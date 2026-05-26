@@ -50,6 +50,7 @@ decision recorded against `R-0001`.
 
 ### Cross-cutting
 
+- **Repository layout:** **monorepo** — `/backend` (Rust workspace) + `/mobile` (Flutter app), plus this top-level methodology set. Decision recorded against R-0001.
 - **Container:** Docker (single Rust API image for MVP)
 - **CI/CD:** GitHub Actions → Docker registry → cloud (AWS or Azure — chosen in M8)
 - **Object storage:** S3-compatible

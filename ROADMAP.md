@@ -17,24 +17,107 @@ Adopt the methodology and prepare the repository.
 
 | Item | Status |
 |------|--------|
-| Methodology files in place (`CLAUDE.md`, `requirements/`, `specs/`, agents) | Backlog |
-| `project-specifics.md` filled in | Backlog |
-| Toolchain chosen and recorded | Backlog |
-| First requirement discussed | Backlog |
+| Methodology files in place (`CLAUDE.md`, `requirements/`, `specs/`, agents) | Done |
+| `project-specifics.md` filled in | Done |
+| `.gitignore` in place | Done |
+| Source brief ingested at `docs/fitness_ai_project.md` | Done |
+| Roadmap (this file) seeded with M0–M8 and R-0001–R-0026 | Done |
+| Toolchain confirmed against real workspaces | Backlog (lands with R-0001) |
+| First requirement (R-0001) discussed | Discussing |
 
-### M1 — <first milestone>
+### M1 — Backend skeleton, auth, profile
 
-> Replace this with the project's first real milestone. Give it a theme, then
-> list the requirements that belong to it.
+The two-stack monorepo exists, CI is green, and a user can be created and
+authenticated against a real backend.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0001 | <capability> | SPEC-0001 | Backlog |
+| R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Discussing |
+| R-0002 | User authentication (JWT; OAuth2 social login flagged as open question) | SPEC-0002 | Backlog |
+| R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 
-### M2 — <next milestone>
+### M2 — Logging core
 
-> Add milestones as the project's scope becomes clear. Keep them small enough
-> that each is a coherent, shippable increment.
+Server-side persistence of every signal the model will eventually consume.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Backlog |
+| R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Backlog |
+| R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
+
+### M3 — Flutter MVP (thin client)
+
+The user can do everything M1–M2 expose, from a phone.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0007 | Onboarding flow (body stats, goals, training history) | SPEC-0007 | Backlog |
+| R-0008 | Daily workout logger UI | SPEC-0008 | Backlog |
+| R-0009 | Nutrition logger UI (manual entry first) | SPEC-0009 | Backlog |
+| R-0010 | Progress photo capture with fixed-angle prompts | SPEC-0010 | Backlog |
+| R-0011 | Dashboard: trends, current program, weekly plan | SPEC-0011 | Backlog |
+
+### M4 — Archetype prior & initial program
+
+Bootstrap personalization before any per-user logs exist.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0012 | `ArchetypeLibrary` schema + curated seed data (Mentzer, Arnold, Columbu, Yates, …) | SPEC-0012 | Backlog |
+| R-0013 | Archetype-matching service: new user → closest archetype | SPEC-0013 | Backlog |
+| R-0014 | Generate initial program from matched archetype | SPEC-0014 | Backlog |
+
+### M5 — ML inference (Phase 1, `linfa`)
+
+Move from heuristic adjustment to learned adjustment from real logs.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0015 | Time-series log aggregation (per user, per time window) | SPEC-0015 | Backlog |
+| R-0016 | Response-inference model (linfa regression / trees): which inputs correlate with positive outcomes | SPEC-0016 | Backlog |
+| R-0017 | Program adjustment engine: tweak volume / frequency / intensity / rest / macros | SPEC-0017 | Backlog |
+
+### M6 — Photo pipeline & compliance
+
+Add the visual signal and account for users who don't log consistently.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0018 | Pose-estimation pipeline (MediaPipe candidate; choice deferred to discussion) | SPEC-0018 | Backlog |
+| R-0019 | Derived photo features (shoulder-width proxy, muscle-belly visibility, symmetry) fed into the main model | SPEC-0019 | Backlog |
+| R-0020 | Compliance tracking: detect logging gaps, weight model confidence accordingly | SPEC-0020 | Backlog |
+
+### M7 — Subscription & monetization
+
+Turn it into a SaaS.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0021 | Subscription plans + billing integration (Stripe candidate) | SPEC-0021 | Backlog |
+| R-0022 | Freemium feature gating (manual logging free; adaptive AI + photo analysis paid) | SPEC-0022 | Backlog |
+| R-0023 | Subscription paywall UI in Flutter | SPEC-0023 | Backlog |
+
+### M8 — Launch readiness
+
+Everything needed to ship to the public.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0024 | Privacy policy + health-data compliance (LATAM + GDPR-adjacent rules) | SPEC-0024 | Backlog |
+| R-0025 | App Store + Play Store accounts, metadata, screenshots | SPEC-0025 | Backlog |
+| R-0026 | Production deployment: AWS *or* Azure, managed Postgres, S3/Blob, CI promotion | SPEC-0026 | Backlog |
+
+## Deferred (not yet on a milestone)
+
+Pulled from the source doc's "Open Questions / TODOs"; will be promoted to
+R-files when their parent milestone is the focus.
+
+- Barcode scan for nutrition (extension of R-0005 / R-0009)
+- OAuth2 social login (extension of R-0002)
+- Self-hosted VPS migration for unit-economics (Phase 2 of M8)
+- GPU inference path (only if R-0016 / R-0018 demand it)
+- Phase-2 ML stack: `burn` or `tch-rs` for sequential / time-series modelling
 
 ## Sequencing rules
 
@@ -46,5 +129,6 @@ Adopt the methodology and prepare the repository.
 
 ## Current focus
 
-Finish M0, then discuss the first requirement (`R-0001`) together before any
-spec is written.
+Finish M0 and complete the requirement loop for **R-0001 — Monorepo scaffold**.
+No other requirement enters `Discussing` until R-0001 is `Done`, because every
+later R depends on the scaffold existing.
