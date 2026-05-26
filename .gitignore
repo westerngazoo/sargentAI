@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+ios/Pods/
+android/.gradle/
+android/local.properties
+*.iml
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
