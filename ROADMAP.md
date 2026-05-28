@@ -32,7 +32,7 @@ authenticated against a real backend.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Spec'd |
+| R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | In progress |
 | R-0002 | User authentication (JWT; OAuth2 social login flagged as open question) | SPEC-0002 | Backlog |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 

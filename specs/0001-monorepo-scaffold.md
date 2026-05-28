@@ -260,7 +260,8 @@ use axum::Router;
 ///
 /// `main.rs` wraps this with `axum::serve`. Tests call it directly via
 /// `tower::ServiceExt::oneshot` or boot a real server in a task.
-#[must_use]
+///
+/// (`Router` is itself `#[must_use]`, so no attribute here — `clippy::double_must_use`.)
 pub fn app() -> Router {
     Router::new().merge(health::router())
 }
@@ -288,9 +289,9 @@ async fn health() -> StatusCode {
 //! fitai-api binary: bind, serve, shut down gracefully.
 //!
 //! No `.unwrap()` / `.expect()`. Signal-handler install failures propagate
-//! via `?` (the same way port-bind failures do); the ctrl_c future's own
+//! via `?` (the same way port-bind failures do); the `ctrl_c` future's own
 //! `io::Result` is logged and shutdown proceeds (we'd rather shut down
-//! cleanly than abort the process on a ctrl_c handler hiccup).
+//! cleanly than abort the process on a `ctrl_c` handler hiccup).
 
 use std::net::SocketAddr;
 use tokio::signal::ctrl_c;
@@ -323,8 +324,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// shutdown semantics for `docker stop` / k8s rolling deploys.
 fn build_shutdown() -> Result<impl std::future::Future<Output = ()>, std::io::Error> {
     #[cfg(unix)]
-    let mut sigterm =
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
 
     Ok(async move {
         #[cfg(unix)]
@@ -452,7 +452,7 @@ Dockerfile
 
 ```yaml
 name: fitai
-description: fitAI mobile client (thin: capture, display, no on-device inference).
+description: "fitAI mobile client — thin: capture, display, no on-device inference."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -697,6 +697,7 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 | 2026-05-28 | **Drop `fvm`; pin Flutter via plain `mobile/.flutter-version` read by `subosito/flutter-action@v2`'s `flutter-version-file` input.** Supersedes the earlier `.fvmrc` choice. | One less tool dependency for devs (no `fvm` install required); single action handles version-read + install; CI/dev parity preserved via the committed file. Owner-approved at step 4 (2026-05-28). |
 | 2026-05-28 | **Version pins resolved against the implementer host:** Rust **1.95.0**, Flutter **3.44.0**. These are the installed stables on the implementation machine and now appear verbatim in `rust-toolchain.toml`, `mobile/.flutter-version`, the `Dockerfile` `ARG RUST_VERSION`, and the `pubspec.yaml` `flutter:` minimum. | Honors §2.8's "implementer pins to current stable" instruction. Owner-approved at step 4 (2026-05-28). |
 | 2026-05-28 | **AC7 (`docker build` + container probe) first runs on CI.** Docker is not installed on the implementation host; local step-5 verification covers AC1–AC6 only. If the `docker` CI job is red on the first PR run, follow-up commits to the same PR fix it. | Pragmatic: standard remote-CI verification path. Owner-approved at step 4 (2026-05-28). |
+| 2026-05-28 | **Step-5 lockstep fixes** (architect finding #1 disposition activated). Four mechanical snippet adjustments made in lockstep across §3 and the actual files: (a) `main.rs:39` — `let mut sigterm = …` collapsed onto one line (rustfmt); (b) `lib.rs:19` — removed redundant `#[must_use]` on `pub fn app() -> Router` (`Router` is itself `#[must_use]`; `clippy::double_must_use`); (c) `main.rs:4,6` — wrapped two bare `ctrl_c` mentions in backticks (`clippy::doc_markdown`); (d) `pubspec.yaml:2` — quoted the description string because the embedded `:` after "thin" tripped the YAML parser. All four fixes were necessary to take AC2–AC6 from "compiles" to "fully green". | Each is exactly the kind of small adjustment §2.8 + architect finding #1 anticipated. Spec snippets remain the source of truth — verified clippy-clean. |
 
 ## Changelog
 
@@ -704,3 +705,4 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 - _2026-05-28 — revised after architect review (REQUEST CHANGES verdict resolved): all 2 blocking + 5 major + 4 actionable minor findings addressed; 3 minor findings accepted with rationale in §7. Pending owner re-acceptance._
 - _2026-05-28 — owner accepted the revised spec. Status → Accepted. Step 3 (qa test plan) may begin._
 - _2026-05-28 — step 4 (code outline review): pins resolved to Rust 1.95.0 / Flutter 3.44.0 against the implementer host; `fvm` dropped in favor of `mobile/.flutter-version` + `subosito/flutter-action@v2`'s `flutter-version-file` input; AC7 deferred to first CI run. Snippets in §3.2 / §3.8 / §3.10 / §3.11 / §3.17 updated in lockstep. Decision log entries added._
+- _2026-05-28 — step 5 (implement): all 16 production files written per §3. Lockstep snippet fixes applied (see §7 entry) for `main.rs:39`, `lib.rs:19`, `main.rs:4/6`, `pubspec.yaml:2`. Local gates green: AC1 ✓ AC2 ✓ AC3 ✓ AC4 ✓ AC5 ✓ AC6 ✓ AC8 (script-level) ✓. AC7 deferred to CI run on the PR._
