@@ -33,4 +33,4 @@ the requirement(s) it satisfies. The mapping is maintained in
 
 | Req | Title | Milestone | Status |
 |-----|-------|-----------|--------|
-| [R-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | M1 | Draft |
+| [R-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | M1 | Accepted |

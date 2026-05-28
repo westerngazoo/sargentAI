@@ -1,6 +1,6 @@
 # R-0001 — Monorepo scaffold and CI gates
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Milestone:** M1
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-26
@@ -91,3 +91,4 @@ acknowledges this Draft, status flips to `Accepted` and SPEC-0001 may begin.
 ## Changelog
 
 - _2026-05-26 — created (Draft); decisions OQ1–OQ5 recorded._
+- _2026-05-27 — owner acked acceptance criteria; status → Accepted. SPEC-0001 may begin._
