@@ -1,0 +1,54 @@
+//! Integration tests for `GET /health`.
+//!
+//! Authored by qa agent during R-0001 step 3 (test planning).
+//! Pre-implementation red state = compile failure: the `fitai_api` crate
+//! does not exist yet. Implementation step 5 (SPEC-0001 §3.4–§3.6) makes
+//! these green.
+//!
+//! Two tests: one via the in-process router (fast, no port), one via a
+//! real `axum::serve` boot on `127.0.0.1:0` (literal AC2: "boots the
+//! HTTP service in-process"). Both must pass.
+
+#![allow(clippy::unwrap_used)]
+
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use http_body_util::BodyExt;
+use tower::ServiceExt;
+
+#[tokio::test]
+async fn health_returns_ok_via_router() {
+    let app = fitai_api::app();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    assert!(body.is_empty(), "health body should be empty");
+}
+
+#[tokio::test]
+async fn health_returns_ok_via_real_server() {
+    // Bind ephemeral port, capture address, hand listener to axum::serve.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let server = tokio::spawn(async move {
+        axum::serve(listener, fitai_api::app()).await.unwrap();
+    });
+
+    let url = format!("http://{addr}/health");
+    let response = reqwest::get(&url).await.unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    server.abort();
+}
