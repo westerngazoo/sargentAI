@@ -1,6 +1,6 @@
 # SPEC-0001 — Monorepo scaffold and CI gates
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Realizes:** R-0001
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-27
@@ -699,3 +699,4 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 
 - _2026-05-27 — created (Draft); pending `architect` agent review._
 - _2026-05-28 — revised after architect review (REQUEST CHANGES verdict resolved): all 2 blocking + 5 major + 4 actionable minor findings addressed; 3 minor findings accepted with rationale in §7. Pending owner re-acceptance._
+- _2026-05-28 — owner accepted the revised spec. Status → Accepted. Step 3 (qa test plan) may begin._
