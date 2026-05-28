@@ -35,4 +35,4 @@ field. The build order across requirements and specs is in
 
 | Spec | Title | Realizes | Status |
 |------|-------|----------|--------|
-| _none yet_ | | | |
+| [SPEC-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | R-0001 | Draft |
