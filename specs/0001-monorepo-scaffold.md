@@ -50,7 +50,7 @@ fitAI/
 └── mobile/
     ├── pubspec.yaml
     ├── analysis_options.yaml
-    ├── .fvmrc                      # pins Flutter SDK (fvm 3.x format)
+    ├── .flutter-version            # plain-text Flutter SDK pin (subosito reads this)
     ├── lib/
     │   ├── main.dart
     │   ├── app.dart
@@ -122,9 +122,11 @@ to introduce dep-pre-fetch + buildx layer cache.
 
 The smallest meaningful Flutter app: `MaterialApp` → `Scaffold` → centred
 `Text('fitAI')`. One widget test pumps `HomeScreen` and asserts the text is
-visible. `flutter_lints` provides the lint baseline. `fvm` pins the SDK so CI
-and devs share a version — committed in the modern `.fvmrc` format (fvm 3.x;
-the legacy `.fvm/fvm_config.json` is deprecated upstream).
+visible. `flutter_lints` provides the lint baseline. The Flutter SDK is pinned
+in a plain-text `mobile/.flutter-version` file; CI reads it natively via
+`subosito/flutter-action@v2`'s `flutter-version-file` input. Devs run plain
+`flutter` and are responsible for matching the pin (no third-party version
+manager is required — keeps the dev setup minimal).
 
 ### 2.7 CI graph
 
@@ -135,7 +137,7 @@ required statuses).
 | Job | Purpose | Cache |
 |-----|---------|-------|
 | `rust` | fmt → clippy → test → build, all `--locked` (incl. clippy) | `Swatinem/rust-cache@v2` keyed on `backend/Cargo.lock` |
-| `mobile` | fvm pin → format-check → analyze → test | flutter-action default cache |
+| `mobile` | version-file → format-check → analyze → test | flutter-action default cache |
 | `docker` | `docker build` against `/backend/Dockerfile` | none (see §2.5 trigger) |
 
 Triggers: `push` on any branch, `pull_request` targeting `main`.
@@ -146,16 +148,15 @@ recorded green build.
 ### 2.8 Pinned versions
 
 The exact pins are committed at implementation time and recorded in §7. The
-spec uses illustrative recent stables; the implementer runs `rustup show` /
-`flutter --version` against the host and updates the pins to current stable
-before opening the PR. The implementer also runs `cargo clippy --workspace
---all-targets --all-features -- -D warnings` against the scaffolded code and
-adjusts any snippet in §3 that fails the gate, in lockstep, before the PR.
+implementer runs `rustup show` / `flutter --version` against the host, pins to
+the installed stables, and runs `cargo clippy --workspace --all-targets
+--all-features --locked -- -D warnings` against the scaffolded code, adjusting
+any snippet in §3 that fails the gate in lockstep, before the PR.
 
-| Tool | Illustrative pin | Pinned in |
-|------|------------------|-----------|
-| Rust | `1.83.0` | `backend/rust-toolchain.toml` |
-| Flutter | `3.27.0` | `mobile/.fvmrc` |
+| Tool | Pin (resolved 2026-05-28) | Pinned in |
+|------|---------------------------|-----------|
+| Rust | `1.95.0` | `backend/rust-toolchain.toml` |
+| Flutter | `3.44.0` | `mobile/.flutter-version` |
 | Axum | `0.7` | `backend/Cargo.toml` (`[workspace.dependencies]`) |
 | Tokio | `1` | `backend/Cargo.toml` |
 | reqwest (dev) | `0.12` | `backend/Cargo.toml` |
@@ -202,7 +203,7 @@ panic = "warn"
 
 ```toml
 [toolchain]
-channel = "1.83.0"   # illustrative; implementer pins to current stable
+channel = "1.95.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 ```
@@ -416,7 +417,7 @@ async fn health_returns_ok_via_real_server() {
 ```dockerfile
 # syntax=docker/dockerfile:1.7
 
-ARG RUST_VERSION=1.83
+ARG RUST_VERSION=1.95
 
 FROM rust:${RUST_VERSION}-slim-bookworm AS builder
 WORKDIR /src
@@ -457,7 +458,7 @@ version: 0.1.0+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
-  flutter: '>=3.27.0'
+  flutter: '>=3.44.0'
 
 dependencies:
   flutter:
@@ -472,12 +473,13 @@ flutter:
   uses-material-design: true
 ```
 
-### 3.11 `mobile/.fvmrc`
+### 3.11 `mobile/.flutter-version`
 
-```json
-{
-  "flutter": "3.27.0"
-}
+Plain text, one line, no trailing newline-of-art. `subosito/flutter-action@v2`
+reads this directly via its `flutter-version-file` input.
+
+```
+3.44.0
 ```
 
 ### 3.12 `mobile/analysis_options.yaml`
@@ -594,12 +596,10 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-      - id: fvm-config
-        uses: kuhnroyal/flutter-fvm-config-action@v2
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ steps.fvm-config.outputs.FLUTTER_VERSION }}
-          channel: ${{ steps.fvm-config.outputs.FLUTTER_CHANNEL }}
+          flutter-version-file: mobile/.flutter-version
+          channel: stable
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze
@@ -694,9 +694,13 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 | 2026-05-28 | **Architect finding #11 — switch from deprecated `.fvm/fvm_config.json` to modern `.fvmrc`.** | fvm 3.x writes `.fvmrc`; the action supports both, but committing the modern format avoids drift the first time a dev runs `fvm use --force` against the project. |
 | 2026-05-28 | **Architect finding #15 — `cancel-in-progress` is now conditional on `github.ref != 'refs/heads/main'`.** | Prevents a fast-follow merge to `main` from leaving the default branch without a recorded green build. |
 | 2026-05-28 | **Forward-looking, per architect Notes:** SPEC-0026 (production deploy) is the natural home for image-registry push, cosign signing, SBOM generation, runtime probes, and (if needed by then) Dockerfile dep-prefetch + buildx cache. Recording the trigger here so it isn't lost. | Keeps R-0001 minimal while preserving the architectural intent. |
+| 2026-05-28 | **Drop `fvm`; pin Flutter via plain `mobile/.flutter-version` read by `subosito/flutter-action@v2`'s `flutter-version-file` input.** Supersedes the earlier `.fvmrc` choice. | One less tool dependency for devs (no `fvm` install required); single action handles version-read + install; CI/dev parity preserved via the committed file. Owner-approved at step 4 (2026-05-28). |
+| 2026-05-28 | **Version pins resolved against the implementer host:** Rust **1.95.0**, Flutter **3.44.0**. These are the installed stables on the implementation machine and now appear verbatim in `rust-toolchain.toml`, `mobile/.flutter-version`, the `Dockerfile` `ARG RUST_VERSION`, and the `pubspec.yaml` `flutter:` minimum. | Honors §2.8's "implementer pins to current stable" instruction. Owner-approved at step 4 (2026-05-28). |
+| 2026-05-28 | **AC7 (`docker build` + container probe) first runs on CI.** Docker is not installed on the implementation host; local step-5 verification covers AC1–AC6 only. If the `docker` CI job is red on the first PR run, follow-up commits to the same PR fix it. | Pragmatic: standard remote-CI verification path. Owner-approved at step 4 (2026-05-28). |
 
 ## Changelog
 
 - _2026-05-27 — created (Draft); pending `architect` agent review._
 - _2026-05-28 — revised after architect review (REQUEST CHANGES verdict resolved): all 2 blocking + 5 major + 4 actionable minor findings addressed; 3 minor findings accepted with rationale in §7. Pending owner re-acceptance._
 - _2026-05-28 — owner accepted the revised spec. Status → Accepted. Step 3 (qa test plan) may begin._
+- _2026-05-28 — step 4 (code outline review): pins resolved to Rust 1.95.0 / Flutter 3.44.0 against the implementer host; `fvm` dropped in favor of `mobile/.flutter-version` + `subosito/flutter-action@v2`'s `flutter-version-file` input; AC7 deferred to first CI run. Snippets in §3.2 / §3.8 / §3.10 / §3.11 / §3.17 updated in lockstep. Decision log entries added._
