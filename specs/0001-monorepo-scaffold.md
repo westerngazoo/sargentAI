@@ -66,6 +66,12 @@ the next requirement that introduces a domain type, which is **R-0003**
 (user profile); SPEC-0003 must introduce `crates/core/` and pull the profile
 types out of `api`. This trigger is recorded in §7.
 
+> **2026-05-29 addendum:** the trigger fired one R earlier than written — at
+> R-0002. The `User` type from R-0002 (auth record) is the first domain type,
+> so SPEC-0002 introduced `crates/core/` and put `User` there. R-0003 will
+> add profile fields to the same `core::User` rather than extracting it.
+> See SPEC-0001 §7 entry of 2026-05-29 and SPEC-0002 §2.
+
 ### 2.3 Router and testability
 
 `lib.rs` exposes `pub fn app() -> Router`. `main.rs` is the binary that calls
@@ -698,6 +704,7 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 | 2026-05-28 | **Version pins resolved against the implementer host:** Rust **1.95.0**, Flutter **3.44.0**. These are the installed stables on the implementation machine and now appear verbatim in `rust-toolchain.toml`, `mobile/.flutter-version`, the `Dockerfile` `ARG RUST_VERSION`, and the `pubspec.yaml` `flutter:` minimum. | Honors §2.8's "implementer pins to current stable" instruction. Owner-approved at step 4 (2026-05-28). |
 | 2026-05-28 | **AC7 (`docker build` + container probe) first runs on CI.** Docker is not installed on the implementation host; local step-5 verification covers AC1–AC6 only. If the `docker` CI job is red on the first PR run, follow-up commits to the same PR fix it. | Pragmatic: standard remote-CI verification path. Owner-approved at step 4 (2026-05-28). |
 | 2026-05-28 | **Step-5 lockstep fixes** (architect finding #1 disposition activated). Four mechanical snippet adjustments made in lockstep across §3 and the actual files: (a) `main.rs:39` — `let mut sigterm = …` collapsed onto one line (rustfmt); (b) `lib.rs:19` — removed redundant `#[must_use]` on `pub fn app() -> Router` (`Router` is itself `#[must_use]`; `clippy::double_must_use`); (c) `main.rs:4,6` — wrapped two bare `ctrl_c` mentions in backticks (`clippy::doc_markdown`); (d) `pubspec.yaml:2` — quoted the description string because the embedded `:` after "thin" tripped the YAML parser. All four fixes were necessary to take AC2–AC6 from "compiles" to "fully green". | Each is exactly the kind of small adjustment §2.8 + architect finding #1 anticipated. Spec snippets remain the source of truth — verified clippy-clean. |
+| 2026-05-29 | **`crates/core/` extraction trigger fired at R-0002, not R-0003 as originally written in §2.2.** The first domain type was `User` (introduced by R-0002 for auth) rather than `Profile` (anticipated for R-0003). SPEC-0002 §2 introduces `crates/core/` and puts `User` there; R-0003 will extend it. Original §2.2 text retained with a `2026-05-29 addendum:` note for traceability. | The trigger's *spirit* was "first domain type"; only the *example R name* was wrong. Updating in place rather than superseding the spec keeps R-0001's history intact. Owner-approved at SPEC-0002 design discussion (2026-05-29). |
 
 ## Changelog
 
