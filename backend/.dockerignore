@@ -1,0 +1,7 @@
+target/
+**/*.bak
+.git/
+.dockerignore
+Dockerfile
+*.md
+.DS_Store
