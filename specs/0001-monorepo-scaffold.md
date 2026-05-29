@@ -1,6 +1,6 @@
 # SPEC-0001 — Monorepo scaffold and CI gates
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0001
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-27
@@ -661,14 +661,14 @@ the changelog at implementation time per §2.8 / §7.
 
 Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 
-- [ ] **SAC1 → AC1.** `cd backend && cargo build --workspace --all-targets` exits 0 against a fresh checkout.
-- [ ] **SAC2 → AC2.** `cd backend && cargo test --workspace --all-features --locked` exits 0; both `crates/api/tests/health.rs::health_returns_ok_via_router` and `health_returns_ok_via_real_server` pass. The second test literally boots `axum::serve` on `127.0.0.1:0` and exercises `GET /health` over real HTTP.
-- [ ] **SAC3 → AC3.** `cd backend && cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` exits 0 with no warnings. Workspace lints include `clippy::pedantic`, `clippy::unwrap_used`, `clippy::expect_used`, `clippy::panic`.
-- [ ] **SAC4 → AC4.** `cd backend && cargo fmt --all -- --check` exits 0.
-- [ ] **SAC5 → AC5.** `cd mobile && flutter analyze` exits 0; `flutter test` exits 0 with `home_screen_test.dart::renders fitAI placeholder` passing.
-- [ ] **SAC6 → AC6.** `cd mobile && dart format --set-exit-if-changed .` exits 0.
-- [ ] **SAC7 → AC7.** `docker build -t fitai-api:ci backend` succeeds; `docker run --rm -p 8080:8080 fitai-api:ci &` followed by `curl -sf -o /dev/null -w "%{http_code}" localhost:8080/health` prints `200`.
-- [ ] **SAC8 → AC8.** `.github/workflows/ci.yml` exists with three jobs (`rust`, `mobile`, `docker`); the R-0001 PR branch shows all three green at the time of `qa` sign-off.
+- [x] **SAC1 → AC1.** `cd backend && cargo build --workspace --all-targets` exits 0 against a fresh checkout.
+- [x] **SAC2 → AC2.** `cd backend && cargo test --workspace --all-features --locked` exits 0; both `crates/api/tests/health.rs::health_returns_ok_via_router` and `health_returns_ok_via_real_server` pass. The second test literally boots `axum::serve` on `127.0.0.1:0` and exercises `GET /health` over real HTTP.
+- [x] **SAC3 → AC3.** `cd backend && cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` exits 0 with no warnings. Workspace lints include `clippy::pedantic`, `clippy::unwrap_used`, `clippy::expect_used`, `clippy::panic`.
+- [x] **SAC4 → AC4.** `cd backend && cargo fmt --all -- --check` exits 0.
+- [x] **SAC5 → AC5.** `cd mobile && flutter analyze` exits 0; `flutter test` exits 0 with `home_screen_test.dart::renders fitAI placeholder` passing.
+- [x] **SAC6 → AC6.** `cd mobile && dart format --set-exit-if-changed .` exits 0.
+- [x] **SAC7 → AC7.** `docker build -t fitai-api:ci backend` succeeds; `docker run --rm -p 8080:8080 fitai-api:ci &` followed by `curl -sf -o /dev/null -w "%{http_code}" localhost:8080/health` prints `200`.
+- [x] **SAC8 → AC8.** `.github/workflows/ci.yml` exists with three jobs (`rust`, `mobile`, `docker`); the R-0001 PR branch shows all three green at the time of `qa` sign-off.
 
 ## 7. Decision log
 
@@ -706,3 +706,4 @@ Each maps back to an R-0001 AC; each becomes one or more `qa` agent tests.
 - _2026-05-28 — owner accepted the revised spec. Status → Accepted. Step 3 (qa test plan) may begin._
 - _2026-05-28 — step 4 (code outline review): pins resolved to Rust 1.95.0 / Flutter 3.44.0 against the implementer host; `fvm` dropped in favor of `mobile/.flutter-version` + `subosito/flutter-action@v2`'s `flutter-version-file` input; AC7 deferred to first CI run. Snippets in §3.2 / §3.8 / §3.10 / §3.11 / §3.17 updated in lockstep. Decision log entries added._
 - _2026-05-28 — step 5 (implement): all 16 production files written per §3. Lockstep snippet fixes applied (see §7 entry) for `main.rs:39`, `lib.rs:19`, `main.rs:4/6`, `pubspec.yaml:2`. Local gates green: AC1 ✓ AC2 ✓ AC3 ✓ AC4 ✓ AC5 ✓ AC6 ✓ AC8 (script-level) ✓. AC7 deferred to CI run on the PR._
+- _2026-05-28 — step 6 (PR): PR #1 opened against `main`. Two CI runs (push + pull_request) both green on all three jobs (`rust` 52s/58s, `mobile` 1m32s/1m16s, `docker` 45s/53s). Docker also installed locally via colima; AC7 verified locally too. Step 7 (qa sign-off) returned PASS — every AC has at least one passing test artifact. Status → Implemented._

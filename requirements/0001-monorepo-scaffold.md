@@ -1,6 +1,6 @@
 # R-0001 — Monorepo scaffold and CI gates
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M1
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-26
@@ -92,3 +92,4 @@ acknowledges this Draft, status flips to `Accepted` and SPEC-0001 may begin.
 
 - _2026-05-26 — created (Draft); decisions OQ1–OQ5 recorded._
 - _2026-05-27 — owner acked acceptance criteria; status → Accepted. SPEC-0001 may begin._
+- _2026-05-28 — qa step 7 PASS; every AC1–AC8 has at least one passing test artifact (local run-all.sh + green CI on PR #1, both push and pull_request runs). Status → Met._

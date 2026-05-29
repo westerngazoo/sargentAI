@@ -11,7 +11,7 @@ requirement loop in [`CLAUDE.md`](CLAUDE.md) §4.
 
 ## Milestones
 
-### M0 — Foundation  ·  *in progress*
+### M0 — Foundation  ·  *complete*
 
 Adopt the methodology and prepare the repository.
 
@@ -22,8 +22,8 @@ Adopt the methodology and prepare the repository.
 | `.gitignore` in place | Done |
 | Source brief ingested at `docs/fitness_ai_project.md` | Done |
 | Roadmap (this file) seeded with M0–M8 and R-0001–R-0026 | Done |
-| Toolchain confirmed against real workspaces | Backlog (lands with R-0001) |
-| First requirement (R-0001) discussed | Done — Accepted; SPEC-0001 Accepted; qa test plan next |
+| Toolchain confirmed against real workspaces | Done — Rust 1.95.0 + Flutter 3.44.0, pinned in R-0001 |
+| First requirement (R-0001) discussed | Done — full loop completed; merged via PR #1 |
 
 ### M1 — Backend skeleton, auth, profile
 
@@ -32,7 +32,7 @@ authenticated against a real backend.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | In progress |
+| R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
 | R-0002 | User authentication (JWT; OAuth2 social login flagged as open question) | SPEC-0002 | Backlog |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 
@@ -129,6 +129,7 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-Finish M0 and complete the requirement loop for **R-0001 — Monorepo scaffold**.
-No other requirement enters `Discussing` until R-0001 is `Done`, because every
-later R depends on the scaffold existing.
+M0 complete. R-0001 merged via PR #1 (2026-05-28). Next: **R-0002 — User
+authentication** is the head of M1's queue. Begin its loop at step 1
+(`CLAUDE.md` §4.1) — discuss scope (JWT today; OAuth2 social login as a
+flagged open question from R-0001 §6) and acceptance criteria together.
