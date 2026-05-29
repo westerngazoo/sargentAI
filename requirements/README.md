@@ -34,3 +34,4 @@ the requirement(s) it satisfies. The mapping is maintained in
 | Req | Title | Milestone | Status |
 |-----|-------|-----------|--------|
 | [R-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | M1 | Met |
+| [R-0002](0002-user-authentication.md) | User authentication (JWT + argon2; Postgres introduced) | M1 | Draft |

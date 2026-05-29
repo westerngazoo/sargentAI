@@ -33,7 +33,7 @@ authenticated against a real backend.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
-| R-0002 | User authentication (JWT; OAuth2 social login flagged as open question) | SPEC-0002 | Backlog |
+| R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Discussing |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 
 ### M2 — Logging core
@@ -129,7 +129,8 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-M0 complete. R-0001 merged via PR #1 (2026-05-28). Next: **R-0002 — User
-authentication** is the head of M1's queue. Begin its loop at step 1
-(`CLAUDE.md` §4.1) — discuss scope (JWT today; OAuth2 social login as a
-flagged open question from R-0001 §6) and acceptance criteria together.
+**R-0002 — User authentication** is in step 1 (Discussing). Scope agreed
+(JWT HS256, 24h, argon2id, Postgres + sqlx introduced, OAuth2 deferred);
+draft requirement at `requirements/0002-user-authentication.md`; OQ1–OQ4
+settled. Pending owner ack of the 8 acceptance criteria → flip to Accepted
+and begin SPEC-0002.
