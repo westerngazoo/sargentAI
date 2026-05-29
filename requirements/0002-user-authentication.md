@@ -1,6 +1,6 @@
 # R-0002 — User authentication
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Milestone:** M1
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-28
@@ -121,3 +121,4 @@ Implementation-level questions (e.g. exact crate versions, per-test vs per-suite
 ## Changelog
 
 - _2026-05-28 — created (Draft); decisions OQ1–OQ4 + three derived choices recorded._
+- _2026-05-28 — owner acked acceptance criteria; status → Accepted. SPEC-0002 may begin._
