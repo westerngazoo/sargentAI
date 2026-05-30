@@ -48,16 +48,23 @@ pub(crate) fn encode(
     Ok((token, expires_at))
 }
 
-/// Decode and validate an HS256 JWT. Validates the signature and the `exp`
-/// claim with **zero leeway** — a token is rejected the moment it expires,
-/// rather than `Validation::default()`'s 60-second grace window.
+/// Decode and validate an HS256 JWT. The signature is checked by
+/// `jsonwebtoken`; the `exp` claim is enforced **here** as `exp <= now`
+/// (expired) rather than leaning on `jsonwebtoken`'s `exp < now`. The auth
+/// design treats a token as dead the instant it reaches its expiry second, so
+/// a `Duration::ZERO` token (`exp == iat == now`) is already expired on arrival
+/// (SAC5(d)) — `jsonwebtoken`'s strict `<` would accept it for the rest of that
+/// whole-second tick.
 ///
 /// # Errors
 /// Returns an error if the signature is invalid, the token is expired, or the
 /// claims are malformed.
 pub(crate) fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
-    let mut validation = Validation::default(); // HS256 + exp check
-    validation.leeway = 0;
+    let mut validation = Validation::default();
+    validation.validate_exp = false; // enforced explicitly below for `<=` semantics
     let data = decode::<Claims>(token, &DecodingKey::from_secret(secret), &validation)?;
+    if data.claims.exp <= Utc::now().timestamp() {
+        return Err(eyre::eyre!("token expired"));
+    }
     Ok(data.claims)
 }

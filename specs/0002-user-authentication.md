@@ -842,13 +842,20 @@ pub(crate) fn encode(
     Ok((token, expires_at))
 }
 
-/// Decode and validate an HS256 JWT with **zero leeway** — a token is rejected
-/// the moment it expires, rather than `Validation::default()`'s 60-second grace
-/// window (which would let SAC5(d)'s already-expired token still authenticate).
+/// Decode and validate an HS256 JWT. The signature is checked by
+/// `jsonwebtoken`; the `exp` claim is enforced **here** as `exp <= now`
+/// (expired) rather than leaning on `jsonwebtoken`'s `exp < now`. The design
+/// treats a token as dead the instant it reaches its expiry second, so a
+/// `Duration::ZERO` token (`exp == iat == now`) is already expired on arrival
+/// (SAC5(d)) — `jsonwebtoken`'s strict `<` would accept it for the rest of that
+/// whole-second tick.
 pub(crate) fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
-    let mut validation = Validation::default(); // HS256 + exp check
-    validation.leeway = 0;
+    let mut validation = Validation::default();
+    validation.validate_exp = false; // enforced explicitly below for `<=` semantics
     let data = decode::<Claims>(token, &DecodingKey::from_secret(secret), &validation)?;
+    if data.claims.exp <= Utc::now().timestamp() {
+        return Err(eyre::eyre!("token expired"));
+    }
     Ok(data.claims)
 }
 ```
@@ -1136,6 +1143,7 @@ Each SAC maps back to an R-0002 AC; each becomes one or more `qa` agent tests.
 | 2026-05-30 | **`token::encode` returns `(token, exp)`; handler reports the token's actual `exp` as `expires_at`.** Function renamed in prose to `decode_token` everywhere (was `decode` in §2.3). `User` drops `Deserialize` (it is never wire-parsed; `Email` has none). | Architect review (findings 2, 5, 7). Removes a sub-second `expires_at`/`exp` skew, fixes a prose/code name mismatch, and removes a non-compiling derive. |
 | 2026-05-30 | **Timing-defence wording softened to "best-effort timing-equalization", not "constant-time".** | Architect review (finding 6). `hash` and `verify` have different timings; rate-limiting (deferred) is the real defence. Honest wording avoids future misreading of the guarantee. |
 | 2026-05-30 | **Supersedes the 2026-05-29 "two-layer email defence": `#[validate(email)]` is dropped; `core::Email::parse` is the sole email validation+normalization gate.** Password-only `validate()` failures now map to `field: "password"`. | Step-7 CI surfaced a real conflict: the ingress `#[validate(email)]` rejected the padded/mixed-case `"  case@b.COM  "` with 400 *before* `Email::parse` could trim+lowercase it, so SAC2's case-insensitive-duplicate test got 400 instead of 409. The two layers disagreed; the single-authority direction (finding 4) wins. A malformed address still returns 400 + `field: "email"` via `Email::parse`. |
+| 2026-05-30 | **Expiry boundary is `exp <= now` (expired), enforced in `decode_token` (not `jsonwebtoken`'s `exp < now`).** `decode_token` sets `validation.validate_exp = false` and checks `exp <= Utc::now().timestamp()` itself. | Step-7 CI: the `leeway = 0` approach still let a `Duration::ZERO` token (`exp == iat == now`) authenticate, because `jsonwebtoken` treats `exp == now` as valid for the rest of that whole-second tick — so SAC5(d)'s expired-token test got 200 instead of 401. Honoring the documented "`Duration::ZERO` ⇒ already expired" contract (decision 2026-05-29) requires owning the `<=` comparison. |
 
 ## Changelog
 
@@ -1143,3 +1151,4 @@ Each SAC maps back to an R-0002 AC; each becomes one or more `qa` agent tests.
 - _2026-05-30 — revised per architect review (REQUEST CHANGES). Applied blocking fixes 1/2/7 (JsonRejection→400 body extraction, `decode_token` rename, `User` drops `Deserialize`), major fixes 3/4 (`core::Email` single normalization authority; fallible `into_user`), minor fixes 5/6 (`encode` returns `(token, exp)`; timing wording). Settled OQ-A1/A2/A3 in §5 + §7. Awaiting owner ratification to flip Accepted._
 - _2026-05-30 — step-5 implementation lockstep: §3 snippets patched to match the merged code under the pinned toolchain (Rust/clippy 1.95.0). auth internals dropped from `pub` to `pub(crate)` (`unreachable_pub`); `login` rewritten as a `let-else` guard (`clippy::single_match_else`); `password` maps the non-`std::error::Error` argon2 error via `eyre::eyre!` instead of `wrap_err`; `decode_token` sets `validation.leeway = 0`; `extractor` impl carries `#[async_trait]` (axum 0.7); `jwt_ttl` uses `Duration::from_hours(24)` (`duration_suboptimal_units`). No change to the §2 contract._
 - _2026-05-30 — step-7 CI fix: dropped `#[validate(email)]` so `core::Email::parse` is the sole email gate (the ingress validator rejected padded/mixed-case input before normalization, failing SAC2's case-insensitive duplicate test with 400 instead of 409). Password `validate()` failures now map to `field: "password"`. Updated §2 register prose, the `Email` type docs, the dependency table, and the decision log (supersedes the 2026-05-29 two-layer decision)._
+- _2026-05-30 — step-7 CI fix: `decode_token` enforces `exp <= now` itself (`validation.validate_exp = false` + explicit check) instead of `validation.leeway = 0`. `jsonwebtoken`'s strict `exp < now` accepted a `Duration::ZERO` token within the same whole-second tick, failing SAC5(d) (200 instead of 401). §3.14 snippet patched in lockstep._
