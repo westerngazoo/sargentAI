@@ -29,6 +29,9 @@ pub enum ApiError {
     #[error("unauthorized")]
     Unauthorized,
 
+    #[error("not found")]
+    NotFound,
+
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 }
@@ -56,6 +59,7 @@ impl IntoResponse for ApiError {
                 json!({"error": "validation", "field": field}),
             ),
             ApiError::Unauthorized => (StatusCode::UNAUTHORIZED, json!({"error": "unauthorized"})),
+            ApiError::NotFound => (StatusCode::NOT_FOUND, json!({"error": "not_found"})),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
                 (

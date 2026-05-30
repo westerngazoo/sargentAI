@@ -17,14 +17,17 @@
 //! tagged inline with the SAC/AC branch it verifies.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+// Weight/body-fat assertions scale by 10 and `.round()` to integer-valued
+// f64s before comparing — exact by construction; `==` is correct here.
+#![allow(clippy::float_cmp)]
+// Test doc comments quote JSON/array literals as prose, not code.
+#![allow(clippy::doc_markdown)]
 
 mod common;
 
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
-use common::{
-    body_json, build_app, get_with_auth, put_json_with_auth, register_and_token,
-};
+use common::{body_json, build_app, get_with_auth, put_json_with_auth, register_and_token};
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
 
@@ -138,7 +141,10 @@ async fn deleting_user_cascades_to_profile(pool: PgPool) {
         .await
         .unwrap()
         .get("n");
-    assert_eq!(remaining, 0, "deleting the user must cascade to its profile");
+    assert_eq!(
+        remaining, 0,
+        "deleting the user must cascade to its profile"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -345,7 +351,7 @@ async fn omitted_optionals_serialize_as_null(pool: PgPool) {
 // AC6 / SAC6: multi-goal body round-trips.
 // ---------------------------------------------------------------------------
 
-/// AC6: a multi-goal body (e.g. ["build_muscle","lose_fat"]) round-trips
+/// AC6: a multi-goal body (e.g. `["build_muscle", "lose_fat"]`) round-trips
 /// through write and read, order preserved.
 #[sqlx::test(migrations = "../../migrations")]
 async fn multi_goal_body_round_trips(pool: PgPool) {
@@ -507,16 +513,14 @@ async fn profiles_are_isolated_per_user(pool: PgPool) {
     let mut body_b = valid_body();
     body_b["height_cm"] = json!(200);
     body_b["goals"] = json!(["gain_strength"]);
-    let resp_b =
-        put_json_with_auth(&app, "/profile/me", Some(&bearer(&token_b)), body_b).await;
+    let resp_b = put_json_with_auth(&app, "/profile/me", Some(&bearer(&token_b)), body_b).await;
     assert_eq!(resp_b.status(), StatusCode::CREATED);
 
     // A writes its own, different profile.
     let mut body_a = valid_body();
     body_a["height_cm"] = json!(160);
     body_a["goals"] = json!(["lose_fat"]);
-    let resp_a =
-        put_json_with_auth(&app, "/profile/me", Some(&bearer(&token_a)), body_a).await;
+    let resp_a = put_json_with_auth(&app, "/profile/me", Some(&bearer(&token_a)), body_a).await;
     assert_eq!(resp_a.status(), StatusCode::CREATED);
     assert_eq!(
         body_json(resp_a).await["user_id"].as_str().unwrap(),
@@ -529,7 +533,10 @@ async fn profiles_are_isolated_per_user(pool: PgPool) {
     let a_body = body_json(get_a).await;
     assert_eq!(a_body["user_id"].as_str().unwrap(), id_a);
     assert_eq!(a_body["height_cm"].as_i64().unwrap(), 160);
-    assert_eq!(a_body["goals"].as_array().unwrap(), &vec![json!("lose_fat")]);
+    assert_eq!(
+        a_body["goals"].as_array().unwrap(),
+        &vec![json!("lose_fat")]
+    );
 
     // B's row is untouched by A's write.
     let get_b = get_with_auth(&app, "/profile/me", Some(&bearer(&token_b))).await;

@@ -12,6 +12,7 @@ pub mod auth;
 pub mod db;
 pub mod error;
 mod health;
+pub mod profile;
 
 use std::{sync::Arc, time::Duration};
 
@@ -37,5 +38,6 @@ pub fn app(state: AppState) -> Router {
     Router::new()
         .merge(health::router())
         .merge(auth::routes())
+        .merge(profile::routes())
         .with_state(state)
 }

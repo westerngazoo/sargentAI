@@ -719,7 +719,7 @@ pub(crate) struct ProfileResponse {
 }
 
 impl ProfileResponse {
-    fn from_profile(p: Profile, today: NaiveDate) -> Self {
+    fn from_profile(p: &Profile, today: NaiveDate) -> Self {
         Self {
             age: p.age_on(today),
             user_id: p.user_id,
@@ -749,7 +749,7 @@ pub(crate) async fn get_me(
         .await?
         .ok_or(ApiError::NotFound)?;
     let today = Utc::now().date_naive();
-    Ok(Json(ProfileResponse::from_profile(profile, today)))
+    Ok(Json(ProfileResponse::from_profile(&profile, today)))
 }
 
 pub(crate) async fn put_me(
@@ -772,7 +772,7 @@ pub(crate) async fn put_me(
 
     let (profile, inserted) = db::upsert_profile(&state.pool, user.user_id, &new).await?;
     let status = if inserted { StatusCode::CREATED } else { StatusCode::OK };
-    Ok((status, Json(ProfileResponse::from_profile(profile, today))))
+    Ok((status, Json(ProfileResponse::from_profile(&profile, today))))
 }
 ```
 

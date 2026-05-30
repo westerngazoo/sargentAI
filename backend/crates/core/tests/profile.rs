@@ -12,6 +12,9 @@
 //! that pins the two encodings together (SPEC-0003 §2.4).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+// Exact round-trip checks of values that pass through the newtypes unchanged
+// (no arithmetic) — `==` is the correct assertion here.
+#![allow(clippy::float_cmp)]
 
 use chrono::NaiveDate;
 use fitai_core::{
@@ -340,7 +343,13 @@ fn goal_controlled_set_is_exactly_the_five_canonical_strings() {
     .collect();
     assert_eq!(
         canonical,
-        vec!["lose_fat", "build_muscle", "recomp", "maintain", "gain_strength"]
+        vec![
+            "lose_fat",
+            "build_muscle",
+            "recomp",
+            "maintain",
+            "gain_strength"
+        ]
     );
 }
 
