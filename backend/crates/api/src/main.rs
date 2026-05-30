@@ -1,16 +1,38 @@
-//! fitai-api binary: bind, serve, shut down gracefully.
+//! fitai-api binary: load config, build pool, run migrations, serve.
 //!
 //! No `.unwrap()` / `.expect()`. Signal-handler install failures propagate
 //! via `?` (the same way port-bind failures do); the `ctrl_c` future's own
 //! `io::Result` is logged and shutdown proceeds (we'd rather shut down
 //! cleanly than abort the process on a `ctrl_c` handler hiccup).
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
+
+use sqlx::postgres::PgPoolOptions;
 use tokio::signal::ctrl_c;
+
+use fitai_api::{app, AppState};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
+
+    let db_url = std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL must be set")?;
+    let jwt_secret = std::env::var("JWT_SECRET").map_err(|_| "JWT_SECRET must be set")?;
+
+    let pool = PgPoolOptions::new()
+        .max_connections(8)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&db_url)
+        .await?;
+
+    sqlx::migrate!("../../migrations").run(&pool).await?;
+    tracing::info!("migrations up to date");
+
+    let state = AppState {
+        pool,
+        jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
+        jwt_ttl: Duration::from_hours(24),
+    };
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -23,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let shutdown = build_shutdown()?;
 
-    axum::serve(listener, fitai_api::app())
+    axum::serve(listener, app(state))
         .with_graceful_shutdown(shutdown)
         .await?;
 

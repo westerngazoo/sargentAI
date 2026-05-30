@@ -36,3 +36,4 @@ field. The build order across requirements and specs is in
 | Spec | Title | Realizes | Status |
 |------|-------|----------|--------|
 | [SPEC-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | R-0001 | Implemented |
+| [SPEC-0002](0002-user-authentication.md) | User authentication (JWT HS256, argon2id, Postgres, `crates/core/` introduced) | R-0002 | Accepted |

@@ -11,14 +11,32 @@
 
 #![allow(clippy::unwrap_used)]
 
+use std::{sync::Arc, time::Duration};
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
+use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
+
+use fitai_api::{app, AppState};
+
+/// Build an `AppState` with a *lazy* pool: the health route never touches the
+/// database, so `connect_lazy` lets these tests run without a live Postgres.
+fn health_app() -> axum::Router {
+    let pool = PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/fitai_health_test")
+        .unwrap();
+    app(AppState {
+        pool,
+        jwt_secret: Arc::from(b"health-test-secret".to_vec().into_boxed_slice()),
+        jwt_ttl: Duration::from_hours(24),
+    })
+}
 
 #[tokio::test]
 async fn health_returns_ok_via_router() {
-    let app = fitai_api::app();
+    let app = health_app();
 
     let response = app
         .oneshot(
@@ -43,7 +61,7 @@ async fn health_returns_ok_via_real_server() {
     let addr = listener.local_addr().unwrap();
 
     let server = tokio::spawn(async move {
-        axum::serve(listener, fitai_api::app()).await.unwrap();
+        axum::serve(listener, health_app()).await.unwrap();
     });
 
     let url = format!("http://{addr}/health");
