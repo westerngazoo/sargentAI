@@ -20,7 +20,11 @@ use crate::{
 
 #[derive(Debug, Deserialize, Validate)]
 pub(crate) struct AuthRequest {
-    #[validate(email)]
+    // Email format is *not* validated here: `core::Email::parse` is the single
+    // normalization+validation authority (it trims and lowercases), so gating
+    // the raw string with `#[validate(email)]` would reject a padded/mixed-case
+    // address before it could be normalized — breaking case-insensitive
+    // duplicate detection (SAC2).
     email: String,
     #[validate(length(min = 8))]
     password: String,
@@ -33,7 +37,7 @@ pub(crate) struct AuthRequest {
 fn body(req: Result<Json<AuthRequest>, JsonRejection>) -> ApiResult<AuthRequest> {
     let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
     req.validate()
-        .map_err(|_| ApiError::Validation { field: "email" })?;
+        .map_err(|_| ApiError::Validation { field: "password" })?;
     Ok(req)
 }
 

@@ -119,7 +119,7 @@ distinguishing body or header. AC5 verifies all five branches.
 ### 2.4 Auth flow details
 
 - **Body extraction.** Both `register` and `login` extract the body as `Result<Json<AuthRequest>, JsonRejection>`; a serde deserialization failure (missing/empty `email` or `password`, malformed JSON) maps to `ApiError::Validation { field: "body" }` → 400. This is what makes the "no password → 400" case (SAC2) actually reach a 400 rather than axum's default extractor rejection.
-- **Register.** Validate `AuthRequest { email, password }` with `validator`'s `#[validate(email)]` + `length(min = 8)` on password. Normalize the email through the domain authority: `let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;` and persist `email.as_str()` — `core::Email` is the *single* normalization point (trim + lowercase), so handler and DB never disagree. Hash the password (`auth::password::hash`). `INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)` — on `unique_violation` map to `ApiError::AlreadyExists`. Return `201 { user_id }`.
+- **Register.** Validate `AuthRequest { email, password }` with `validator`'s `length(min = 8)` on the **password only** (mapped to `ApiError::Validation { field: "password" }` → 400). The email is deliberately *not* gated by `#[validate(email)]`: `core::Email::parse` is the single email validation+normalization authority, and a raw `#[validate(email)]` would reject a padded/mixed-case address before normalization, breaking case-insensitive duplicate detection (SAC2). Normalize through the domain authority: `let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;` (a malformed address still yields 400 + `field: "email"`) and persist `email.as_str()` — `core::Email` is the *single* normalization point (trim + lowercase), so handler and DB never disagree. Hash the password (`auth::password::hash`). `INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)` — on `unique_violation` map to `ApiError::AlreadyExists`. Return `201 { user_id }`.
 - **Login.** Normalize the lookup email via `Email::parse` (same authority), look up by `email.as_str()`. If `None`, hash the supplied password anyway (best-effort timing-equalization against email-enumeration timing leaks — *not* a hard constant-time guarantee; rate-limiting is the real defence and is deferred) then return `Unauthorized`. If `Some(row)`, `auth::password::verify` against `row.password_hash`. On match, `auth::token::encode` returns `(token, exp)`; report that exact `exp` as `expires_at` and return `200 { token, user_id, expires_at }`. On mismatch, return `Unauthorized`.
 - **Me.** Extractor → handler returns `Json({ user_id })`. Eight lines including imports.
 
@@ -165,7 +165,7 @@ Added to `backend/Cargo.toml` `[workspace.dependencies]`:
 | `serde` | `1` | DTO derives; features `derive` |
 | `serde_json` | `1` | response bodies |
 | `thiserror` | `2` | `ApiError` derive |
-| `validator` | `0.20` | `#[validate(email)]` + `length(min)` |
+| `validator` | `0.20` | `length(min)` on password (email is validated by `core::Email::parse`) |
 | `eyre` | `0.6` | `ApiError::Internal(eyre::Report)` |
 | `tracing-test` | `0.2` (dev) | log-capture assertions for AC6 (no plaintext passwords in tracing output) |
 
@@ -295,10 +295,11 @@ impl std::fmt::Display for UserId {
     }
 }
 
-/// Email newtype with a validating constructor. The format is checked by
-/// the `validator` crate at the handler boundary; this type guarantees
-/// "well-formed at construction" so downstream code can rely on the
-/// invariant without re-validating.
+/// Email newtype with a validating constructor. `parse` is the single email
+/// validation+normalization authority on both the write and lookup paths; it
+/// trims, lowercases, and checks basic shape, so downstream code can rely on
+/// the "well-formed and normalized at construction" invariant without
+/// re-validating.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct Email(String);
@@ -309,9 +310,10 @@ pub struct EmailParseError;
 
 impl Email {
     /// Construct from a `&str`. Returns `EmailParseError` on a malformed
-    /// input. Trusts only basic shape: presence of `@` with non-empty
-    /// local + domain parts. Stricter checking is the `validator` crate's
-    /// job at the handler boundary.
+    /// input. Trims surrounding whitespace and lowercases, then checks basic
+    /// shape: presence of `@` with non-empty local + domain parts and a dot in
+    /// the domain. This is the only email gate — the handler does not also run
+    /// `#[validate(email)]`, which would reject a padded address pre-normalization.
     pub fn parse(raw: &str) -> Result<Self, EmailParseError> {
         let trimmed = raw.trim();
         let (local, domain) = trimmed.split_once('@').ok_or(EmailParseError)?;
@@ -673,7 +675,11 @@ use crate::{
 
 #[derive(Debug, Deserialize, Validate)]
 pub(crate) struct AuthRequest {
-    #[validate(email)]
+    // Email format is *not* validated here: `core::Email::parse` is the single
+    // normalization+validation authority (it trims and lowercases), so gating
+    // the raw string with `#[validate(email)]` would reject a padded/mixed-case
+    // address before it could be normalized — breaking case-insensitive
+    // duplicate detection (SAC2).
     email: String,
     #[validate(length(min = 8))]
     password: String,
@@ -685,7 +691,7 @@ pub(crate) struct AuthRequest {
 /// extractor before the handler runs, yielding the wrong status (SAC2).
 fn body(req: Result<Json<AuthRequest>, JsonRejection>) -> ApiResult<AuthRequest> {
     let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
-    req.validate().map_err(|_| ApiError::Validation { field: "email" })?;
+    req.validate().map_err(|_| ApiError::Validation { field: "password" })?;
     Ok(req)
 }
 
@@ -1129,9 +1135,11 @@ Each SAC maps back to an R-0002 AC; each becomes one or more `qa` agent tests.
 | 2026-05-30 | **Body extraction via `Result<Json<AuthRequest>, JsonRejection>` mapped to 400.** Email normalized through `core::Email::parse` on both write and lookup paths; DB persists `email.as_str()`. | Architect review (blocking finding 1 + major finding 3). The default `Json` extractor would reject a missing-`password` body before the handler runs, returning the wrong status for SAC2; routing all body rejections through `ApiError::Validation` fixes it. Single normalization authority prevents handler/DB email divergence. |
 | 2026-05-30 | **`token::encode` returns `(token, exp)`; handler reports the token's actual `exp` as `expires_at`.** Function renamed in prose to `decode_token` everywhere (was `decode` in §2.3). `User` drops `Deserialize` (it is never wire-parsed; `Email` has none). | Architect review (findings 2, 5, 7). Removes a sub-second `expires_at`/`exp` skew, fixes a prose/code name mismatch, and removes a non-compiling derive. |
 | 2026-05-30 | **Timing-defence wording softened to "best-effort timing-equalization", not "constant-time".** | Architect review (finding 6). `hash` and `verify` have different timings; rate-limiting (deferred) is the real defence. Honest wording avoids future misreading of the guarantee. |
+| 2026-05-30 | **Supersedes the 2026-05-29 "two-layer email defence": `#[validate(email)]` is dropped; `core::Email::parse` is the sole email validation+normalization gate.** Password-only `validate()` failures now map to `field: "password"`. | Step-7 CI surfaced a real conflict: the ingress `#[validate(email)]` rejected the padded/mixed-case `"  case@b.COM  "` with 400 *before* `Email::parse` could trim+lowercase it, so SAC2's case-insensitive-duplicate test got 400 instead of 409. The two layers disagreed; the single-authority direction (finding 4) wins. A malformed address still returns 400 + `field: "email"` via `Email::parse`. |
 
 ## Changelog
 
 - _2026-05-29 — created (Draft); decisions OQ1–OQ4 + 10 derived choices recorded. Pending `architect` agent review._
 - _2026-05-30 — revised per architect review (REQUEST CHANGES). Applied blocking fixes 1/2/7 (JsonRejection→400 body extraction, `decode_token` rename, `User` drops `Deserialize`), major fixes 3/4 (`core::Email` single normalization authority; fallible `into_user`), minor fixes 5/6 (`encode` returns `(token, exp)`; timing wording). Settled OQ-A1/A2/A3 in §5 + §7. Awaiting owner ratification to flip Accepted._
 - _2026-05-30 — step-5 implementation lockstep: §3 snippets patched to match the merged code under the pinned toolchain (Rust/clippy 1.95.0). auth internals dropped from `pub` to `pub(crate)` (`unreachable_pub`); `login` rewritten as a `let-else` guard (`clippy::single_match_else`); `password` maps the non-`std::error::Error` argon2 error via `eyre::eyre!` instead of `wrap_err`; `decode_token` sets `validation.leeway = 0`; `extractor` impl carries `#[async_trait]` (axum 0.7); `jwt_ttl` uses `Duration::from_hours(24)` (`duration_suboptimal_units`). No change to the §2 contract._
+- _2026-05-30 — step-7 CI fix: dropped `#[validate(email)]` so `core::Email::parse` is the sole email gate (the ingress validator rejected padded/mixed-case input before normalization, failing SAC2's case-insensitive duplicate test with 400 instead of 409). Password `validate()` failures now map to `field: "password"`. Updated §2 register prose, the `Email` type docs, the dependency table, and the decision log (supersedes the 2026-05-29 two-layer decision)._
