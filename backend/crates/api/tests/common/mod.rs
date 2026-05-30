@@ -77,6 +77,26 @@ pub async fn get_with_auth(app: &Router, path: &str, auth: Option<&str>) -> Resp
         .unwrap()
 }
 
+/// PUT a JSON body to `path` with an optional raw `Authorization` header value.
+pub async fn put_json_with_auth(
+    app: &Router,
+    path: &str,
+    auth: Option<&str>,
+    body: Value,
+) -> Response<Body> {
+    let mut builder = Request::builder()
+        .method("PUT")
+        .uri(path)
+        .header("content-type", "application/json");
+    if let Some(value) = auth {
+        builder = builder.header("authorization", value);
+    }
+    app.clone()
+        .oneshot(builder.body(Body::from(body.to_string())).unwrap())
+        .await
+        .unwrap()
+}
+
 /// Drain a response body into raw bytes.
 pub async fn body_bytes(resp: Response<Body>) -> Vec<u8> {
     resp.into_body()
@@ -111,4 +131,27 @@ pub async fn register_user(app: &Router, email: &str, password: &str) -> String 
         .as_str()
         .expect("register response must carry a string user_id")
         .to_string()
+}
+
+/// Register a user and log in, returning `(user_id, bearer_token)`. Convenience
+/// for tests that need an authenticated caller — including the cross-user
+/// isolation case, which mints two distinct callers.
+pub async fn register_and_token(app: &Router, email: &str, password: &str) -> (String, String) {
+    let user_id = register_user(app, email, password).await;
+    let login = post_json(
+        app,
+        "/auth/login",
+        serde_json::json!({ "email": email, "password": password }),
+    )
+    .await;
+    assert_eq!(
+        login.status(),
+        axum::http::StatusCode::OK,
+        "seed login expected 200"
+    );
+    let token = body_json(login).await["token"]
+        .as_str()
+        .expect("login response must carry a string token")
+        .to_string();
+    (user_id, token)
 }
