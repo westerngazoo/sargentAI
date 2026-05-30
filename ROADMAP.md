@@ -33,7 +33,7 @@ authenticated against a real backend.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
-| R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | In progress |
+| R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Done |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 
 ### M2 — Logging core
@@ -129,11 +129,13 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0002 — User authentication** is in step 3 (Test plan). Requirement is
-Accepted (AC1–AC8, OQ1–OQ4 settled); `SPEC-0002` is **Accepted** — the
-2026-05-30 architect review settled OQ-A1 (fallible `into_user`, no DB
-`CHECK`), OQ-A2 (defer `cargo-deny`, record a trigger), and OQ-A3 (drop the
-redundant `users_email_idx`), and all blocking findings were patched into the
-spec. Next: the `qa` agent derives unit + e2e cases from SAC1–SAC8 and writes
-the failing (red) test suite before any implementation. No code, migrations, or
-auth tests exist on the branch yet.
+**R-0002 — User authentication** is **Done** — the full eight-step loop
+completed and it merged to `main` via PR #2 (merge commit `36bdf73`) on
+2026-05-30: architect review APPROVE, `qa` sign-off PASS, all CI gates green.
+Requirement is `Met`; `SPEC-0002` is `Implemented`.
+
+Next up is **R-0003 — User profile CRUD** (age, height, weight, goals, body
+stats), still `Backlog`. Its dependency (R-0002) is now `Done`, so it is
+unblocked. The first loop step is **step 1 (Discuss)**: owner + Claude agree the
+capability and acceptance criteria, then write `requirements/0003-user-profile.md`
+from the template and move it to `Accepted` before any spec is drafted.
