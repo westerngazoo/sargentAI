@@ -63,7 +63,10 @@ fn parse_rejects_empty_domain() {
 
 #[test]
 fn parse_rejects_domain_without_dot() {
-    assert!(matches!(Email::parse("alice@localhost"), Err(EmailParseError)));
+    assert!(matches!(
+        Email::parse("alice@localhost"),
+        Err(EmailParseError)
+    ));
 }
 
 #[test]

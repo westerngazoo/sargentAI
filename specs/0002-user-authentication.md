@@ -438,7 +438,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         pool,
         jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
-        jwt_ttl: Duration::from_secs(60 * 60 * 24),  // 24 h
+        jwt_ttl: Duration::from_hours(24),
     };
 
     let port: u16 = std::env::var("PORT")
@@ -672,7 +672,7 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize, Validate)]
-pub struct AuthRequest {
+pub(crate) struct AuthRequest {
     #[validate(email)]
     email: String,
     #[validate(length(min = 8))]
@@ -690,23 +690,23 @@ fn body(req: Result<Json<AuthRequest>, JsonRejection>) -> ApiResult<AuthRequest>
 }
 
 #[derive(Debug, Serialize)]
-pub struct RegisterResponse {
+pub(crate) struct RegisterResponse {
     user_id: UserId,
 }
 
 #[derive(Debug, Serialize)]
-pub struct LoginResponse {
+pub(crate) struct LoginResponse {
     token: String,
     user_id: UserId,
     expires_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct MeResponse {
+pub(crate) struct MeResponse {
     user_id: UserId,
 }
 
-pub async fn register(
+pub(crate) async fn register(
     State(state): State<AppState>,
     req: Result<Json<AuthRequest>, JsonRejection>,
 ) -> ApiResult<(StatusCode, Json<RegisterResponse>)> {
@@ -719,7 +719,7 @@ pub async fn register(
     Ok((StatusCode::CREATED, Json(RegisterResponse { user_id })))
 }
 
-pub async fn login(
+pub(crate) async fn login(
     State(state): State<AppState>,
     req: Result<Json<AuthRequest>, JsonRejection>,
 ) -> ApiResult<Json<LoginResponse>> {
@@ -728,31 +728,27 @@ pub async fn login(
 
     let lookup = db::find_row_by_email(&state.pool, email.as_str()).await?;
 
-    match lookup {
-        Some(row) => {
-            if password::verify(&req.password, &row.password_hash).is_ok() {
-                let user_id = UserId(row.id);
-                let (token, expires_at) =
-                    token::encode(user_id, state.jwt_ttl, &state.jwt_secret)
-                        .map_err(ApiError::Internal)?;
-                Ok(Json(LoginResponse { token, user_id, expires_at }))
-            } else {
-                Err(ApiError::Unauthorized)
-            }
-        }
-        None => {
-            // Best-effort timing-equalization: hash the supplied password even
-            // when the email is unknown, so response latency doesn't leak
-            // account existence. Not a hard constant-time guarantee — `hash`
-            // (salt-gen + derive) and `verify` (PHC-parse + derive) differ;
-            // rate-limiting is the real defence (deferred, see §4).
-            let _ = password::hash(&req.password);
-            Err(ApiError::Unauthorized)
-        }
+    let Some(row) = lookup else {
+        // Best-effort timing-equalization: hash the supplied password even when
+        // the email is unknown, so response latency doesn't leak account
+        // existence. Not a hard constant-time guarantee — `hash` (salt-gen +
+        // derive) and `verify` (PHC-parse + derive) differ; rate-limiting is
+        // the real defence (deferred, see §4).
+        let _ = password::hash(&req.password);
+        return Err(ApiError::Unauthorized);
+    };
+
+    if password::verify(&req.password, &row.password_hash).is_err() {
+        return Err(ApiError::Unauthorized);
     }
+
+    let user_id = UserId(row.id);
+    let (token, expires_at) =
+        token::encode(user_id, state.jwt_ttl, &state.jwt_secret).map_err(ApiError::Internal)?;
+    Ok(Json(LoginResponse { token, user_id, expires_at }))
 }
 
-pub async fn me(user: AuthenticatedUser) -> Json<MeResponse> {
+pub(crate) async fn me(user: AuthenticatedUser) -> Json<MeResponse> {
     Json(MeResponse { user_id: user.user_id })
 }
 ```
@@ -766,27 +762,30 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use eyre::WrapErr;
+
+// `argon2::password_hash::Error` does not implement `std::error::Error`, so it
+// can't flow through `eyre`'s `wrap_err`/`?`; we map it to an `eyre::Report`
+// via its `Display`.
 
 /// Hash a plaintext password using argon2id with default parameters and a
 /// fresh per-password salt. Returns the PHC string (`$argon2id$v=19$…`).
-pub fn hash(plain: &str) -> eyre::Result<String> {
+pub(crate) fn hash(plain: &str) -> eyre::Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon = Argon2::default();
     let hash = argon
         .hash_password(plain.as_bytes(), &salt)
-        .wrap_err("argon2 hash")?
+        .map_err(|e| eyre::eyre!("argon2 hash: {e}"))?
         .to_string();
     Ok(hash)
 }
 
 /// Verify a plaintext password against a stored PHC string.
 /// Returns `Ok(())` on match, `Err` on mismatch or malformed hash.
-pub fn verify(plain: &str, phc: &str) -> eyre::Result<()> {
-    let parsed = PasswordHash::new(phc).wrap_err("parse PHC hash")?;
+pub(crate) fn verify(plain: &str, phc: &str) -> eyre::Result<()> {
+    let parsed = PasswordHash::new(phc).map_err(|e| eyre::eyre!("parse PHC hash: {e}"))?;
     Argon2::default()
         .verify_password(plain.as_bytes(), &parsed)
-        .wrap_err("argon2 verify")?;
+        .map_err(|e| eyre::eyre!("argon2 verify: {e}"))?;
     Ok(())
 }
 ```
@@ -805,19 +804,19 @@ use serde::{Deserialize, Serialize};
 use fitai_core::UserId;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
+pub(crate) struct Claims {
     /// User id as a string (Uuid).
-    pub sub: String,
+    pub(crate) sub: String,
     /// Issued-at, seconds since epoch.
-    pub iat: i64,
+    pub(crate) iat: i64,
     /// Expiry, seconds since epoch.
-    pub exp: i64,
+    pub(crate) exp: i64,
 }
 
 /// Encode an HS256 JWT for `user_id` valid for `ttl`. Returns the token **and**
 /// the exact `exp` instant it carries, so callers report the token's real
 /// expiry rather than recomputing `now + ttl` from a second clock read.
-pub fn encode(
+pub(crate) fn encode(
     user_id: UserId,
     ttl: Duration,
     secret: &[u8],
@@ -837,12 +836,13 @@ pub fn encode(
     Ok((token, expires_at))
 }
 
-pub fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
-    let data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret),
-        &Validation::default(),  // HS256 + exp check
-    )?;
+/// Decode and validate an HS256 JWT with **zero leeway** — a token is rejected
+/// the moment it expires, rather than `Validation::default()`'s 60-second grace
+/// window (which would let SAC5(d)'s already-expired token still authenticate).
+pub(crate) fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
+    let mut validation = Validation::default(); // HS256 + exp check
+    validation.leeway = 0;
+    let data = decode::<Claims>(token, &DecodingKey::from_secret(secret), &validation)?;
     Ok(data.claims)
 }
 ```
@@ -853,6 +853,7 @@ pub fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
 //! `AuthenticatedUser` extractor — turns a Bearer header into a user id.
 
 use axum::{
+    async_trait,
     extract::FromRequestParts,
     http::{header::AUTHORIZATION, request::Parts},
 };
@@ -860,21 +861,23 @@ use uuid::Uuid;
 
 use fitai_core::UserId;
 
-use crate::{
-    auth::token,
-    db,
-    error::ApiError,
-    AppState,
-};
+use crate::{auth::token, db, error::ApiError, AppState};
 
 pub struct AuthenticatedUser {
     pub user_id: UserId,
 }
 
+// axum 0.7's `FromRequestParts` is still an `#[async_trait]` trait (native
+// `async fn` in traits is an axum 0.8 change), so the impl must carry the
+// attribute or it fails to satisfy the trait's lifetime bounds.
+#[async_trait]
 impl FromRequestParts<AppState> for AuthenticatedUser {
     type Rejection = ApiError;
 
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let header = parts
             .headers
             .get(AUTHORIZATION)
@@ -1131,3 +1134,4 @@ Each SAC maps back to an R-0002 AC; each becomes one or more `qa` agent tests.
 
 - _2026-05-29 — created (Draft); decisions OQ1–OQ4 + 10 derived choices recorded. Pending `architect` agent review._
 - _2026-05-30 — revised per architect review (REQUEST CHANGES). Applied blocking fixes 1/2/7 (JsonRejection→400 body extraction, `decode_token` rename, `User` drops `Deserialize`), major fixes 3/4 (`core::Email` single normalization authority; fallible `into_user`), minor fixes 5/6 (`encode` returns `(token, exp)`; timing wording). Settled OQ-A1/A2/A3 in §5 + §7. Awaiting owner ratification to flip Accepted._
+- _2026-05-30 — step-5 implementation lockstep: §3 snippets patched to match the merged code under the pinned toolchain (Rust/clippy 1.95.0). auth internals dropped from `pub` to `pub(crate)` (`unreachable_pub`); `login` rewritten as a `let-else` guard (`clippy::single_match_else`); `password` maps the non-`std::error::Error` argon2 error via `eyre::eyre!` instead of `wrap_err`; `decode_token` sets `validation.leeway = 0`; `extractor` impl carries `#[async_trait]` (axum 0.7); `jwt_ttl` uses `Duration::from_hours(24)` (`duration_suboptimal_units`). No change to the §2 contract._

@@ -5,7 +5,13 @@
 //! a known `JWT_SECRET` and a caller-chosen token TTL (so a test can mint an
 //! already-expired token by passing `Duration::ZERO`).
 
-#![allow(dead_code, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+#![allow(
+    dead_code,
+    unreachable_pub,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic
+)]
 
 use std::{sync::Arc, time::Duration};
 
@@ -26,7 +32,7 @@ use fitai_api::{app, AppState};
 pub const TEST_SECRET: &[u8] = b"qa-test-secret-r0002";
 
 /// 24h, the production TTL — used by every test except the expiry case.
-pub const TTL_24H: Duration = Duration::from_secs(60 * 60 * 24);
+pub const TTL_24H: Duration = Duration::from_hours(24);
 
 /// Build a router over the supplied pool with the canonical test secret and a
 /// chosen TTL.
@@ -73,7 +79,12 @@ pub async fn get_with_auth(app: &Router, path: &str, auth: Option<&str>) -> Resp
 
 /// Drain a response body into raw bytes.
 pub async fn body_bytes(resp: Response<Body>) -> Vec<u8> {
-    resp.into_body().collect().await.unwrap().to_bytes().to_vec()
+    resp.into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes()
+        .to_vec()
 }
 
 /// Drain a response body and parse it as JSON.

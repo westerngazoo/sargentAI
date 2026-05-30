@@ -5,7 +5,7 @@
 //! duration of the test; `logs_assert` inspects everything emitted while the
 //! register path runs with a recognisable password.
 //!
-//! The argon2 PHC hash and the user_id MAY appear; the literal plaintext
+//! The argon2 PHC hash and the `user_id` MAY appear; the literal plaintext
 //! password MUST NOT.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
@@ -38,7 +38,9 @@ async fn register_does_not_log_plaintext_password(pool: PgPool) {
     logs_assert(|lines: &[&str]| {
         for line in lines {
             if line.contains(RECOGNISABLE_PW) {
-                return Err(format!("tracing output leaked the plaintext password: {line}"));
+                return Err(format!(
+                    "tracing output leaked the plaintext password: {line}"
+                ));
             }
         }
         Ok(())
@@ -71,7 +73,9 @@ async fn failed_login_does_not_log_plaintext_password(pool: PgPool) {
     logs_assert(|lines: &[&str]| {
         for line in lines {
             if line.contains(RECOGNISABLE_PW) {
-                return Err(format!("tracing output leaked the plaintext password: {line}"));
+                return Err(format!(
+                    "tracing output leaked the plaintext password: {line}"
+                ));
             }
         }
         Ok(())

@@ -38,7 +38,10 @@ async fn me_expired_token_unauthorized(pool: PgPool) {
     )
     .await;
     assert_eq!(login.status(), StatusCode::OK);
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let resp = get_with_auth(&app, "/auth/me", Some(&format!("Bearer {token}"))).await;
 

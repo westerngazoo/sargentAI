@@ -29,7 +29,7 @@ use sqlx::{PgPool, Row};
 // SAC1 → AC1: migration / users table shape.
 // ---------------------------------------------------------------------------
 
-/// SAC1: the migration runs (sqlx::test applied it) and the `users` table has
+/// SAC1: the migration runs (`sqlx::test` applied it) and the `users` table has
 /// the four expected columns with the expected nullability.
 #[sqlx::test(migrations = "../../migrations")]
 async fn migration_creates_users_table_with_expected_columns(pool: PgPool) {
@@ -116,7 +116,11 @@ async fn register_success_persists_argon2id_hash(pool: PgPool) {
         .fetch_all(&pool)
         .await
         .unwrap();
-    assert_eq!(row.len(), 1, "exactly one user row must exist after register");
+    assert_eq!(
+        row.len(),
+        1,
+        "exactly one user row must exist after register"
+    );
     let hash: String = row[0].get("password_hash");
     assert!(
         hash.starts_with("$argon2id$"),
@@ -185,7 +189,7 @@ async fn register_bad_email_is_bad_request(pool: PgPool) {
     );
 }
 
-/// SAC2: missing `password` field returns 400 (mapped via JsonRejection, not
+/// SAC2: missing `password` field returns 400 (mapped via `JsonRejection`, not
 /// axum's default extractor rejection).
 #[sqlx::test(migrations = "../../migrations")]
 async fn register_missing_password_is_bad_request(pool: PgPool) {
@@ -195,7 +199,8 @@ async fn register_missing_password_is_bad_request(pool: PgPool) {
 
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
-        body_json(resp).await["error"], "validation",
+        body_json(resp).await["error"],
+        "validation",
         "missing field must surface as a validation error, not a 422 rejection"
     );
 }
@@ -235,7 +240,7 @@ async fn register_short_password_is_bad_request(pool: PgPool) {
 // ---------------------------------------------------------------------------
 
 /// SAC3: valid credentials return 200 + a non-empty token, the matching
-/// user_id, and `expires_at` ≈ now + 24h (± 5 s).
+/// `user_id`, and `expires_at` ≈ now + 24h (± 5 s).
 #[sqlx::test(migrations = "../../migrations")]
 async fn login_success_returns_token(pool: PgPool) {
     let app = build_app(pool);
@@ -335,7 +340,10 @@ async fn me_with_valid_token_succeeds(pool: PgPool) {
         json!({ "email": "me@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let resp = get_with_auth(&app, "/auth/me", Some(&format!("Bearer {token}"))).await;
 
@@ -366,7 +374,10 @@ async fn me_wrong_scheme_unauthorized(pool: PgPool) {
         json!({ "email": "scheme@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let resp = get_with_auth(&app, "/auth/me", Some(&format!("Token {token}"))).await;
 
@@ -385,7 +396,10 @@ async fn me_tampered_signature_unauthorized(pool: PgPool) {
         json!({ "email": "tamper@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Flip the final character of the signature segment.
     let last = token.chars().last().unwrap();
@@ -413,7 +427,10 @@ async fn me_unknown_subject_unauthorized(pool: PgPool) {
         json!({ "email": "ghost@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(uuid::Uuid::parse_str(&user_id).unwrap())
@@ -458,7 +475,10 @@ async fn issued_token_carries_expected_claims(pool: PgPool) {
         json!({ "email": "claims@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let data = decode::<Claims>(
         &token,
@@ -482,7 +502,10 @@ async fn issued_token_rejects_wrong_secret(pool: PgPool) {
     use jsonwebtoken::{decode, errors::ErrorKind, DecodingKey, Validation};
     use serde::Deserialize;
 
-    #[derive(Deserialize)]
+    // Debug: `expect_err` prints the Ok value on failure. allow(dead_code):
+    // this test only asserts the decode error, so the claim fields are unread.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
     struct Claims {
         sub: String,
         iat: i64,
@@ -498,7 +521,10 @@ async fn issued_token_rejects_wrong_secret(pool: PgPool) {
         json!({ "email": "sig@b.com", "password": "8charsmin" }),
     )
     .await;
-    let token = body_json(login).await["token"].as_str().unwrap().to_string();
+    let token = body_json(login).await["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     let err = decode::<Claims>(
         &token,
