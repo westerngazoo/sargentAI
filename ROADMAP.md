@@ -33,7 +33,7 @@ authenticated against a real backend.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
-| R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Discussing |
+| R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | In progress |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
 
 ### M2 — Logging core
@@ -129,8 +129,11 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0002 — User authentication** is in step 1 (Discussing). Scope agreed
-(JWT HS256, 24h, argon2id, Postgres + sqlx introduced, OAuth2 deferred);
-draft requirement at `requirements/0002-user-authentication.md`; OQ1–OQ4
-settled. Pending owner ack of the 8 acceptance criteria → flip to Accepted
-and begin SPEC-0002.
+**R-0002 — User authentication** is in step 3 (Test plan). Requirement is
+Accepted (AC1–AC8, OQ1–OQ4 settled); `SPEC-0002` is **Accepted** — the
+2026-05-30 architect review settled OQ-A1 (fallible `into_user`, no DB
+`CHECK`), OQ-A2 (defer `cargo-deny`, record a trigger), and OQ-A3 (drop the
+redundant `users_email_idx`), and all blocking findings were patched into the
+spec. Next: the `qa` agent derives unit + e2e cases from SAC1–SAC8 and writes
+the failing (red) test suite before any implementation. No code, migrations, or
+auth tests exist on the branch yet.

@@ -1,6 +1,6 @@
 # SPEC-0002 — User authentication
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Realizes:** R-0002
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-29
@@ -70,9 +70,9 @@ domain invariants like `EmailParseError`). Persistence lives in `api::db`.
 This keeps `password_hash` out of `core::User`: that field is a *persistence
 detail* (how we authenticate), not a *domain fact* (the user has a password,
 yes, but `core` doesn't need to know its representation). `api::db::UserRow`
-carries `password_hash`; the `From<UserRow>` impl strips it when producing
-`core::User`. Smaller code-paths see the hash → smaller AC6 (no-plaintext-in-
-logs) audit surface.
+carries `password_hash`; the fallible `UserRow::into_user` conversion strips it
+when producing `core::User`. Smaller code-paths see the hash → smaller AC6
+(no-plaintext-in-logs) audit surface.
 
 ### 2.3 Application state, error type, extractor
 
@@ -109,7 +109,7 @@ pub fn app(state: AppState) -> Router {
 
 1. Read `Authorization` header → `Err → ApiError::Unauthorized`.
 2. Strip `Bearer ` prefix → on mismatch, `Unauthorized`.
-3. `auth::token::decode(token, &state.jwt_secret)` → on any error, `Unauthorized`.
+3. `auth::token::decode_token(token, &state.jwt_secret)` → on any error, `Unauthorized`.
 4. Parse `claims.sub` as `Uuid` → on failure, `Unauthorized`.
 5. `db::find_user_by_id(&state.pool, user_id)` → `None` ⇒ `Unauthorized`; `Some(user)` ⇒ `Ok(AuthenticatedUser { user_id })`.
 
@@ -118,8 +118,9 @@ distinguishing body or header. AC5 verifies all five branches.
 
 ### 2.4 Auth flow details
 
-- **Register.** Validate `RegisterRequest { email, password }` with `validator`'s `#[validate(email)]` + `length(min = 8)` on password. Hash the password (`auth::password::hash`). `INSERT INTO users (id, email, password_hash) VALUES (gen_random_uuid(), $1, $2) RETURNING id` — on `unique_violation` map to `ApiError::AlreadyExists`. Return `201 { user_id }`.
-- **Login.** Look up by email. If `None`, hash the supplied password anyway (constant-time defence against email enumeration timing leaks) then return `Unauthorized`. If `Some(row)`, `auth::password::verify` against `row.password_hash`. On match, `auth::token::encode(claims)` and return `200 { token, user_id, expires_at }`. On mismatch, return `Unauthorized`.
+- **Body extraction.** Both `register` and `login` extract the body as `Result<Json<AuthRequest>, JsonRejection>`; a serde deserialization failure (missing/empty `email` or `password`, malformed JSON) maps to `ApiError::Validation { field: "body" }` → 400. This is what makes the "no password → 400" case (SAC2) actually reach a 400 rather than axum's default extractor rejection.
+- **Register.** Validate `AuthRequest { email, password }` with `validator`'s `#[validate(email)]` + `length(min = 8)` on password. Normalize the email through the domain authority: `let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;` and persist `email.as_str()` — `core::Email` is the *single* normalization point (trim + lowercase), so handler and DB never disagree. Hash the password (`auth::password::hash`). `INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3)` — on `unique_violation` map to `ApiError::AlreadyExists`. Return `201 { user_id }`.
+- **Login.** Normalize the lookup email via `Email::parse` (same authority), look up by `email.as_str()`. If `None`, hash the supplied password anyway (best-effort timing-equalization against email-enumeration timing leaks — *not* a hard constant-time guarantee; rate-limiting is the real defence and is deferred) then return `Unauthorized`. If `Some(row)`, `auth::password::verify` against `row.password_hash`. On match, `auth::token::encode` returns `(token, exp)`; report that exact `exp` as `expires_at` and return `200 { token, user_id, expires_at }`. On mismatch, return `Unauthorized`.
 - **Me.** Extractor → handler returns `Json({ user_id })`. Eight lines including imports.
 
 ### 2.5 Database lifecycle
@@ -193,13 +194,12 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE INDEX users_email_idx ON users (email);  -- redundant with UNIQUE constraint? UNIQUE creates an index, so this is dropped — note kept for review.
 ```
 
-> The trailing `CREATE INDEX` is redundant with the `UNIQUE` constraint (which
-> creates an index implicitly). It will be removed before commit; left here so
-> the architect review can confirm. *Decision recorded in §7.*
+> No separate index on `email`: the `UNIQUE` constraint already creates a
+> backing B-tree index, so a `CREATE INDEX users_email_idx` would be a pure
+> duplicate (write amplification, zero read benefit). Architect-confirmed
+> (OQ-A3). *Decision recorded in §7.*
 
 ### 3.2 `backend/Cargo.toml` — `[workspace.dependencies]` additions
 
@@ -334,8 +334,10 @@ impl std::fmt::Display for Email {
 }
 
 /// Domain `User`. Note: no `password_hash` field — that's a persistence
-/// detail kept in `fitai_api::db::UserRow`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+/// detail kept in `fitai_api::db::UserRow`. No `Deserialize`: `User` is only
+/// ever produced from a `UserRow` (DB), never parsed from the wire — and
+/// `Email` intentionally has no `Deserialize` (it must go through `parse`).
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct User {
     pub id: UserId,
     pub email: Email,
@@ -551,28 +553,27 @@ use crate::error::{ApiError, ApiResult};
 pub struct UserRow {
     pub id: Uuid,
     pub email: String,
-    pub password_hash: String,  // *never* leaves this module by accident
+    pub password_hash: String,  // only crosses the seam via find_row_by_email → login (verify needs it); into_user strips it everywhere else
     pub created_at: DateTime<Utc>,
 }
 
 impl UserRow {
-    pub fn into_user(self) -> User {
-        // Email::parse cannot fail on data we wrote — DB CHECK and
-        // application-side validation already enforced format. Falling
-        // back via `expect` would violate the lints; use a fresh Email
-        // constructed bypass: we know the invariant holds because we
-        // wrote it.
-        User {
+    /// Convert a persisted row into the domain `User`, stripping
+    /// `password_hash`. Fallible: a stored `email` that fails
+    /// `core::Email::parse` is data corruption (we only ever write
+    /// parsed-and-normalized emails), so surface it loudly as a 500 rather
+    /// than fabricating a placeholder identity. §6 (CLAUDE.md): aborting /
+    /// recovering-with-a-lie is wrong; a typed error is right.
+    pub fn into_user(self) -> ApiResult<User> {
+        let email = Email::parse(&self.email).map_err(|_| {
+            tracing::error!(user_id = %self.id, "stored email failed core::Email::parse — data corruption");
+            ApiError::Internal(eyre::eyre!("stored email failed domain validation"))
+        })?;
+        Ok(User {
             id: UserId(self.id),
-            email: Email::parse(&self.email).unwrap_or_else(|_| {
-                // unreachable in practice; if it happens, we've corrupted
-                // the DB and the rest of the system is in trouble too.
-                // Log and recover with a safe placeholder.
-                tracing::error!(email = %self.email, "row email failed core::Email::parse");
-                Email::parse("invalid@invalid.invalid").expect("hardcoded valid")
-            }),
+            email,
             created_at: self.created_at,
-        }
+        })
     }
 }
 
@@ -583,7 +584,7 @@ pub async fn find_user_by_id(pool: &PgPool, id: UserId) -> ApiResult<Option<User
     .bind(id.0)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(UserRow::into_user))
+    row.map(UserRow::into_user).transpose()
 }
 
 pub async fn find_row_by_email(pool: &PgPool, email: &str) -> ApiResult<Option<UserRow>> {
@@ -619,10 +620,10 @@ pub async fn insert_user(
 }
 ```
 
-> The `into_user` fallback path on email parse failure is awkward; the
-> architect should weigh in on whether the DB schema should add a `CHECK`
-> constraint (so this path truly is unreachable) and the parse can `expect`.
-> Recorded in §7 as an open architect question.
+> `into_user` is fallible by design (OQ-A1, architect-resolved): a row whose
+> `email` fails `core::Email::parse` is corruption and becomes a logged 500,
+> never a fabricated identity. No DB `CHECK` constraint — that would duplicate
+> validation in a drift-prone Postgres regex. *Recorded in §7.*
 
 ### 3.11 `backend/crates/api/src/auth/mod.rs`
 
@@ -656,12 +657,12 @@ pub fn routes() -> Router<AppState> {
 ```rust
 //! HTTP handlers for the auth endpoints.
 
-use axum::{extract::State, Json};
-use chrono::{Duration, Utc};
+use axum::{extract::rejection::JsonRejection, extract::State, http::StatusCode, Json};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use fitai_core::UserId;
+use fitai_core::{Email, UserId};
 
 use crate::{
     auth::{password, token, AuthenticatedUser},
@@ -678,6 +679,16 @@ pub struct AuthRequest {
     password: String,
 }
 
+/// Extract the JSON body, mapping any serde rejection (missing/empty field,
+/// malformed JSON, wrong content-type) to a 400 `Validation` error. Without
+/// this, a body that omits `password` would be rejected by axum's own `Json`
+/// extractor before the handler runs, yielding the wrong status (SAC2).
+fn body(req: Result<Json<AuthRequest>, JsonRejection>) -> ApiResult<AuthRequest> {
+    let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
+    req.validate().map_err(|_| ApiError::Validation { field: "email" })?;
+    Ok(req)
+}
+
 #[derive(Debug, Serialize)]
 pub struct RegisterResponse {
     user_id: UserId,
@@ -687,7 +698,7 @@ pub struct RegisterResponse {
 pub struct LoginResponse {
     token: String,
     user_id: UserId,
-    expires_at: chrono::DateTime<Utc>,
+    expires_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
@@ -697,45 +708,44 @@ pub struct MeResponse {
 
 pub async fn register(
     State(state): State<AppState>,
-    Json(req): Json<AuthRequest>,
-) -> ApiResult<(axum::http::StatusCode, Json<RegisterResponse>)> {
-    req.validate().map_err(|_| ApiError::Validation { field: "email" })?;
+    req: Result<Json<AuthRequest>, JsonRejection>,
+) -> ApiResult<(StatusCode, Json<RegisterResponse>)> {
+    let req = body(req)?;
+    let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;
 
     let hash = password::hash(&req.password).map_err(ApiError::Internal)?;
-    let user_id = db::insert_user(&state.pool, &req.email.to_ascii_lowercase(), &hash).await?;
+    let user_id = db::insert_user(&state.pool, email.as_str(), &hash).await?;
 
-    Ok((axum::http::StatusCode::CREATED, Json(RegisterResponse { user_id })))
+    Ok((StatusCode::CREATED, Json(RegisterResponse { user_id })))
 }
 
 pub async fn login(
     State(state): State<AppState>,
-    Json(req): Json<AuthRequest>,
+    req: Result<Json<AuthRequest>, JsonRejection>,
 ) -> ApiResult<Json<LoginResponse>> {
-    req.validate().map_err(|_| ApiError::Validation { field: "email" })?;
+    let req = body(req)?;
+    let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;
 
-    let lookup = db::find_row_by_email(&state.pool, &req.email.to_ascii_lowercase()).await?;
+    let lookup = db::find_row_by_email(&state.pool, email.as_str()).await?;
 
-    // Constant-time defence: hash the input password even when the email
-    // doesn't exist, so timing doesn't leak existence.
     match lookup {
         Some(row) => {
             if password::verify(&req.password, &row.password_hash).is_ok() {
                 let user_id = UserId(row.id);
-                let expires_at = Utc::now()
-                    + Duration::from_std(state.jwt_ttl).expect("ttl fits chrono::Duration");
-                let token = token::encode(user_id, state.jwt_ttl, &state.jwt_secret)
-                    .map_err(ApiError::Internal)?;
-                Ok(Json(LoginResponse {
-                    token,
-                    user_id,
-                    expires_at,
-                }))
+                let (token, expires_at) =
+                    token::encode(user_id, state.jwt_ttl, &state.jwt_secret)
+                        .map_err(ApiError::Internal)?;
+                Ok(Json(LoginResponse { token, user_id, expires_at }))
             } else {
                 Err(ApiError::Unauthorized)
             }
         }
         None => {
-            // Burn comparable time so register-vs-login timing matches.
+            // Best-effort timing-equalization: hash the supplied password even
+            // when the email is unknown, so response latency doesn't leak
+            // account existence. Not a hard constant-time guarantee — `hash`
+            // (salt-gen + derive) and `verify` (PHC-parse + derive) differ;
+            // rate-limiting is the real defence (deferred, see §4).
             let _ = password::hash(&req.password);
             Err(ApiError::Unauthorized)
         }
@@ -788,7 +798,7 @@ pub fn verify(plain: &str, phc: &str) -> eyre::Result<()> {
 
 use std::time::Duration;
 
-use chrono::Utc;
+use chrono::{DateTime, TimeZone, Utc};
 use jsonwebtoken::{decode, encode as jwt_encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
@@ -804,7 +814,14 @@ pub struct Claims {
     pub exp: i64,
 }
 
-pub fn encode(user_id: UserId, ttl: Duration, secret: &[u8]) -> eyre::Result<String> {
+/// Encode an HS256 JWT for `user_id` valid for `ttl`. Returns the token **and**
+/// the exact `exp` instant it carries, so callers report the token's real
+/// expiry rather than recomputing `now + ttl` from a second clock read.
+pub fn encode(
+    user_id: UserId,
+    ttl: Duration,
+    secret: &[u8],
+) -> eyre::Result<(String, DateTime<Utc>)> {
     let iat = Utc::now().timestamp();
     let exp = iat + i64::try_from(ttl.as_secs()).unwrap_or(i64::MAX);
     let claims = Claims {
@@ -813,7 +830,11 @@ pub fn encode(user_id: UserId, ttl: Duration, secret: &[u8]) -> eyre::Result<Str
         exp,
     };
     let token = jwt_encode(&Header::default(), &claims, &EncodingKey::from_secret(secret))?;
-    Ok(token)
+    let expires_at = Utc
+        .timestamp_opt(exp, 0)
+        .single()
+        .ok_or_else(|| eyre::eyre!("exp timestamp out of range"))?;
+    Ok((token, expires_at))
 }
 
 pub fn decode_token(token: &str, secret: &[u8]) -> eyre::Result<Claims> {
@@ -1051,11 +1072,12 @@ remain green.
 
 ## 5. Open questions
 
-For the **architect** review to settle:
+All three architect questions were settled in the 2026-05-30 architect review
+(resolutions in §7):
 
-- **OQ-A1.** `UserRow::into_user`'s fallback path on `Email::parse` failure: should the DB schema add a `CHECK` constraint that enforces format (so the path becomes truly unreachable and we can `expect`), or is the recover-and-log behaviour preferred? Currently the spec keeps the recover-and-log; a `CHECK` constraint would be cleaner but adds a migration concern. *Architect call.*
-- **OQ-A2.** Workspace lint setup for the new `fitai-core` crate — should we explicitly forbid `tokio` / `axum` / `sqlx` dependencies in `core` (perhaps via `cargo-deny`)? `cargo-deny` isn't in the project yet; the discipline is enforced socially today.
-- **OQ-A3.** The `users_email_idx` line in §3.1 is redundant with the `UNIQUE` constraint; planned to be removed before commit. Architect should confirm.
+- **OQ-A1 — *resolved*.** `UserRow::into_user` is made **fallible** (`-> ApiResult<User>`); a stored email that fails `core::Email::parse` is data corruption and becomes a logged `ApiError::Internal` (500), never a fabricated placeholder identity. **No** DB `CHECK` constraint — a Postgres regex would duplicate validation and drift from `validator` + `Email::parse`. (§3.10)
+- **OQ-A2 — *resolved*.** Do **not** add `cargo-deny` now (premature for one pure crate). Instead record a *trigger*: introduce `cargo-deny` with a `bans` section excluding async/web/db crates from `core` when a second `core`-consuming crate lands, or when `core` gains its first non-trivial dependency surface — whichever comes first. Until then the inward-dependency rule is architect-enforced.
+- **OQ-A3 — *resolved*, confirmed.** The redundant `users_email_idx` is removed from §3.1; the `UNIQUE` constraint already provides the backing index.
 
 For the **owner** to settle (none — all R-0002 OQ1–OQ4 already locked at requirement-discussion). Implementer mechanical choices (exact crate versions) are recorded at implementation time per §2.8.
 
@@ -1098,7 +1120,14 @@ Each SAC maps back to an R-0002 AC; each becomes one or more `qa` agent tests.
 | 2026-05-29 | **CI `JWT_SECRET = "ci-only-test-secret"`** committed in the workflow. Production `JWT_SECRET` is a secret-manager concern in R-0026. | Repo-public secret is harmless because the CI db is also ephemeral; tests need a stable secret to assert on token decoding. |
 | 2026-05-29 | **Architect questions OQ-A1 / OQ-A2 / OQ-A3 in §5 carried into the architect review** rather than pre-resolved by me. | These have real trade-offs and the architect's perspective on long-term invariants is exactly the point of the review. |
 | 2026-05-29 | **Lockstep snippet policy from SPEC-0001 §7 (architect finding #1) remains in force.** Any clippy-pedantic failures during implementation get patched in spec + impl together. | Same discipline as R-0001; the gate is project-wide, not per-spec. |
+| 2026-05-30 | **OQ-A1 resolved: `UserRow::into_user` is fallible (`-> ApiResult<User>`); corrupt stored email → logged `ApiError::Internal` (500). No DB `CHECK` constraint.** | Architect review. A fabricated placeholder identity violates §6 (surface errors, never recover-with-a-lie); a Postgres email regex would drift from `validator`/`Email::parse`. `core::Email` stays the single normalization authority. |
+| 2026-05-30 | **OQ-A2 resolved: no `cargo-deny` yet; record a trigger** — add it (with a `bans` section excluding async/web/db crates from `core`) when a second `core`-consuming crate lands or `core` gains its first non-trivial dependency. | Architect review. §2 "no premature anything": the guard is unneeded for one pure, architect-reviewed crate. |
+| 2026-05-30 | **OQ-A3 resolved: `users_email_idx` removed.** | Architect review. `UNIQUE` already creates the backing B-tree index; a separate index is pure write-amplification with no read benefit. |
+| 2026-05-30 | **Body extraction via `Result<Json<AuthRequest>, JsonRejection>` mapped to 400.** Email normalized through `core::Email::parse` on both write and lookup paths; DB persists `email.as_str()`. | Architect review (blocking finding 1 + major finding 3). The default `Json` extractor would reject a missing-`password` body before the handler runs, returning the wrong status for SAC2; routing all body rejections through `ApiError::Validation` fixes it. Single normalization authority prevents handler/DB email divergence. |
+| 2026-05-30 | **`token::encode` returns `(token, exp)`; handler reports the token's actual `exp` as `expires_at`.** Function renamed in prose to `decode_token` everywhere (was `decode` in §2.3). `User` drops `Deserialize` (it is never wire-parsed; `Email` has none). | Architect review (findings 2, 5, 7). Removes a sub-second `expires_at`/`exp` skew, fixes a prose/code name mismatch, and removes a non-compiling derive. |
+| 2026-05-30 | **Timing-defence wording softened to "best-effort timing-equalization", not "constant-time".** | Architect review (finding 6). `hash` and `verify` have different timings; rate-limiting (deferred) is the real defence. Honest wording avoids future misreading of the guarantee. |
 
 ## Changelog
 
 - _2026-05-29 — created (Draft); decisions OQ1–OQ4 + 10 derived choices recorded. Pending `architect` agent review._
+- _2026-05-30 — revised per architect review (REQUEST CHANGES). Applied blocking fixes 1/2/7 (JsonRejection→400 body extraction, `decode_token` rename, `User` drops `Deserialize`), major fixes 3/4 (`core::Email` single normalization authority; fallible `into_user`), minor fixes 5/6 (`encode` returns `(token, exp)`; timing wording). Settled OQ-A1/A2/A3 in §5 + §7. Awaiting owner ratification to flip Accepted._
