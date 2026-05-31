@@ -136,8 +136,21 @@ workout_sets`; free-text exercise name + optional `muscle_group` enum; full
 `/workouts` CRUD with full-replace `PUT` edit; `reps` required, `weight_kg`/
 `rpe` optional, RPE 6–10 step 0.5) and acked the twelve acceptance criteria
 (AC1–AC12). R-0004 opens **M2 — Logging core** and introduces the `crates/core`
-workout domain. Next is **step 2 (Spec)**: write `SPEC-0004` realizing AC1–AC12,
-then the `architect` agent reviews the design before the `qa` red suite.
+workout domain.
+
+Step 2 (Spec) completed 2026-05-31: `SPEC-0004` realizes AC1–AC12 (mapped 1:1 as
+SAC1–SAC12) and the `architect` agent reviewed the design — **APPROVE WITH
+NITS**. All five design open questions resolved: serialize the core read
+aggregate directly (OQ-C1), three batched queries + in-memory grouping with
+per-parent ordering and empty-id short-circuit (OQ-C2), server-assigned 0-based
+`position` (OQ-C3), transactional full-replace `PUT` with new child ids (OQ-C4),
+and the `parse_body` helper promoted to a new `crate::http` module (OQ-C5). The
+four nits were applied in lockstep; `SPEC-0004` is now `Accepted`. R-0004
+introduces the codebase's **first sqlx transaction** (atomic multi-table
+insert/replace) and first nested collection resource. Next is **step 3 (Test
+plan)**: the `qa` agent, scoped to R-0004, authors the red unit + e2e suite
+(≥14 `#[sqlx::test]` integration tests, incl. a partial-write rollback test)
+from AC1–AC12.
 
 Predecessor **R-0003 — User profile CRUD** is **Done** — the full eight-step
 loop completed and it merged to `main` via PR #3 (merge commit `cdf9f9e`) on
