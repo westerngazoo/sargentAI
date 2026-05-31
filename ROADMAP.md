@@ -42,7 +42,7 @@ Server-side persistence of every signal the model will eventually consume.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Backlog |
+| R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Accepted |
 | R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Backlog |
 | R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
 
@@ -129,16 +129,20 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0003 — User profile CRUD** is **Done** — the full eight-step loop
-completed and it merged to `main` via PR #3 (merge commit `cdf9f9e`) on
+**R-0004 — Workout log** is **Accepted** and in progress on branch
+`R-0004-workout-log`. Step 1 (Discuss) completed 2026-05-31: owner settled
+OQ1–OQ4 (normalized three-table schema `workout_sessions → workout_exercises →
+workout_sets`; free-text exercise name + optional `muscle_group` enum; full
+`/workouts` CRUD with full-replace `PUT` edit; `reps` required, `weight_kg`/
+`rpe` optional, RPE 6–10 step 0.5) and acked the twelve acceptance criteria
+(AC1–AC12). R-0004 opens **M2 — Logging core** and introduces the `crates/core`
+workout domain. Next is **step 2 (Spec)**: write `SPEC-0004` realizing AC1–AC12,
+then the `architect` agent reviews the design before the `qa` red suite.
+
+Predecessor **R-0003 — User profile CRUD** is **Done** — the full eight-step
+loop completed and it merged to `main` via PR #3 (merge commit `cdf9f9e`) on
 2026-05-30: architect APPROVE on both the design (step 2) and the
 implementation (step 6), `qa` sign-off PASS verifying all of AC1–AC9, and all
-CI gates green (rust fmt/clippy/test/build, docker build, mobile analyze/test).
-Requirement is `Met`; `SPEC-0003` is `Implemented`. With R-0001, R-0002, and
-R-0003 all `Done`, **M1 — Backend skeleton, auth, profile is fully complete**.
-
-Next per the sequencing rules is **M2 — Logging core**, beginning with
-**R-0004 — Workout log** (exercises, sets, reps, weight, RPE — model + REST
-endpoints), currently `Backlog`. Its dependency R-0003 is now `Done`, so R-0004
-may enter **step 1 (Discuss)**: owner + Claude agree the capability and its
-acceptance criteria, then write `requirements/0004-workout-log.md`.
+CI gates green. Requirement is `Met`; `SPEC-0003` is `Implemented`. With
+R-0001, R-0002, and R-0003 all `Done`, **M1 — Backend skeleton, auth, profile
+is fully complete**.
