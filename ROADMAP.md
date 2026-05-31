@@ -34,7 +34,7 @@ authenticated against a real backend.
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
 | R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Done |
-| R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Accepted |
+| R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Done |
 
 ### M2 — Logging core
 
@@ -129,15 +129,16 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0003 — User profile CRUD** is **Accepted** and in progress on branch
-`R-0003-user-profile`. Step 1 (Discuss) completed 2026-05-30: owner settled
-OQ1–OQ4 (metric-only units; multi-select goals enum; optional `sex`;
-`GET`+`PUT`-upsert on `/profile/me`) and acked the nine acceptance criteria
-(AC1–AC9). R-0003 introduces the `crates/core` profile domain types deferred
-from R-0002. Next is **step 2 (Spec)**: write `SPEC-0003` realizing AC1–AC9,
-then the `architect` agent reviews the design before the `qa` red suite.
+**R-0003 — User profile CRUD** is **Done** — the full eight-step loop
+completed and it merged to `main` via PR #3 (merge commit `cdf9f9e`) on
+2026-05-30: architect APPROVE on both the design (step 2) and the
+implementation (step 6), `qa` sign-off PASS verifying all of AC1–AC9, and all
+CI gates green (rust fmt/clippy/test/build, docker build, mobile analyze/test).
+Requirement is `Met`; `SPEC-0003` is `Implemented`. With R-0001, R-0002, and
+R-0003 all `Done`, **M1 — Backend skeleton, auth, profile is fully complete**.
 
-Predecessor **R-0002 — User authentication** is **Done** — the full
-eight-step loop completed and it merged to `main` via PR #2 (merge commit
-`36bdf73`) on 2026-05-30: architect APPROVE, `qa` sign-off PASS, all CI gates
-green. Requirement is `Met`; `SPEC-0002` is `Implemented`.
+Next per the sequencing rules is **M2 — Logging core**, beginning with
+**R-0004 — Workout log** (exercises, sets, reps, weight, RPE — model + REST
+endpoints), currently `Backlog`. Its dependency R-0003 is now `Done`, so R-0004
+may enter **step 1 (Discuss)**: owner + Claude agree the capability and its
+acceptance criteria, then write `requirements/0004-workout-log.md`.

@@ -37,4 +37,4 @@ field. The build order across requirements and specs is in
 |------|-------|----------|--------|
 | [SPEC-0001](0001-monorepo-scaffold.md) | Monorepo scaffold and CI gates | R-0001 | Implemented |
 | [SPEC-0002](0002-user-authentication.md) | User authentication (JWT HS256, argon2id, Postgres, `crates/core/` introduced) | R-0002 | Implemented |
-| [SPEC-0003](0003-user-profile.md) | User profile CRUD (1:1 `user_profiles`, GET/PUT `/profile/me`, core profile domain) | R-0003 | Accepted |
+| [SPEC-0003](0003-user-profile.md) | User profile CRUD (1:1 `user_profiles`, GET/PUT `/profile/me`, core profile domain) | R-0003 | Implemented |

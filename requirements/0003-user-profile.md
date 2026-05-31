@@ -1,6 +1,6 @@
 # R-0003 — User profile CRUD
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M1
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-30
@@ -183,3 +183,4 @@ Decisions made together (owner + Claude). Append-only.
 
 - _2026-05-30 — created (Draft); OQ1–OQ4 settled with owner the same day; five derived engineering decisions recorded._
 - _2026-05-30 — owner acked acceptance criteria; status → Accepted. SPEC-0003 may begin._
+- _2026-05-30 — full loop completed; merged to `main` via PR #3 (merge commit `cdf9f9e`). `qa` sign-off PASS over AC1–AC9, all CI gates green; status → Met._

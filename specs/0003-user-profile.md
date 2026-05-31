@@ -1,6 +1,6 @@
 # SPEC-0003 — User profile CRUD
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0003
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-30
@@ -856,3 +856,4 @@ Each SAC maps back to an R-0003 AC; each becomes one or more `qa` agent tests.
 
 - _2026-05-30 — created (Draft). OQ1–OQ4 + five derived calls inherited from the accepted R-0003. Four architect questions (OQ-B1..B4) raised for the design review._
 - _2026-05-30 — `architect` design review: **APPROVE WITH NITS** (one blocking finding). Applied in lockstep: blocking finding 1 (§3.7 direct `PgRow` read replaces `#[sqlx(flatten)]` `UpsertRow`); minor 3 (dropped dead `#[allow(clippy::too_many_arguments)]` on `NewProfile::new`, added its `# Errors` section); nits 8/9 (all public fallible fns carry proper `/// # Errors` sections; `NotFound` arm placed inside the existing `match &self`). Documented the request field-label asymmetry (§2.3) and the 404-vs-500 boundary (§2.5); made the §2.4 dual-encoding test exhaustive over all variants. OQ-B1..OQ-B4 resolved (§5). Status → **Accepted**; SPEC-0003 may proceed to step 3 (qa red suite)._
+- _2026-05-30 — implemented and merged to `main` via PR #3 (merge commit `cdf9f9e`); architect APPROVE on the implementation, `qa` PASS over SAC1–SAC9, all CI gates green. Status → **Implemented**._
