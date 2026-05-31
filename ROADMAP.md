@@ -34,7 +34,7 @@ authenticated against a real backend.
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
 | R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Done |
-| R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Backlog |
+| R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Accepted |
 
 ### M2 — Logging core
 
@@ -129,13 +129,15 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0002 — User authentication** is **Done** — the full eight-step loop
-completed and it merged to `main` via PR #2 (merge commit `36bdf73`) on
-2026-05-30: architect review APPROVE, `qa` sign-off PASS, all CI gates green.
-Requirement is `Met`; `SPEC-0002` is `Implemented`.
+**R-0003 — User profile CRUD** is **Accepted** and in progress on branch
+`R-0003-user-profile`. Step 1 (Discuss) completed 2026-05-30: owner settled
+OQ1–OQ4 (metric-only units; multi-select goals enum; optional `sex`;
+`GET`+`PUT`-upsert on `/profile/me`) and acked the nine acceptance criteria
+(AC1–AC9). R-0003 introduces the `crates/core` profile domain types deferred
+from R-0002. Next is **step 2 (Spec)**: write `SPEC-0003` realizing AC1–AC9,
+then the `architect` agent reviews the design before the `qa` red suite.
 
-Next up is **R-0003 — User profile CRUD** (age, height, weight, goals, body
-stats), still `Backlog`. Its dependency (R-0002) is now `Done`, so it is
-unblocked. The first loop step is **step 1 (Discuss)**: owner + Claude agree the
-capability and acceptance criteria, then write `requirements/0003-user-profile.md`
-from the template and move it to `Accepted` before any spec is drafted.
+Predecessor **R-0002 — User authentication** is **Done** — the full
+eight-step loop completed and it merged to `main` via PR #2 (merge commit
+`36bdf73`) on 2026-05-30: architect APPROVE, `qa` sign-off PASS, all CI gates
+green. Requirement is `Met`; `SPEC-0002` is `Implemented`.
