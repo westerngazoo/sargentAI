@@ -12,7 +12,9 @@ pub mod auth;
 pub mod db;
 pub mod error;
 mod health;
+pub(crate) mod http;
 pub mod profile;
+pub mod workout;
 
 use std::{sync::Arc, time::Duration};
 
@@ -39,5 +41,6 @@ pub fn app(state: AppState) -> Router {
         .merge(health::router())
         .merge(auth::routes())
         .merge(profile::routes())
+        .merge(workout::routes())
         .with_state(state)
 }

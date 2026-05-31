@@ -21,14 +21,16 @@
 #![allow(clippy::float_cmp)]
 // Test doc comments quote JSON/array literals as prose, not code.
 #![allow(clippy::doc_markdown)]
+// Small loop indices are cast to i64 to compare against JSON `as_i64()` values.
+#![allow(clippy::cast_possible_wrap)]
 
 mod common;
 
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use common::{
-    body_json, build_app, delete_with_auth, get_with_auth, post_json_with_auth,
-    put_json_with_auth, register_and_token,
+    body_json, build_app, delete_with_auth, get_with_auth, post_json_with_auth, put_json_with_auth,
+    register_and_token,
 };
 use serde_json::{json, Value};
 use sqlx::{PgPool, Row};
@@ -126,7 +128,11 @@ async fn migration_creates_workout_tables_with_expected_columns(pool: PgPool) {
         "workout_exercises must have exactly the five expected columns"
     );
     assert_eq!(
-        exercises.iter().find(|(n, _)| n == "muscle_group").unwrap().1,
+        exercises
+            .iter()
+            .find(|(n, _)| n == "muscle_group")
+            .unwrap()
+            .1,
         "YES",
         "muscle_group must be nullable"
     );
@@ -172,8 +178,16 @@ async fn deleting_user_cascades_to_sessions_exercises_sets(pool: PgPool) {
         .await
         .unwrap();
 
-    assert_eq!(count(&pool, "workout_sessions").await, 0, "sessions must cascade");
-    assert_eq!(count(&pool, "workout_exercises").await, 0, "exercises must cascade");
+    assert_eq!(
+        count(&pool, "workout_sessions").await,
+        0,
+        "sessions must cascade"
+    );
+    assert_eq!(
+        count(&pool, "workout_exercises").await,
+        0,
+        "exercises must cascade"
+    );
     assert_eq!(count(&pool, "workout_sets").await, 0, "sets must cascade");
 }
 
@@ -193,7 +207,11 @@ async fn deleting_session_cascades_to_exercises_sets(pool: PgPool) {
         .await
         .unwrap();
 
-    assert_eq!(count(&pool, "workout_exercises").await, 0, "exercises must cascade");
+    assert_eq!(
+        count(&pool, "workout_exercises").await,
+        0,
+        "exercises must cascade"
+    );
     assert_eq!(count(&pool, "workout_sets").await, 0, "sets must cascade");
 }
 
@@ -212,14 +230,22 @@ async fn post_creates_session_with_nested_ids_and_persists(pool: PgPool) {
     assert_eq!(resp.status(), StatusCode::CREATED);
     let body = body_json(resp).await;
 
-    assert_eq!(body["user_id"].as_str().unwrap(), user_id, "owned by the caller");
+    assert_eq!(
+        body["user_id"].as_str().unwrap(),
+        user_id,
+        "owned by the caller"
+    );
     assert!(
         body["id"].as_str().unwrap().parse::<uuid::Uuid>().is_ok(),
         "session id must be a server-generated UUID"
     );
     let exercise = &body["exercises"][0];
     assert!(
-        exercise["id"].as_str().unwrap().parse::<uuid::Uuid>().is_ok(),
+        exercise["id"]
+            .as_str()
+            .unwrap()
+            .parse::<uuid::Uuid>()
+            .is_ok(),
         "exercise id must be a server-generated UUID"
     );
     let set = &exercise["sets"][0];
@@ -235,7 +261,10 @@ async fn post_creates_session_with_nested_ids_and_persists(pool: PgPool) {
         .await
         .unwrap()
         .get("n");
-    assert_eq!(owned, 1, "the session must be persisted owned by the caller");
+    assert_eq!(
+        owned, 1,
+        "the session must be persisted owned by the caller"
+    );
     assert_eq!(count(&pool, "workout_exercises").await, 1);
     assert_eq!(count(&pool, "workout_sets").await, 2);
 }
@@ -279,7 +308,11 @@ async fn post_without_token_is_unauthorized(pool: PgPool) {
     let resp = post_json_with_auth(&app, "/workouts", None, valid_body()).await;
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-    assert_eq!(count(&pool, "workout_sessions").await, 0, "unauthorized POST writes nothing");
+    assert_eq!(
+        count(&pool, "workout_sessions").await,
+        0,
+        "unauthorized POST writes nothing"
+    );
 }
 
 // ===========================================================================
@@ -295,7 +328,11 @@ async fn list_when_empty_returns_empty_array(pool: PgPool) {
     let resp = get_with_auth(&app, "/workouts", Some(&bearer(&token))).await;
 
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(body_json(resp).await, json!([]), "no sessions -> empty array");
+    assert_eq!(
+        body_json(resp).await,
+        json!([]),
+        "no sessions -> empty array"
+    );
 }
 
 /// AC3: GET lists the caller's sessions ordered by performed_on descending
@@ -326,8 +363,16 @@ async fn list_returns_caller_sessions_newest_first_with_nested(pool: PgPool) {
     );
     assert_eq!(sessions[1]["performed_on"].as_str().unwrap(), "2026-05-01");
     // Nested data travels with the list element.
-    assert_eq!(sessions[0]["exercises"][0]["name"].as_str().unwrap(), "Deadlift");
-    assert_eq!(sessions[0]["exercises"][0]["sets"][0]["reps"].as_i64().unwrap(), 5);
+    assert_eq!(
+        sessions[0]["exercises"][0]["name"].as_str().unwrap(),
+        "Deadlift"
+    );
+    assert_eq!(
+        sessions[0]["exercises"][0]["sets"][0]["reps"]
+            .as_i64()
+            .unwrap(),
+        5
+    );
 }
 
 /// AC3: GET with no token -> 401.
@@ -354,11 +399,19 @@ async fn get_one_owned_returns_200_with_nested(pool: PgPool) {
     let created = post_json_with_auth(&app, "/workouts", Some(&bearer(&token)), valid_body()).await;
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
-    let resp = get_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token))).await;
+    let resp = get_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token)),
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::OK);
     let body = body_json(resp).await;
     assert_eq!(body["id"].as_str().unwrap(), session_id);
-    assert_eq!(body["exercises"][0]["name"].as_str().unwrap(), "Bench Press");
+    assert_eq!(
+        body["exercises"][0]["name"].as_str().unwrap(),
+        "Bench Press"
+    );
     assert_eq!(body["exercises"][0]["sets"].as_array().unwrap().len(), 2);
 }
 
@@ -383,12 +436,17 @@ async fn get_one_foreign_session_is_not_found(pool: PgPool) {
     let (_id_a, token_a) = register_and_token(&app, "ownerA@b.com", "8charsmin").await;
     let (_id_b, token_b) = register_and_token(&app, "intruderB@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
     // B asks for A's session — must look identical to a missing id.
-    let resp =
-        get_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token_b))).await;
+    let resp = get_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token_b)),
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
@@ -422,7 +480,12 @@ async fn response_carries_full_nested_shape_with_nullable_fields(pool: PgPool) {
     assert_eq!(created.status(), StatusCode::CREATED);
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
-    let resp = get_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token))).await;
+    let resp = get_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token)),
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::OK);
     let body = body_json(resp).await;
 
@@ -430,11 +493,19 @@ async fn response_carries_full_nested_shape_with_nullable_fields(pool: PgPool) {
     assert_eq!(body["user_id"].as_str().unwrap(), user_id);
     assert_eq!(body["performed_on"].as_str().unwrap(), "2026-05-01");
     assert!(
-        body["created_at"].as_str().unwrap().parse::<DateTime<Utc>>().is_ok(),
+        body["created_at"]
+            .as_str()
+            .unwrap()
+            .parse::<DateTime<Utc>>()
+            .is_ok(),
         "created_at must be an RFC3339 timestamp"
     );
     assert!(
-        body["updated_at"].as_str().unwrap().parse::<DateTime<Utc>>().is_ok(),
+        body["updated_at"]
+            .as_str()
+            .unwrap()
+            .parse::<DateTime<Utc>>()
+            .is_ok(),
         "updated_at must be an RFC3339 timestamp"
     );
 
@@ -442,7 +513,10 @@ async fn response_carries_full_nested_shape_with_nullable_fields(pool: PgPool) {
     let exercise = &body["exercises"][0];
     assert_eq!(exercise["position"].as_i64().unwrap(), 0);
     assert_eq!(exercise["name"].as_str().unwrap(), "Pull Up");
-    assert!(exercise["muscle_group"].is_null(), "omitted muscle_group must be null");
+    assert!(
+        exercise["muscle_group"].is_null(),
+        "omitted muscle_group must be null"
+    );
 
     // Set-level literal keys + nullable weight_kg/rpe.
     let set = &exercise["sets"][0];
@@ -471,7 +545,10 @@ async fn put_full_replace_returns_200_bumps_updated_at_new_child_ids(pool: PgPoo
     let created_at: DateTime<Utc> = first["created_at"].as_str().unwrap().parse().unwrap();
     let first_updated: DateTime<Utc> = first["updated_at"].as_str().unwrap().parse().unwrap();
     let old_exercise_id = first["exercises"][0]["id"].as_str().unwrap().to_string();
-    let old_set_id = first["exercises"][0]["sets"][0]["id"].as_str().unwrap().to_string();
+    let old_set_id = first["exercises"][0]["sets"][0]["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
 
     // Replace with a different shape (a single new exercise/set, new date).
     let replacement = json!({
@@ -489,12 +566,27 @@ async fn put_full_replace_returns_200_bumps_updated_at_new_child_ids(pool: PgPoo
         replacement,
     )
     .await;
-    assert_eq!(resp.status(), StatusCode::OK, "full-replace must return 200");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "full-replace must return 200"
+    );
     let second = body_json(resp).await;
 
-    assert_eq!(second["id"].as_str().unwrap(), session_id, "session id is stable");
-    assert_eq!(second["performed_on"].as_str().unwrap(), "2026-05-20", "date updated");
-    assert_eq!(second["exercises"][0]["name"].as_str().unwrap(), "Overhead Press");
+    assert_eq!(
+        second["id"].as_str().unwrap(),
+        session_id,
+        "session id is stable"
+    );
+    assert_eq!(
+        second["performed_on"].as_str().unwrap(),
+        "2026-05-20",
+        "date updated"
+    );
+    assert_eq!(
+        second["exercises"][0]["name"].as_str().unwrap(),
+        "Overhead Press"
+    );
     assert_eq!(second["exercises"][0]["sets"].as_array().unwrap().len(), 1);
 
     let second_created: DateTime<Utc> = second["created_at"].as_str().unwrap().parse().unwrap();
@@ -519,8 +611,16 @@ async fn put_full_replace_returns_200_bumps_updated_at_new_child_ids(pool: PgPoo
 
     // The replaced rows are gone; exactly the new ones remain.
     assert_eq!(count(&pool, "workout_sessions").await, 1);
-    assert_eq!(count(&pool, "workout_exercises").await, 1, "old exercise replaced, not duplicated");
-    assert_eq!(count(&pool, "workout_sets").await, 1, "old sets replaced, not duplicated");
+    assert_eq!(
+        count(&pool, "workout_exercises").await,
+        1,
+        "old exercise replaced, not duplicated"
+    );
+    assert_eq!(
+        count(&pool, "workout_sets").await,
+        1,
+        "old sets replaced, not duplicated"
+    );
 }
 
 /// AC5: PUT /:id for a non-existent id -> 404.
@@ -530,9 +630,13 @@ async fn put_missing_is_not_found(pool: PgPool) {
     let (_id, token) = register_and_token(&app, "putmissing@b.com", "8charsmin").await;
 
     let unknown = uuid::Uuid::new_v4();
-    let resp =
-        put_json_with_auth(&app, &format!("/workouts/{unknown}"), Some(&bearer(&token)), valid_body())
-            .await;
+    let resp = put_json_with_auth(
+        &app,
+        &format!("/workouts/{unknown}"),
+        Some(&bearer(&token)),
+        valid_body(),
+    )
+    .await;
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
@@ -545,7 +649,8 @@ async fn put_foreign_session_is_not_found_and_untouched(pool: PgPool) {
     let (_id_a, token_a) = register_and_token(&app, "putownerA@b.com", "8charsmin").await;
     let (_id_b, token_b) = register_and_token(&app, "putintruderB@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
     // B tries to overwrite A's session.
@@ -559,11 +664,23 @@ async fn put_foreign_session_is_not_found_and_untouched(pool: PgPool) {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     // A's session is unchanged.
-    let get_a = get_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token_a))).await;
+    let get_a = get_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token_a)),
+    )
+    .await;
     assert_eq!(get_a.status(), StatusCode::OK);
     let body = body_json(get_a).await;
-    assert_eq!(body["performed_on"].as_str().unwrap(), "2026-05-01", "A's session must be untouched");
-    assert_eq!(body["exercises"][0]["name"].as_str().unwrap(), "Bench Press");
+    assert_eq!(
+        body["performed_on"].as_str().unwrap(),
+        "2026-05-01",
+        "A's session must be untouched"
+    );
+    assert_eq!(
+        body["exercises"][0]["name"].as_str().unwrap(),
+        "Bench Press"
+    );
 }
 
 /// AC5/AC8: PUT /:id with an invalid body -> 400 and writes nothing (the
@@ -579,15 +696,27 @@ async fn put_invalid_body_is_rejected_and_writes_nothing(pool: PgPool) {
     // reps out of range -> 400 field "reps".
     let mut bad = valid_body();
     bad["exercises"][0]["sets"][0]["reps"] = json!(0);
-    let resp =
-        put_json_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token)), bad).await;
+    let resp = put_json_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token)),
+        bad,
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-    assert_eq!(body_json(resp).await, json!({ "error": "validation", "field": "reps" }));
+    assert_eq!(
+        body_json(resp).await,
+        json!({ "error": "validation", "field": "reps" })
+    );
 
     // The original rows are intact (the rejected PUT replaced nothing).
     assert_eq!(count(&pool, "workout_sessions").await, 1);
     assert_eq!(count(&pool, "workout_exercises").await, 1);
-    assert_eq!(count(&pool, "workout_sets").await, 2, "a rejected PUT must not delete children");
+    assert_eq!(
+        count(&pool, "workout_sets").await,
+        2,
+        "a rejected PUT must not delete children"
+    );
 }
 
 /// AC5: PUT /:id with no token -> 401.
@@ -615,16 +744,29 @@ async fn delete_owned_then_second_delete_is_not_found(pool: PgPool) {
     let created = post_json_with_auth(&app, "/workouts", Some(&bearer(&token)), valid_body()).await;
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
-    let first = delete_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token))).await;
+    let first = delete_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token)),
+    )
+    .await;
     assert_eq!(first.status(), StatusCode::NO_CONTENT);
 
     assert_eq!(count(&pool, "workout_sessions").await, 0);
-    assert_eq!(count(&pool, "workout_exercises").await, 0, "children cascade on delete");
+    assert_eq!(
+        count(&pool, "workout_exercises").await,
+        0,
+        "children cascade on delete"
+    );
     assert_eq!(count(&pool, "workout_sets").await, 0);
 
     // A second DELETE of the same id -> 404.
-    let second =
-        delete_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token))).await;
+    let second = delete_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token)),
+    )
+    .await;
     assert_eq!(second.status(), StatusCode::NOT_FOUND);
 }
 
@@ -635,15 +777,24 @@ async fn delete_foreign_session_is_not_found_and_untouched(pool: PgPool) {
     let (_id_a, token_a) = register_and_token(&app, "delownerA@b.com", "8charsmin").await;
     let (_id_b, token_b) = register_and_token(&app, "delintruderB@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
     let session_id = body_json(created).await["id"].as_str().unwrap().to_string();
 
-    let resp =
-        delete_with_auth(&app, &format!("/workouts/{session_id}"), Some(&bearer(&token_b))).await;
+    let resp = delete_with_auth(
+        &app,
+        &format!("/workouts/{session_id}"),
+        Some(&bearer(&token_b)),
+    )
+    .await;
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     // A's session survives.
-    assert_eq!(count(&pool, "workout_sessions").await, 1, "B's delete must not touch A's session");
+    assert_eq!(
+        count(&pool, "workout_sessions").await,
+        1,
+        "B's delete must not touch A's session"
+    );
 }
 
 /// AC6: DELETE /:id with no token -> 401.
@@ -686,9 +837,21 @@ async fn assert_rejected(pool: &PgPool, email: &str, mutate: Value, field: Optio
         );
     }
 
-    assert_eq!(count(pool, "workout_sessions").await, 0, "rejected POST for {email} writes no session");
-    assert_eq!(count(pool, "workout_exercises").await, 0, "rejected POST for {email} writes no exercise");
-    assert_eq!(count(pool, "workout_sets").await, 0, "rejected POST for {email} writes no set");
+    assert_eq!(
+        count(pool, "workout_sessions").await,
+        0,
+        "rejected POST for {email} writes no session"
+    );
+    assert_eq!(
+        count(pool, "workout_exercises").await,
+        0,
+        "rejected POST for {email} writes no exercise"
+    );
+    assert_eq!(
+        count(pool, "workout_sets").await,
+        0,
+        "rejected POST for {email} writes no set"
+    );
 }
 
 // --- Semantic failures: report the leaf field. ---
@@ -832,7 +995,13 @@ async fn list_is_isolated_per_user(pool: PgPool) {
 
     // B logs two sessions; A logs one.
     post_json_with_auth(&app, "/workouts", Some(&bearer(&token_b)), valid_body()).await;
-    post_json_with_auth(&app, "/workouts", Some(&bearer(&token_b)), valid_body_newer()).await;
+    post_json_with_auth(
+        &app,
+        "/workouts",
+        Some(&bearer(&token_b)),
+        valid_body_newer(),
+    )
+    .await;
     post_json_with_auth(&app, "/workouts", Some(&bearer(&token_a)), valid_body()).await;
 
     let list_a = get_with_auth(&app, "/workouts", Some(&bearer(&token_a))).await;
@@ -846,7 +1015,11 @@ async fn list_is_isolated_per_user(pool: PgPool) {
     let b_arr = b_sessions.as_array().unwrap();
     assert_eq!(b_arr.len(), 2, "B must see only its own two sessions");
     for s in b_arr {
-        assert_eq!(s["user_id"].as_str().unwrap(), id_b, "no cross-user session leaks");
+        assert_eq!(
+            s["user_id"].as_str().unwrap(),
+            id_b,
+            "no cross-user session leaks"
+        );
     }
 }
 

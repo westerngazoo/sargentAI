@@ -6,8 +6,13 @@
 
 pub mod profile;
 pub mod user;
+pub mod workout;
 
 pub use profile::{
     BodyFatPercentage, Goal, Goals, HeightCm, NewProfile, Profile, ProfileError, Sex, WeightKg,
 };
 pub use user::{Email, EmailParseError, User, UserId};
+pub use workout::{
+    ExerciseName, LoadKg, MuscleGroup, NewExercise, NewSet, NewWorkoutSession, Reps, Rpe,
+    WorkoutError, WorkoutExercise, WorkoutSession, WorkoutSet,
+};

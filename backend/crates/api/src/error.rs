@@ -34,6 +34,9 @@ pub enum ApiError {
 
     #[error("internal error")]
     Internal(#[from] eyre::Report),
+
+    #[error("integer conversion error")]
+    IntConversion(#[from] std::num::TryFromIntError),
 }
 
 impl IntoResponse for ApiError {
@@ -62,6 +65,13 @@ impl IntoResponse for ApiError {
             ApiError::NotFound => (StatusCode::NOT_FOUND, json!({"error": "not_found"})),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    json!({"error": "internal"}),
+                )
+            }
+            ApiError::IntConversion(e) => {
+                tracing::error!(error = %e, "integer conversion error");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     json!({"error": "internal"}),

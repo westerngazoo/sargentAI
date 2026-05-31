@@ -55,7 +55,10 @@ fn new_session_accepts_fully_valid_input() {
     assert_eq!(session.performed_on, today());
     assert_eq!(session.exercises, vec![exercise]);
     assert_eq!(session.exercises[0].sets, vec![set]);
-    assert_eq!(session.exercises[0].name, ExerciseName::try_new("Bench Press").unwrap());
+    assert_eq!(
+        session.exercises[0].name,
+        ExerciseName::try_new("Bench Press").unwrap()
+    );
     assert_eq!(session.exercises[0].muscle_group, Some(MuscleGroup::Chest));
 }
 
@@ -80,8 +83,12 @@ fn new_exercise_accepts_omitted_muscle_group() {
 
 #[test]
 fn performed_on_today_is_accepted() {
-    NewWorkoutSession::new(today(), vec![NewExercise::new("Squat", None, vec![valid_set()]).unwrap()], today())
-        .expect("performed_on == today must be accepted");
+    NewWorkoutSession::new(
+        today(),
+        vec![NewExercise::new("Squat", None, vec![valid_set()]).unwrap()],
+        today(),
+    )
+    .expect("performed_on == today must be accepted");
 }
 
 #[test]
@@ -421,7 +428,14 @@ fn session_serializes_with_the_ac7_keys_and_transparent_newtypes() {
     let json = serde_json::to_value(sample_session()).unwrap();
 
     // Session-level keys.
-    for key in ["id", "user_id", "performed_on", "created_at", "updated_at", "exercises"] {
+    for key in [
+        "id",
+        "user_id",
+        "performed_on",
+        "created_at",
+        "updated_at",
+        "exercises",
+    ] {
         assert!(json.get(key).is_some(), "session JSON must carry `{key}`");
     }
     assert_eq!(json["performed_on"], serde_json::json!("2026-05-30"));
@@ -429,7 +443,10 @@ fn session_serializes_with_the_ac7_keys_and_transparent_newtypes() {
     // Exercise-level keys.
     let exercise = &json["exercises"][0];
     for key in ["id", "position", "name", "muscle_group", "sets"] {
-        assert!(exercise.get(key).is_some(), "exercise JSON must carry `{key}`");
+        assert!(
+            exercise.get(key).is_some(),
+            "exercise JSON must carry `{key}`"
+        );
     }
     assert_eq!(exercise["name"], serde_json::json!("Bench Press"));
     assert_eq!(exercise["muscle_group"], serde_json::json!("chest"));
@@ -458,6 +475,9 @@ fn session_serializes_nullable_fields_as_null() {
         json["exercises"][0]["muscle_group"].is_null(),
         "an absent muscle_group must serialize as null"
     );
-    assert!(set["weight_kg"].is_null(), "an absent weight_kg must serialize as null");
+    assert!(
+        set["weight_kg"].is_null(),
+        "an absent weight_kg must serialize as null"
+    );
     assert!(set["rpe"].is_null(), "an absent rpe must serialize as null");
 }
