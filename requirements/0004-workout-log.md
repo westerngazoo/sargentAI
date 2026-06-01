@@ -1,6 +1,6 @@
 # R-0004 — Workout log
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M2
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-31

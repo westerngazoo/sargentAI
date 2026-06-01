@@ -1,6 +1,6 @@
 # SPEC-0004 — Workout log
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0004
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-31

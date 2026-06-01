@@ -42,7 +42,7 @@ Server-side persistence of every signal the model will eventually consume.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Accepted |
+| R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Done |
 | R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Backlog |
 | R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
 
@@ -129,33 +129,22 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0004 — Workout log** is **Accepted** and in progress on branch
-`R-0004-workout-log`. Step 1 (Discuss) completed 2026-05-31: owner settled
-OQ1–OQ4 (normalized three-table schema `workout_sessions → workout_exercises →
-workout_sets`; free-text exercise name + optional `muscle_group` enum; full
-`/workouts` CRUD with full-replace `PUT` edit; `reps` required, `weight_kg`/
-`rpe` optional, RPE 6–10 step 0.5) and acked the twelve acceptance criteria
-(AC1–AC12). R-0004 opens **M2 — Logging core** and introduces the `crates/core`
-workout domain.
+**R-0004 — Workout log** is **Done** — the full eight-step loop completed and
+it merged to `main` via PR #4 (commit `f5112e5`) on 2026-05-31: architect
+APPROVE WITH NITS on the design (nits applied) and APPROVE on the
+implementation, `qa`-derived red→green suite passing (core 42/42, api workout
+39/39, incl. the partial-write rollback e2e test), and all four CI gates green.
+Requirement is `Met`; `SPEC-0004` is `Implemented`. R-0004 opened **M2 —
+Logging core** and introduced the codebase's first sqlx transaction (atomic
+multi-table insert/replace) and first nested collection resource.
 
-Step 2 (Spec) completed 2026-05-31: `SPEC-0004` realizes AC1–AC12 (mapped 1:1 as
-SAC1–SAC12) and the `architect` agent reviewed the design — **APPROVE WITH
-NITS**. All five design open questions resolved: serialize the core read
-aggregate directly (OQ-C1), three batched queries + in-memory grouping with
-per-parent ordering and empty-id short-circuit (OQ-C2), server-assigned 0-based
-`position` (OQ-C3), transactional full-replace `PUT` with new child ids (OQ-C4),
-and the `parse_body` helper promoted to a new `crate::http` module (OQ-C5). The
-four nits were applied in lockstep; `SPEC-0004` is now `Accepted`. R-0004
-introduces the codebase's **first sqlx transaction** (atomic multi-table
-insert/replace) and first nested collection resource. Next is **step 3 (Test
-plan)**: the `qa` agent, scoped to R-0004, authors the red unit + e2e suite
-(≥14 `#[sqlx::test]` integration tests, incl. a partial-write rollback test)
-from AC1–AC12.
+Predecessor **R-0003 — User profile CRUD** is **Done** (PR #3, merge commit
+`cdf9f9e`); with R-0001–R-0003 all `Done`, **M1 — Backend skeleton, auth,
+profile is fully complete**.
 
-Predecessor **R-0003 — User profile CRUD** is **Done** — the full eight-step
-loop completed and it merged to `main` via PR #3 (merge commit `cdf9f9e`) on
-2026-05-30: architect APPROVE on both the design (step 2) and the
-implementation (step 6), `qa` sign-off PASS verifying all of AC1–AC9, and all
-CI gates green. Requirement is `Met`; `SPEC-0003` is `Implemented`. With
-R-0001, R-0002, and R-0003 all `Done`, **M1 — Backend skeleton, auth, profile
-is fully complete**.
+Next focus is **R-0005 — Nutrition log** (M2), currently `Backlog`. Its only
+declared dependencies — R-0002 (Met) and R-0003 (Met), via the shared
+`AppState` / `AuthenticatedUser` / `db` machinery — are satisfied, so it is
+eligible to enter **step 1 (Discuss)**. R-0005 is the natural successor to
+R-0004: same per-user, owner-scoped, transactional-CRUD shape, manual entry
+only (barcode scan stays deferred).
