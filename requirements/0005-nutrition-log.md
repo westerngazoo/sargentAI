@@ -5,7 +5,7 @@
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-31
 - **Depends on:** R-0002 (Met), R-0003 (Met)
-- **Realized by:** SPEC-0005 (to be written once this R is `Accepted`)
+- **Realized by:** [SPEC-0005](../specs/0005-nutrition-log.md) (Accepted)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
