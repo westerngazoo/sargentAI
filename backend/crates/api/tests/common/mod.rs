@@ -77,6 +77,40 @@ pub async fn get_with_auth(app: &Router, path: &str, auth: Option<&str>) -> Resp
         .unwrap()
 }
 
+/// POST a JSON body to `path` with an optional raw `Authorization` header value.
+/// Mirrors `put_json_with_auth`; used by the R-0004 `/workouts` create tests
+/// (the existing `post_json` is auth-free, for `/auth/register` and `/login`).
+pub async fn post_json_with_auth(
+    app: &Router,
+    path: &str,
+    auth: Option<&str>,
+    body: Value,
+) -> Response<Body> {
+    let mut builder = Request::builder()
+        .method("POST")
+        .uri(path)
+        .header("content-type", "application/json");
+    if let Some(value) = auth {
+        builder = builder.header("authorization", value);
+    }
+    app.clone()
+        .oneshot(builder.body(Body::from(body.to_string())).unwrap())
+        .await
+        .unwrap()
+}
+
+/// DELETE `path` with an optional raw `Authorization` header value.
+pub async fn delete_with_auth(app: &Router, path: &str, auth: Option<&str>) -> Response<Body> {
+    let mut builder = Request::builder().method("DELETE").uri(path);
+    if let Some(value) = auth {
+        builder = builder.header("authorization", value);
+    }
+    app.clone()
+        .oneshot(builder.body(Body::empty()).unwrap())
+        .await
+        .unwrap()
+}
+
 /// PUT a JSON body to `path` with an optional raw `Authorization` header value.
 pub async fn put_json_with_auth(
     app: &Router,

@@ -1,13 +1,16 @@
 //! Postgres-side types and queries. Maps row shapes to `fitai_core` types
 //! at the seam so callers never see `password_hash`.
 
+use std::collections::HashMap;
+
 use chrono::{DateTime, NaiveDate, Utc};
-use sqlx::{prelude::FromRow, PgPool, Row as _};
+use sqlx::{prelude::FromRow, PgPool, Postgres, Row as _, Transaction};
 use uuid::Uuid;
 
 use fitai_core::{
-    BodyFatPercentage, Email, Goal, Goals, HeightCm, NewProfile, Profile, Sex, User, UserId,
-    WeightKg,
+    BodyFatPercentage, Email, ExerciseName, Goal, Goals, HeightCm, LoadKg, MuscleGroup,
+    NewExercise, NewProfile, NewWorkoutSession, Profile, Reps, Rpe, Sex, User, UserId, WeightKg,
+    WorkoutExercise, WorkoutSession, WorkoutSet,
 };
 
 use crate::error::{ApiError, ApiResult};
@@ -233,4 +236,353 @@ pub async fn upsert_profile(
     let inserted: bool = row.try_get("inserted")?;
     let profile = ProfileRow::from_row(&row)?.into_profile()?;
     Ok((profile, inserted))
+}
+
+#[derive(Debug, FromRow)]
+pub struct SessionRow {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub performed_on: NaiveDate,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+pub struct ExerciseRow {
+    pub id: Uuid,
+    pub session_id: Uuid,
+    pub position: i32,
+    pub name: String,
+    pub muscle_group: Option<String>,
+}
+
+#[derive(Debug, FromRow)]
+pub struct SetRow {
+    pub id: Uuid,
+    pub exercise_id: Uuid,
+    pub position: i32,
+    pub reps: i32,
+    pub weight_kg: Option<f64>,
+    pub rpe: Option<f64>,
+}
+
+/// A stored workout value that fails domain validation is data corruption (we
+/// only ever persist validated values), surfaced as a logged 500 — never
+/// silently coerced (the `into_profile`/`into_user` discipline).
+fn corrupt(id: Uuid, what: &'static str) -> ApiError {
+    tracing::error!(%id, what, "stored workout value failed domain validation");
+    ApiError::Internal(eyre::eyre!("stored workout value failed domain validation"))
+}
+
+fn set_from_row(r: &SetRow) -> ApiResult<WorkoutSet> {
+    let id = r.id;
+    Ok(WorkoutSet {
+        id,
+        position: r.position,
+        reps: Reps::try_new(r.reps).map_err(|_| corrupt(id, "reps"))?,
+        weight_kg: r
+            .weight_kg
+            .map(LoadKg::try_new)
+            .transpose()
+            .map_err(|_| corrupt(id, "weight_kg"))?,
+        rpe: r
+            .rpe
+            .map(Rpe::try_new)
+            .transpose()
+            .map_err(|_| corrupt(id, "rpe"))?,
+    })
+}
+
+fn exercise_from_row(r: &ExerciseRow, sets: Vec<WorkoutSet>) -> ApiResult<WorkoutExercise> {
+    let id = r.id;
+    Ok(WorkoutExercise {
+        id,
+        position: r.position,
+        name: ExerciseName::try_new(&r.name).map_err(|_| corrupt(id, "name"))?,
+        muscle_group: r
+            .muscle_group
+            .as_deref()
+            .map(MuscleGroup::parse)
+            .transpose()
+            .map_err(|_| corrupt(id, "muscle_group"))?,
+        sets,
+    })
+}
+
+/// Insert the validated exercises (and their sets) for `session_id` within an
+/// open transaction, assigning server-side ids and 0-based `position`s from the
+/// array index. Returns the stored read aggregates.
+async fn insert_exercises(
+    tx: &mut Transaction<'_, Postgres>,
+    session_id: Uuid,
+    exercises: &[NewExercise],
+) -> ApiResult<Vec<WorkoutExercise>> {
+    let mut stored = Vec::with_capacity(exercises.len());
+    for (ei, ex) in exercises.iter().enumerate() {
+        let position = i32::try_from(ei)?;
+        let exercise_id = Uuid::new_v4();
+        sqlx::query(
+            "INSERT INTO workout_exercises (id, session_id, position, name, muscle_group) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(exercise_id)
+        .bind(session_id)
+        .bind(position)
+        .bind(ex.name.as_str())
+        .bind(ex.muscle_group.map(MuscleGroup::as_str))
+        .execute(&mut **tx)
+        .await?;
+
+        let mut sets = Vec::with_capacity(ex.sets.len());
+        for (si, st) in ex.sets.iter().enumerate() {
+            let set_position = i32::try_from(si)?;
+            let set_id = Uuid::new_v4();
+            sqlx::query(
+                "INSERT INTO workout_sets (id, exercise_id, position, reps, weight_kg, rpe) \
+                 VALUES ($1, $2, $3, $4, $5, $6)",
+            )
+            .bind(set_id)
+            .bind(exercise_id)
+            .bind(set_position)
+            .bind(st.reps.get())
+            .bind(st.weight_kg.map(LoadKg::get))
+            .bind(st.rpe.map(Rpe::get))
+            .execute(&mut **tx)
+            .await?;
+            sets.push(WorkoutSet {
+                id: set_id,
+                position: set_position,
+                reps: st.reps,
+                weight_kg: st.weight_kg,
+                rpe: st.rpe,
+            });
+        }
+        stored.push(WorkoutExercise {
+            id: exercise_id,
+            position,
+            name: ex.name.clone(),
+            muscle_group: ex.muscle_group,
+            sets,
+        });
+    }
+    Ok(stored)
+}
+
+/// Load every exercise (with its sets) for the given session ids, grouped by
+/// session id. Two batched queries — no N+1, no join row-explosion — with an
+/// empty-id short-circuit (SPEC-0004 §2.5 / OQ-C2). The `ORDER BY parent,
+/// position` clauses make the grouped push order match `position`.
+async fn load_exercises_by_session(
+    pool: &PgPool,
+    session_ids: &[Uuid],
+) -> ApiResult<HashMap<Uuid, Vec<WorkoutExercise>>> {
+    if session_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let exercise_rows: Vec<ExerciseRow> = sqlx::query_as(
+        "SELECT id, session_id, position, name, muscle_group FROM workout_exercises \
+         WHERE session_id = ANY($1) ORDER BY session_id, position",
+    )
+    .bind(session_ids)
+    .fetch_all(pool)
+    .await?;
+
+    let exercise_ids: Vec<Uuid> = exercise_rows.iter().map(|r| r.id).collect();
+    let set_rows: Vec<SetRow> = if exercise_ids.is_empty() {
+        Vec::new()
+    } else {
+        sqlx::query_as(
+            "SELECT id, exercise_id, position, reps, weight_kg, rpe FROM workout_sets \
+             WHERE exercise_id = ANY($1) ORDER BY exercise_id, position",
+        )
+        .bind(&exercise_ids)
+        .fetch_all(pool)
+        .await?
+    };
+
+    let mut sets_by_exercise: HashMap<Uuid, Vec<WorkoutSet>> = HashMap::new();
+    for sr in set_rows {
+        let exercise_id = sr.exercise_id;
+        sets_by_exercise
+            .entry(exercise_id)
+            .or_default()
+            .push(set_from_row(&sr)?);
+    }
+
+    let mut exercises_by_session: HashMap<Uuid, Vec<WorkoutExercise>> = HashMap::new();
+    for er in exercise_rows {
+        let session_id = er.session_id;
+        let sets = sets_by_exercise.remove(&er.id).unwrap_or_default();
+        exercises_by_session
+            .entry(session_id)
+            .or_default()
+            .push(exercise_from_row(&er, sets)?);
+    }
+    Ok(exercises_by_session)
+}
+
+/// Insert a full session atomically; returns the stored aggregate.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on any query failure (the transaction rolls
+/// back), or [`ApiError::IntConversion`] if a position index exceeds `i32`.
+pub async fn insert_session(
+    pool: &PgPool,
+    user_id: UserId,
+    new: &NewWorkoutSession,
+) -> ApiResult<WorkoutSession> {
+    let mut tx = pool.begin().await?;
+    let session_id = Uuid::new_v4();
+    let row: SessionRow = sqlx::query_as(
+        "INSERT INTO workout_sessions (id, user_id, performed_on) VALUES ($1, $2, $3) \
+         RETURNING id, user_id, performed_on, created_at, updated_at",
+    )
+    .bind(session_id)
+    .bind(user_id.0)
+    .bind(new.performed_on)
+    .fetch_one(&mut *tx)
+    .await?;
+
+    let exercises = insert_exercises(&mut tx, session_id, &new.exercises).await?;
+    tx.commit().await?;
+
+    Ok(WorkoutSession {
+        id: row.id,
+        user_id,
+        performed_on: row.performed_on,
+        exercises,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    })
+}
+
+/// All of the caller's sessions, newest `performed_on` first, fully nested.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure, or [`ApiError::Internal`]
+/// if a stored row fails domain validation on read-back.
+pub async fn find_sessions_by_user(
+    pool: &PgPool,
+    user_id: UserId,
+) -> ApiResult<Vec<WorkoutSession>> {
+    let session_rows: Vec<SessionRow> = sqlx::query_as(
+        "SELECT id, user_id, performed_on, created_at, updated_at FROM workout_sessions \
+         WHERE user_id = $1 ORDER BY performed_on DESC, created_at DESC",
+    )
+    .bind(user_id.0)
+    .fetch_all(pool)
+    .await?;
+
+    let session_ids: Vec<Uuid> = session_rows.iter().map(|r| r.id).collect();
+    let mut exercises_by_session = load_exercises_by_session(pool, &session_ids).await?;
+
+    Ok(session_rows
+        .into_iter()
+        .map(|row| WorkoutSession {
+            id: row.id,
+            user_id,
+            performed_on: row.performed_on,
+            exercises: exercises_by_session.remove(&row.id).unwrap_or_default(),
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
+        .collect())
+}
+
+/// One session if it exists and is owned by the caller, else `None` (→ 404).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure, or [`ApiError::Internal`]
+/// if a stored row fails domain validation on read-back.
+pub async fn find_session_by_id(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+) -> ApiResult<Option<WorkoutSession>> {
+    let row: Option<SessionRow> = sqlx::query_as(
+        "SELECT id, user_id, performed_on, created_at, updated_at FROM workout_sessions \
+         WHERE id = $1 AND user_id = $2",
+    )
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    let mut exercises_by_session = load_exercises_by_session(pool, &[row.id]).await?;
+    Ok(Some(WorkoutSession {
+        id: row.id,
+        user_id,
+        performed_on: row.performed_on,
+        exercises: exercises_by_session.remove(&row.id).unwrap_or_default(),
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }))
+}
+
+/// Full-replace edit within a transaction; `None` when the session is missing
+/// or owned by another user (→ 404). The session row is updated in place
+/// (`created_at` preserved, `updated_at` bumped); the children are deleted
+/// (sets cascade) and re-inserted with new ids.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on any query failure (the transaction rolls
+/// back), or [`ApiError::IntConversion`] if a position index exceeds `i32`.
+pub async fn replace_session(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+    new: &NewWorkoutSession,
+) -> ApiResult<Option<WorkoutSession>> {
+    let mut tx = pool.begin().await?;
+    let row: Option<SessionRow> = sqlx::query_as(
+        "UPDATE workout_sessions SET performed_on = $1, updated_at = NOW() \
+         WHERE id = $2 AND user_id = $3 \
+         RETURNING id, user_id, performed_on, created_at, updated_at",
+    )
+    .bind(new.performed_on)
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let Some(row) = row else {
+        // Missing or foreign: nothing written, transaction dropped (rollback).
+        return Ok(None);
+    };
+
+    sqlx::query("DELETE FROM workout_exercises WHERE session_id = $1")
+        .bind(row.id)
+        .execute(&mut *tx)
+        .await?;
+
+    let exercises = insert_exercises(&mut tx, row.id, &new.exercises).await?;
+    tx.commit().await?;
+
+    Ok(Some(WorkoutSession {
+        id: row.id,
+        user_id,
+        performed_on: row.performed_on,
+        exercises,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }))
+}
+
+/// Delete the caller's session (children cascade); `false` when the session is
+/// missing or owned by another user (→ 404).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn delete_session(pool: &PgPool, user_id: UserId, id: Uuid) -> ApiResult<bool> {
+    let result = sqlx::query("DELETE FROM workout_sessions WHERE id = $1 AND user_id = $2")
+        .bind(id)
+        .bind(user_id.0)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
 }

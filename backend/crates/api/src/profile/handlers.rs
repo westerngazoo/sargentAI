@@ -14,6 +14,7 @@ use crate::{
     auth::AuthenticatedUser,
     db,
     error::{ApiError, ApiResult},
+    http::parse_body,
     AppState,
 };
 
@@ -58,13 +59,6 @@ impl ProfileResponse {
             updated_at: p.updated_at,
         }
     }
-}
-
-/// Map any serde/body rejection (missing field, bad type, malformed JSON) to a
-/// 400 — without this, axum's `Json` extractor rejects before the handler runs.
-fn parse_body(req: Result<Json<ProfileRequest>, JsonRejection>) -> ApiResult<ProfileRequest> {
-    req.map(|Json(r)| r)
-        .map_err(|_| ApiError::Validation { field: "body" })
 }
 
 pub(crate) async fn get_me(
