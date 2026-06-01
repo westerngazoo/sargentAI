@@ -13,6 +13,7 @@ pub mod db;
 pub mod error;
 mod health;
 pub(crate) mod http;
+pub mod nutrition;
 pub mod profile;
 pub mod workout;
 
@@ -42,5 +43,6 @@ pub fn app(state: AppState) -> Router {
         .merge(auth::routes())
         .merge(profile::routes())
         .merge(workout::routes())
+        .merge(nutrition::routes())
         .with_state(state)
 }

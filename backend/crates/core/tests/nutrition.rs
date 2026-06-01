@@ -41,7 +41,10 @@ fn new_nutrition_log_accepts_fully_valid_input() {
     let log = NewNutritionLog::new(today(), 150.0, 300.0, 80.0, today())
         .expect("a fully valid nutrition log must construct");
     assert_eq!(log.performed_on, today());
-    assert_eq!(log.macros.protein, Grams::try_new(150.0, "protein_g").unwrap());
+    assert_eq!(
+        log.macros.protein,
+        Grams::try_new(150.0, "protein_g").unwrap()
+    );
     assert_eq!(log.macros.carbs, Grams::try_new(300.0, "carbs_g").unwrap());
     assert_eq!(log.macros.fat, Grams::try_new(80.0, "fat_g").unwrap());
 }
@@ -95,18 +98,17 @@ fn grams_at_minimum_zero_is_accepted() {
 
 #[test]
 fn grams_at_maximum_is_accepted() {
-    assert_eq!(Grams::try_new(Grams::MAX, "protein_g").unwrap().get(), 2000.0);
+    assert_eq!(
+        Grams::try_new(Grams::MAX, "protein_g").unwrap().get(),
+        2000.0
+    );
 }
 
 #[test]
 fn grams_negative_is_rejected() {
-    let err = Grams::try_new(-0.1, "protein_g").expect_err("a negative gram value must be rejected");
-    assert_eq!(
-        err,
-        NutritionError::MacroOutOfRange {
-            field: "protein_g"
-        }
-    );
+    let err =
+        Grams::try_new(-0.1, "protein_g").expect_err("a negative gram value must be rejected");
+    assert_eq!(err, NutritionError::MacroOutOfRange { field: "protein_g" });
     assert_eq!(err.field(), "protein_g");
 }
 
@@ -153,12 +155,7 @@ fn macros_new_accepts_in_range_values() {
 #[test]
 fn macros_new_attributes_out_of_range_protein() {
     let err = Macros::new(-1.0, 300.0, 80.0).expect_err("negative protein must be rejected");
-    assert_eq!(
-        err,
-        NutritionError::MacroOutOfRange {
-            field: "protein_g"
-        }
-    );
+    assert_eq!(err, NutritionError::MacroOutOfRange { field: "protein_g" });
     assert_eq!(err.field(), "protein_g");
 }
 

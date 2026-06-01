@@ -84,7 +84,10 @@ async fn migration_creates_nutrition_logs_with_expected_columns(pool: PgPool) {
     .fetch_all(&pool)
     .await
     .unwrap();
-    let mut names: Vec<String> = rows.iter().map(|r| r.get::<String, _>("column_name")).collect();
+    let mut names: Vec<String> = rows
+        .iter()
+        .map(|r| r.get::<String, _>("column_name"))
+        .collect();
     names.sort();
     assert_eq!(
         names,
@@ -137,7 +140,11 @@ async fn post_creates_log_with_derived_calories_and_persists(pool: PgPool) {
     assert_eq!(resp.status(), StatusCode::CREATED);
     let body = body_json(resp).await;
 
-    assert_eq!(body["user_id"].as_str().unwrap(), user_id, "owned by caller");
+    assert_eq!(
+        body["user_id"].as_str().unwrap(),
+        user_id,
+        "owned by caller"
+    );
     assert!(
         body["id"].as_str().unwrap().parse::<uuid::Uuid>().is_ok(),
         "id must be a server-generated UUID"
@@ -153,16 +160,29 @@ async fn post_creates_log_with_derived_calories_and_persists(pool: PgPool) {
         "calories must be derived 4·protein + 4·carbs + 9·fat"
     );
     assert!(
-        body["created_at"].as_str().unwrap().parse::<DateTime<Utc>>().is_ok(),
+        body["created_at"]
+            .as_str()
+            .unwrap()
+            .parse::<DateTime<Utc>>()
+            .is_ok(),
         "created_at must be RFC3339"
     );
     assert!(
-        body["updated_at"].as_str().unwrap().parse::<DateTime<Utc>>().is_ok(),
+        body["updated_at"]
+            .as_str()
+            .unwrap()
+            .parse::<DateTime<Utc>>()
+            .is_ok(),
         "updated_at must be RFC3339"
     );
 
     // AC7: no stored calories column; the wire carries the literal keys only.
-    let keys: Vec<&str> = body.as_object().unwrap().keys().map(String::as_str).collect();
+    let keys: Vec<&str> = body
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
     for key in [
         "id",
         "user_id",
@@ -198,8 +218,7 @@ async fn post_duplicate_date_is_conflict_and_writes_nothing(pool: PgPool) {
     // Same performed_on, different macros — still a per-day conflict.
     let mut second_body = valid_body();
     second_body["protein_g"] = json!(10.0);
-    let second =
-        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), second_body).await;
+    let second = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), second_body).await;
     assert_eq!(
         second.status(),
         StatusCode::CONFLICT,
@@ -246,8 +265,13 @@ async fn list_returns_caller_logs_newest_first_with_calories(pool: PgPool) {
     // from the expected performed_on-descending result order.
     let older = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     assert_eq!(older.status(), StatusCode::CREATED);
-    let newer =
-        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body_newer()).await;
+    let newer = post_json_with_auth(
+        &app,
+        "/nutrition",
+        Some(&bearer(&token)),
+        valid_body_newer(),
+    )
+    .await;
     assert_eq!(newer.status(), StatusCode::CREATED);
 
     let resp = get_with_auth(&app, "/nutrition", Some(&bearer(&token))).await;
@@ -288,7 +312,8 @@ async fn get_one_owned_returns_200(pool: PgPool) {
     let app = build_app(pool);
     let (_id, token) = register_and_token(&app, "getone@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     let id = body_json(created).await["id"].as_str().unwrap().to_string();
 
     let resp = get_with_auth(&app, &format!("/nutrition/{id}"), Some(&bearer(&token))).await;
@@ -305,7 +330,12 @@ async fn get_one_missing_is_not_found(pool: PgPool) {
     let (_id, token) = register_and_token(&app, "getmissing@b.com", "8charsmin").await;
 
     let unknown = uuid::Uuid::new_v4();
-    let resp = get_with_auth(&app, &format!("/nutrition/{unknown}"), Some(&bearer(&token))).await;
+    let resp = get_with_auth(
+        &app,
+        &format!("/nutrition/{unknown}"),
+        Some(&bearer(&token)),
+    )
+    .await;
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     assert_eq!(body_json(resp).await, json!({ "error": "not_found" }));
@@ -349,7 +379,8 @@ async fn put_full_replace_returns_200_bumps_updated_at_and_recomputes_calories(p
     let app = build_app(pool.clone());
     let (_id, token) = register_and_token(&app, "replace@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     assert_eq!(created.status(), StatusCode::CREATED);
     let first = body_json(created).await;
     let id = first["id"].as_str().unwrap().to_string();
@@ -370,11 +401,19 @@ async fn put_full_replace_returns_200_bumps_updated_at_and_recomputes_calories(p
         replacement,
     )
     .await;
-    assert_eq!(resp.status(), StatusCode::OK, "full-replace must return 200");
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "full-replace must return 200"
+    );
     let second = body_json(resp).await;
 
     assert_eq!(second["id"].as_str().unwrap(), id, "id is stable");
-    assert_eq!(second["performed_on"].as_str().unwrap(), "2026-05-20", "date updated");
+    assert_eq!(
+        second["performed_on"].as_str().unwrap(),
+        "2026-05-20",
+        "date updated"
+    );
     // Recomputed: 4·100 + 4·100 + 9·10 = 400 + 400 + 90 = 890.
     assert_eq!(
         second["calories"].as_f64().unwrap(),
@@ -404,8 +443,13 @@ async fn put_date_collision_is_conflict(pool: PgPool) {
     let day1 = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     assert_eq!(day1.status(), StatusCode::CREATED);
     let day1_id = body_json(day1).await["id"].as_str().unwrap().to_string();
-    let day2 =
-        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body_newer()).await;
+    let day2 = post_json_with_auth(
+        &app,
+        "/nutrition",
+        Some(&bearer(&token)),
+        valid_body_newer(),
+    )
+    .await;
     assert_eq!(day2.status(), StatusCode::CREATED);
 
     // Edit day1 to land on day2's date (2026-05-15) — collides with the unique
@@ -428,7 +472,11 @@ async fn put_date_collision_is_conflict(pool: PgPool) {
         StatusCode::CONFLICT,
         "editing onto another existing day's date must be 409"
     );
-    assert_eq!(count(&pool).await, 2, "no row added or destroyed by the conflict");
+    assert_eq!(
+        count(&pool).await,
+        2,
+        "no row added or destroyed by the conflict"
+    );
 }
 
 /// AC5: PUT /:id for a non-existent id -> 404.
@@ -487,7 +535,8 @@ async fn put_invalid_body_is_rejected_and_writes_nothing(pool: PgPool) {
     let app = build_app(pool.clone());
     let (_id, token) = register_and_token(&app, "putinvalid@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     let id = body_json(created).await["id"].as_str().unwrap().to_string();
 
     // protein_g out of range -> 400 field "protein_g".
@@ -508,7 +557,10 @@ async fn put_invalid_body_is_rejected_and_writes_nothing(pool: PgPool) {
 
     // The original row is intact (the rejected PUT replaced nothing).
     let get_one = get_with_auth(&app, &format!("/nutrition/{id}"), Some(&bearer(&token))).await;
-    assert_eq!(body_json(get_one).await["protein_g"].as_f64().unwrap(), 150.0);
+    assert_eq!(
+        body_json(get_one).await["protein_g"].as_f64().unwrap(),
+        150.0
+    );
 }
 
 /// AC5: PUT /:id with no token -> 401.
@@ -532,7 +584,8 @@ async fn delete_owned_then_second_delete_is_not_found(pool: PgPool) {
     let app = build_app(pool.clone());
     let (_id, token) = register_and_token(&app, "delete@b.com", "8charsmin").await;
 
-    let created = post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
+    let created =
+        post_json_with_auth(&app, "/nutrition", Some(&bearer(&token)), valid_body()).await;
     let id = body_json(created).await["id"].as_str().unwrap().to_string();
 
     let first = delete_with_auth(&app, &format!("/nutrition/{id}"), Some(&bearer(&token))).await;
@@ -595,7 +648,11 @@ async fn assert_rejected(pool: &PgPool, email: &str, mutate: Value, field: &str)
         json!({ "error": "validation", "field": field }),
         "validation error for {email} must name field `{field}`"
     );
-    assert_eq!(count(pool).await, 0, "rejected POST for {email} writes nothing");
+    assert_eq!(
+        count(pool).await,
+        0,
+        "rejected POST for {email} writes nothing"
+    );
 }
 
 // --- Semantic failures: present-but-invalid value reports the leaf field. ---
@@ -672,7 +729,13 @@ async fn list_is_isolated_per_user(pool: PgPool) {
 
     // B logs two days; A logs one.
     post_json_with_auth(&app, "/nutrition", Some(&bearer(&token_b)), valid_body()).await;
-    post_json_with_auth(&app, "/nutrition", Some(&bearer(&token_b)), valid_body_newer()).await;
+    post_json_with_auth(
+        &app,
+        "/nutrition",
+        Some(&bearer(&token_b)),
+        valid_body_newer(),
+    )
+    .await;
     post_json_with_auth(&app, "/nutrition", Some(&bearer(&token_a)), valid_body()).await;
 
     let list_a = get_with_auth(&app, "/nutrition", Some(&bearer(&token_a))).await;
@@ -686,6 +749,10 @@ async fn list_is_isolated_per_user(pool: PgPool) {
     let b_arr = b_arr.as_array().unwrap();
     assert_eq!(b_arr.len(), 2, "B must see only its own two logs");
     for log in b_arr {
-        assert_eq!(log["user_id"].as_str().unwrap(), id_b, "no cross-user log leaks");
+        assert_eq!(
+            log["user_id"].as_str().unwrap(),
+            id_b,
+            "no cross-user log leaks"
+        );
     }
 }
