@@ -1,6 +1,6 @@
 # SPEC-0005 — Nutrition log
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0005
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-05-31

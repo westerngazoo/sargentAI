@@ -43,7 +43,7 @@ Server-side persistence of every signal the model will eventually consume.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Done |
-| R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Accepted |
+| R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Done |
 | R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
 
 ### M3 — Flutter MVP (thin client)
@@ -129,22 +129,25 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0004 — Workout log** is **Done** — the full eight-step loop completed and
-it merged to `main` via PR #4 (commit `f5112e5`) on 2026-05-31: architect
-APPROVE WITH NITS on the design (nits applied) and APPROVE on the
-implementation, `qa`-derived red→green suite passing (core 42/42, api workout
-39/39, incl. the partial-write rollback e2e test), and all four CI gates green.
-Requirement is `Met`; `SPEC-0004` is `Implemented`. R-0004 opened **M2 —
-Logging core** and introduced the codebase's first sqlx transaction (atomic
-multi-table insert/replace) and first nested collection resource.
+**R-0005 — Nutrition log** is **Done** — the full eight-step loop completed and
+it merged to `main` via PR #5 (commit `cb97131`) on 2026-06-01: architect
+APPROVE on both design (Accepted spec, five OQs resolved) and implementation
+(reviewed inline against SPEC-0005 §3 — strict adherence confirmed), `qa`
+sign-off PASS on all twelve acceptance criteria, red→green suite passing (core
+nutrition 19/19, api nutrition 29/29, plus all prior suites unchanged), and all
+four CI gates green. Requirement is `Met`; `SPEC-0005` is `Implemented`. R-0005
+is the second M2 logging resource: deliberately simpler than R-0004 (one flat
+table, no transaction) but reintroducing a **derived response field** —
+`calories` (4/4/9, never stored) via a dedicated `NutritionResponse` DTO, the
+R-0003 `ProfileResponse`/`age` precedent.
 
-Predecessor **R-0003 — User profile CRUD** is **Done** (PR #3, merge commit
-`cdf9f9e`); with R-0001–R-0003 all `Done`, **M1 — Backend skeleton, auth,
-profile is fully complete**.
+Predecessor **R-0004 — Workout log** is **Done** (PR #4, commit `f5112e5`); it
+opened **M2 — Logging core** and introduced the codebase's first sqlx
+transaction and first nested collection resource. **R-0003 — User profile CRUD**
+is **Done** (PR #3, merge commit `cdf9f9e`); with R-0001–R-0003 all `Done`,
+**M1 — Backend skeleton, auth, profile is fully complete**.
 
-Next focus is **R-0005 — Nutrition log** (M2), currently `Backlog`. Its only
-declared dependencies — R-0002 (Met) and R-0003 (Met), via the shared
-`AppState` / `AuthenticatedUser` / `db` machinery — are satisfied, so it is
-eligible to enter **step 1 (Discuss)**. R-0005 is the natural successor to
-R-0004: same per-user, owner-scoped, transactional-CRUD shape, manual entry
-only (barcode scan stays deferred).
+Next focus is the **M2 photo-session logger** (the third logging resource
+named in the M2 theme) — eligible to enter **step 1 (Discuss)** once the owner
+opens it. No requirement file exists for it yet; with R-0004 and R-0005 `Done`,
+the workout and nutrition signals the M5 ML engine consumes are both in place.

@@ -1,11 +1,11 @@
 # R-0005 — Nutrition log
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M2
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-05-31
 - **Depends on:** R-0002 (Met), R-0003 (Met)
-- **Realized by:** [SPEC-0005](../specs/0005-nutrition-log.md) (Accepted)
+- **Realized by:** [SPEC-0005](../specs/0005-nutrition-log.md) (Implemented)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
