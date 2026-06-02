@@ -48,15 +48,22 @@ Server-side persistence of every signal the model will eventually consume.
 
 ### M3 — Flutter MVP (thin client)
 
-The user can do everything M1–M2 expose, from a phone.
+The user can do everything M1–M2 expose, from a phone. The milestone opens with
+the app architecture + auth shell (R-0007), then each feature logger is a thin
+screen on top of it.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0007 | Onboarding flow (body stats, goals, training history) | SPEC-0007 | Backlog |
-| R-0008 | Daily workout logger UI | SPEC-0008 | Backlog |
-| R-0009 | Nutrition logger UI (manual entry first) | SPEC-0009 | Backlog |
-| R-0010 | Progress photo capture with fixed-angle prompts | SPEC-0010 | Backlog |
+| R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Accepted |
+| R-0008 | Onboarding flow (body stats, goals, training history) | SPEC-0008 | Backlog |
+| R-0009 | Daily workout logger UI | SPEC-0009 | Backlog |
+| R-0010 | Nutrition logger UI (manual entry first) | SPEC-0010 | Backlog |
 | R-0011 | Dashboard: trends, current program, weekly plan | SPEC-0011 | Backlog |
+
+> **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
+> **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
+> it re-enters the backlog with a fresh id once R-0006 is `Done`, sequenced
+> alongside the M6 photo pipeline.
 
 ### M4 — Archetype prior & initial program
 
