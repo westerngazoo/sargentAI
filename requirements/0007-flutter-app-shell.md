@@ -5,7 +5,7 @@
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-02
 - **Depends on:** R-0001 (Done — Flutter scaffold under `/mobile`), R-0002 (Done — `/auth/register`, `/auth/login`, `/auth/me`)
-- **Realized by:** SPEC-0007 (to be written)
+- **Realized by:** [SPEC-0007](../specs/0007-flutter-app-shell.md) (Accepted)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
