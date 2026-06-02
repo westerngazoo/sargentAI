@@ -8,9 +8,9 @@ use sqlx::{prelude::FromRow, PgPool, Postgres, Row as _, Transaction};
 use uuid::Uuid;
 
 use fitai_core::{
-    BodyFatPercentage, Email, ExerciseName, Goal, Goals, HeightCm, LoadKg, MuscleGroup,
-    NewExercise, NewProfile, NewWorkoutSession, Profile, Reps, Rpe, Sex, User, UserId, WeightKg,
-    WorkoutExercise, WorkoutSession, WorkoutSet,
+    BodyFatPercentage, Email, ExerciseName, Goal, Goals, Grams, HeightCm, LoadKg, Macros,
+    MuscleGroup, NewExercise, NewNutritionLog, NewProfile, NewWorkoutSession, NutritionLog,
+    Profile, Reps, Rpe, Sex, User, UserId, WeightKg, WorkoutExercise, WorkoutSession, WorkoutSet,
 };
 
 use crate::error::{ApiError, ApiResult};
@@ -266,12 +266,13 @@ pub struct SetRow {
     pub rpe: Option<f64>,
 }
 
-/// A stored workout value that fails domain validation is data corruption (we
-/// only ever persist validated values), surfaced as a logged 500 — never
-/// silently coerced (the `into_profile`/`into_user` discipline).
+/// A stored value that fails domain validation is data corruption (we only ever
+/// persist validated values), surfaced as a logged 500 — never silently coerced
+/// (the `into_profile`/`into_user` discipline). Shared by the workout and
+/// nutrition row mappers.
 fn corrupt(id: Uuid, what: &'static str) -> ApiError {
-    tracing::error!(%id, what, "stored workout value failed domain validation");
-    ApiError::Internal(eyre::eyre!("stored workout value failed domain validation"))
+    tracing::error!(%id, what, "stored value failed domain validation");
+    ApiError::Internal(eyre::eyre!("stored value failed domain validation"))
 }
 
 fn set_from_row(r: &SetRow) -> ApiResult<WorkoutSet> {
@@ -580,6 +581,174 @@ pub async fn replace_session(
 /// Returns [`ApiError::Database`] on a query failure.
 pub async fn delete_session(pool: &PgPool, user_id: UserId, id: Uuid) -> ApiResult<bool> {
     let result = sqlx::query("DELETE FROM workout_sessions WHERE id = $1 AND user_id = $2")
+        .bind(id)
+        .bind(user_id.0)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+#[derive(Debug, FromRow)]
+pub struct NutritionRow {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub performed_on: NaiveDate,
+    pub protein_g: f64,
+    pub carbs_g: f64,
+    pub fat_g: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl NutritionRow {
+    /// Reconstruct the domain `NutritionLog`. A stored macro that fails domain
+    /// validation is data corruption → logged 500 (reuses the shared `corrupt`
+    /// helper, as the workout row mappers do).
+    ///
+    /// # Errors
+    /// Returns [`ApiError::Internal`] when a stored macro fails domain validation.
+    pub fn into_nutrition_log(self) -> ApiResult<NutritionLog> {
+        let id = self.id;
+        let macros = Macros {
+            protein: Grams::try_new(self.protein_g, "protein_g")
+                .map_err(|_| corrupt(id, "protein_g"))?,
+            carbs: Grams::try_new(self.carbs_g, "carbs_g").map_err(|_| corrupt(id, "carbs_g"))?,
+            fat: Grams::try_new(self.fat_g, "fat_g").map_err(|_| corrupt(id, "fat_g"))?,
+        };
+        Ok(NutritionLog {
+            id: self.id,
+            user_id: UserId(self.user_id),
+            performed_on: self.performed_on,
+            macros,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        })
+    }
+}
+
+const NUTRITION_COLUMNS: &str =
+    "id, user_id, performed_on, protein_g, carbs_g, fat_g, created_at, updated_at";
+
+/// Insert a nutrition log; maps a per-day unique violation to
+/// [`ApiError::AlreadyExists`] (→ 409), as `insert_user` maps a duplicate email.
+///
+/// # Errors
+/// Returns [`ApiError::AlreadyExists`] when the caller already has a log for
+/// that date, or [`ApiError::Database`] on any other query failure.
+pub async fn insert_nutrition_log(
+    pool: &PgPool,
+    user_id: UserId,
+    new: &NewNutritionLog,
+) -> ApiResult<NutritionLog> {
+    let id = Uuid::new_v4();
+    let result = sqlx::query_as::<_, NutritionRow>(
+        "INSERT INTO nutrition_logs (id, user_id, performed_on, protein_g, carbs_g, fat_g) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
+         RETURNING id, user_id, performed_on, protein_g, carbs_g, fat_g, created_at, updated_at",
+    )
+    .bind(id)
+    .bind(user_id.0)
+    .bind(new.performed_on)
+    .bind(new.macros.protein.get())
+    .bind(new.macros.carbs.get())
+    .bind(new.macros.fat.get())
+    .fetch_one(pool)
+    .await;
+
+    match result {
+        Ok(row) => row.into_nutrition_log(),
+        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
+            Err(ApiError::AlreadyExists)
+        }
+        Err(e) => Err(ApiError::Database(e)),
+    }
+}
+
+/// All of the caller's logs, newest `performed_on` first.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure, or [`ApiError::Internal`]
+/// if a stored row fails domain validation on read-back.
+pub async fn find_nutrition_logs_by_user(
+    pool: &PgPool,
+    user_id: UserId,
+) -> ApiResult<Vec<NutritionLog>> {
+    let rows: Vec<NutritionRow> = sqlx::query_as(&format!(
+        "SELECT {NUTRITION_COLUMNS} FROM nutrition_logs \
+         WHERE user_id = $1 ORDER BY performed_on DESC, created_at DESC"
+    ))
+    .bind(user_id.0)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(NutritionRow::into_nutrition_log)
+        .collect()
+}
+
+/// One log if it exists and is owned by the caller, else `None` (→ 404).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure, or [`ApiError::Internal`]
+/// if the stored row fails domain validation on read-back.
+pub async fn find_nutrition_log_by_id(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+) -> ApiResult<Option<NutritionLog>> {
+    let row: Option<NutritionRow> = sqlx::query_as(&format!(
+        "SELECT {NUTRITION_COLUMNS} FROM nutrition_logs WHERE id = $1 AND user_id = $2"
+    ))
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(NutritionRow::into_nutrition_log).transpose()
+}
+
+/// Full-replace edit; `None` when the log is missing or owned by another user
+/// (→ 404). The row is updated in place (`created_at` preserved, `updated_at`
+/// bumped). A `performed_on` collision with another of the caller's logs
+/// surfaces as a unique violation, auto-mapped to `AlreadyExists`/409 by
+/// `ApiError::into_response` (error.rs) — no pre-check query is issued
+/// (SPEC-0005 §2.5 / OQ-C3).
+///
+/// # Errors
+/// Returns [`ApiError::AlreadyExists`] on a date collision (via the auto-map),
+/// [`ApiError::Database`] on any other query failure, or [`ApiError::Internal`]
+/// if the stored row fails domain validation on read-back.
+pub async fn update_nutrition_log(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+    new: &NewNutritionLog,
+) -> ApiResult<Option<NutritionLog>> {
+    let row: Option<NutritionRow> = sqlx::query_as(
+        "UPDATE nutrition_logs \
+         SET performed_on = $1, protein_g = $2, carbs_g = $3, fat_g = $4, updated_at = NOW() \
+         WHERE id = $5 AND user_id = $6 \
+         RETURNING id, user_id, performed_on, protein_g, carbs_g, fat_g, created_at, updated_at",
+    )
+    .bind(new.performed_on)
+    .bind(new.macros.protein.get())
+    .bind(new.macros.carbs.get())
+    .bind(new.macros.fat.get())
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?;
+
+    row.map(NutritionRow::into_nutrition_log).transpose()
+}
+
+/// Delete the caller's log; `false` when it is missing or owned by another user
+/// (→ 404).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn delete_nutrition_log(pool: &PgPool, user_id: UserId, id: Uuid) -> ApiResult<bool> {
+    let result = sqlx::query("DELETE FROM nutrition_logs WHERE id = $1 AND user_id = $2")
         .bind(id)
         .bind(user_id.0)
         .execute(pool)

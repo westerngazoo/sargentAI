@@ -43,7 +43,7 @@ Server-side persistence of every signal the model will eventually consume.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Done |
-| R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Backlog |
+| R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Accepted |
 | R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
 
 ### M3 — Flutter MVP (thin client)
