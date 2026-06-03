@@ -18,6 +18,7 @@ import 'package:fitai/src/auth/data/auth_api.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 /// Mock HTTP client — lets a test stub register/login/me at the transport edge.
@@ -78,5 +79,5 @@ void registerFallbacks() {
 }
 
 /// Convenience: an ApiException matcher by status code.
-Matcher isApiExceptionWithStatus(int? status) => isA<ApiException>()
-    .having((e) => e.statusCode, 'statusCode', status);
+Matcher isApiExceptionWithStatus(int? status) =>
+    isA<ApiException>().having((e) => e.statusCode, 'statusCode', status);

@@ -75,7 +75,8 @@ void main() {
   testWidgets('SAC1 a 400 bad email renders a readable inline message',
       (tester) async {
     when(() => repo.register(any(), any())).thenThrow(
-      const ApiException('enter a valid email', statusCode: 400, field: 'email'),
+      const ApiException('enter a valid email',
+          statusCode: 400, field: 'email'),
     );
     final container = await pumpRegister(tester);
 

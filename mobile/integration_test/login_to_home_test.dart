@@ -43,8 +43,8 @@ void main() {
     final store = <String, String>{};
     when(() => storage.read(key: any(named: 'key')))
         .thenAnswer((inv) async => store[inv.namedArguments[#key]]);
-    when(() => storage.write(
-            key: any(named: 'key'), value: any(named: 'value')))
+    when(() =>
+            storage.write(key: any(named: 'key'), value: any(named: 'value')))
         .thenAnswer((inv) async {
       store[inv.namedArguments[#key] as String] =
           inv.namedArguments[#value] as String;
@@ -62,8 +62,8 @@ void main() {
               'user_id': 'e2e-user',
               'expires_at': '2030-01-01T00:00:00Z',
             }));
-    when(() => dio.get<dynamic>('/auth/me'))
-        .thenAnswer((_) async => _resp('/auth/me', 200, {'user_id': 'e2e-user'}));
+    when(() => dio.get<dynamic>('/auth/me')).thenAnswer(
+        (_) async => _resp('/auth/me', 200, {'user_id': 'e2e-user'}));
 
     await tester.pumpWidget(
       ProviderScope(

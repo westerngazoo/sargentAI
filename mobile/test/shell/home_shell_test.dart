@@ -71,7 +71,12 @@ void main() {
     await pumpShell(tester);
     await tester.pumpAndSettle();
 
-    for (final feature in const ['Workout', 'Nutrition', 'Dashboard', 'Photo']) {
+    for (final feature in const [
+      'Workout',
+      'Nutrition',
+      'Dashboard',
+      'Photo'
+    ]) {
       expect(find.textContaining(feature), findsNothing);
     }
   });

@@ -112,8 +112,7 @@ void main() {
     // Busy indicator visible.
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     // Double-submit prevented: the button is disabled (onPressed == null).
-    final button =
-        tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(button.onPressed, isNull);
 
     gate.complete(sampleToken());

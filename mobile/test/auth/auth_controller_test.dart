@@ -111,9 +111,8 @@ void main() {
     });
 
     test('a failed login rethrows ApiException and keeps state put', () async {
-      when(() => repo.login(any(), any()))
-          .thenThrow(const ApiException('invalid email or password',
-              statusCode: 401));
+      when(() => repo.login(any(), any())).thenThrow(
+          const ApiException('invalid email or password', statusCode: 401));
       final container = makeContainer();
       final controller = container.read(authControllerProvider.notifier);
       container.read(authControllerProvider);

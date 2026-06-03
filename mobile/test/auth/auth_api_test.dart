@@ -36,8 +36,8 @@ void main() {
   group('SAC1 register', () {
     test('201 {user_id} completes without throwing', () async {
       when(() => dio.post<dynamic>('/auth/register', data: any(named: 'data')))
-          .thenAnswer((_) async =>
-              _ok('/auth/register', 201, {'user_id': 'user-1'}));
+          .thenAnswer(
+              (_) async => _ok('/auth/register', 201, {'user_id': 'user-1'}));
       await expectLater(api.register('a@b.com', 'pw'), completes);
     });
 
