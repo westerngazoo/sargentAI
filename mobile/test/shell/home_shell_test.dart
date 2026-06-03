@@ -86,7 +86,13 @@ void main() {
       const ApiException('session expired', statusCode: 401),
     );
     final container = await pumpShell(tester);
-    await tester.pumpAndSettle();
+    // The 401 path calls logout() but deliberately leaves the loading spinner
+    // up: in the running app the router redirect unmounts the shell, but this
+    // isolated test has no router, so the CircularProgressIndicator never stops
+    // animating and pumpAndSettle would block until its timeout. Bounded pumps
+    // flush the async chain (me() 401 -> logout -> clear -> state) instead.
+    await tester.pump(); // me() rejects, logout() runs, awaits clear()
+    await tester.pump(); // clear() resolves, state -> AuthUnauthenticated
 
     verify(() => repo.clear()).called(1);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
