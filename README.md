@@ -18,4 +18,4 @@ built and in what order.
 ## Pinned toolchains
 
 - Rust **1.95.0** (`backend/rust-toolchain.toml`)
-- Flutter **3.44.0** (`mobile/.flutter-version`)
+- Flutter **3.41.2** (`mobile/.flutter-version`)
