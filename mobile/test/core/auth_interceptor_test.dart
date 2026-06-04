@@ -91,7 +91,7 @@ void main() {
       final interceptor = container.read(_interceptorProbe);
       interceptor.onError(
         dioError(401, path: '/auth/me'),
-        ErrorInterceptorHandler(),
+        FakeErrorInterceptorHandler(),
       );
       await pumpEventQueue();
 
@@ -113,7 +113,7 @@ void main() {
       final interceptor = container.read(_interceptorProbe);
       interceptor.onError(
         dioError(401, path: '/auth/login'),
-        ErrorInterceptorHandler(),
+        FakeErrorInterceptorHandler(),
       );
       await pumpEventQueue();
 
@@ -134,7 +134,7 @@ void main() {
       final interceptor = container.read(_interceptorProbe);
       interceptor.onError(
         dioError(401, path: '/auth/register'),
-        ErrorInterceptorHandler(),
+        FakeErrorInterceptorHandler(),
       );
       await pumpEventQueue();
 

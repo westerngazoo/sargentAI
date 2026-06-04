@@ -45,7 +45,7 @@ void main() {
     addTearDown(container.dispose);
     // Settle the restore so the controller is AuthAuthenticated.
     container.read(authControllerProvider);
-    await Future<void>.delayed(Duration.zero);
+    await tester.pumpAndSettle();
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -59,7 +59,7 @@ void main() {
       (tester) async {
     when(() => repo.me()).thenAnswer((_) async => 'u-42');
     await pumpShell(tester);
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     expect(find.widgetWithText(AppBar, 'fitAI'), findsOneWidget);
     expect(find.textContaining('u-42'), findsOneWidget);
@@ -69,7 +69,7 @@ void main() {
   testWidgets('SAC11 the shell renders no feature logger UI', (tester) async {
     when(() => repo.me()).thenAnswer((_) async => 'u-1');
     await pumpShell(tester);
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     for (final feature in const [
       'Workout',
