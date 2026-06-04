@@ -1,6 +1,6 @@
 # SPEC-0007 — Flutter app architecture & auth shell
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0007
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-06-02
@@ -76,7 +76,7 @@ The R-0001 `lib/screens/home_screen.dart` placeholder and its widget test are
 | `dio` | `^5.7.0` | HTTP client; interceptors make bearer-attach + 401-sink clean (OQ-D1) |
 | `flutter_secure_storage` | `^9.2.2` | JWT in Keychain/Keystore (owner decision) |
 | **dev:** `mocktail` | `^1.0.4` | mock `AuthApi`/`Dio` in widget + integration tests |
-| **dev:** `integration_test` | SDK | `login → home` e2e on the **flutter-tester** target (headless, no device — OQ-D4) |
+| **dev:** `integration_test` | SDK | `login → home` e2e — **authored + compile-checked** now; gate execution deferred to R-0025 (needs platform folders — OQ-D4) |
 
 No `freezed`/codegen in this spec — the sealed `AuthState` and small DTOs are
 hand-written to keep the first build dependency-light (revisit if DTOs multiply
@@ -370,11 +370,17 @@ confirmed.** Folded into §2/§3 above; status is now `Accepted`.
 - **OQ-D3 — Token source for the interceptor. RESOLVED → in-memory**
   (`AuthController._token`, hydrated at restore/login). Synchronous `onRequest`,
   no Keychain read per call; secure storage stays the cross-start source of truth.
-- **OQ-D4 — `integration_test` without a device. RESOLVED → headless
-  `flutter test integration_test/` on the flutter-tester target** with `Dio`
-  mocked; **no `flutter create .` now** — committing unsigned, untested
-  `android/`/`ios/` device surface is R-0025 scope and outside R-0007 §4. (No
-  platform folders exist today; the e2e needs none.)
+- **OQ-D4 — `integration_test` without a device. RESOLVED → author +
+  compile-check the e2e now; defer gate execution to R-0025.** The file is
+  written against a mocked `Dio` and kept honest by `flutter analyze`, but it is
+  **run by no gate**: `flutter test` (and the CI mobile job) execute `test/`
+  only, and `flutter test integration_test/` routes to a device/host target that
+  needs the `android/`/`ios/` folders R-0007 deliberately does not create
+  (committing an unsigned, untested device surface is R-0025 scope, §4). The
+  `login → home` capability is covered in the meantime by the `test/` widget
+  suites (login + router gate + home shell). *(Corrected 2026-06-03 — the
+  original resolution wrongly assumed the flutter-tester path needs no platform
+  folders; qa step-7 found it does. See Changelog.)*
 - **OQ-D5 — `AuthController` shape. RESOLVED → `Notifier<AuthState>`** with an
   explicit `AuthUnknown` splash state (not `AsyncNotifier<AuthState>`). The sealed
   state already models loading; the router's exhaustive `switch` reads cleaner
@@ -426,10 +432,13 @@ Each maps 1:1 to an R-0007 acceptance criterion and to the qa agent's test.
   error type screens render; a transport/timeout error shows a retryable message;
   the submit button shows a spinner and is disabled in-flight (no double-submit).
   Tests pin the timeout message and the disabled-while-loading state.
-- [ ] **SAC10 → AC10.** Widget tests cover login, register, and the auth gate; at
-  least one `integration_test` drives `login → home` end-to-end against a mocked
-  `Dio`. `flutter analyze`, `dart format --set-exit-if-changed .`, and
-  `flutter test` (incl. `integration_test/`) are all green.
+- [ ] **SAC10 → AC10.** Widget tests cover login, register, and the auth gate and
+  together exercise the full `login → home` path (login → router gate → home
+  shell). An `integration_test` driving `login → home` against a mocked `Dio` is
+  authored and compile-checked (via `flutter analyze`); **running** it in a gate
+  is deferred to R-0025 — it needs platform folders R-0007 does not create
+  (OQ-D4). `flutter analyze`, `dart format --set-exit-if-changed .`, and
+  `flutter test` (the `test/` unit + widget suite) are all green.
 - [ ] **SAC11 → AC11.** No workout/nutrition/photo/dashboard UI exists; the only
   screens are splash, login, register, and the placeholder `HomeShell`
   (user + logout). Verified by the `lib/src` tree + a route-table assertion.
@@ -448,8 +457,10 @@ Each maps 1:1 to an R-0007 acceptance criterion and to the qa agent's test.
 | 2026-06-02 | **(architect) Router built once; a `ValueNotifier` driven by `ref.listen` is the sole `refreshListenable` — the provider body does not `watch` auth.** | Avoids rebuilding the whole `GoRouter` (and discarding nav state) on every auth change; removes the undefined `authChangeNotifierProvider` ambiguity (Finding 1). |
 | 2026-06-02 | **(architect) `_restore` wraps storage reads; a throw clears the entry and falls back to `AuthUnauthenticated`.** | A corrupt/failed secure-storage read must not strand the app in the splash state (Finding 2; SAC3). |
 | 2026-06-02 | **(architect) Restored token is optimistic; `GET /auth/me` is the liveness check that 401-sinks an expired one.** | Documents the cold-start-with-stale-token path (Finding 3; SAC5). |
+| 2026-06-03 | **(qa step-7) The `integration_test` is authored + compile-checked but run by no gate; execution deferred to R-0025.** | `flutter test` and CI run `test/` only; `flutter test integration_test/` needs the platform folders R-0007 omits (corrects OQ-D4). The `login → home` capability is redundantly covered by the widget suites, so SAC10/AC10 were amended to match reality rather than gate-running the e2e now. |
 
 ## Changelog
 
 - _2026-06-02 — created (Draft). Realizes the accepted R-0007 (Flutter app architecture + auth shell). Five HOW-level design questions (OQ-D1..D5: dio, go_router, in-memory token, headless integration_test, Notifier) raised for the architect review._
 - _2026-06-02 — **Accepted.** Architect review returned APPROVE WITH NITS; all five OQ-D resolved as proposed (dio, go_router, in-memory token, headless flutter-tester e2e with no `flutter create`, Notifier). Applied the four findings in lockstep: router built once + `ValueNotifier`/`ref.listen` refresh (§2.7), `_restore` error handling (§2.5), optimistic-restore liveness note (§2.5/SAC5), `AuthToken.userId` "no JWT decode" wording (§3.1); SAC3/SAC5 sub-cases added._
+- _2026-06-03 — **AC10 e2e clause amended (qa step-7 sign-off, owner-approved).** The full `test/` suite is green (49/49) and qa signed off, but the `integration_test` is run by no gate: it needs platform folders R-0007 deliberately omits, so the OQ-D4 "headless flutter-tester" resolution did not actually execute. Scoped SAC10 / OQ-D4 / §2.2 gate-table to "authored + compile-checked now; gate execution deferred to R-0025"; the `login → home` capability stays covered by the `test/` widget suites. Separately, two qa-authored test-harness bugs were fixed during implementation with no production change: the `pumpShell` `Future.delayed` fake-async hang (all three shell tests), and the bare-`ErrorInterceptorHandler` interceptor tests (now drive a real `Dio` request through `onError`)._

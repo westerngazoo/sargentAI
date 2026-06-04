@@ -8,6 +8,8 @@
 // package:fitai/src/auth/application/auth_controller.dart defines
 // authControllerProvider with an in-memory `token` getter + logout().
 
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
@@ -24,6 +26,29 @@ import '../support/fakes.dart';
 /// `AuthInterceptor(ref)` inside `dioProvider`; this mirrors that construction
 /// so the test drives the exact production seam).
 final _interceptorProbe = Provider<AuthInterceptor>(AuthInterceptor.new);
+
+/// Answers every request with [statusCode] and an empty body, so the SAC5
+/// tests can drive a real Dio request through the production interceptor. That
+/// is the correct seam: a bare `ErrorInterceptorHandler` cannot be invoked in
+/// isolation, because `handler.next(err)` propagates dio's internal control
+/// state (which surfaces as an unhandled error with no request flow to catch
+/// it).
+class _StatusAdapter implements HttpClientAdapter {
+  _StatusAdapter(this.statusCode);
+
+  final int statusCode;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async =>
+      ResponseBody.fromString('', statusCode);
+
+  @override
+  void close({bool force = false}) {}
+}
 
 void main() {
   setUpAll(registerFallbacks);
@@ -80,6 +105,11 @@ void main() {
   });
 
   group('SAC5 401 sink', () {
+    Dio dioThrough(ProviderContainer container, int status) =>
+        Dio(BaseOptions(baseUrl: 'http://test.local'))
+          ..httpClientAdapter = _StatusAdapter(status)
+          ..interceptors.add(container.read(_interceptorProbe));
+
     test('a 401 on an authed call logs the user out', () async {
       final container = makeContainer();
       final controller = container.read(authControllerProvider.notifier);
@@ -88,10 +118,9 @@ void main() {
       await controller.login('a@b.com', 'pw');
       expect(container.read(authControllerProvider), isA<AuthAuthenticated>());
 
-      final interceptor = container.read(_interceptorProbe);
-      interceptor.onError(
-        dioError(401, path: '/auth/me'),
-        FakeErrorInterceptorHandler(),
+      await expectLater(
+        dioThrough(container, 401).get<void>('/auth/me'),
+        throwsA(isA<DioException>()),
       );
       await pumpEventQueue();
 
@@ -110,10 +139,9 @@ void main() {
           .thenAnswer((_) async => sampleToken());
       await controller.login('a@b.com', 'pw');
 
-      final interceptor = container.read(_interceptorProbe);
-      interceptor.onError(
-        dioError(401, path: '/auth/login'),
-        FakeErrorInterceptorHandler(),
+      await expectLater(
+        dioThrough(container, 401).get<void>('/auth/login'),
+        throwsA(isA<DioException>()),
       );
       await pumpEventQueue();
 
@@ -131,10 +159,9 @@ void main() {
           .thenAnswer((_) async => sampleToken());
       await controller.login('a@b.com', 'pw');
 
-      final interceptor = container.read(_interceptorProbe);
-      interceptor.onError(
-        dioError(401, path: '/auth/register'),
-        FakeErrorInterceptorHandler(),
+      await expectLater(
+        dioThrough(container, 401).get<void>('/auth/register'),
+        throwsA(isA<DioException>()),
       );
       await pumpEventQueue();
 

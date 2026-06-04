@@ -54,7 +54,7 @@ screen on top of it.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Accepted |
+| R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Done |
 | R-0008 | Onboarding flow (body stats, goals, training history) | SPEC-0008 | Backlog |
 | R-0009 | Daily workout logger UI | SPEC-0009 | Backlog |
 | R-0010 | Nutrition logger UI (manual entry first) | SPEC-0010 | Backlog |
@@ -136,25 +136,29 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0005 — Nutrition log** is **Done** — the full eight-step loop completed and
-it merged to `main` via PR #5 (commit `cb97131`) on 2026-06-01: architect
-APPROVE on both design (Accepted spec, five OQs resolved) and implementation
-(reviewed inline against SPEC-0005 §3 — strict adherence confirmed), `qa`
-sign-off PASS on all twelve acceptance criteria, red→green suite passing (core
-nutrition 19/19, api nutrition 29/29, plus all prior suites unchanged), and all
-four CI gates green. Requirement is `Met`; `SPEC-0005` is `Implemented`. R-0005
-is the second M2 logging resource: deliberately simpler than R-0004 (one flat
-table, no transaction) but reintroducing a **derived response field** —
-`calories` (4/4/9, never stored) via a dedicated `NutritionResponse` DTO, the
-R-0003 `ProfileResponse`/`age` precedent.
+**R-0007 — Flutter app architecture & auth shell** is **Done** — the project's
+first mobile requirement completed the eight-step loop and landed on `main`. It
+turns `/mobile` from a hello-world into an authenticated client skeleton:
+register/login against the R-0002 endpoints, JWT in platform secure storage, a
+Riverpod session as the single source of truth, a Dio client with a 401
+re-login interceptor, a `go_router` auth gate, and a build-time-configurable API
+base URL — **no feature logger UI** (that is R-0008+). Architect **APPROVE**; qa
+**SIGN-OFF** on AC1–AC11 with the `test/` suite green (49/49). Requirement is
+`Met`; `SPEC-0007` is `Implemented`. AC10's `integration_test` is authored +
+compile-checked; running it in a gate is deferred to **R-0025** (it needs the
+platform folders R-0007 deliberately omits).
 
-Predecessor **R-0004 — Workout log** is **Done** (PR #4, commit `f5112e5`); it
-opened **M2 — Logging core** and introduced the codebase's first sqlx
-transaction and first nested collection resource. **R-0003 — User profile CRUD**
-is **Done** (PR #3, merge commit `cdf9f9e`); with R-0001–R-0003 all `Done`,
-**M1 — Backend skeleton, auth, profile is fully complete**.
+> Landed via a hotfix: PR #6/#8 first merged the branch at a stale commit that
+> predated the test-suite fix (a `pumpShell` fake-async hang + bare-handler
+> interceptor tests), turning `main` red. The hotfix restored the green 49/49
+> suite, amended AC10 to match the e2e's real gate coverage, and completed the
+> step-8 tracking.
 
-Next focus is the **M2 photo-session logger** (the third logging resource
-named in the M2 theme) — eligible to enter **step 1 (Discuss)** once the owner
-opens it. No requirement file exists for it yet; with R-0004 and R-0005 `Done`,
-the workout and nutrition signals the M5 ML engine consumes are both in place.
+Predecessors **R-0005 — Nutrition log** and **R-0004 — Workout log** are `Done`
+(M2 — Logging core: workout + nutrition signals for the M5 ML engine). With
+**R-0001–R-0003** `Done`, **M1** is complete.
+
+Next focus is the first **M3 feature logger — R-0008 (Onboarding flow)** — now
+unblocked: it builds directly on the R-0007 shell and the R-0003 profile
+endpoints. The **M2 photo-session backend (R-0006)** remains open and gates the
+later progress-photo capture screen.
