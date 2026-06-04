@@ -43,15 +43,19 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    // Settle the restore so the controller is AuthAuthenticated.
+    // Kick off the controller's restore, then pump. Inside testWidgets timers
+    // run on a fake clock that only advances when the test pumps, so a real
+    // `await Future.delayed` here would block forever — pumping advances the
+    // binding and flushes both the restore and the shell's initState `_load`
+    // (me()) microtasks.
     container.read(authControllerProvider);
-    await Future<void>.delayed(Duration.zero);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: const MaterialApp(home: HomeShell()),
       ),
     );
+    await tester.pump();
     return container;
   }
 
