@@ -1,11 +1,11 @@
 # R-0007 — Flutter app architecture & auth shell
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M3
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-02
 - **Depends on:** R-0001 (Done — Flutter scaffold under `/mobile`), R-0002 (Done — `/auth/register`, `/auth/login`, `/auth/me`)
-- **Realized by:** [SPEC-0007](../specs/0007-flutter-app-shell.md) (Accepted)
+- **Realized by:** [SPEC-0007](../specs/0007-flutter-app-shell.md) (Implemented)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
@@ -69,9 +69,14 @@ routing) that the four following M3 screens inherit.
   retryable message; in-flight auth calls show a busy indicator and disable
   double-submit.
 - **AC10.** **Tests:** widget tests cover the login screen, the register screen,
-  and the auth redirect gate; at least one `integration_test` drives
-  **login → home** end-to-end against a mocked HTTP layer. The mobile gates are
-  green: `flutter analyze`, `dart format --set-exit-if-changed .`, `flutter test`.
+  and the auth redirect gate, and together they cover the full **login → home**
+  path (login → router gate → home shell). An `integration_test` driving
+  login → home against a mocked HTTP layer is **authored and compile-checked**
+  (kept honest by `flutter analyze`); **executing** it in a CI gate is **deferred
+  to R-0025**, when `flutter create .` provides a host/device target — no platform
+  folders exist yet, by design (§4). The mobile gates are green: `flutter
+  analyze`, `dart format --set-exit-if-changed .`, and `flutter test` (the
+  `test/` unit + widget suite).
 - **AC11.** **No feature logger UI** (workout, nutrition, photo, dashboard) ships
   in this requirement — the authenticated shell (a placeholder home showing the
   user + logout) is the only screen beyond register/login. Those features are
@@ -118,8 +123,10 @@ mocked-vs-real backend approach for the `integration_test`.
 | 2026-06-02 | **Re-login on `401`; JWT in platform secure storage; no refresh flow.** | Backend issues 24h HS256 tokens with no refresh endpoint (R-0002); re-login is the simplest correct MVP behaviour and needs no backend change. (OQ3) |
 | 2026-06-02 | **API base URL configurable via `--dart-define`, dev default `http://localhost:8080`.** | No hard-coded prod URL; flavors deferred to M8. (AC7) |
 | 2026-06-02 | **Inserted as R-0007; M3 feature rows renumber (onboarding→R-0008, workout→R-0009, nutrition→R-0010, dashboard stays R-0011); progress-photo capture re-homed onto the photo-backend gate (R-0006).** | Avoids rotating 31 committed cross-references to R-0012+ that a full cascade would cause; SPEC-0002 already frames R-0007 as where the Flutter client begins. |
+| 2026-06-03 | **(qa step-7) `integration_test` execution deferred to R-0025; AC10 scoped to authored + compile-checked.** | The e2e needs the `android/`/`ios/` platform folders R-0007 omits by design; `flutter test` and CI run `test/` only. The login → home capability is covered redundantly by the widget suites (login + router gate + home shell), so deferring keeps R-0007 thin without losing coverage. |
 
 ## Changelog
 
 - _2026-06-02 — created (Draft). First M3 / first-mobile requirement: the Flutter app architecture + auth shell. Three step-1 decisions captured (own requirement; Riverpod; re-login on 401)._
 - _2026-06-02 — **Accepted.** Owner accepted AC1–AC11 and the M3 renumber (onboarding→R-0008, workout→R-0009, nutrition→R-0010, dashboard stays R-0011; progress-photo capture re-homed onto the photo-backend gate R-0006). Next: step 2 — write SPEC-0007 and the architect design review._
+- _2026-06-03 — **AC10 amended at qa step-7 sign-off (owner-approved).** The full `test/` suite is green (49/49) and qa signed off, but the `integration_test` is executed by no gate — it needs platform folders R-0007 deliberately omits. AC10 scoped to "authored + compile-checked now; gate execution deferred to R-0025"; the login → home capability stays covered by the widget suites. SPEC-0007 SAC10/OQ-D4 amended to match._
