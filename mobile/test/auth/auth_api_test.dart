@@ -41,14 +41,17 @@ void main() {
       await expectLater(api.register('a@b.com', 'pw'), completes);
     });
 
-    test('400 bad email -> field-aware ApiException', () async {
+    test('400 bad email -> field-aware ApiException (FLAT backend body)',
+        () async {
+      // The backend sends the FLAT shape `{"error":"validation","field":...}`
+      // (`backend/crates/api/src/error.rs`); the corrected shared
+      // `ApiException.fromDio` (SPEC-0008 §2.7) reads `data["field"]` directly,
+      // so `field` is now populated instead of the always-null R-0007 bug.
       when(() => dio.post<dynamic>('/auth/register', data: any(named: 'data')))
           .thenThrow(dioError(
         400,
         path: '/auth/register',
-        body: {
-          'error': {'message': 'invalid email', 'field': 'email'}
-        },
+        body: {'error': 'validation', 'field': 'email'},
       ));
       await expectLater(
         api.register('bad', 'pw'),
