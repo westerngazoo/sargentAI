@@ -6,6 +6,7 @@ import '../auth/application/auth_controller.dart';
 import '../auth/domain/auth_state.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
+import '../profile/presentation/onboarding_screen.dart';
 import '../shell/home_shell.dart';
 import '../shell/splash_screen.dart';
 
@@ -45,6 +46,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+      GoRoute(
+        path: '/onboarding',
+        builder: (_, __) => const OnboardingScreen(),
+      ),
     ],
   );
 });
