@@ -5,7 +5,7 @@
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-10
 - **Depends on:** R-0004 (Done — `/workouts` CRUD), R-0007 (Done — app shell), R-0008 (Done — shell idioms: `AsyncValue`, shared `ApiException.fromDio`, failure-as-state controllers)
-- **Realized by:** SPEC-0009 (to be written)
+- **Realized by:** [SPEC-0009](../specs/0009-live-workout-logger.md) (Accepted)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
