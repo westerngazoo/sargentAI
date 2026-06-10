@@ -27,10 +27,14 @@ fn health_app() -> axum::Router {
     let pool = PgPoolOptions::new()
         .connect_lazy("postgres://localhost/fitai_health_test")
         .unwrap();
+    let store = Arc::new(fitai_api::storage::LocalObjectStore::new(
+        std::env::temp_dir().join("fitai-health-store"),
+    ));
     app(AppState {
         pool,
         jwt_secret: Arc::from(b"health-test-secret".to_vec().into_boxed_slice()),
         jwt_ttl: Duration::from_hours(24),
+        store,
     })
 }
 

@@ -16,8 +16,10 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
-axum.workspace = true
+axum = { workspace = true, features = ["multipart"] }
 tokio.workspace = true
+bytes.workspace = true
+async-trait.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 fitai-core.workspace = true
@@ -37,8 +39,6 @@ tower = { workspace = true, features = ["util"] }
 http-body-util.workspace = true
 reqwest.workspace = true
 tracing-test.workspace = true
-# R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam test root, and
-# `bytes` so the storage unit tests name the `ObjectStore` trait's `Bytes`
-# argument directly (the production dep is added in step 5).
+# R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam test root.
+# (`bytes` is now a production dependency, available to tests too.)
 tempfile = "3"
-bytes = "1"
