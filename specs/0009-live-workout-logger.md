@@ -149,12 +149,14 @@ weight_kg?, rpe?}]}]`, `created_at`, `updated_at`.
 - **Abandon (AC7)**: `PopScope` intercepts back/close while a draft exists →
   confirm dialog → `driver.abandon()` + leave. Starting over after a finish is
   a fresh `start()`.
-- A backend `400 {field}` shows the message on the screen; `errorField` maps to
-  the offending input where nameable (`reps`/`weight_kg`/`rpe` → the set row;
-  `name`/`muscle_group` → the add-exercise sheet; `exercises`/`sets`/
-  `performed_on` → the finish area — `performed_on` defensively, finding 2).
-  The mapping table lives beside the driver (the R-0008 architect note), not
-  in widgets.
+- A backend `400 {field}` shows the message on the screen; `errorField` is
+  mapped by `fieldArea(String?)` (beside the driver, the R-0008 note) to the
+  **area** the message names — `reps`/`weight_kg`/`rpe` → "your sets";
+  `name`/`muscle_group` → "the exercise"; `exercises`/`sets`/`performed_on` →
+  "the workout" (`performed_on` defensively, finding 2). The MVP realizes the
+  routing as a **field-aware message** (the error banner names the area); a
+  focus-jump/scroll to the exact input is deferred polish. `fieldArea` is the
+  same context the R-0027 voice transport speaks back.
 
 ### 2.6 Preset list (AC2 — presentation-only)
 

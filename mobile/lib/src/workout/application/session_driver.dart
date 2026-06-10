@@ -139,3 +139,13 @@ class SessionDriver extends Notifier<SessionDriverState> {
 
   void abandon() => state = const SessionDriverState();
 }
+
+/// Maps a backend `400 {field}` to the area of the live screen that owns it, so
+/// the error message can name where to look (the R-0027 voice transport speaks
+/// this back). `null` when the field maps to no specific area.
+String? fieldArea(String? field) => switch (field) {
+      'reps' || 'weight_kg' || 'rpe' => 'your sets',
+      'name' || 'muscle_group' => 'the exercise',
+      'exercises' || 'sets' || 'performed_on' => 'the workout',
+      _ => null,
+    };

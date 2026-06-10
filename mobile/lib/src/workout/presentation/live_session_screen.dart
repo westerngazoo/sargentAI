@@ -57,17 +57,7 @@ class LiveSessionScreen extends ConsumerWidget {
           child: Column(
             children: [
               if (state.error != null)
-                Container(
-                  width: double.infinity,
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    state.error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                    ),
-                  ),
-                ),
+                _ErrorBanner(error: state.error!, field: state.errorField),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -100,6 +90,31 @@ class LiveSessionScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _AddExerciseSheet(driver: driver),
+    );
+  }
+}
+
+/// The finish-failure banner. When the backend named a field, it appends the
+/// area of the screen to check (`fieldArea`), so the message is field-aware —
+/// the context the R-0027 voice transport will speak back.
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.error, this.field});
+
+  final String error;
+  final String? field;
+
+  @override
+  Widget build(BuildContext context) {
+    final area = fieldArea(field);
+    final message = area == null ? error : '$error — check $area';
+    return Container(
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.errorContainer,
+      padding: const EdgeInsets.all(12),
+      child: Text(
+        message,
+        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+      ),
     );
   }
 }
