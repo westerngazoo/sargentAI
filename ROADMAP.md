@@ -44,7 +44,7 @@ Server-side persistence of every signal the model will eventually consume.
 |-----|------------|------|--------|
 | R-0004 | Workout log: exercises, sets, reps, weight, RPE — model + REST endpoints | SPEC-0004 | Done |
 | R-0005 | Nutrition log: protein/carbs/fat/calories — model + REST endpoints (manual entry only; barcode scan deferred) | SPEC-0005 | Done |
-| R-0006 | Photo session: four fixed angles, upload to S3-compatible storage, metadata in Postgres | SPEC-0006 | Backlog |
+| R-0006 | Photo session: multipart upload through the API to an `ObjectStore` seam (local-fs now, S3 at R-0026), metadata in Postgres; flexible photo list w/ optional angle; owner-only byte download; cross-user → 404 | SPEC-0006 | Done |
 
 ### M3 — Flutter MVP (thin client)
 
@@ -159,27 +159,27 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0009 — Live workout logger** is **Done** — the first fast-track requirement
-completed the eight-step loop and merged via PR #14 (squash `1cfca06`) on
-2026-06-10 (requirement + SPEC-0009 landed first via PR #13). A Start-workout
-FAB opens a live in-gym screen over the **`SessionDriver`** — a
-widget-independent Riverpod state machine that is the **R-0027 earbud seam**:
-`addExercise`/`logSet` are the single validation-enforcement point (reject
-invalid input, return a speakable reason), `finish()` stamps the local date and
-re-reads the list before navigating, failure is data on state. The home shell
-also lists recent sessions with delete. Architect **REQUEST CHANGES** on the
-design (7 findings applied, incl. driver-enforced validation + local-date
-stamping) → **APPROVE WITH NITS** on the implementation (finding-1 `fieldArea`
-fix applied); qa **SIGN-OFF** on AC1–AC12 (suite 235/235). Requirement is `Met`;
-`SPEC-0009` is `Implemented`. The driver is proven widget-free — R-0027 plugs a
-voice transport into the same API without re-touching this code.
+**R-0006 — Photo-session backend** is **Done** — the second fast-track
+requirement (first server-side work of it) completed the eight-step loop and
+merged via PR #16 (squash `39e456c`) on 2026-06-10. Session CRUD + multipart
+photo upload **through the API** to an **`ObjectStore` seam** (`LocalObjectStore`
+now; the real S3 impl is a drop-in at R-0026, so the whole suite runs
+cloud-free), metadata in Postgres, byte-streaming download. The upload is
+bytes-first/row-second/compensate (no dangling row); keys are UUID-only and
+user-namespaced; cross-user access is **404 never 403** and `storage_key` never
+crosses the wire. Architect **APPROVE WITH NITS** on the design → **APPROVE** on
+the implementation; qa **SIGN-OFF** on AC1–AC12 (282 tests, 61 new). Requirement
+is `Met`; `SPEC-0006` is `Implemented`. This is the substrate R-0013's pose
+estimation reads. Deferred follow-ups (recorded): an orphan-object sweep and a
+fault-injecting compensation test. The stack now handles binary object storage.
 
-**R-0008 — Onboarding flow** is `Done` (PR #10/#11): a dismissible profile prompt
-+ wizard over `PUT /profile/me`; it introduced the shared flat-body
-`ApiException.fromDio` and the `AsyncValue` shell. **R-0007 — Flutter app shell**
-is `Done` (PR #6/#8 + hotfix #9). **R-0005 — Nutrition log** and **R-0004 —
-Workout log** are `Done` (M2 — Logging core). With **R-0001–R-0003** `Done`,
-**M1** is complete.
+**R-0009 — Live workout logger** is `Done` (PR #14): the live in-gym logger over
+the widget-independent `SessionDriver` — the R-0027 earbud seam. **R-0008 —
+Onboarding flow** is `Done` (PR #10/#11), introducing the shared
+`ApiException.fromDio` + `AsyncValue` shell. **R-0007 — Flutter app shell** is
+`Done` (PR #6/#8 + hotfix #9). **R-0005 — Nutrition** and **R-0004 — Workout**
+logs are `Done` (M2 — Logging core). With **R-0001–R-0003** `Done`, **M1** is
+complete.
 
 **The roadmap is re-sequenced onto the differentiator fast-track** (owner
 decision, 2026-06-10 — see the M3 callout): live workout logger → photo backend
@@ -191,10 +191,13 @@ photo→archetype uses **real pose-estimation frame features** from day one;
 archetype data is **Claude-curated, owner-approved**, with provenance flags and
 internal-only famous names.
 
-Next focus is **R-0006 — Photo-session backend** — the next fast-track step:
-fixed-angle photo upload to S3-compatible storage with metadata in Postgres,
-the substrate the photo→archetype matching (R-0013) consumes. It is a backend
-(Rust) requirement — the first server-side work since R-0005 — and introduces
-object storage to the stack. After it: the archetype library (R-0012), then
-photo→archetype matching + program/diet proposal (R-0013/R-0014), then the
+Next focus is **R-0012 — the archetype library** — the heart of the
+differentiator: an `ArchetypeLibrary` schema plus **curated seed data** from
+famous athletes' documented routines **and diets** (Mentzer, Arnold, Columbu,
+Yates '96, Cutler, Heath, …), each record carrying a frame profile, a program
+template, a diet template, and **provenance** (documented vs folklore). Claude
+curates and researches the records; the owner approves each before it seeds the
+library. Famous names stay internal labels; user-facing archetype names are
+abstracted. After it: photo→archetype matching + program/diet proposal
+(R-0013/R-0014), then the
 **R-0027 earbud-guided training** differentiator.

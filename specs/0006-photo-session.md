@@ -1,6 +1,6 @@
 # SPEC-0006 — Photo-session backend
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0006
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-06-10
