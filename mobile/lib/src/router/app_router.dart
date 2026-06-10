@@ -9,6 +9,7 @@ import '../auth/presentation/register_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
 import '../shell/home_shell.dart';
 import '../shell/splash_screen.dart';
+import '../workout/presentation/live_session_screen.dart';
 
 /// The app router with the auth-gate (AC3/AC5/AC6/AC8).
 ///
@@ -49,6 +50,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding',
         builder: (_, __) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/session',
+        builder: (_, __) => const LiveSessionScreen(),
       ),
     ],
   );

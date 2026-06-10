@@ -23,6 +23,7 @@ import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
 import 'package:fitai/src/shell/home_shell.dart';
+import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,6 +31,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
 import '../support/profile_fakes.dart';
+import '../support/workout_fakes.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -38,15 +40,18 @@ void main() {
   late MockTokenStore tokenStore;
   late MockAuthRepository repo;
   late MockProfileRepository profileRepo;
+  late MockWorkoutRepository workoutRepo;
 
   setUp(() {
     tokenStore = MockTokenStore();
     repo = MockAuthRepository();
     profileRepo = MockProfileRepository();
+    workoutRepo = MockWorkoutRepository();
     when(() => tokenStore.read())
         .thenAnswer((_) async => sampleToken(userId: 'u-1'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
+    when(() => workoutRepo.list()).thenAnswer((_) async => []);
   });
 
   Future<ProviderContainer> pumpShell(WidgetTester tester) async {
@@ -55,6 +60,7 @@ void main() {
         tokenStoreProvider.overrideWithValue(tokenStore),
         authRepositoryProvider.overrideWithValue(repo),
         profileRepositoryProvider.overrideWithValue(profileRepo),
+        workoutRepositoryProvider.overrideWithValue(workoutRepo),
       ],
     );
     addTearDown(container.dispose);
