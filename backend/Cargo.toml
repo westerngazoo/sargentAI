@@ -9,7 +9,7 @@ publish = false
 
 [workspace.dependencies]
 axum = "0.7"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net", "fs"] }
 tower = "0.5"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -29,6 +29,10 @@ thiserror = "2"
 validator = { version = "0.20", features = ["derive"] }
 eyre = "0.6"
 tracing-test = "0.2"
+
+# R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam.
+bytes = "1"
+async-trait = "0.1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

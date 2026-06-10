@@ -39,6 +39,16 @@ pub enum ApiError {
     IntConversion(#[from] std::num::TryFromIntError),
 }
 
+impl From<crate::storage::ObjectStoreError> for ApiError {
+    /// Object-store failures (a missing object, an IO error, a rejected key) are
+    /// server-side faults — they map to the opaque `Internal` (500) body, never
+    /// a variant that leaks storage internals (SPEC-0006 §2.4, AC10).
+    fn from(e: crate::storage::ObjectStoreError) -> Self {
+        tracing::error!(error = %e, "object store error");
+        ApiError::Internal(eyre::eyre!("object store error"))
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {

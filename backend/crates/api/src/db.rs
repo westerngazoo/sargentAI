@@ -8,9 +8,10 @@ use sqlx::{prelude::FromRow, PgPool, Postgres, Row as _, Transaction};
 use uuid::Uuid;
 
 use fitai_core::{
-    BodyFatPercentage, Email, ExerciseName, Goal, Goals, Grams, HeightCm, LoadKg, Macros,
-    MuscleGroup, NewExercise, NewNutritionLog, NewProfile, NewWorkoutSession, NutritionLog,
-    Profile, Reps, Rpe, Sex, User, UserId, WeightKg, WorkoutExercise, WorkoutSession, WorkoutSet,
+    Angle, BodyFatPercentage, Email, ExerciseName, Goal, Goals, Grams, HeightCm, ImageContentType,
+    LoadKg, Macros, MuscleGroup, NewExercise, NewNutritionLog, NewPhoto, NewProfile,
+    NewWorkoutSession, NutritionLog, PhotoSession, Profile, Reps, Rpe, SessionPhoto, Sex, User,
+    UserId, WeightKg, WorkoutExercise, WorkoutSession, WorkoutSet,
 };
 
 use crate::error::{ApiError, ApiResult};
@@ -754,4 +755,289 @@ pub async fn delete_nutrition_log(pool: &PgPool, user_id: UserId, id: Uuid) -> A
         .execute(pool)
         .await?;
     Ok(result.rows_affected() > 0)
+}
+
+// --- R-0006 photo sessions -------------------------------------------------
+
+#[derive(Debug, FromRow)]
+pub struct PhotoSessionRow {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub performed_on: NaiveDate,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, FromRow)]
+pub struct PhotoRow {
+    pub id: Uuid,
+    pub session_id: Uuid,
+    pub angle: Option<String>,
+    pub storage_key: String,
+    pub content_type: String,
+    pub byte_size: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+/// The owner-scoped storage location of one photo (download/delete need the key
+/// + content type without the full aggregate).
+pub struct PhotoLocation {
+    pub storage_key: String,
+    pub content_type: String,
+}
+
+fn into_session_photo(row: &PhotoRow) -> ApiResult<SessionPhoto> {
+    let angle = match &row.angle {
+        Some(a) => Some(Angle::parse(a).map_err(|_| corrupt(row.id, "angle"))?),
+        None => None,
+    };
+    let content_type =
+        ImageContentType::parse(&row.content_type).map_err(|_| corrupt(row.id, "content_type"))?;
+    Ok(SessionPhoto {
+        id: row.id,
+        angle,
+        content_type,
+        byte_size: row.byte_size,
+        created_at: row.created_at,
+    })
+}
+
+const PHOTO_COLUMNS: &str =
+    "id, session_id, angle, storage_key, content_type, byte_size, created_at";
+
+/// Create an empty photo session for the caller (`performed_on` = today).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn insert_photo_session(
+    pool: &PgPool,
+    user_id: UserId,
+    performed_on: NaiveDate,
+) -> ApiResult<PhotoSession> {
+    let row: PhotoSessionRow = sqlx::query_as(
+        "INSERT INTO photo_sessions (id, user_id, performed_on) VALUES ($1, $2, $3) \
+         RETURNING id, user_id, performed_on, created_at, updated_at",
+    )
+    .bind(Uuid::new_v4())
+    .bind(user_id.0)
+    .bind(performed_on)
+    .fetch_one(pool)
+    .await?;
+    Ok(PhotoSession {
+        id: row.id,
+        user_id: UserId(row.user_id),
+        performed_on: row.performed_on,
+        photos: Vec::new(),
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    })
+}
+
+/// Lightweight ownership check for the upload/photo-delete authorize path —
+/// avoids assembling the full photo list.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn session_exists_for_user(
+    pool: &PgPool,
+    user_id: UserId,
+    session_id: Uuid,
+) -> ApiResult<bool> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM photo_sessions WHERE id = $1 AND user_id = $2)",
+    )
+    .bind(session_id)
+    .bind(user_id.0)
+    .fetch_one(pool)
+    .await?;
+    Ok(exists)
+}
+
+async fn photos_for_session(pool: &PgPool, session_id: Uuid) -> ApiResult<Vec<SessionPhoto>> {
+    let rows: Vec<PhotoRow> = sqlx::query_as(&format!(
+        "SELECT {PHOTO_COLUMNS} FROM photo_session_photos WHERE session_id = $1 \
+         ORDER BY created_at, id"
+    ))
+    .bind(session_id)
+    .fetch_all(pool)
+    .await?;
+    rows.iter().map(into_session_photo).collect()
+}
+
+fn assemble(row: &PhotoSessionRow, photos: Vec<SessionPhoto>) -> PhotoSession {
+    PhotoSession {
+        id: row.id,
+        user_id: UserId(row.user_id),
+        performed_on: row.performed_on,
+        photos,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+    }
+}
+
+/// All of the caller's sessions, newest `performed_on` first, each with its
+/// photos' metadata.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure; [`ApiError::Internal`] if a stored
+/// photo fails domain validation on read-back.
+pub async fn find_photo_sessions_by_user(
+    pool: &PgPool,
+    user_id: UserId,
+) -> ApiResult<Vec<PhotoSession>> {
+    let sessions: Vec<PhotoSessionRow> = sqlx::query_as(
+        "SELECT id, user_id, performed_on, created_at, updated_at FROM photo_sessions \
+         WHERE user_id = $1 ORDER BY performed_on DESC, created_at DESC",
+    )
+    .bind(user_id.0)
+    .fetch_all(pool)
+    .await?;
+
+    let mut out = Vec::with_capacity(sessions.len());
+    for row in sessions {
+        let photos = photos_for_session(pool, row.id).await?;
+        out.push(assemble(&row, photos));
+    }
+    Ok(out)
+}
+
+/// One session with its photos if it exists and is owned by the caller, else
+/// `None` (→ 404).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure; [`ApiError::Internal`] on corrupt
+/// stored photo metadata.
+pub async fn find_photo_session_by_id(
+    pool: &PgPool,
+    user_id: UserId,
+    session_id: Uuid,
+) -> ApiResult<Option<PhotoSession>> {
+    let row: Option<PhotoSessionRow> = sqlx::query_as(
+        "SELECT id, user_id, performed_on, created_at, updated_at FROM photo_sessions \
+         WHERE id = $1 AND user_id = $2",
+    )
+    .bind(session_id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?;
+
+    match row {
+        None => Ok(None),
+        Some(row) => {
+            let photos = photos_for_session(pool, row.id).await?;
+            Ok(Some(assemble(&row, photos)))
+        }
+    }
+}
+
+/// Insert a photo row (after its bytes are in the store).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure; [`ApiError::Internal`] if the
+/// just-inserted row fails read-back validation.
+pub async fn insert_photo(
+    pool: &PgPool,
+    session_id: Uuid,
+    photo_id: Uuid,
+    new: &NewPhoto,
+    storage_key: &str,
+) -> ApiResult<SessionPhoto> {
+    let angle = new.angle.map(serde_plain_angle);
+    let row: PhotoRow = sqlx::query_as(&format!(
+        "INSERT INTO photo_session_photos \
+         (id, session_id, angle, storage_key, content_type, byte_size) \
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING {PHOTO_COLUMNS}"
+    ))
+    .bind(photo_id)
+    .bind(session_id)
+    .bind(angle)
+    .bind(storage_key)
+    .bind(new.content_type.as_str())
+    .bind(new.byte_size)
+    .fetch_one(pool)
+    .await?;
+    into_session_photo(&row)
+}
+
+/// The owner-scoped storage location of one photo (download/delete), else `None`
+/// (→ 404). Ownership is enforced by the join on `photo_sessions.user_id`.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn find_photo_location(
+    pool: &PgPool,
+    user_id: UserId,
+    session_id: Uuid,
+    photo_id: Uuid,
+) -> ApiResult<Option<PhotoLocation>> {
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT p.storage_key, p.content_type FROM photo_session_photos p \
+         JOIN photo_sessions s ON p.session_id = s.id \
+         WHERE p.id = $1 AND s.id = $2 AND s.user_id = $3",
+    )
+    .bind(photo_id)
+    .bind(session_id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|(storage_key, content_type)| PhotoLocation {
+        storage_key,
+        content_type,
+    }))
+}
+
+/// Delete one photo row. Returns `false` (→ 404) when missing/foreign.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn delete_photo_row(pool: &PgPool, photo_id: Uuid) -> ApiResult<bool> {
+    let result = sqlx::query("DELETE FROM photo_session_photos WHERE id = $1")
+        .bind(photo_id)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+/// The storage keys of every photo in the caller's session (for byte cleanup on
+/// session delete).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn photo_keys_for_session(pool: &PgPool, session_id: Uuid) -> ApiResult<Vec<String>> {
+    let keys: Vec<(String,)> =
+        sqlx::query_as("SELECT storage_key FROM photo_session_photos WHERE session_id = $1")
+            .bind(session_id)
+            .fetch_all(pool)
+            .await?;
+    Ok(keys.into_iter().map(|(k,)| k).collect())
+}
+
+/// Delete the caller's session (FK-cascades its photo rows). `false` (→ 404)
+/// when missing/foreign.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn delete_photo_session(
+    pool: &PgPool,
+    user_id: UserId,
+    session_id: Uuid,
+) -> ApiResult<bool> {
+    let result = sqlx::query("DELETE FROM photo_sessions WHERE id = $1 AND user_id = $2")
+        .bind(session_id)
+        .bind(user_id.0)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+/// The canonical lowercase token for an [`Angle`] (its serde encoding) for the
+/// `angle` column.
+fn serde_plain_angle(angle: Angle) -> &'static str {
+    match angle {
+        Angle::Front => "front",
+        Angle::Back => "back",
+        Angle::Left => "left",
+        Angle::Right => "right",
+        Angle::Other => "other",
+    }
 }

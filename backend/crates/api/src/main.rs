@@ -28,10 +28,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("../../migrations").run(&pool).await?;
     tracing::info!("migrations up to date");
 
+    let store_root =
+        std::env::var("PHOTO_STORE_ROOT").unwrap_or_else(|_| "data/photos".to_string());
+    let store = Arc::new(fitai_api::storage::LocalObjectStore::new(&store_root));
+    tracing::info!(root = %store_root, "object store rooted");
+
     let state = AppState {
         pool,
         jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
         jwt_ttl: Duration::from_hours(24),
+        store,
     };
 
     let port: u16 = std::env::var("PORT")
