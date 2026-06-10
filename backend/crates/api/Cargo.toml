@@ -37,3 +37,8 @@ tower = { workspace = true, features = ["util"] }
 http-body-util.workspace = true
 reqwest.workspace = true
 tracing-test.workspace = true
+# R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam test root, and
+# `bytes` so the storage unit tests name the `ObjectStore` trait's `Bytes`
+# argument directly (the production dep is added in step 5).
+tempfile = "3"
+bytes = "1"
