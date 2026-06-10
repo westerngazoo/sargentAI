@@ -1,56 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../auth/application/auth_controller.dart';
-import '../auth/data/auth_repository.dart';
-import '../core/network/api_exception.dart';
+import '../profile/application/profile_providers.dart';
+import '../profile/presentation/profile_prompt.dart';
 
-/// The authenticated home — a deliberate placeholder (AC11). It fetches the
-/// current user from `GET /auth/me` (AC4) and offers Logout (AC6). A 401 from
-/// `me()` (e.g. a restored-but-expired token, AC5) logs the user out; the
-/// router then redirects to `/login`. R-0008+ replace the body with real
-/// feature navigation.
-class HomeShell extends ConsumerStatefulWidget {
+/// The authenticated home (AC11 placeholder). It observes [profileProvider]
+/// (`GET /profile/me`) via `AsyncValue.when` — the uniform async idiom (SPEC-0007
+/// review Finding 1, paid down here): a `null` profile (404) offers the
+/// dismissible onboarding prompt; a present profile shows a summary.
+///
+/// `profileProvider`'s read is also the cold-start liveness probe: a restored
+/// but expired token yields a `401`, which the shared `AuthInterceptor`
+/// 401-sinks → logout → `/login` (SPEC-0007 SAC5). R-0009+ must not reintroduce
+/// a redundant `/auth/me` read.
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
 
   @override
-  ConsumerState<HomeShell> createState() => _HomeShellState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(profileProvider);
+    final dismissed = ref.watch(onboardingDismissedProvider);
 
-class _HomeShellState extends ConsumerState<HomeShell> {
-  String? _userId;
-  String? _error;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final id = await ref.read(authRepositoryProvider).me();
-      if (!mounted) return;
-      setState(() {
-        _userId = id;
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (e.statusCode == 401) {
-        await ref.read(authControllerProvider.notifier).logout();
-        return; // the router redirect takes over.
-      }
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('fitAI'),
@@ -61,13 +33,46 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           ),
         ],
       ),
-      body: Center(child: _body()),
+      body: profile.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) =>
+            _Retry(onRetry: () => ref.invalidate(profileProvider)),
+        data: (p) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (p == null && !dismissed)
+              ProfilePrompt(
+                onStart: () => context.go('/onboarding'),
+                onDismiss: () =>
+                    ref.read(onboardingDismissedProvider.notifier).state = true,
+              ),
+            Expanded(
+              child: Center(
+                child: Text(p == null
+                    ? 'Welcome — complete your profile to get started'
+                    : 'Signed in · ${p.goals.length} goal(s)'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  Widget _body() {
-    if (_loading) return const CircularProgressIndicator();
-    if (_error != null) return Text(_error!);
-    return Text('Signed in as $_userId');
-  }
+class _Retry extends StatelessWidget {
+  const _Retry({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("couldn't load your profile"),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      );
 }

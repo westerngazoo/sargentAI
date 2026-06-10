@@ -81,8 +81,3 @@ void registerFallbacks() {
 /// Convenience: an ApiException matcher by status code.
 Matcher isApiExceptionWithStatus(int? status) =>
     isA<ApiException>().having((e) => e.statusCode, 'statusCode', status);
-
-class FakeErrorInterceptorHandler extends ErrorInterceptorHandler {
-  @override
-  void next(DioException err) {}
-}
