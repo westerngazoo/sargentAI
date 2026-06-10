@@ -5,7 +5,7 @@
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-10
 - **Depends on:** R-0002 (Done — auth, `AppState`, the `db`/error machinery) — for the read API only; the curated data itself depends on nothing
-- **Realized by:** SPEC-0012 (to be written)
+- **Realized by:** [SPEC-0012](../specs/0012-archetype-library.md) (Accepted)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
