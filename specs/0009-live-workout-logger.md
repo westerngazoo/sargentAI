@@ -1,6 +1,6 @@
 # SPEC-0009 — Live workout logger
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0009
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-06-10

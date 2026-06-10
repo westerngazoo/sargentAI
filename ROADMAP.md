@@ -71,7 +71,7 @@ screen on top of it.
 |-----|------------|------|--------|
 | R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Done |
 | R-0008 | Onboarding flow: dismissible home prompt + multi-step wizard (body stats, goals, optional details) over `PUT /profile/me`; training history deferred (no backend field) | SPEC-0008 | Done |
-| R-0009 | Live workout logger: program-aware in-gym session driver (start → add exercise via preset picker + free text → log sets → finish → `POST /workouts`); sessions list + delete; full edit deferred. The substrate R-0027 drives by voice | SPEC-0009 | Backlog |
+| R-0009 | Live workout logger: program-aware in-gym session driver (start → add exercise via preset picker + free text → log sets → finish → `POST /workouts`); sessions list + delete; full edit deferred. The substrate R-0027 drives by voice | SPEC-0009 | Done |
 | R-0010 | Nutrition logger UI (manual entry first) — deferred until after the fast-track chain | SPEC-0010 | Backlog |
 | R-0011 | Dashboard: trends, current program, weekly plan — deferred until after the fast-track chain | SPEC-0011 | Backlog |
 | R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | Backlog |
@@ -159,24 +159,27 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0008 — Onboarding flow** is **Done** — the second M3 mobile requirement
-completed the eight-step loop and merged via PR #10 (squash `52e6f2b`) on
-2026-06-10. A dismissible "complete your profile" prompt on the home shell
-(gated on `GET /profile/me` 404) opens a multi-step wizard (body stats → goals →
-optional details) that upserts via `PUT /profile/me`; no backend changes.
-Architect **REQUEST CHANGES** on the design (all five findings applied, incl. a
-**latent R-0007 bug fix** — the error parser read a nested body the backend
-never sends, so `field` was always null; a shared flat-body
-`ApiException.fromDio` now serves auth + profile) and **APPROVE** on the
-implementation; qa **SIGN-OFF** on AC1–AC11 (suite 127/127, byte-identical to
-the red commit). `HomeShell` was refactored to the `AsyncValue` idiom (paying
-down the SPEC-0007 Finding-1 nit) and is the template for R-0009+. Requirement
-is `Met`; `SPEC-0008` is `Implemented`. Training-history capture was deferred —
-no backend field exists yet.
+**R-0009 — Live workout logger** is **Done** — the first fast-track requirement
+completed the eight-step loop and merged via PR #14 (squash `1cfca06`) on
+2026-06-10 (requirement + SPEC-0009 landed first via PR #13). A Start-workout
+FAB opens a live in-gym screen over the **`SessionDriver`** — a
+widget-independent Riverpod state machine that is the **R-0027 earbud seam**:
+`addExercise`/`logSet` are the single validation-enforcement point (reject
+invalid input, return a speakable reason), `finish()` stamps the local date and
+re-reads the list before navigating, failure is data on state. The home shell
+also lists recent sessions with delete. Architect **REQUEST CHANGES** on the
+design (7 findings applied, incl. driver-enforced validation + local-date
+stamping) → **APPROVE WITH NITS** on the implementation (finding-1 `fieldArea`
+fix applied); qa **SIGN-OFF** on AC1–AC12 (suite 235/235). Requirement is `Met`;
+`SPEC-0009` is `Implemented`. The driver is proven widget-free — R-0027 plugs a
+voice transport into the same API without re-touching this code.
 
-**R-0007 — Flutter app shell** is `Done` (PR #6/#8 + hotfix #9). **R-0005 —
-Nutrition log** and **R-0004 — Workout log** are `Done` (M2 — Logging core).
-With **R-0001–R-0003** `Done`, **M1** is complete.
+**R-0008 — Onboarding flow** is `Done` (PR #10/#11): a dismissible profile prompt
++ wizard over `PUT /profile/me`; it introduced the shared flat-body
+`ApiException.fromDio` and the `AsyncValue` shell. **R-0007 — Flutter app shell**
+is `Done` (PR #6/#8 + hotfix #9). **R-0005 — Nutrition log** and **R-0004 —
+Workout log** are `Done` (M2 — Logging core). With **R-0001–R-0003** `Done`,
+**M1** is complete.
 
 **The roadmap is re-sequenced onto the differentiator fast-track** (owner
 decision, 2026-06-10 — see the M3 callout): live workout logger → photo backend
@@ -188,8 +191,10 @@ photo→archetype uses **real pose-estimation frame features** from day one;
 archetype data is **Claude-curated, owner-approved**, with provenance flags and
 internal-only famous names.
 
-Next focus is **R-0009 — Live workout logger** — now unblocked: it builds on
-the R-0007/R-0008 shell idioms (AsyncValue, shared `ApiException.fromDio`,
-failure-as-state controllers) and the R-0004 workout endpoints, and is
-deliberately designed as a **program-aware session state machine** so the
-R-0027 voice driver can sit on top of it unchanged.
+Next focus is **R-0006 — Photo-session backend** — the next fast-track step:
+fixed-angle photo upload to S3-compatible storage with metadata in Postgres,
+the substrate the photo→archetype matching (R-0013) consumes. It is a backend
+(Rust) requirement — the first server-side work since R-0005 — and introduces
+object storage to the stack. After it: the archetype library (R-0012), then
+photo→archetype matching + program/diet proposal (R-0013/R-0014), then the
+**R-0027 earbud-guided training** differentiator.
