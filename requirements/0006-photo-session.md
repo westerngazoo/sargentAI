@@ -1,11 +1,11 @@
 # R-0006 — Photo-session backend
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M2 (Logging core) — pulled forward by the differentiator fast-track
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-10
 - **Depends on:** R-0002 (Done — auth, `AuthenticatedUser`, `AppState`, the `db` seam, `ApiError`)
-- **Realized by:** [SPEC-0006](../specs/0006-photo-session.md) (Accepted)
+- **Realized by:** [SPEC-0006](../specs/0006-photo-session.md) (Implemented)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
