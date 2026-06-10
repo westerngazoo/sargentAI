@@ -1,6 +1,6 @@
 # SPEC-0008 — Onboarding flow
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0008
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-06-04

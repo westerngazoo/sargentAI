@@ -1,11 +1,11 @@
 # R-0008 — Onboarding flow
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M3
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-04
 - **Depends on:** R-0007 (Done — Flutter app shell: auth, router, Riverpod, Dio), R-0003 (Done — `GET`/`PUT /profile/me`)
-- **Realized by:** [SPEC-0008](../specs/0008-onboarding.md) (Accepted)
+- **Realized by:** [SPEC-0008](../specs/0008-onboarding.md) (Implemented)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
