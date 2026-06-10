@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../auth/application/auth_controller.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
+import '../workout/application/session_driver.dart';
+import '../workout/presentation/session_list.dart';
 
 /// The authenticated home (AC11 placeholder). It observes [profileProvider]
 /// (`GET /profile/me`) via `AsyncValue.when` — the uniform async idiom (SPEC-0007
@@ -33,6 +35,14 @@ class HomeShell extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          ref.read(sessionDriverProvider.notifier).start();
+          context.go('/session');
+        },
+        icon: const Icon(Icons.fitness_center),
+        label: const Text('Start workout'),
+      ),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>
@@ -46,13 +56,7 @@ class HomeShell extends ConsumerWidget {
                 onDismiss: () =>
                     ref.read(onboardingDismissedProvider.notifier).state = true,
               ),
-            Expanded(
-              child: Center(
-                child: Text(p == null
-                    ? 'Welcome — complete your profile to get started'
-                    : 'Signed in · ${p.goals.length} goal(s)'),
-              ),
-            ),
+            const Expanded(child: SessionList()),
           ],
         ),
       ),
