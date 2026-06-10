@@ -55,7 +55,7 @@ screen on top of it.
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Done |
-| R-0008 | Onboarding flow (body stats, goals, training history) | SPEC-0008 | Backlog |
+| R-0008 | Onboarding flow: dismissible home prompt + multi-step wizard (body stats, goals, optional details) over `PUT /profile/me`; training history deferred (no backend field) | SPEC-0008 | Done |
 | R-0009 | Daily workout logger UI | SPEC-0009 | Backlog |
 | R-0010 | Nutrition logger UI (manual entry first) | SPEC-0010 | Backlog |
 | R-0011 | Dashboard: trends, current program, weekly plan | SPEC-0011 | Backlog |
@@ -136,29 +136,27 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0007 — Flutter app architecture & auth shell** is **Done** — the project's
-first mobile requirement completed the eight-step loop and landed on `main`. It
-turns `/mobile` from a hello-world into an authenticated client skeleton:
-register/login against the R-0002 endpoints, JWT in platform secure storage, a
-Riverpod session as the single source of truth, a Dio client with a 401
-re-login interceptor, a `go_router` auth gate, and a build-time-configurable API
-base URL — **no feature logger UI** (that is R-0008+). Architect **APPROVE**; qa
-**SIGN-OFF** on AC1–AC11 with the `test/` suite green (49/49). Requirement is
-`Met`; `SPEC-0007` is `Implemented`. AC10's `integration_test` is authored +
-compile-checked; running it in a gate is deferred to **R-0025** (it needs the
-platform folders R-0007 deliberately omits).
+**R-0008 — Onboarding flow** is **Done** — the second M3 mobile requirement
+completed the eight-step loop and merged via PR #10 (squash `52e6f2b`) on
+2026-06-10. A dismissible "complete your profile" prompt on the home shell
+(gated on `GET /profile/me` 404) opens a multi-step wizard (body stats → goals →
+optional details) that upserts via `PUT /profile/me`; no backend changes.
+Architect **REQUEST CHANGES** on the design (all five findings applied, incl. a
+**latent R-0007 bug fix** — the error parser read a nested body the backend
+never sends, so `field` was always null; a shared flat-body
+`ApiException.fromDio` now serves auth + profile) and **APPROVE** on the
+implementation; qa **SIGN-OFF** on AC1–AC11 (suite 127/127, byte-identical to
+the red commit). `HomeShell` was refactored to the `AsyncValue` idiom (paying
+down the SPEC-0007 Finding-1 nit) and is the template for R-0009+. Requirement
+is `Met`; `SPEC-0008` is `Implemented`. Training-history capture was deferred —
+no backend field exists yet.
 
-> Landed via a hotfix: PR #6/#8 first merged the branch at a stale commit that
-> predated the test-suite fix (a `pumpShell` fake-async hang + bare-handler
-> interceptor tests), turning `main` red. The hotfix restored the green 49/49
-> suite, amended AC10 to match the e2e's real gate coverage, and completed the
-> step-8 tracking.
+**R-0007 — Flutter app shell** is `Done` (PR #6/#8 + hotfix #9). **R-0005 —
+Nutrition log** and **R-0004 — Workout log** are `Done` (M2 — Logging core).
+With **R-0001–R-0003** `Done`, **M1** is complete.
 
-Predecessors **R-0005 — Nutrition log** and **R-0004 — Workout log** are `Done`
-(M2 — Logging core: workout + nutrition signals for the M5 ML engine). With
-**R-0001–R-0003** `Done`, **M1** is complete.
-
-Next focus is the first **M3 feature logger — R-0008 (Onboarding flow)** — now
-unblocked: it builds directly on the R-0007 shell and the R-0003 profile
-endpoints. The **M2 photo-session backend (R-0006)** remains open and gates the
-later progress-photo capture screen.
+Next focus is **R-0009 — Daily workout logger UI** — now unblocked: it builds
+on the R-0007/R-0008 shell idioms (AsyncValue, shared `ApiException.fromDio`,
+failure-as-state controllers) and the R-0004 workout endpoints. The **M2
+photo-session backend (R-0006)** remains open and gates the later
+progress-photo capture screen.
