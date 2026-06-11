@@ -27,14 +27,24 @@
 
 mod common;
 
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
+};
+
+use async_trait::async_trait;
 use axum::http::StatusCode;
+use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use common::{
-    body_bytes, body_json, build_app_with_store, content_type, delete_with_auth, get_with_auth,
-    multipart_body, multipart_body_no_file, post_json_with_auth, post_multipart_with_auth,
-    register_and_token,
+    body_bytes, body_json, build_app_with_object_store, build_app_with_store, content_type,
+    delete_with_auth, get_with_auth, multipart_body, multipart_body_no_file, post_json_with_auth,
+    post_multipart_with_auth, register_and_token,
 };
-use fitai_api::storage::ObjectStore;
+use fitai_api::storage::{ObjectStore, ObjectStoreError};
 use serde_json::json;
 use sqlx::{PgPool, Row};
 
@@ -1123,5 +1133,217 @@ async fn owner_download_serves_their_own_bytes(pool: PgPool) {
         body_bytes(resp).await,
         bytes,
         "the owner must receive their exact bytes"
+    );
+}
+
+// ===========================================================================
+// SAC10 / AC10 (compensation): the upload writes bytes BEFORE the metadata row
+// and compensates on insert failure, so no row ever points at absent bytes
+// (SPEC-0006 §2.3). The real `LocalObjectStore` cannot fail on demand, so these
+// two branches are driven by `FaultStore`, a fault-injecting stub wired in
+// through `build_app_with_object_store`.
+// ===========================================================================
+
+/// How [`FaultStore::put`] behaves — each variant drives one compensation branch
+/// of `upload_photo`.
+enum PutFault {
+    /// `put` fails before storing anything: the handler returns 500 and never
+    /// reaches the metadata insert — there is nothing to compensate.
+    FailBeforeStore,
+    /// `put` stores the bytes, then deletes the session row named in the key, so
+    /// the *following* metadata insert hits an FK violation. This exercises the
+    /// compensating `store.delete` that removes the just-written orphan object.
+    StoreThenOrphanSession(PgPool),
+}
+
+/// An [`ObjectStore`] that records call counts and injects a `put` fault, so the
+/// upload handler's bytes-first / compensate path can be exercised without a
+/// real cloud failure. Byte storage is a tiny in-memory map — enough for `get`
+/// and `delete` to honestly reflect what `put` wrote, so the test can assert the
+/// compensated object is actually gone.
+struct FaultStore {
+    fault: PutFault,
+    objects: Mutex<HashMap<String, Bytes>>,
+    puts: AtomicUsize,
+    deletes: AtomicUsize,
+}
+
+impl FaultStore {
+    fn new(fault: PutFault) -> Self {
+        Self {
+            fault,
+            objects: Mutex::new(HashMap::new()),
+            puts: AtomicUsize::new(0),
+            deletes: AtomicUsize::new(0),
+        }
+    }
+
+    fn put_count(&self) -> usize {
+        self.puts.load(Ordering::SeqCst)
+    }
+
+    fn delete_count(&self) -> usize {
+        self.deletes.load(Ordering::SeqCst)
+    }
+
+    fn stored_object_count(&self) -> usize {
+        self.objects.lock().unwrap().len()
+    }
+}
+
+/// The session id is the middle segment of the `{user}/{session}/{photo}` key
+/// (SPEC-0006 §3, SAC9).
+fn session_id_in_key(key: &str) -> uuid::Uuid {
+    let segment = key
+        .split('/')
+        .nth(1)
+        .expect("the storage key must be user/session/photo");
+    uuid::Uuid::parse_str(segment).expect("the session segment must be a UUID")
+}
+
+#[async_trait]
+impl ObjectStore for FaultStore {
+    async fn put(&self, key: &str, bytes: &Bytes) -> Result<(), ObjectStoreError> {
+        self.puts.fetch_add(1, Ordering::SeqCst);
+        match &self.fault {
+            PutFault::FailBeforeStore => Err(ObjectStoreError::Io(std::io::Error::other(
+                "injected put failure",
+            ))),
+            PutFault::StoreThenOrphanSession(pool) => {
+                self.objects
+                    .lock()
+                    .unwrap()
+                    .insert(key.to_owned(), bytes.clone());
+                // Delete the parent session out-of-band so the handler's next
+                // step — the metadata insert — fails its FK and triggers the
+                // compensating delete.
+                sqlx::query("DELETE FROM photo_sessions WHERE id = $1")
+                    .bind(session_id_in_key(key))
+                    .execute(pool)
+                    .await
+                    .expect("orphaning the session must succeed");
+                Ok(())
+            }
+        }
+    }
+
+    async fn get(&self, key: &str) -> Result<Bytes, ObjectStoreError> {
+        self.objects
+            .lock()
+            .unwrap()
+            .get(key)
+            .cloned()
+            .ok_or(ObjectStoreError::Missing)
+    }
+
+    async fn delete(&self, key: &str) -> Result<(), ObjectStoreError> {
+        self.deletes.fetch_add(1, Ordering::SeqCst);
+        self.objects.lock().unwrap().remove(key);
+        Ok(())
+    }
+}
+
+/// AC10 (compensation, `put` fails): a store-write failure surfaces as an opaque
+/// 500 and writes NO metadata row. Nothing was stored, so the handler never
+/// reaches the insert and there is nothing to compensate (`delete` is not
+/// called).
+#[sqlx::test(migrations = "../../migrations")]
+async fn upload_put_failure_writes_no_row_and_does_not_compensate(pool: PgPool) {
+    let store = Arc::new(FaultStore::new(PutFault::FailBeforeStore));
+    let app = build_app_with_object_store(pool.clone(), store.clone());
+    let (_id, token) = register_and_token(&app, "putfail@b.com", "8charsmin").await;
+    let session_id = create_session(&app, &token).await;
+
+    let resp = upload(
+        &app,
+        &token,
+        &session_id,
+        Some("front"),
+        "image/png",
+        &png_bytes(),
+    )
+    .await;
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "a put failure must surface as an opaque 500"
+    );
+    assert_eq!(
+        body_json(resp).await,
+        json!({ "error": "internal" }),
+        "the body must be the opaque internal error — no store-internals leak"
+    );
+    assert_eq!(
+        count(&pool, "photo_session_photos").await,
+        0,
+        "a failed put must leave no metadata row"
+    );
+    assert_eq!(store.put_count(), 1, "put is attempted exactly once");
+    assert_eq!(
+        store.delete_count(),
+        0,
+        "nothing was stored, so there is nothing to compensate"
+    );
+    assert_eq!(
+        store.stored_object_count(),
+        0,
+        "a failed put stores no bytes"
+    );
+}
+
+/// AC10 (compensation, metadata insert fails): when the bytes land but the
+/// metadata insert fails, the handler compensates by deleting the just-written
+/// object — so no row ever points at absent bytes and no orphan object is left
+/// behind. The failure is forced by orphaning the session inside `put`, after
+/// the handler's existence check but before its insert.
+#[sqlx::test(migrations = "../../migrations")]
+async fn upload_insert_failure_compensates_the_stored_object(pool: PgPool) {
+    let store = Arc::new(FaultStore::new(PutFault::StoreThenOrphanSession(
+        pool.clone(),
+    )));
+    let app = build_app_with_object_store(pool.clone(), store.clone());
+    let (_id, token) = register_and_token(&app, "insertfail@b.com", "8charsmin").await;
+    let session_id = create_session(&app, &token).await;
+
+    let resp = upload(
+        &app,
+        &token,
+        &session_id,
+        Some("front"),
+        "image/png",
+        &png_bytes(),
+    )
+    .await;
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "a metadata-insert failure must surface as an opaque 500"
+    );
+    assert_eq!(
+        body_json(resp).await,
+        json!({ "error": "internal" }),
+        "the body must be the opaque internal error"
+    );
+    assert_eq!(
+        count(&pool, "photo_session_photos").await,
+        0,
+        "the failed insert must leave no metadata row"
+    );
+    assert_eq!(
+        store.put_count(),
+        1,
+        "the bytes are written before the insert is attempted"
+    );
+    assert_eq!(
+        store.delete_count(),
+        1,
+        "the handler must compensate by deleting the orphaned object exactly once"
+    );
+    assert_eq!(
+        store.stored_object_count(),
+        0,
+        "the compensation must leave no orphan object behind"
     );
 }

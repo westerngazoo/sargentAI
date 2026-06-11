@@ -148,6 +148,16 @@ R-files when their parent milestone is the focus.
 - Self-hosted VPS migration for unit-economics (Phase 2 of M8)
 - GPU inference path (only if R-0016 / R-0018 demand it)
 - Phase-2 ML stack: `burn` or `tch-rs` for sequential / time-series modelling
+- **R-0028 — Orphan-object sweep** (deferred follow-up of R-0006, recorded in
+  SPEC-0006 §5). A periodic background job reconciles the object store against
+  the `photo_session_photos` table and deletes objects with no owning row — the
+  *compensated orphans* left when an upload's metadata insert fails **and** the
+  synchronous compensating `delete` also fails (a rare double-failure; the common
+  single-failure case is handled inline by the upload handler's compensation,
+  now covered by the R-0006 fault-injection tests). Kept out of R-0006's
+  synchronous request-path scope by design; depends on the real S3 `ObjectStore`
+  (R-0026) for production relevance — enumerating orphans differs between
+  local-fs and S3 — so it naturally sequences alongside R-0026.
 
 ## Sequencing rules
 
@@ -170,8 +180,12 @@ user-namespaced; cross-user access is **404 never 403** and `storage_key` never
 crosses the wire. Architect **APPROVE WITH NITS** on the design → **APPROVE** on
 the implementation; qa **SIGN-OFF** on AC1–AC12 (282 tests, 61 new). Requirement
 is `Met`; `SPEC-0006` is `Implemented`. This is the substrate R-0013's pose
-estimation reads. Deferred follow-ups (recorded): an orphan-object sweep and a
-fault-injecting compensation test. The stack now handles binary object storage.
+estimation reads. Deferred follow-ups: the **fault-injecting compensation test**
+is now landed — the upload's bytes-first/compensate branches (put-fails and
+insert-fails, SPEC-0006 §2.3 / AC10) are covered by a stub `ObjectStore`; the
+**orphan-object sweep** is promoted to **R-0028** in the Deferred section (its own
+requirement, not reopened R-0006 scope). The stack now handles binary object
+storage.
 
 **R-0009 — Live workout logger** is `Done` (PR #14): the live in-gym logger over
 the widget-independent `SessionDriver` — the R-0027 earbud seam. **R-0008 —
