@@ -29,10 +29,7 @@ mod common;
 
 use std::{
     collections::HashMap,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
+    sync::{Arc, Mutex},
 };
 
 use async_trait::async_trait;
@@ -1156,16 +1153,18 @@ enum PutFault {
     StoreThenOrphanSession(PgPool),
 }
 
-/// An [`ObjectStore`] that records call counts and injects a `put` fault, so the
-/// upload handler's bytes-first / compensate path can be exercised without a
-/// real cloud failure. Byte storage is a tiny in-memory map — enough for `get`
-/// and `delete` to honestly reflect what `put` wrote, so the test can assert the
-/// compensated object is actually gone.
+/// An [`ObjectStore`] that records the keys it is asked to `put` and `delete` and
+/// injects a `put` fault, so the upload handler's bytes-first / compensate path
+/// can be exercised without a real cloud failure. Byte storage is a tiny
+/// in-memory map — enough for `get` and `delete` to honestly reflect what `put`
+/// wrote, so a test can assert the compensated object is actually gone. Call
+/// counts are derived from the key logs (one source of truth), and comparing the
+/// two logs pins that compensation deletes *exactly* the object `put` wrote.
 struct FaultStore {
     fault: PutFault,
     objects: Mutex<HashMap<String, Bytes>>,
-    puts: AtomicUsize,
-    deletes: AtomicUsize,
+    put_keys: Mutex<Vec<String>>,
+    deleted_keys: Mutex<Vec<String>>,
 }
 
 impl FaultStore {
@@ -1173,17 +1172,27 @@ impl FaultStore {
         Self {
             fault,
             objects: Mutex::new(HashMap::new()),
-            puts: AtomicUsize::new(0),
-            deletes: AtomicUsize::new(0),
+            put_keys: Mutex::new(Vec::new()),
+            deleted_keys: Mutex::new(Vec::new()),
         }
     }
 
+    /// The keys passed to `put`, in call order (including a failed attempt).
+    fn put_keys(&self) -> Vec<String> {
+        self.put_keys.lock().unwrap().clone()
+    }
+
+    /// The keys passed to `delete`, in call order — the compensation log.
+    fn deleted_keys(&self) -> Vec<String> {
+        self.deleted_keys.lock().unwrap().clone()
+    }
+
     fn put_count(&self) -> usize {
-        self.puts.load(Ordering::SeqCst)
+        self.put_keys.lock().unwrap().len()
     }
 
     fn delete_count(&self) -> usize {
-        self.deletes.load(Ordering::SeqCst)
+        self.deleted_keys.lock().unwrap().len()
     }
 
     fn stored_object_count(&self) -> usize {
@@ -1204,7 +1213,7 @@ fn session_id_in_key(key: &str) -> uuid::Uuid {
 #[async_trait]
 impl ObjectStore for FaultStore {
     async fn put(&self, key: &str, bytes: &Bytes) -> Result<(), ObjectStoreError> {
-        self.puts.fetch_add(1, Ordering::SeqCst);
+        self.put_keys.lock().unwrap().push(key.to_owned());
         match &self.fault {
             PutFault::FailBeforeStore => Err(ObjectStoreError::Io(std::io::Error::other(
                 "injected put failure",
@@ -1237,7 +1246,7 @@ impl ObjectStore for FaultStore {
     }
 
     async fn delete(&self, key: &str) -> Result<(), ObjectStoreError> {
-        self.deletes.fetch_add(1, Ordering::SeqCst);
+        self.deleted_keys.lock().unwrap().push(key.to_owned());
         self.objects.lock().unwrap().remove(key);
         Ok(())
     }
@@ -1340,6 +1349,11 @@ async fn upload_insert_failure_compensates_the_stored_object(pool: PgPool) {
         store.delete_count(),
         1,
         "the handler must compensate by deleting the orphaned object exactly once"
+    );
+    assert_eq!(
+        store.deleted_keys(),
+        store.put_keys(),
+        "compensation must delete exactly the key it wrote — same object, not some other"
     );
     assert_eq!(
         store.stored_object_count(),
