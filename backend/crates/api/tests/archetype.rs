@@ -77,7 +77,7 @@ async fn list_returns_200_and_the_six_archetypes(pool: PgPool) {
             "each element must carry a non-empty display_name"
         );
         assert!(
-            item["goals_served"].as_array().map(Vec::len).unwrap_or(0) >= 1,
+            item["goals_served"].as_array().map_or(0, Vec::len) >= 1,
             "each element must serve at least one goal"
         );
     }

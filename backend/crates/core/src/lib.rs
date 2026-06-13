@@ -4,12 +4,18 @@
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod archetype;
 pub mod nutrition;
 pub mod photo;
 pub mod profile;
 pub mod user;
 pub mod workout;
 
+pub use archetype::{
+    Archetype, ArchetypeError, Confidence, DietTemplate, FrameProfile, HeightBand, LengthBand,
+    MacroEmphasis, ProgramTemplate, Provenance, Somatotype, StructureTag, TrainingPhilosophy,
+    VolumeBand, WidthBand,
+};
 pub use nutrition::{Grams, Macros, NewNutritionLog, NutritionError, NutritionLog};
 pub use photo::{
     Angle, ImageContentType, NewPhoto, PhotoError, PhotoSession, SessionPhoto, MAX_BYTES,

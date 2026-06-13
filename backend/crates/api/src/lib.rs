@@ -8,6 +8,7 @@
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod archetype;
 pub mod auth;
 pub mod db;
 pub mod error;
@@ -45,6 +46,7 @@ pub struct AppState {
 pub fn app(state: AppState) -> Router {
     Router::new()
         .merge(health::router())
+        .merge(archetype::routes())
         .merge(auth::routes())
         .merge(profile::routes())
         .merge(workout::routes())
