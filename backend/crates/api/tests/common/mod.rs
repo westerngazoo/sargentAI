@@ -26,7 +26,7 @@ use sqlx::PgPool;
 use tempfile::TempDir;
 use tower::ServiceExt;
 
-use fitai_api::{app, storage::LocalObjectStore, AppState};
+use fitai_api::{app, pose::FakePoseEstimator, storage::LocalObjectStore, AppState};
 
 /// Stable secret the whole suite signs/decodes with. SAC4 asserts that a
 /// *different* secret fails signature verification.
@@ -36,15 +36,27 @@ pub const TEST_SECRET: &[u8] = b"qa-test-secret-r0002";
 pub const TTL_24H: Duration = Duration::from_hours(24);
 
 /// Build an `AppState` over the supplied pool with the canonical test secret, a
-/// chosen TTL, and a `LocalObjectStore` rooted in a fresh `TempDir`.
+/// chosen TTL, a `LocalObjectStore` rooted in a fresh `TempDir`, and the supplied
+/// pose estimator.
 ///
 /// R-0006 (SPEC-0006 §3.4) added `store: Arc<dyn ObjectStore>` to `AppState`;
-/// every test app now constructs a per-test local object store so the photo
-/// upload/download/delete handlers have somewhere to put bytes — and so the
-/// whole suite runs cloud-free (AC8). The `TempDir` is returned alongside the
-/// router so the caller can keep it alive for the test's duration; it is
-/// removed from disk when dropped.
-fn state_with_ttl(pool: PgPool, ttl: Duration) -> (AppState, Arc<LocalObjectStore>, TempDir) {
+/// R-0013 (SPEC-0013 §2.4) adds `pose: Arc<dyn PoseEstimator>` alongside it.
+/// Every test app constructs a per-test local object store (so the photo
+/// handlers have somewhere to put bytes) plus a per-test pose estimator (a
+/// `FakePoseEstimator` so the suite never loads the ONNX model and stays
+/// deterministic — AC3/AC8). The `TempDir` is returned alongside the router so
+/// the caller can keep it alive for the test's duration; it is removed from disk
+/// when dropped.
+///
+/// STEP-5 WIRING NOTE: `AppState` does not yet carry a `pose` field — step 5
+/// adds it (mirroring how R-0006 added `store`). When it does, this literal must
+/// set `pose` from the `pose` argument below. Until then this file is RED-by
+/// -absence (the `pose` field and `FakePoseEstimator` are not yet defined).
+fn state_with_ttl(
+    pool: PgPool,
+    ttl: Duration,
+    pose: FakePoseEstimator,
+) -> (AppState, Arc<LocalObjectStore>, TempDir) {
     let dir = tempfile::tempdir().expect("a temp dir for the object store must be creatable");
     let store = Arc::new(LocalObjectStore::new(dir.path()));
     let state = AppState {
@@ -52,6 +64,7 @@ fn state_with_ttl(pool: PgPool, ttl: Duration) -> (AppState, Arc<LocalObjectStor
         jwt_secret: Arc::from(TEST_SECRET.to_vec().into_boxed_slice()),
         jwt_ttl: ttl,
         store: store.clone(),
+        pose: Arc::new(pose),
     };
     (state, store, dir)
 }
@@ -61,7 +74,9 @@ fn state_with_ttl(pool: PgPool, ttl: Duration) -> (AppState, Arc<LocalObjectStor
 /// [`TempDir::keep`]) so the directory outlives this function for suites that do
 /// not need to inspect the store handle.
 pub fn app_with_ttl(pool: PgPool, ttl: Duration) -> Router {
-    let (state, _store, dir) = state_with_ttl(pool, ttl);
+    // Suites built via this helper never reach the match endpoint, so the pose
+    // estimator is never invoked; a default fake satisfies the `AppState` field.
+    let (state, _store, dir) = state_with_ttl(pool, ttl, FakePoseEstimator::default());
     // Persist the directory for the life of the test; suites using this helper
     // never assert on stored bytes, so leaking the path is acceptable here.
     let _ = dir.keep();
@@ -79,7 +94,27 @@ pub fn build_app(pool: PgPool) -> Router {
 /// returned `TempDir` for the test's duration — dropping it deletes the backing
 /// directory.
 pub fn build_app_with_store(pool: PgPool) -> (Router, Arc<LocalObjectStore>, TempDir) {
-    let (state, store, dir) = state_with_ttl(pool, TTL_24H);
+    // The photo suite never matches, so a default fake estimator suffices.
+    let (state, store, dir) = state_with_ttl(pool, TTL_24H, FakePoseEstimator::default());
+    (app(state), store, dir)
+}
+
+/// Build a router whose `AppState.pose` is the supplied [`FakePoseEstimator`],
+/// together with a handle to its backing `LocalObjectStore` and the owning
+/// `TempDir`. The R-0013 match suite uses this to inject deterministic keypoints
+/// (or a `PoseError`) so `POST /photo-sessions/:id/match` runs without the ONNX
+/// model (SPEC-0013 §2.7). The caller MUST hold the returned `TempDir` for the
+/// test's duration — dropping it deletes the backing directory.
+///
+/// STEP-5: this is the injection seam step 5 must support — `AppState` gains
+/// `pose: Arc<dyn PoseEstimator>` and the real `build_app`/`app` defaults it to
+/// a real `OnnxPoseEstimator`, exactly as R-0006 defaulted `store` to a real
+/// object store.
+pub fn build_app_with_pose(
+    pool: PgPool,
+    pose: FakePoseEstimator,
+) -> (Router, Arc<LocalObjectStore>, TempDir) {
+    let (state, store, dir) = state_with_ttl(pool, TTL_24H, pose);
     (app(state), store, dir)
 }
 
@@ -311,4 +346,54 @@ pub async fn register_and_token(app: &Router, email: &str, password: &str) -> (S
         .expect("login response must carry a string token")
         .to_string();
     (user_id, token)
+}
+
+/// Create an empty photo session for `token` and return its id string. Used by
+/// the R-0013 match suite to seed the substrate the match endpoint reads.
+pub async fn create_session(app: &Router, token: &str) -> String {
+    let resp = post_json_with_auth(
+        app,
+        "/photo-sessions",
+        Some(&format!("Bearer {token}")),
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        axum::http::StatusCode::CREATED,
+        "seed photo-session create expected 201"
+    );
+    body_json(resp).await["id"]
+        .as_str()
+        .expect("session create response must carry a string id")
+        .to_string()
+}
+
+/// Upload a tiny PNG to `session_id` (declared `image/png`, optional `angle`)
+/// through the real R-0006 upload endpoint, returning the new photo's id. The
+/// R-0013 match suite uses this to give a session something to match against;
+/// the bytes' actual decodability is irrelevant because the match suite injects
+/// keypoints via the `FakePoseEstimator` (the real model is exercised only by
+/// the AC4 fixture test).
+pub async fn png_upload(app: &Router, token: &str, session_id: &str, angle: Option<&str>) -> String {
+    let mut payload: Vec<u8> = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+    payload.extend_from_slice(b"r0013-match-seed-payload");
+    let (body, header) = multipart_body(angle, "image/png", &payload);
+    let resp = post_multipart_with_auth(
+        app,
+        &format!("/photo-sessions/{session_id}/photos"),
+        Some(&format!("Bearer {token}")),
+        body,
+        &header,
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        axum::http::StatusCode::CREATED,
+        "seed photo upload expected 201"
+    );
+    body_json(resp).await["id"]
+        .as_str()
+        .expect("photo upload response must carry a string id")
+        .to_string()
 }
