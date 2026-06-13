@@ -48,7 +48,6 @@ const FIXTURE_JPEG: &[u8] = include_bytes!("fixtures/physique-front.jpg");
 /// `shoulder_to_waist` — not just that inference returned. `#[ignore]` until
 /// step 5 commits the model + fixture and implements `OnnxPoseEstimator`; the
 /// implementer removes the attribute then.
-#[ignore = "R-0013 step 5: needs the committed MoveNet .onnx model + the fixture image + the ort-backed OnnxPoseEstimator (SPEC-0013 §2.6)"]
 #[tokio::test]
 async fn real_onnx_estimator_derives_a_plausible_ratio_from_a_fixture() {
     // The real estimator loads the bundled model once (Arc<Session>); no DB, no

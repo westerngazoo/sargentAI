@@ -46,21 +46,13 @@ use fitai_core::pose::{
 
 /// A confident keypoint at the given normalized coordinate.
 fn kp(x: f32, y: f32) -> Keypoint {
-    Keypoint {
-        x,
-        y,
-        score: 0.9,
-    }
+    Keypoint { x, y, score: 0.9 }
 }
 
 /// A keypoint placed where the golden one is, but below the confidence floor —
 /// the derivation must treat it as absent.
 fn dim(x: f32, y: f32) -> Keypoint {
-    Keypoint {
-        x,
-        y,
-        score: 0.05,
-    }
+    Keypoint { x, y, score: 0.05 }
 }
 
 /// COCO-17 order (the model's fixed output order):
@@ -211,7 +203,9 @@ fn derive_orders_taper_monotonically() {
     // The whole point of the ratio is that a wider taper ⇒ a higher number. A
     // strongly-tapered frame must out-rank a mildly-tapered one, whatever the
     // exact normalization.
-    let strong = derive_frame_features(&valid_pose()).unwrap().shoulder_to_waist;
+    let strong = derive_frame_features(&valid_pose())
+        .unwrap()
+        .shoulder_to_waist;
 
     // Mild taper: shoulders span 0.24, hips span 0.14 — tapered, but less so.
     let mild = derive_frame_features(&pose_with(&[

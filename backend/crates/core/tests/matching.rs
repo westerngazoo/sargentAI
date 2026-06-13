@@ -62,7 +62,7 @@ fn frame_of(slug: &str) -> &'static fitai_core::archetype::FrameProfile {
     &a.frame_profile
 }
 
-fn ids(matches: &[RankedMatch]) -> Vec<&str> {
+fn ids(matches: &[RankedMatch]) -> Vec<&'static str> {
     matches.iter().map(|m| m.archetype.id).collect()
 }
 
@@ -105,7 +105,8 @@ fn rank_places_the_nearest_archetype_first() {
     let matches = rank(&f, library());
 
     assert_eq!(
-        matches[0].archetype.id, "classic-aesthetic-taper",
+        matches[0].archetype.id,
+        "classic-aesthetic-taper",
         "a query authored at the V-taper profile must rank it first; got order {:?}",
         ids(&matches)
     );
@@ -166,7 +167,8 @@ fn rank_with_both_bands_absent_collapses_to_the_numeric_term_without_panic() {
     // With only the ratio in play, the record whose ratio is nearest 1.65 must
     // rank first — that is the V-taper record (1.65).
     assert_eq!(
-        matches[0].archetype.id, "classic-aesthetic-taper",
+        matches[0].archetype.id,
+        "classic-aesthetic-taper",
         "with both bands absent the nearest-ratio record (1.65) must win; got {:?}",
         ids(&matches)
     );
@@ -185,11 +187,7 @@ fn rank_does_not_penalize_an_absent_band() {
         Some(target.clavicle_width),
         Some(target.limb_length),
     );
-    let without_clavicle = features(
-        target.shoulder_to_waist,
-        None,
-        Some(target.limb_length),
-    );
+    let without_clavicle = features(target.shoulder_to_waist, None, Some(target.limb_length));
 
     let d_with = rank(&with_band, library())
         .into_iter()

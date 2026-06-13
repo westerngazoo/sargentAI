@@ -375,7 +375,12 @@ pub async fn create_session(app: &Router, token: &str) -> String {
 /// the bytes' actual decodability is irrelevant because the match suite injects
 /// keypoints via the `FakePoseEstimator` (the real model is exercised only by
 /// the AC4 fixture test).
-pub async fn png_upload(app: &Router, token: &str, session_id: &str, angle: Option<&str>) -> String {
+pub async fn png_upload(
+    app: &Router,
+    token: &str,
+    session_id: &str,
+    angle: Option<&str>,
+) -> String {
     let mut payload: Vec<u8> = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
     payload.extend_from_slice(b"r0013-match-seed-payload");
     let (body, header) = multipart_body(angle, "image/png", &payload);

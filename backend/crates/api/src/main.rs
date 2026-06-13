@@ -33,11 +33,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store = Arc::new(fitai_api::storage::LocalObjectStore::new(&store_root));
     tracing::info!(root = %store_root, "object store rooted");
 
+    let pose = Arc::new(fitai_api::pose::OnnxPoseEstimator::load()?);
+    tracing::info!("pose estimator loaded (MoveNet)");
+
     let state = AppState {
         pool,
         jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
         jwt_ttl: Duration::from_hours(24),
         store,
+        pose,
     };
 
     let port: u16 = std::env::var("PORT")

@@ -38,9 +38,7 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::{
-    body_json, build_app_with_pose, create_session, png_upload, register_and_token,
-};
+use common::{body_json, build_app_with_pose, create_session, png_upload, register_and_token};
 use fitai_api::pose::{FakePoseEstimator, PoseError};
 use fitai_core::pose::{Keypoint, Landmark, PoseKeypoints};
 use serde_json::json;
@@ -193,10 +191,7 @@ async fn match_response_never_leaks_internal_name_or_sources(pool: PgPool) {
             m.get("internal_name").is_none(),
             "no match may carry internal_name"
         );
-        assert!(
-            m.get("sources").is_none(),
-            "no match may carry sources"
-        );
+        assert!(m.get("sources").is_none(), "no match may carry sources");
     }
     let serialized = body.to_string();
     assert!(
