@@ -7,7 +7,7 @@
 - **Depends on:** R-0006 (Done — photo sessions: the stored bytes + the
   `ObjectStore` seam this reads), R-0012 (Done — the archetype `library()` this
   matches against)
-- **Realized by:** SPEC-0013 (to be written in step 2)
+- **Realized by:** [SPEC-0013](../specs/0013-archetype-matching.md) (Accepted)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
