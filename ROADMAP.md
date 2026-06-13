@@ -91,7 +91,7 @@ enhancement confounders).
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0012 | `ArchetypeLibrary` schema + curated seed data: documented routines **and diets** of famous bodybuilders/athletes (Mentzer, Arnold, Columbu, Yates '96, Cutler, Heath, …) with frame profile, program template, diet template, and provenance (documented vs folklore). Claude curates; owner approves each record. Names internal-only | SPEC-0012 | Backlog |
+| R-0012 | `ArchetypeLibrary` schema + curated seed data: documented routines **and diets** of famous bodybuilders/athletes (Mentzer, Arnold, Columbu, Yates '96, Cutler, Heath, …) with frame profile, program template, diet template, and provenance (documented vs folklore). Claude curates; owner approves each record. Names internal-only | SPEC-0012 | Done |
 | R-0013 | Archetype-matching service: uploaded photo → server-side pose-estimation frame features (shoulder/hip ratio, limb proportions — pulled forward from R-0018/R-0019) → closest archetype | SPEC-0013 | Backlog |
 | R-0014 | Generate proposed program **+ diet** from the matched archetype; present 2–3 targets and the user chooses which to follow | SPEC-0014 | Backlog |
 
@@ -169,31 +169,44 @@ R-files when their parent milestone is the focus.
 
 ## Current focus
 
-**R-0006 — Photo-session backend** is **Done** — the second fast-track
-requirement (first server-side work of it) completed the eight-step loop and
-merged via PR #16 (squash `39e456c`) on 2026-06-10. Session CRUD + multipart
-photo upload **through the API** to an **`ObjectStore` seam** (`LocalObjectStore`
-now; the real S3 impl is a drop-in at R-0026, so the whole suite runs
-cloud-free), metadata in Postgres, byte-streaming download. The upload is
-bytes-first/row-second/compensate (no dangling row); keys are UUID-only and
-user-namespaced; cross-user access is **404 never 403** and `storage_key` never
-crosses the wire. Architect **APPROVE WITH NITS** on the design → **APPROVE** on
-the implementation; qa **SIGN-OFF** on AC1–AC12 (282 tests, 61 new). Requirement
-is `Met`; `SPEC-0006` is `Implemented`. This is the substrate R-0013's pose
-estimation reads. Deferred follow-ups: the **fault-injecting compensation test**
-is now landed — the upload's bytes-first/compensate branches (put-fails and
-insert-fails, SPEC-0006 §2.3 / AC10) are covered by a stub `ObjectStore`; the
-**orphan-object sweep** is promoted to **R-0028** in the Deferred section (its own
-requirement, not reopened R-0006 scope). The stack now handles binary object
-storage.
+**R-0012 — Archetype library** is **Done** — the heart of the differentiator,
+the third fast-track requirement, completed the eight-step loop and merged via
+PR #18 (squash `600b0c7`) on 2026-06-13. A curated **six-archetype library**
+(Yates/Mentzer/Arnold/Columbu/Cutler/Heath — internal research labels) where the
+data *is* the deliverable: each record carries a structured **frame profile**
+(numeric shoulder-to-waist ratio + banded/enum descriptors + a controlled
+`StructureTag` vocab — the shape R-0013's pose estimation matches against), a
+**program template**, a **diet template**, and honest **provenance** (Yates/
+Mentzer `documented`; Arnold/Columbu/Cutler/Heath `reconstructed` — no fabricated
+precision). It ships as an **embedded typed-Rust** library in `core::archetype`
+(validated once via `OnceLock`, no DB), exposed through an **authenticated read
+API** (`GET /archetypes`, `GET /archetypes/:id`); the `ArchetypeResponse` DTO
+**omits `internal_name` + `provenance.sources`** so famous names and research
+sources never cross the wire (likeness/legal). `seed::all` discharges the
+validating constructors with the single justified `expect` (architect finding 1,
+option B), guarded by the SAC2 revalidation test so an invalid record fails the
+build. Architect **APPROVE** on the implementation; qa **SIGN-OFF** on AC1–AC9
+(39 new tests — 29 core unit + 10 api integration; 321 passing overall).
+Requirement is `Met`; `SPEC-0012` is `Implemented`. This is the **prior** R-0013
+matches a photo against and R-0014 instantiates a starting plan from. The
+**prior-only guardrail** (the famous data must never feed the M5 response model)
+is documentation + module boundary today; making it an executable lint/test is a
+deferred note carried to the first M5 requirement (see R-0015).
 
-**R-0009 — Live workout logger** is `Done` (PR #14): the live in-gym logger over
-the widget-independent `SessionDriver` — the R-0027 earbud seam. **R-0008 —
-Onboarding flow** is `Done` (PR #10/#11), introducing the shared
-`ApiException.fromDio` + `AsyncValue` shell. **R-0007 — Flutter app shell** is
-`Done` (PR #6/#8 + hotfix #9). **R-0005 — Nutrition** and **R-0004 — Workout**
-logs are `Done` (M2 — Logging core). With **R-0001–R-0003** `Done`, **M1** is
-complete.
+**R-0006 — Photo-session backend** is `Done` (PR #16): session CRUD + multipart
+photo upload through the API to an **`ObjectStore` seam** (`LocalObjectStore`
+now, S3 at R-0026), bytes-first/row-second/compensate, cross-user **404 never
+403** — the substrate R-0013's pose estimation reads. The **fault-injecting
+compensation test** (the put-fails and insert-fails branches, SPEC-0006 §2.3 /
+AC10, via a stub `ObjectStore`) has since landed; the **orphan-object sweep** is
+promoted to **R-0028** (Deferred), its own requirement rather than reopened
+R-0006 scope. **R-0009 — Live workout
+logger** is `Done` (PR #14): the live in-gym logger over the widget-independent
+`SessionDriver` — the R-0027 earbud seam. **R-0008 — Onboarding flow** is `Done`
+(PR #10/#11), introducing the shared `ApiException.fromDio` + `AsyncValue` shell.
+**R-0007 — Flutter app shell** is `Done` (PR #6/#8 + hotfix #9). **R-0005 —
+Nutrition** and **R-0004 — Workout** logs are `Done` (M2 — Logging core). With
+**R-0001–R-0003** `Done`, **M1** is complete.
 
 **The roadmap is re-sequenced onto the differentiator fast-track** (owner
 decision, 2026-06-10 — see the M3 callout): live workout logger → photo backend
@@ -205,13 +218,14 @@ photo→archetype uses **real pose-estimation frame features** from day one;
 archetype data is **Claude-curated, owner-approved**, with provenance flags and
 internal-only famous names.
 
-Next focus is **R-0012 — the archetype library** — the heart of the
-differentiator: an `ArchetypeLibrary` schema plus **curated seed data** from
-famous athletes' documented routines **and diets** (Mentzer, Arnold, Columbu,
-Yates '96, Cutler, Heath, …), each record carrying a frame profile, a program
-template, a diet template, and **provenance** (documented vs folklore). Claude
-curates and researches the records; the owner approves each before it seeds the
-library. Famous names stay internal labels; user-facing archetype names are
-abstracted. After it: photo→archetype matching + program/diet proposal
-(R-0013/R-0014), then the
-**R-0027 earbud-guided training** differentiator.
+Next focus is **R-0013 — photo→archetype matching** — the fast-track step that
+turns the library into the differentiator: an uploaded photo → **server-side
+pose-estimation frame features** (shoulder-to-waist ratio, banded clavicle
+width, limb proportions, somatotype — the M6 frame-feature slice pulled forward)
+→ a weighted **nearest-archetype** lookup over the in-memory
+`core::archetype::library()`. Both its dependencies are satisfied: **R-0006**
+(`Done`) is the photo substrate it reads, and **R-0012** (`Done`) is the library
+it matches against — the frame profile was deliberately authored in the shape
+the pose estimation emits, so matching is a distance over those fields. After it:
+program/diet generation from the matched archetype (R-0014), then the **R-0027
+earbud-guided training** differentiator.
