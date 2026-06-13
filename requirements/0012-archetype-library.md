@@ -1,11 +1,11 @@
 # R-0012 — Archetype library
 
-- **Status:** Accepted
+- **Status:** Met
 - **Milestone:** M4 (Archetype prior) — pulled forward by the differentiator fast-track
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-10
 - **Depends on:** R-0002 (Done — auth, `AppState`, the `db`/error machinery) — for the read API only; the curated data itself depends on nothing
-- **Realized by:** [SPEC-0012](../specs/0012-archetype-library.md) (Accepted)
+- **Realized by:** [SPEC-0012](../specs/0012-archetype-library.md) (Implemented)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
@@ -124,3 +124,4 @@ and the module boundary that enforces the prior-only guardrail.
 
 - _2026-06-10 — created (Draft). The differentiator's knowledge base: a curated, provenance-flagged archetype library (frame profile + program + diet) seeded with six athletes. Three step-1 forks owner-resolved (structured frame profile; the six; full provenance discipline)._
 - _2026-06-10 — **Accepted.** Owner accepted AC1–AC9 and chose to review all six curated records together before implementation. Next: step 2 — SPEC-0012 + architect design review._
+- _2026-06-13 — **Met.** Eight-step loop completed and merged via PR #18 (squash `600b0c7`): architect **APPROVE**, qa **SIGN-OFF** on AC1–AC9. The embedded `core::archetype` library (validated `Archetype` model + the six owner-approved records via `seed::all`, exposed through `library()`/`find()`) plus the `api::archetype` read surface (`GET /archetypes`, `GET /archetypes/:id`) with an `ArchetypeResponse` DTO that omits `internal_name` + `provenance.sources` (AC4). 39 new tests (29 core unit + 10 api integration; 321 passing overall); gates green (`cargo fmt`/`clippy -D warnings`/`test`/`build`). `SPEC-0012` is `Implemented`._

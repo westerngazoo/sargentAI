@@ -1,6 +1,6 @@
 # SPEC-0012 — Archetype library
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Realizes:** R-0012
 - **Author:** Claude (main session), with owner
 - **Created:** 2026-06-10
@@ -201,26 +201,26 @@ athlete imagery. Also: no DB table, no admin write API, no per-record versioning
 
 ## 6. Acceptance criteria
 
-- [ ] **SAC1 → AC1.** The `Archetype` model + value types validate via
+- [x] **SAC1 → AC1.** The `Archetype` model + value types validate via
   `Archetype::new`; an out-of-range ratio/frequency, empty goals, or empty name
   is rejected with the right `field()`.
-- [ ] **SAC2 → AC2/AC7.** `library()` returns the six; a unit test asserts **every
+- [x] **SAC2 → AC2/AC7.** `library()` returns the six; a unit test asserts **every
   record validates** and that each `provenance.confidence` is set honestly
   (documented vs reconstructed vs folklore, per the curated sources).
-- [ ] **SAC3 → AC3.** `GET /archetypes` → `200` + six records (authenticated);
+- [x] **SAC3 → AC3.** `GET /archetypes` → `200` + six records (authenticated);
   `GET /archetypes/:id` → `200` a known slug / `404` unknown; `401` without a
   token.
-- [ ] **SAC4 → AC4.** The `ArchetypeResponse` JSON carries `display_name` but
+- [x] **SAC4 → AC4.** The `ArchetypeResponse` JSON carries `display_name` but
   **no `internal_name` and no `sources`** key (asserted on the serialized body).
-- [ ] **SAC5 → AC5.** The library lives in `core::archetype` with the prior-only
+- [x] **SAC5 → AC5.** The library lives in `core::archetype` with the prior-only
   doc; no `archetype` symbol is imported by any training path (none exists yet —
   the boundary is documented for M5).
-- [ ] **SAC6 → AC6.** `frame_profile` exposes the numeric ratio + banded/enum
+- [x] **SAC6 → AC6.** `frame_profile` exposes the numeric ratio + banded/enum
   fields R-0013 will match on; `structure_tags` is the controlled `StructureTag`
   set.
-- [ ] **SAC7 → AC8.** Unit (`core::archetype`) + integration (`/archetypes`)
+- [x] **SAC7 → AC8.** Unit (`core::archetype`) + integration (`/archetypes`)
   suites; `cargo fmt`/`clippy`/`test`/`build` green.
-- [ ] **SAC8 → AC9.** No matching/generation/ML/DB/mobile in the diff — the
+- [x] **SAC8 → AC9.** No matching/generation/ML/DB/mobile in the diff — the
   library + read API only.
 
 ## 7. Decision log
@@ -240,3 +240,4 @@ athlete imagery. Also: no DB table, no admin write API, no per-record versioning
 
 - _2026-06-10 — created (Draft). Realizes the accepted R-0012. Five HOW-level design questions (OQ-H1..H5) raised for the architect review; the central call is embedded-typed-Rust over a DB table. The six curated records are presented to the owner for approval before step-5 implementation._
 - _2026-06-10 — **Accepted.** Architect review returned APPROVE WITH NITS; all five OQ-H approved. Finding 1 applied: `library()` stays infallible with a single justified `expect` in `seed::all` (option B), keeping `find`/`list`/`get_one` signatures; `structure_tags` controlled-enum tightening recorded as deliberate. **Owner approved all six curated records** (Yates/Mentzer/Arnold/Columbu/Cutler/Heath — content, frame priors, training/diet templates, provenance flags) for the seed._
+- _2026-06-13 — **Implemented.** Merged via PR #18 (squash `600b0c7`); architect **APPROVE**, qa **SIGN-OFF**. SAC1–SAC8 all met (§6 ticked). `core::archetype` (model + value types + the six records via `seed::all`, behind `library()`/`find()`) and the `api::archetype` read surface shipped; the `ArchetypeResponse` DTO omits `internal_name` + `provenance.sources`, asserted on the serialized body. `seed::all` discharges the validating constructors with the single justified `expect` (finding 1, option B), guarded by the SAC2 revalidation test. 39 new tests (29 core unit + 10 api integration; 321 passing overall); gates green (`cargo fmt`/`clippy -D warnings`/`test`/`build`)._
