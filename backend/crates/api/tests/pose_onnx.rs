@@ -9,29 +9,13 @@
 //! a silently-wrong preprocessing (the NHWC/int32/letterbox gotcha, SPEC-0013
 //! §2.6) that yields a distorted-but-non-erroring pose is caught.
 //!
-//! ## Why this is `#[ignore]` (RED-by-absence now, owned by step 5)
-//!
-//! The model artifact (`backend/crates/api/models/movenet-thunder.onnx`, embedded
-//! via `include_bytes!`), the `ort`/`image` dependencies, and the
-//! `OnnxPoseEstimator` itself all land in implementation **step 5** (SPEC-0013
-//! §2.6, decision log). Until then this test **fails by absence**: it imports
-//! `fitai_api::pose::OnnxPoseEstimator` and a committed fixture that do not yet
-//! exist, so the crate will not compile (the same RED signal as the rest of the
-//! suite). Once step 5 lands the model + the estimator, the `#[ignore]` is
-//! REMOVED so the test runs in CI (SPEC-0013 §2.6: the default `download-binaries`
-//! path works on `ubuntu-latest` with no system setup).
-//!
-//! It is left `#[ignore]` rather than deleted so step 5 inherits a written
-//! contract: the fixture path, the end-to-end assertion, and the plausible-range
-//! check are all specified here for the implementer to satisfy.
-//!
-//! Step-5 checklist this test encodes:
-//!   1. commit `backend/crates/api/models/movenet-thunder.onnx` + its
-//!      Apache-2.0 `LICENSE`/`NOTICE` (SPEC-0013 §2.6, decision log);
-//!   2. commit `backend/crates/api/tests/fixtures/physique-front.jpg` — a
-//!      single, clearly-posed standing figure (front angle);
-//!   3. implement `OnnxPoseEstimator` (`ort` + `include_bytes!` model);
-//!   4. delete the `#[ignore]` attribute below.
+//! Step 5 delivered the artifacts this test needs — the bundled
+//! `backend/crates/api/models/movenet-lightning.onnx` (embedded via
+//! `include_bytes!`), the `ort`/`image` dependencies, the `OnnxPoseEstimator`,
+//! and the committed `fixtures/physique-front.jpg` — so the test now runs in CI
+//! (the qa step-3 author left it `#[ignore]` until then; that attribute is gone).
+//! SPEC-0013 §2.6: the default `download-binaries` path works on `ubuntu-latest`
+//! with no system setup.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #![allow(clippy::doc_markdown)]
@@ -40,14 +24,12 @@ use fitai_api::pose::{OnnxPoseEstimator, PoseEstimator};
 use fitai_core::pose::derive_frame_features;
 use fitai_core::ImageContentType;
 
-/// A committed JPEG of a single, clearly-posed standing figure (front angle).
-/// Step 5 must add this file (see the module checklist).
+/// A committed public-domain JPEG of a single, clearly-posed standing figure
+/// (front angle) — see `fixtures/SOURCES.md`.
 const FIXTURE_JPEG: &[u8] = include_bytes!("fixtures/physique-front.jpg");
 
 /// AC4: the REAL model, end-to-end on the fixture, asserting a plausible
-/// `shoulder_to_waist` — not just that inference returned. `#[ignore]` until
-/// step 5 commits the model + fixture and implements `OnnxPoseEstimator`; the
-/// implementer removes the attribute then.
+/// `shoulder_to_waist` — not just that inference returned.
 #[tokio::test]
 async fn real_onnx_estimator_derives_a_plausible_ratio_from_a_fixture() {
     // The real estimator loads the bundled model once (Arc<Session>); no DB, no
