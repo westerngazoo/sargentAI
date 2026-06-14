@@ -986,6 +986,53 @@ pub async fn find_photo_location(
     }))
 }
 
+/// One photo of a session as a match candidate: enough to read its bytes
+/// (`storage_key`), choose by angle, and tell the estimator the encoding. The
+/// `storage_key` stays server-side (it never crosses the wire). (R-0013 §2.5.)
+pub struct MatchCandidate {
+    pub angle: Option<Angle>,
+    pub content_type: ImageContentType,
+    pub storage_key: String,
+}
+
+/// The owner-scoped photos of a session, in stored order, as match candidates
+/// (R-0013). Ownership is enforced by the join on `photo_sessions.user_id`; an
+/// empty result means the session has no photos (the caller maps that to 422).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure; [`ApiError::Internal`] if a stored
+/// `angle`/`content_type` fails domain validation (corrupt data).
+pub async fn match_candidates_for_session(
+    pool: &PgPool,
+    user_id: UserId,
+    session_id: Uuid,
+) -> ApiResult<Vec<MatchCandidate>> {
+    let rows: Vec<(Uuid, Option<String>, String, String)> = sqlx::query_as(
+        "SELECT p.id, p.angle, p.content_type, p.storage_key FROM photo_session_photos p \
+         JOIN photo_sessions s ON p.session_id = s.id \
+         WHERE s.id = $1 AND s.user_id = $2 ORDER BY p.created_at ASC, p.id ASC",
+    )
+    .bind(session_id)
+    .bind(user_id.0)
+    .fetch_all(pool)
+    .await?;
+
+    rows.into_iter()
+        .map(|(id, angle, content_type, storage_key)| {
+            let angle = angle
+                .map(|a| Angle::parse(&a).map_err(|_| corrupt(id, "angle")))
+                .transpose()?;
+            let content_type =
+                ImageContentType::parse(&content_type).map_err(|_| corrupt(id, "content_type"))?;
+            Ok(MatchCandidate {
+                angle,
+                content_type,
+                storage_key,
+            })
+        })
+        .collect()
+}
+
 /// Delete one photo row. Returns `false` (→ 404) when missing/foreign.
 ///
 /// # Errors

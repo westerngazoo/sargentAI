@@ -14,8 +14,10 @@ pub mod db;
 pub mod error;
 mod health;
 pub(crate) mod http;
+pub mod matching;
 pub mod nutrition;
 pub mod photo;
+pub mod pose;
 pub mod profile;
 pub mod storage;
 pub mod workout;
@@ -25,18 +27,19 @@ use std::{sync::Arc, time::Duration};
 use axum::Router;
 use sqlx::PgPool;
 
-use crate::storage::ObjectStore;
+use crate::{pose::PoseEstimator, storage::ObjectStore};
 
 /// Application state shared across handlers via `Router::with_state`.
 ///
 /// `Clone` is cheap: `PgPool` is `Arc`-internal, `jwt_secret` is `Arc<[u8]>`,
-/// `Duration` is `Copy`, and `store` is an `Arc` over the object-store seam.
+/// `Duration` is `Copy`, and `store`/`pose` are `Arc`s over their seams.
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
     pub jwt_secret: Arc<[u8]>,
     pub jwt_ttl: Duration,
     pub store: Arc<dyn ObjectStore>,
+    pub pose: Arc<dyn PoseEstimator>,
 }
 
 /// Build the application router with all routes mounted.
@@ -52,5 +55,6 @@ pub fn app(state: AppState) -> Router {
         .merge(workout::routes())
         .merge(nutrition::routes())
         .merge(photo::routes())
+        .merge(matching::routes())
         .with_state(state)
 }

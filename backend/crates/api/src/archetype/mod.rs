@@ -10,6 +10,11 @@ use axum::{routing::get, Router};
 
 use crate::AppState;
 
+/// The user-facing archetype wire shape — reused by the R-0013 match response
+/// (`RankedArchetype` flattens it), so the privacy contract (no `internal_name`/
+/// `sources`) holds on both surfaces.
+pub(crate) use handlers::ArchetypeResponse;
+
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/archetypes", get(handlers::list))
