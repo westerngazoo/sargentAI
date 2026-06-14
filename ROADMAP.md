@@ -92,7 +92,7 @@ enhancement confounders).
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
 | R-0012 | `ArchetypeLibrary` schema + curated seed data: documented routines **and diets** of famous bodybuilders/athletes (Mentzer, Arnold, Columbu, Yates '96, Cutler, Heath, …) with frame profile, program template, diet template, and provenance (documented vs folklore). Claude curates; owner approves each record. Names internal-only | SPEC-0012 | Done |
-| R-0013 | Archetype-matching service: uploaded photo → server-side pose-estimation frame features (shoulder/hip ratio, limb proportions — pulled forward from R-0018/R-0019) → closest archetype | SPEC-0013 | Backlog |
+| R-0013 | Archetype-matching service: uploaded photo → server-side pose-estimation frame features (shoulder/hip ratio, limb proportions — pulled forward from R-0018/R-0019) → closest archetype | SPEC-0013 | Done |
 | R-0014 | Generate proposed program **+ diet** from the matched archetype; present 2–3 targets and the user chooses which to follow | SPEC-0014 | Backlog |
 
 ### M5 — ML inference (Phase 1, `linfa`)
@@ -204,14 +204,27 @@ photo→archetype uses **real pose-estimation frame features** from day one;
 archetype data is **Claude-curated, owner-approved**, with provenance flags and
 internal-only famous names.
 
-Next focus is **R-0013 — photo→archetype matching** — the fast-track step that
-turns the library into the differentiator: an uploaded photo → **server-side
-pose-estimation frame features** (shoulder-to-waist ratio, banded clavicle
-width, limb proportions, somatotype — the M6 frame-feature slice pulled forward)
-→ a weighted **nearest-archetype** lookup over the in-memory
-`core::archetype::library()`. Both its dependencies are satisfied: **R-0006**
-(`Done`) is the photo substrate it reads, and **R-0012** (`Done`) is the library
-it matches against — the frame profile was deliberately authored in the shape
-the pose estimation emits, so matching is a distance over those fields. After it:
-program/diet generation from the matched archetype (R-0014), then the **R-0027
-earbud-guided training** differentiator.
+**R-0013 — photo→archetype matching** is **Done** — merged via PR #21 (squash
+`438851a`) on 2026-06-14. An uploaded photo runs through **in-process MoveNet
+Lightning** (fp32, Apache-2.0, 192 px, bundled via `include_bytes!`) using ONNX
+Runtime (`ort 2.0-rc.12`); the keypoints derive a **`FrameFeatures`** (numeric
+`shoulder_to_waist` ratio + optional banded clavicle/limb fields); a **weighted
+nearest-neighbor** (`rank()`, weights 0.6 / 0.2 / 0.2, absent-field-skip +
+renormalize, `f64::total_cmp` stable sort) over the in-memory library returns
+all six archetypes ranked nearest-first at `POST /photo-sessions/:id/match`.
+Wire privacy: `internal_name` / `sources` never cross the wire. Error contract:
+`422 no_usable_photo`, `422 no_person_detected`, `422 degenerate_frame`, `404`
+for missing/foreign sessions. Dependency-inverted `Arc<dyn PoseEstimator>` seam
+mirrors R-0006's `Arc<dyn ObjectStore>` — the integration suite uses
+`FakePoseEstimator`; one real-ONNX test (`pose_onnx.rs`) on a committed
+public-domain fixture asserts a plausible ratio, catching silent preprocessing
+regressions. Architect **APPROVE WITH NITS** (both nits fixed before PR).
+QA **SIGN-OFF** AC1–AC9 (31 new tests — 11 pose unit + 11 matching unit + 8
+endpoint integration + 1 real-ONNX; 355 passing overall). Requirement is `Met`;
+`SPEC-0013` is `Implemented`. Deviation from spec: fp32 Lightning not fp16
+Thunder — fp16 emits garbage on CPU kernels; documented in SPEC changelog.
+
+Next focus is **R-0014 — program + diet generation from the matched archetype**
+— the fast-track step that turns the matching result into an actionable proposal:
+generate 2–3 program + diet target options from the top-ranked archetype(s), let
+the user choose which to follow. Depends on R-0012 (`Done`) and R-0013 (`Done`).
