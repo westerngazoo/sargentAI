@@ -256,6 +256,55 @@ fn derive_populates_banded_fields_when_keypoints_are_confident() {
 }
 
 #[test]
+fn derive_bands_limb_length_by_limb_to_torso_ratio() {
+    // The limb-length band is the longer confident chain (here the left
+    // hip→knee→ankle leg) over the torso (shoulder-mid → hip-mid). The golden
+    // shoulders (mid 0.50, 0.22) and hips (mid 0.50, 0.55) give a constant torso
+    // of 0.33; only the left knee/ankle move, so the limb ÷ torso ratio — and thus
+    // the band — is the single variable. These three cases lock the Short/Average/
+    // Long cut-points (1.1 and 1.5 in `limb_length`) against silent drift.
+
+    // Short: a vertical leg of 0.15 + 0.15 = 0.30 → 0.30 / 0.33 ≈ 0.909 (< 1.1).
+    let short = derive_frame_features(&pose_with(&[
+        (Landmark::LeftKnee, kp(0.43, 0.70)),
+        (Landmark::LeftAnkle, kp(0.43, 0.85)),
+    ]))
+    .expect("a confident pose must derive a limb band");
+    assert_eq!(
+        short.limb_length,
+        Some(LengthBand::Short),
+        "a short limb over a 0.33 torso (ratio ≈ 0.909) must band Short"
+    );
+
+    // Average: a vertical leg of 0.20 + 0.20 = 0.40 → 0.40 / 0.33 ≈ 1.212
+    // (in the [1.1, 1.5) middle band).
+    let average = derive_frame_features(&pose_with(&[
+        (Landmark::LeftKnee, kp(0.43, 0.75)),
+        (Landmark::LeftAnkle, kp(0.43, 0.95)),
+    ]))
+    .expect("a confident pose must derive a limb band");
+    assert_eq!(
+        average.limb_length,
+        Some(LengthBand::Average),
+        "an average limb over a 0.33 torso (ratio ≈ 1.212) must band Average"
+    );
+
+    // Long: a bent leg of |hip→knee| 0.25 + |knee→ankle| 0.30 = 0.55 → 0.55 / 0.33
+    // ≈ 1.667 (≥ 1.5). Segments are 3-4-5 right triangles: hip→knee dx 0.20/dy
+    // 0.15; knee→ankle dx 0.18/dy 0.24.
+    let long = derive_frame_features(&pose_with(&[
+        (Landmark::LeftKnee, kp(0.23, 0.70)),
+        (Landmark::LeftAnkle, kp(0.41, 0.94)),
+    ]))
+    .expect("a confident pose must derive a limb band");
+    assert_eq!(
+        long.limb_length,
+        Some(LengthBand::Long),
+        "a long limb over a 0.33 torso (ratio ≈ 1.667) must band Long"
+    );
+}
+
+#[test]
 fn derive_leaves_clavicle_band_absent_when_shoulders_are_low_confidence() {
     // Dim BOTH shoulders below the floor but keep them geometrically placed so a
     // naive derivation that ignores confidence would still produce a band. The
