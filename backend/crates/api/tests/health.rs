@@ -35,6 +35,9 @@ fn health_app() -> axum::Router {
         jwt_secret: Arc::from(b"health-test-secret".to_vec().into_boxed_slice()),
         jwt_ttl: Duration::from_hours(24),
         store,
+        // The health route never estimates a pose; a default fake satisfies the
+        // R-0013 `AppState.pose` field (mirrors the `store` field above).
+        pose: Arc::new(fitai_api::pose::FakePoseEstimator::default()),
     })
 }
 

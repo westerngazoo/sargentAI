@@ -32,6 +32,13 @@ pub enum ApiError {
     #[error("not found")]
     NotFound,
 
+    /// A well-formed request the server understood but cannot act on — e.g. a
+    /// photo session with no usable photo, or one whose pose cannot be derived
+    /// (R-0013). `reason` is a fixed token, never free text (no stringly-typed
+    /// errors, CLAUDE.md §6).
+    #[error("unprocessable: {reason}")]
+    Unprocessable { reason: &'static str },
+
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
@@ -46,6 +53,35 @@ impl From<crate::storage::ObjectStoreError> for ApiError {
     fn from(e: crate::storage::ObjectStoreError) -> Self {
         tracing::error!(error = %e, "object store error");
         ApiError::Internal(eyre::eyre!("object store error"))
+    }
+}
+
+impl From<crate::pose::PoseError> for ApiError {
+    /// `NoPersonDetected` is a 422 the user can act on (try another photo); a
+    /// decode/inference fault is a server-side 500 — a stored, content-validated
+    /// photo (R-0006) that won't decode, or a model fault, is not bad user input
+    /// (SPEC-0013 §2.4).
+    fn from(e: crate::pose::PoseError) -> Self {
+        use crate::pose::PoseError;
+        match e {
+            PoseError::NoPersonDetected => ApiError::Unprocessable {
+                reason: "no_person_detected",
+            },
+            PoseError::Decode | PoseError::Inference => {
+                tracing::error!(error = %e, "pose inference fault");
+                ApiError::Internal(eyre::eyre!("pose inference error"))
+            }
+        }
+    }
+}
+
+impl From<fitai_core::FrameError> for ApiError {
+    /// A pose that yields no derivable frame (too few confident joints, a
+    /// degenerate hip span) is a 422 — no fabricated match (SPEC-0013 §2.4).
+    fn from(_e: fitai_core::FrameError) -> Self {
+        ApiError::Unprocessable {
+            reason: "degenerate_frame",
+        }
     }
 }
 
@@ -73,6 +109,10 @@ impl IntoResponse for ApiError {
             ),
             ApiError::Unauthorized => (StatusCode::UNAUTHORIZED, json!({"error": "unauthorized"})),
             ApiError::NotFound => (StatusCode::NOT_FOUND, json!({"error": "not_found"})),
+            ApiError::Unprocessable { reason } => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                json!({"error": "unprocessable", "reason": reason}),
+            ),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
                 (

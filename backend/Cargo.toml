@@ -34,6 +34,10 @@ tracing-test = "0.2"
 bytes = "1"
 async-trait = "0.1"
 
+# R-0013 / SPEC-0013 §2.6 — in-process ONNX pose estimation + image decode.
+ort = "=2.0.0-rc.12"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 unreachable_pub = "warn"
