@@ -21,13 +21,21 @@ ENV PATH="/root/.cargo/bin:$PATH"
 FROM rust-toolchain AS builder
 WORKDIR /src
 # pkg-config + libssl-dev: openssl-sys (native-tls ← ureq ← ort-sys).
-# libstdc++-14-dev: Ubuntu 24.04 ships GCC 14; the link step needs the unversioned
-#   libstdc++.so stub because ONNX Runtime is a C++ library.
+# libstdc++6: runtime C++ library (already present in ubuntu:24.04 base, but
+#   listed explicitly so the ln below is self-documenting).
+# The symlink /usr/lib/x86_64-linux-gnu/libstdc++.so → .so.6 is required
+# because Rust 1.90+ uses its bundled rust-lld (not ld.bfd) which does NOT
+# search GCC-internal paths and does NOT parse GCC linker scripts.
+# libstdc++-14-dev only puts libstdc++.so in /usr/lib/gcc/x86_64-linux-gnu/14/
+# as a linker script, which lld rejects. A real symlink in the standard lib
+# dir is the fix.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc \
         pkg-config \
         libssl-dev \
-        libstdc++-14-dev \
+        libstdc++6 \
+    && ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6 \
+              /usr/lib/x86_64-linux-gnu/libstdc++.so \
     && rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN cargo build --release -p fitai-api --locked
