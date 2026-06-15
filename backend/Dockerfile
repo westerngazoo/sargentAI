@@ -24,6 +24,7 @@ WORKDIR /src
 # libstdc++-14-dev: Ubuntu 24.04 ships GCC 14; the link step needs the unversioned
 #   libstdc++.so stub because ONNX Runtime is a C++ library.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
         pkg-config \
         libssl-dev \
         libstdc++-14-dev \
