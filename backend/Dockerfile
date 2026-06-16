@@ -20,20 +20,21 @@ ENV PATH="/root/.cargo/bin:$PATH"
 
 FROM rust-toolchain AS builder
 WORKDIR /src
+# build-essential: full C/C++ toolchain (gcc, g++, libc6-dev, libstdc++-14-dev,
+#   make).  libc6-dev is critical — it provides the CRT objects (Scrt1.o,
+#   crti.o, crtn.o) and link stubs (libc.so, libm.so, libpthread.so …) that
+#   rust-lld needs even for the earliest build-script crates.
 # pkg-config + libssl-dev: openssl-sys (native-tls ← ureq ← ort-sys).
-# libstdc++6: runtime C++ library (already present in ubuntu:24.04 base, but
-#   listed explicitly so the ln below is self-documenting).
 # The symlink /usr/lib/x86_64-linux-gnu/libstdc++.so → .so.6 is required
-# because Rust 1.90+ uses its bundled rust-lld (not ld.bfd) which does NOT
-# search GCC-internal paths and does NOT parse GCC linker scripts.
-# libstdc++-14-dev only puts libstdc++.so in /usr/lib/gcc/x86_64-linux-gnu/14/
-# as a linker script, which lld rejects. A real symlink in the standard lib
-# dir is the fix.
+# because Rust 1.90+ uses its bundled rust-lld which does NOT search
+# GCC-internal paths and does NOT parse GCC linker scripts.
+# libstdc++-14-dev (pulled in by g++) puts libstdc++.so in
+# /usr/lib/gcc/x86_64-linux-gnu/14/ as a linker script; lld rejects it.
+# A real symlink in the standard lib dir is the fix.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc \
+        build-essential \
         pkg-config \
         libssl-dev \
-        libstdc++6 \
     && ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6 \
               /usr/lib/x86_64-linux-gnu/libstdc++.so \
     && rm -rf /var/lib/apt/lists/*
