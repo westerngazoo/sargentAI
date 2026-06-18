@@ -26,7 +26,12 @@ use sqlx::PgPool;
 use tempfile::TempDir;
 use tower::ServiceExt;
 
-use fitai_api::{app, pose::FakePoseEstimator, storage::LocalObjectStore, AppState};
+use fitai_api::{
+    app,
+    pose::FakePoseEstimator,
+    storage::{LocalObjectStore, ObjectStore},
+    AppState,
+};
 
 /// Stable secret the whole suite signs/decodes with. SAC4 asserts that a
 /// *different* secret fails signature verification.
@@ -116,6 +121,24 @@ pub fn build_app_with_pose(
 ) -> (Router, Arc<LocalObjectStore>, TempDir) {
     let (state, store, dir) = state_with_ttl(pool, TTL_24H, pose);
     (app(state), store, dir)
+}
+
+/// Build a router over `pool` wired to a caller-supplied object store.
+///
+/// The R-0006 compensation tests pass a fault-injecting stub here to drive the
+/// upload handler's "bytes-first, row-second, compensate-on-insert-failure"
+/// branch (SPEC-0006 §2.3, AC10) — failure paths the real `LocalObjectStore`
+/// cannot reach on demand. Everything else (secret, TTL) matches the production
+/// 24h app the rest of the suite builds.
+pub fn build_app_with_object_store(pool: PgPool, store: Arc<dyn ObjectStore>) -> Router {
+    let state = AppState {
+        pool,
+        jwt_secret: Arc::from(TEST_SECRET.to_vec().into_boxed_slice()),
+        jwt_ttl: TTL_24H,
+        store,
+        pose: Arc::new(FakePoseEstimator::default()),
+    };
+    app(state)
 }
 
 /// POST a JSON body to `path` and return the raw response.
