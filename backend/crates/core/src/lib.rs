@@ -10,6 +10,7 @@ pub mod nutrition;
 pub mod photo;
 pub mod pose;
 pub mod profile;
+pub mod program;
 pub mod user;
 pub mod workout;
 
@@ -29,6 +30,7 @@ pub use pose::{
 pub use profile::{
     BodyFatPercentage, Goal, Goals, HeightCm, NewProfile, Profile, ProfileError, Sex, WeightKg,
 };
+pub use program::{instantiate, GeneratedDiet, GeneratedProgram, ProgramProposal};
 pub use user::{Email, EmailParseError, User, UserId};
 pub use workout::{
     ExerciseName, LoadKg, MuscleGroup, NewExercise, NewSet, NewWorkoutSession, Reps, Rpe,
