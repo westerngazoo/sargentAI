@@ -74,7 +74,7 @@ screen on top of it.
 | R-0009 | Live workout logger: program-aware in-gym session driver (start → add exercise via preset picker + free text → log sets → finish → `POST /workouts`); sessions list + delete; full edit deferred. The substrate R-0027 drives by voice | SPEC-0009 | Done |
 | R-0010 | Nutrition logger UI (manual entry first) — deferred until after the fast-track chain | SPEC-0010 | Backlog |
 | R-0011 | Dashboard: trends, current program, weekly plan — deferred until after the fast-track chain | SPEC-0011 | Backlog |
-| R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | Backlog |
+| R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | Discussing |
 
 > **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
 > **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
