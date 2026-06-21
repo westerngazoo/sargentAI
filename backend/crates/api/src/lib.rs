@@ -19,6 +19,7 @@ pub mod nutrition;
 pub mod photo;
 pub mod pose;
 pub mod profile;
+pub mod program;
 pub mod storage;
 pub mod workout;
 
@@ -56,5 +57,6 @@ pub fn app(state: AppState) -> Router {
         .merge(nutrition::routes())
         .merge(photo::routes())
         .merge(matching::routes())
+        .merge(program::routes())
         .with_state(state)
 }

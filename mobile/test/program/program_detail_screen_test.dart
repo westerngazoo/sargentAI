@@ -24,8 +24,6 @@ import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
-import 'package:fitai/src/profile/data/profile_repository.dart';
-import 'package:fitai/src/program/application/program_providers.dart';
 import 'package:fitai/src/program/models/user_program.dart';
 import 'package:fitai/src/program/presentation/program_detail_screen.dart';
 import 'package:fitai/src/program/services/program_service.dart';
@@ -58,7 +56,8 @@ void main() {
     programService = MockProgramService();
     profileRepo = MockProfileRepository();
     workoutRepo = MockWorkoutRepository();
-    when(() => tokenStore.read()).thenAnswer((_) async => sampleToken(userId: 'u-1'));
+    when(() => tokenStore.read())
+        .thenAnswer((_) async => sampleToken(userId: 'u-1'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
     when(() => workoutRepo.list()).thenAnswer((_) async => []);
@@ -103,7 +102,8 @@ void main() {
     );
     // Macro values from generatedDietJson.
     expect(find.textContaining('176'), findsAtLeastNWidgets(1)); // protein_g
-    expect(find.textContaining('3200'), findsAtLeastNWidgets(1)); // estimated_kcal
+    expect(
+        find.textContaining('3200'), findsAtLeastNWidgets(1)); // estimated_kcal
   });
 
   // AC9: detail screen shows days_per_week training overview.
@@ -330,12 +330,14 @@ void main() {
 
     // Tap the CurrentProgramCard / program shortcut widget.
     await tester.tap(
-      find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            ((w.data ?? '').contains('4-day') ||
-                (w.data ?? '').contains('split')),
-      ).first,
+      find
+          .byWidgetPredicate(
+            (w) =>
+                w is Text &&
+                ((w.data ?? '').contains('4-day') ||
+                    (w.data ?? '').contains('split')),
+          )
+          .first,
     );
     await tester.pumpAndSettle();
 
@@ -426,8 +428,7 @@ void main() {
     expect(
       matchRoutes,
       isNotEmpty,
-      reason:
-          '"Get your program" CTA must navigate toward the match flow; '
+      reason: '"Get your program" CTA must navigate toward the match flow; '
           'pushed routes: $pushedRoutes',
     );
   });

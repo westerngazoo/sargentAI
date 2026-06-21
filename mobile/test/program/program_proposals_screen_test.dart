@@ -25,10 +25,10 @@
 
 import 'dart:async';
 
-import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
+import 'package:fitai/src/program/models/user_program.dart';
 import 'package:fitai/src/program/presentation/program_detail_screen.dart';
 import 'package:fitai/src/program/presentation/program_proposals_screen.dart';
 import 'package:fitai/src/program/services/program_service.dart';
@@ -52,7 +52,8 @@ void main() {
     tokenStore = MockTokenStore();
     repo = MockAuthRepository();
     programService = MockProgramService();
-    when(() => tokenStore.read()).thenAnswer((_) async => sampleToken(userId: 'u-1'));
+    when(() => tokenStore.read())
+        .thenAnswer((_) async => sampleToken(userId: 'u-1'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
   });
@@ -225,7 +226,7 @@ void main() {
     // Protein / carbs / fat from generatedDietJson.
     expect(find.textContaining('176'), findsAtLeastNWidgets(1)); // protein_g
     expect(find.textContaining('360'), findsAtLeastNWidgets(1)); // carbs_g
-    expect(find.textContaining('89'), findsAtLeastNWidgets(1));  // fat_g
+    expect(find.textContaining('89'), findsAtLeastNWidgets(1)); // fat_g
   });
 
   // -------------------------------------------------------------------------
@@ -284,11 +285,11 @@ void main() {
   // AC9: while the choose call is in-flight the button shows a loading
   // indicator and is disabled (no double-submit).
   testWidgets('AC9 choose_button_disabled_while_in_flight', (tester) async {
-    final gate = Completer<dynamic>();
+    final gate = Completer<UserProgram>();
     when(() => programService.getProposals(any()))
         .thenAnswer((_) async => sampleProposals());
     when(() => programService.chooseProgram(any(), any()))
-        .thenAnswer((_) => gate.future as Future<dynamic>);
+        .thenAnswer((_) => gate.future);
 
     await pumpProposals(tester);
     await tester.pumpAndSettle();

@@ -14,15 +14,13 @@ use uuid::Uuid;
 
 use fitai_core::archetype::library;
 use fitai_core::matching::{rank, RankedMatch};
-use fitai_core::pose::{derive_frame_features, PoseKeypoints};
-use fitai_core::Angle;
+use fitai_core::pose::derive_frame_features;
 
 use crate::{
     archetype::ArchetypeResponse,
     auth::AuthenticatedUser,
-    db::{self, MatchCandidate},
+    db,
     error::{ApiError, ApiResult},
-    pose::PoseError,
     AppState,
 };
 
@@ -80,35 +78,7 @@ pub(crate) async fn match_session(
         });
     }
 
-    let keypoints = estimate_first_usable(&state, candidates).await?;
+    let keypoints = super::estimate_first_usable(&state, candidates).await?;
     let features = derive_frame_features(&keypoints)?; // FrameError → 422 degenerate_frame
     Ok(Json(MatchResponse::from_ranked(rank(&features, library()))))
-}
-
-/// Try candidates **front-angle first, then stored order**; the first usable
-/// pose wins. A `NoPersonDetected` photo falls through to the next; a decode /
-/// inference fault is a hard `500`. No usable pose anywhere → `422`.
-async fn estimate_first_usable(
-    state: &AppState,
-    candidates: Vec<MatchCandidate>,
-) -> ApiResult<PoseKeypoints> {
-    for candidate in front_first(candidates) {
-        let bytes = state.store.get(&candidate.storage_key).await?;
-        match state.pose.estimate(&bytes, candidate.content_type).await {
-            Ok(keypoints) => return Ok(keypoints),
-            // No pose in this photo — fall through to the next candidate.
-            Err(PoseError::NoPersonDetected) => {}
-            Err(other) => return Err(other.into()),
-        }
-    }
-    Err(ApiError::Unprocessable {
-        reason: "no_person_detected",
-    })
-}
-
-/// Order candidates with `front`-angle photos first (stable: each group keeps
-/// its stored order).
-fn front_first(mut candidates: Vec<MatchCandidate>) -> Vec<MatchCandidate> {
-    candidates.sort_by_key(|c| c.angle != Some(Angle::Front));
-    candidates
 }

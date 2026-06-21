@@ -135,7 +135,11 @@ const TODAY: NaiveDate = {
 /// AC2 / SPEC-0014 §2.2.1: "Upper/Lower" split → `days_per_week == 4`.
 #[test]
 fn instantiate_upper_lower_split_gives_4_days() {
-    let arch = archetype_fixture("Upper/Lower split", VolumeBand::Moderate, MacroEmphasis::Balanced);
+    let arch = archetype_fixture(
+        "Upper/Lower split",
+        VolumeBand::Moderate,
+        MacroEmphasis::Balanced,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.9, 0.1, TODAY);
     assert_eq!(
@@ -147,7 +151,11 @@ fn instantiate_upper_lower_split_gives_4_days() {
 /// AC2 / SPEC-0014 §2.2.1: "PPL" split → `days_per_week == 6`.
 #[test]
 fn instantiate_ppl_split_gives_6_days() {
-    let arch = archetype_fixture("PPL rotation (push/pull/legs)", VolumeBand::High, MacroEmphasis::HighCarb);
+    let arch = archetype_fixture(
+        "PPL rotation (push/pull/legs)",
+        VolumeBand::High,
+        MacroEmphasis::HighCarb,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.8, 0.2, TODAY);
     assert_eq!(
@@ -159,7 +167,11 @@ fn instantiate_ppl_split_gives_6_days() {
 /// AC2 / SPEC-0014 §2.2.1: "Full Body" split → `days_per_week == 3`.
 #[test]
 fn instantiate_full_body_split_gives_3_days() {
-    let arch = archetype_fixture("Full Body 3x per week", VolumeBand::Low, MacroEmphasis::Balanced);
+    let arch = archetype_fixture(
+        "Full Body 3x per week",
+        VolumeBand::Low,
+        MacroEmphasis::Balanced,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.7, 0.3, TODAY);
     assert_eq!(
@@ -171,7 +183,11 @@ fn instantiate_full_body_split_gives_3_days() {
 /// AC2 / SPEC-0014 §2.2.1: unknown / unrecognised split → default 4.
 #[test]
 fn instantiate_unknown_split_gives_4_days() {
-    let arch = archetype_fixture("Something entirely different", VolumeBand::Moderate, MacroEmphasis::Balanced);
+    let arch = archetype_fixture(
+        "Something entirely different",
+        VolumeBand::Moderate,
+        MacroEmphasis::Balanced,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.6, 0.4, TODAY);
     assert_eq!(
@@ -283,7 +299,11 @@ fn instantiate_kcal_surplus_for_build_muscle() {
 /// AC2 / SPEC-0014 §2.2.2: `HighProtein` → protein ≈ weight × 2.2 g (± 2).
 #[test]
 fn instantiate_high_protein_split_protein_correct() {
-    let arch = archetype_fixture("4-day split", VolumeBand::Moderate, MacroEmphasis::HighProtein);
+    let arch = archetype_fixture(
+        "4-day split",
+        VolumeBand::Moderate,
+        MacroEmphasis::HighProtein,
+    );
     let profile = male_maintain_profile(); // weight = 80 kg
     let proposal = instantiate(&arch, &profile, 0.9, 0.1, TODAY);
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
@@ -297,17 +317,18 @@ fn instantiate_high_protein_split_protein_correct() {
     );
 }
 
-/// AC2 / SPEC-0014 §2.2.2: `carbs_g` must never be negative regardless of
-/// pathological macro emphasis or very low kcal inputs.
+/// AC2 / SPEC-0014 §2.2.2: `carbs_g` is non-negative and the macro consistency
+/// invariant holds even for the most extreme valid profile (minimum weight,
+/// female, `LowCarb` + `LoseFat`).
 ///
-/// We use a `LowCarb` emphasis (fat takes 40 % of kcal) with a `LoseFat` goal
-/// (20 % deficit). At extreme inputs carbs could go negative without the
-/// `.max(0.0)` floor; verify the floor is applied.
+/// With valid `Profile` inputs, Mifflin-St Jeor always yields kcal well above
+/// the point where fat+protein could exceed total kcal (minimum ~1060 kcal at
+/// 20 kg), so the `.max(0.0)` guard is defensive for future formula changes.
+/// This test verifies the macro consistency invariant across this extreme case.
 #[test]
 fn instantiate_carbs_never_negative() {
     use chrono::Utc;
     let arch = archetype_fixture("4-day split", VolumeBand::Low, MacroEmphasis::LowCarb);
-    // Use a very light female profile to drive a small kcal target.
     let profile = Profile {
         user_id: UserId(Uuid::nil()),
         date_of_birth: NaiveDate::from_ymd_opt(1996, 6, 20).expect("valid date"),
@@ -320,12 +341,13 @@ fn instantiate_carbs_never_negative() {
         updated_at: Utc::now(),
     };
     let proposal = instantiate(&arch, &profile, 0.5, 0.5, TODAY);
-    // The invariant: carbs must never underflow to a wrap (u32 wrapping) or
-    // go negative — the spec mandates `.max(0.0)` before casting.
+    // `carbs_g` is `u32` so it can't be negative; verify the macro consistency
+    // invariant holds (no wrap, no truncation artefacts).
+    let recomputed =
+        proposal.diet.protein_g * 4 + proposal.diet.carbs_g * 4 + proposal.diet.fat_g * 9;
     assert_eq!(
-        proposal.diet.carbs_g,
-        0,
-        "carbs_g must be clamped to 0 when protein+fat exceed kcal"
+        proposal.diet.estimated_kcal, recomputed,
+        "macro consistency must hold even at minimum-weight extreme"
     );
 }
 
@@ -352,9 +374,8 @@ fn instantiate_kcal_consistent_with_macros() {
         for &emphasis in &emphases {
             let arch = archetype_fixture("4-day split", VolumeBand::Moderate, emphasis);
             let proposal = instantiate(&arch, profile, 0.9, 0.1, TODAY);
-            let recomputed = proposal.diet.protein_g * 4
-                + proposal.diet.carbs_g * 4
-                + proposal.diet.fat_g * 9;
+            let recomputed =
+                proposal.diet.protein_g * 4 + proposal.diet.carbs_g * 4 + proposal.diet.fat_g * 9;
             assert_eq!(
                 proposal.diet.estimated_kcal, recomputed,
                 "estimated_kcal must equal protein*4 + carbs*4 + fat*9 \
@@ -406,9 +427,15 @@ fn instantiate_template_fields_copied_verbatim() {
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.9, 0.1, TODAY);
     assert_eq!(proposal.program.split, split);
-    assert_eq!(proposal.program.intensity_guidance, "intensity guidance text");
+    assert_eq!(
+        proposal.program.intensity_guidance,
+        "intensity guidance text"
+    );
     assert_eq!(proposal.program.rest_guidance, "rest guidance text");
-    assert_eq!(proposal.program.progression_guidance, "progression guidance text");
+    assert_eq!(
+        proposal.program.progression_guidance,
+        "progression guidance text"
+    );
     assert_eq!(proposal.diet.approach, "approach text");
     assert_eq!(proposal.diet.calorie_strategy, "calorie strategy text");
     assert_eq!(proposal.diet.meal_structure, "meal structure text");
@@ -417,7 +444,11 @@ fn instantiate_template_fields_copied_verbatim() {
 /// `whole body` (lowercase, alternate phrase) also maps to 3 days.
 #[test]
 fn instantiate_whole_body_split_gives_3_days() {
-    let arch = archetype_fixture("whole body 3 times a week", VolumeBand::Low, MacroEmphasis::Balanced);
+    let arch = archetype_fixture(
+        "whole body 3 times a week",
+        VolumeBand::Low,
+        MacroEmphasis::Balanced,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.7, 0.3, TODAY);
     assert_eq!(
@@ -429,7 +460,11 @@ fn instantiate_whole_body_split_gives_3_days() {
 /// PPL match is case-insensitive: "ppl" (lowercase) must also yield 6 days.
 #[test]
 fn instantiate_ppl_split_case_insensitive() {
-    let arch = archetype_fixture("ppl (push pull legs)", VolumeBand::High, MacroEmphasis::HighCarb);
+    let arch = archetype_fixture(
+        "ppl (push pull legs)",
+        VolumeBand::High,
+        MacroEmphasis::HighCarb,
+    );
     let profile = male_maintain_profile();
     let proposal = instantiate(&arch, &profile, 0.8, 0.2, TODAY);
     assert_eq!(

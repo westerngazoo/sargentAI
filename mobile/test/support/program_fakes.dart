@@ -49,7 +49,14 @@ Map<String, dynamic> generatedProgramJson({
       'progression_guidance': progressionGuidance,
       'estimated_session_duration_min': estimatedSessionDurationMin,
       'highlight_exercises': highlightExercises ??
-          ['Bench Press', 'Overhead Press', 'Squat', 'Barbell Row', 'Deadlift', 'Pull-up'],
+          [
+            'Bench Press',
+            'Overhead Press',
+            'Squat',
+            'Barbell Row',
+            'Deadlift',
+            'Pull-up'
+          ],
     };
 
 /// A `GeneratedDiet`-shaped JSON map.

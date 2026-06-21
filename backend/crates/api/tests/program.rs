@@ -178,7 +178,11 @@ async fn proposals_returns_top3_for_own_session(pool: PgPool) {
     // Scores descend (nearest first).
     let scores: Vec<f64> = proposals
         .iter()
-        .map(|p| p["score"].as_f64().expect("each proposal must have a numeric score"))
+        .map(|p| {
+            p["score"]
+                .as_f64()
+                .expect("each proposal must have a numeric score")
+        })
         .collect();
     for pair in scores.windows(2) {
         assert!(
@@ -194,7 +198,10 @@ async fn proposals_returns_top3_for_own_session(pool: PgPool) {
         assert!(p.get("archetype_id").and_then(|v| v.as_str()).is_some());
         assert!(p.get("display_name").and_then(|v| v.as_str()).is_some());
         assert!(p.get("score").and_then(serde_json::Value::as_f64).is_some());
-        assert!(p.get("distance").and_then(serde_json::Value::as_f64).is_some());
+        assert!(p
+            .get("distance")
+            .and_then(serde_json::Value::as_f64)
+            .is_some());
         assert!(p.get("program").is_some(), "proposal must include program");
         assert!(p.get("diet").is_some(), "proposal must include diet");
     }
@@ -402,7 +409,10 @@ async fn choose_deactivates_previous_program(pool: PgPool) {
         .as_str()
         .expect("second program must have an id")
         .to_string();
-    assert_ne!(first_id, second_id, "two choose calls must produce two rows");
+    assert_ne!(
+        first_id, second_id,
+        "two choose calls must produce two rows"
+    );
 
     // GET /programs/me/current must now return the second program.
     let current_resp =
@@ -624,8 +634,7 @@ async fn history_returns_programs_newest_first(pool: PgPool) {
         .to_string();
 
     // History must include both, newest (second) first.
-    let hist_resp =
-        common::get_with_auth(&app, "/programs/me", Some(&bearer(&token))).await;
+    let hist_resp = common::get_with_auth(&app, "/programs/me", Some(&bearer(&token))).await;
     assert_eq!(hist_resp.status(), StatusCode::OK);
     let hist = body_json(hist_resp).await;
     let programs = hist["programs"].as_array().expect("`programs` array");
@@ -673,8 +682,7 @@ async fn history_pagination_limit_offset(pool: PgPool) {
     .await;
 
     // limit=1 → exactly 1 program.
-    let resp1 =
-        common::get_with_auth(&app, "/programs/me?limit=1", Some(&bearer(&token))).await;
+    let resp1 = common::get_with_auth(&app, "/programs/me?limit=1", Some(&bearer(&token))).await;
     assert_eq!(resp1.status(), StatusCode::OK);
     let body1 = body_json(resp1).await;
     assert_eq!(
@@ -689,8 +697,7 @@ async fn history_pagination_limit_offset(pool: PgPool) {
     );
 
     // offset=1 → skips the first (newest) item.
-    let resp2 =
-        common::get_with_auth(&app, "/programs/me?offset=1", Some(&bearer(&token))).await;
+    let resp2 = common::get_with_auth(&app, "/programs/me?offset=1", Some(&bearer(&token))).await;
     assert_eq!(resp2.status(), StatusCode::OK);
     let body2 = body_json(resp2).await;
     let programs2 = body2["programs"].as_array().unwrap();
@@ -740,10 +747,7 @@ async fn proposals_contain_derived_program_and_diet_fields(pool: PgPool) {
         let dpw = p["program"]["days_per_week"]
             .as_u64()
             .expect("days_per_week must be a non-null u64");
-        assert!(
-            dpw > 0 && dpw <= 7,
-            "days_per_week {dpw} must be in [1, 7]"
-        );
+        assert!(dpw > 0 && dpw <= 7, "days_per_week {dpw} must be in [1, 7]");
         let kcal = p["diet"]["estimated_kcal"]
             .as_u64()
             .expect("estimated_kcal must be a non-null u64");

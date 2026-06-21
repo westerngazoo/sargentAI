@@ -1077,6 +1077,124 @@ pub async fn delete_photo_session(
     Ok(result.rows_affected() > 0)
 }
 
+// ---------------------------------------------------------------------------
+// user_programs (R-0014, SPEC-0014 §2.3)
+// ---------------------------------------------------------------------------
+
+/// A `user_programs` row returned from the DB. The `program` and `diet` fields
+/// are JSONB blobs deserialized into their typed structs by the caller.
+#[derive(Debug, FromRow)]
+pub struct UserProgramRow {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub archetype_id: String,
+    pub source_session_id: Option<Uuid>,
+    pub program: serde_json::Value,
+    pub diet: serde_json::Value,
+    pub active: bool,
+    pub chosen_at: DateTime<Utc>,
+}
+
+/// Insert a new program row, deactivate every previous active row for the same
+/// user, and return the inserted row — all inside one transaction.
+///
+/// # Errors
+/// [`ApiError::Database`] on any query failure.
+pub async fn insert_program(
+    pool: &PgPool,
+    user_id: UserId,
+    archetype_id: &str,
+    source_session_id: Option<Uuid>,
+    program: &fitai_core::program::GeneratedProgram,
+    diet: &fitai_core::program::GeneratedDiet,
+) -> ApiResult<UserProgramRow> {
+    let program_json = serde_json::to_value(program)
+        .map_err(|e| ApiError::Internal(eyre::eyre!("serialise program: {e}")))?;
+    let diet_json = serde_json::to_value(diet)
+        .map_err(|e| ApiError::Internal(eyre::eyre!("serialise diet: {e}")))?;
+
+    let mut tx: Transaction<'_, Postgres> = pool.begin().await?;
+
+    sqlx::query("UPDATE user_programs SET active = FALSE WHERE user_id = $1 AND active = TRUE")
+        .bind(user_id.0)
+        .execute(&mut *tx)
+        .await?;
+
+    let row = sqlx::query_as::<_, UserProgramRow>(
+        "INSERT INTO user_programs \
+           (user_id, archetype_id, source_session_id, program, diet) \
+         VALUES ($1, $2, $3, $4, $5) \
+         RETURNING id, user_id, archetype_id, source_session_id, \
+                   program, diet, active, chosen_at",
+    )
+    .bind(user_id.0)
+    .bind(archetype_id)
+    .bind(source_session_id)
+    .bind(&program_json)
+    .bind(&diet_json)
+    .fetch_one(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(row)
+}
+
+/// Fetch the most-recently-chosen active program for the caller.
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn get_current_program(
+    pool: &PgPool,
+    user_id: UserId,
+) -> ApiResult<Option<UserProgramRow>> {
+    Ok(sqlx::query_as::<_, UserProgramRow>(
+        "SELECT id, user_id, archetype_id, source_session_id, \
+                program, diet, active, chosen_at \
+         FROM user_programs \
+         WHERE user_id = $1 AND active = TRUE \
+         ORDER BY chosen_at DESC \
+         LIMIT 1",
+    )
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?)
+}
+
+/// Fetch the caller's program history, newest first, with limit/offset
+/// pagination.
+///
+/// Returns `(rows, total_count)`.
+///
+/// # Errors
+/// [`ApiError::Database`] on any query failure.
+pub async fn get_program_history(
+    pool: &PgPool,
+    user_id: UserId,
+    limit: i64,
+    offset: i64,
+) -> ApiResult<(Vec<UserProgramRow>, i64)> {
+    let rows = sqlx::query_as::<_, UserProgramRow>(
+        "SELECT id, user_id, archetype_id, source_session_id, \
+                program, diet, active, chosen_at \
+         FROM user_programs \
+         WHERE user_id = $1 \
+         ORDER BY chosen_at DESC \
+         LIMIT $2 OFFSET $3",
+    )
+    .bind(user_id.0)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool)
+    .await?;
+
+    let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM user_programs WHERE user_id = $1")
+        .bind(user_id.0)
+        .fetch_one(pool)
+        .await?;
+
+    Ok((rows, total.0))
+}
+
 /// The canonical lowercase token for an [`Angle`] (its serde encoding) for the
 /// `angle` column.
 fn serde_plain_angle(angle: Angle) -> &'static str {

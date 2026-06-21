@@ -14,14 +14,16 @@
 // (a 401 there 401-sinks via the shared AuthInterceptor; preserved in
 // app_router_test). The user identity, if shown, reads the in-memory session.
 //
-// RED until package:fitai/src/shell/home_shell.dart is refactored to a
-// ConsumerWidget over profileProvider and package:fitai/src/profile/** exists.
+// R-0014: CurrentProgramCard is always present in HomeShell; programService is
+// stubbed here (returns null → no program card shown) so that these tests do
+// not start pending network timers.
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
+import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:flutter/material.dart';
@@ -31,27 +33,33 @@ import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
 import '../support/profile_fakes.dart';
+import '../support/program_fakes.dart';
 import '../support/workout_fakes.dart';
 
 void main() {
   setUpAll(registerFallbacks);
   setUpAll(registerProfileFallbacks);
+  setUpAll(registerProgramFallbacks);
 
   late MockTokenStore tokenStore;
   late MockAuthRepository repo;
   late MockProfileRepository profileRepo;
   late MockWorkoutRepository workoutRepo;
+  late MockProgramService programService;
 
   setUp(() {
     tokenStore = MockTokenStore();
     repo = MockAuthRepository();
     profileRepo = MockProfileRepository();
     workoutRepo = MockWorkoutRepository();
+    programService = MockProgramService();
     when(() => tokenStore.read())
         .thenAnswer((_) async => sampleToken(userId: 'u-1'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
     when(() => workoutRepo.list()).thenAnswer((_) async => []);
+    // Default: no program (returns null so CurrentProgramCard shows the CTA).
+    when(() => programService.getCurrent()).thenAnswer((_) async => null);
   });
 
   Future<ProviderContainer> pumpShell(WidgetTester tester) async {
@@ -61,6 +69,7 @@ void main() {
         authRepositoryProvider.overrideWithValue(repo),
         profileRepositoryProvider.overrideWithValue(profileRepo),
         workoutRepositoryProvider.overrideWithValue(workoutRepo),
+        programServiceProvider.overrideWithValue(programService),
       ],
     );
     addTearDown(container.dispose);
