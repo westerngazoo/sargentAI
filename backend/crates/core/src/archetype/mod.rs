@@ -31,7 +31,7 @@ mod seed;
 
 use std::sync::OnceLock;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::Goal;
@@ -100,7 +100,7 @@ pub enum TrainingPhilosophy {
 }
 
 /// Weekly working-set volume band per muscle.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum VolumeBand {
     Low,
@@ -109,7 +109,7 @@ pub enum VolumeBand {
 }
 
 /// Which macronutrient an archetype's diet leans on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MacroEmphasis {
     HighProtein,

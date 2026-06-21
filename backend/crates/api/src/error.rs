@@ -39,6 +39,12 @@ pub enum ApiError {
     #[error("unprocessable: {reason}")]
     Unprocessable { reason: &'static str },
 
+    /// The request conflicts with the derived state of an existing resource —
+    /// e.g. the chosen archetype is not among the session's top-3 proposals
+    /// (R-0014, SPEC-0014 §2.4.6). `reason` is a fixed token.
+    #[error("conflict: {reason}")]
+    Conflict { reason: &'static str },
+
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
@@ -112,6 +118,10 @@ impl IntoResponse for ApiError {
             ApiError::Unprocessable { reason } => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 json!({"error": "unprocessable", "reason": reason}),
+            ),
+            ApiError::Conflict { reason } => (
+                StatusCode::CONFLICT,
+                json!({"error": "conflict", "reason": reason}),
             ),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");

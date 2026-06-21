@@ -7,6 +7,7 @@ import '../auth/domain/auth_state.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
+import '../program/presentation/program_detail_screen.dart';
 import '../shell/home_shell.dart';
 import '../shell/splash_screen.dart';
 import '../workout/presentation/live_session_screen.dart';
@@ -54,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/session',
         builder: (_, __) => const LiveSessionScreen(),
+      ),
+      GoRoute(
+        path: '/programs/current',
+        builder: (_, __) => const ProgramDetailScreen(),
       ),
     ],
   );

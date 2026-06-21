@@ -93,7 +93,7 @@ enhancement confounders).
 |-----|------------|------|--------|
 | R-0012 | `ArchetypeLibrary` schema + curated seed data: documented routines **and diets** of famous bodybuilders/athletes (Mentzer, Arnold, Columbu, Yates '96, Cutler, Heath, …) with frame profile, program template, diet template, and provenance (documented vs folklore). Claude curates; owner approves each record. Names internal-only | SPEC-0012 | Done |
 | R-0013 | Archetype-matching service: uploaded photo → server-side pose-estimation frame features (shoulder/hip ratio, limb proportions — pulled forward from R-0018/R-0019) → closest archetype | SPEC-0013 | Done |
-| R-0014 | Generate proposed program **+ diet** from matched archetype; top-3 closest archetypes presented, user picks one; persisted in `user_programs`; backend + Flutter | SPEC-0014 | Discussing |
+| R-0014 | Generate proposed program **+ diet** from matched archetype; top-3 closest archetypes presented, user picks one; persisted in `user_programs`; backend + Flutter | SPEC-0014 | Spec'd |
 
 ### M5 — ML inference (Phase 1, `linfa`)
 

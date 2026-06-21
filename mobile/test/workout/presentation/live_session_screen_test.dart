@@ -24,6 +24,7 @@ import 'dart:async';
 
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
+import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
@@ -38,6 +39,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../support/profile_fakes.dart';
+import '../../support/program_fakes.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
@@ -121,11 +123,14 @@ void main() {
         'Start workout on the home shell opens /session with a session '
         'in progress', (tester) async {
       final profileRepo = MockProfileRepository();
+      final programService = MockProgramService();
       when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
+      when(() => programService.getCurrent()).thenAnswer((_) async => null);
       final container = ProviderContainer(
         overrides: [
           workoutRepositoryProvider.overrideWithValue(repo),
           profileRepositoryProvider.overrideWithValue(profileRepo),
+          programServiceProvider.overrideWithValue(programService),
         ],
       );
       addTearDown(container.dispose);
