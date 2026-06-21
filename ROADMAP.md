@@ -93,7 +93,7 @@ enhancement confounders).
 |-----|------------|------|--------|
 | R-0012 | `ArchetypeLibrary` schema + curated seed data: documented routines **and diets** of famous bodybuilders/athletes (Mentzer, Arnold, Columbu, Yates '96, Cutler, Heath, …) with frame profile, program template, diet template, and provenance (documented vs folklore). Claude curates; owner approves each record. Names internal-only | SPEC-0012 | Done |
 | R-0013 | Archetype-matching service: uploaded photo → server-side pose-estimation frame features (shoulder/hip ratio, limb proportions — pulled forward from R-0018/R-0019) → closest archetype | SPEC-0013 | Done |
-| R-0014 | Generate proposed program **+ diet** from matched archetype; top-3 closest archetypes presented, user picks one; persisted in `user_programs`; backend + Flutter | SPEC-0014 | Spec'd |
+| R-0014 | Generate proposed program **+ diet** from matched archetype; top-3 closest archetypes presented, user picks one; persisted in `user_programs`; backend + Flutter | SPEC-0014 | Done |
 
 ### M5 — ML inference (Phase 1, `linfa`)
 
@@ -238,7 +238,20 @@ endpoint integration + 1 real-ONNX; 355 passing overall). Requirement is `Met`;
 `SPEC-0013` is `Implemented`. Deviation from spec: fp32 Lightning not fp16
 Thunder — fp16 emits garbage on CPU kernels; documented in SPEC changelog.
 
-Next focus is **R-0014 — program + diet generation from the matched archetype**
-— the fast-track step that turns the matching result into an actionable proposal:
-generate 2–3 program + diet target options from the top-ranked archetype(s), let
-the user choose which to follow. Depends on R-0012 (`Done`) and R-0013 (`Done`).
+**R-0014 — program + diet generation from matched archetype** is **Done** —
+merged via PR #24 (squash `e924587`) on 2026-06-21. Mifflin-St Jeor TDEE
+with goal multiplier (×0.80 LoseFat / ×1.15 BuildMuscle-GainStrength) drives
+macro derivation; `GET /photo-sessions/:id/program-proposals` returns the top-3
+ranked archetypes as fully instantiated `{proposals:[...]}` envelopes;
+`POST /programs` chooses one (deactivate-then-insert transaction, 409 for
+non-top-3); `GET /programs/me/current` and `GET /programs/me` (paginated).
+Flutter: `ProgramProposalsScreen` (exclusive-expand cards, macro table, GoRouter
+navigation), `ProgramDetailScreen`, `CurrentProgramCard` always visible in
+`HomeShell`. 20 new core unit tests + 26 Flutter widget tests + full integration
+suite (CI gate); 261 Flutter tests passing. Architect **APPROVE**; QA
+**SIGN-OFF** AC1–AC11. Wire privacy: `internal_name`/`sources` never cross the
+wire. Scope guard held: no ML, no earbud, no nutrition-log UI (AC11).
+
+Next focus is **R-0027 — earbud-guided training** — the differentiator
+hands-free voice-out in-gym experience. Depends on R-0009 (`Done`) and R-0014
+(`Done`).
