@@ -47,6 +47,12 @@ fn default_limit() -> i64 {
     20
 }
 
+/// Response for `GET /photo-sessions/:id/program-proposals`.
+#[derive(Serialize)]
+pub(crate) struct ProposalsResponse {
+    pub proposals: Vec<ProgramProposal>,
+}
+
 /// The wire response for a single persisted program row.
 #[derive(Serialize)]
 pub(crate) struct UserProgramResponse {
@@ -144,10 +150,10 @@ pub(crate) async fn get_proposals(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Path(session_id): Path<Uuid>,
-) -> ApiResult<Json<Vec<ProgramProposal>>> {
+) -> ApiResult<Json<ProposalsResponse>> {
     let profile = require_profile(&state, user.user_id).await?;
     let proposals = derive_proposals(&state, user.user_id, session_id, &profile).await?;
-    Ok(Json(proposals))
+    Ok(Json(ProposalsResponse { proposals }))
 }
 
 /// `POST /programs`

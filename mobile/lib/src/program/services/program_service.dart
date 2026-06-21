@@ -19,12 +19,9 @@ class ProgramService {
   /// `GET /photo-sessions/:id/program-proposals` → top-3 proposals.
   Future<ProposalsResponse> getProposals(String sessionId) async {
     try {
-      final res = await _dio
-          .get<List<dynamic>>('/photo-sessions/$sessionId/program-proposals');
-      final list = (res.data ?? const <dynamic>[])
-          .map((e) => ProgramProposal.fromJson(e as Map<String, dynamic>))
-          .toList();
-      return ProposalsResponse(proposals: list);
+      final res = await _dio.get<Map<String, dynamic>>(
+          '/photo-sessions/$sessionId/program-proposals');
+      return ProposalsResponse.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
