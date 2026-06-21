@@ -432,7 +432,7 @@ async fn choose_deactivates_previous_program(pool: PgPool) {
 }
 
 /// AC3: choosing an archetype that is NOT in the session's top-3 proposals →
-/// 409 with `{"error": "archetype_not_in_proposals"}`.
+/// 409 with `{"error": "conflict", "reason": "archetype_not_in_proposals"}`.
 #[sqlx::test(migrations = "../../migrations")]
 async fn choose_archetype_not_in_top3_is_409(pool: PgPool) {
     let fake = FakePoseEstimator::returning(wide_frame_pose());
@@ -461,7 +461,7 @@ async fn choose_archetype_not_in_top3_is_409(pool: PgPool) {
     );
     assert_eq!(
         body_json(resp).await,
-        json!({ "error": "archetype_not_in_proposals" })
+        json!({ "error": "conflict", "reason": "archetype_not_in_proposals" })
     );
 }
 

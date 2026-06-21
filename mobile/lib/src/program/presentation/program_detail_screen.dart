@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -175,9 +176,9 @@ class CurrentProgramCard extends ConsumerWidget {
     final async = ref.watch(currentProgramProvider);
     return async.when(
       loading: () => const LinearProgressIndicator(),
-      error: (_, __) => _GetProgramCta(context),
+      error: (_, __) => _getProgramCta(context),
       data: (program) {
-        if (program == null) return _GetProgramCta(context);
+        if (program == null) return _getProgramCta(context);
         return Card(
           margin: const EdgeInsets.all(16),
           child: ListTile(
@@ -185,21 +186,21 @@ class CurrentProgramCard extends ConsumerWidget {
             subtitle: Text('${program.program.daysPerWeek} days/week · '
                 '${program.diet.estimatedKcal} kcal'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).pushNamed('/programs/current'),
+            onTap: () => context.go('/programs/current'),
           ),
         );
       },
     );
   }
 
-  Widget _GetProgramCta(BuildContext context) => Card(
+  Widget _getProgramCta(BuildContext context) => Card(
         margin: const EdgeInsets.all(16),
         child: ListTile(
           leading: const Icon(Icons.fitness_center),
           title: const Text('Get your program'),
           subtitle: const Text('Take a photo to get a personalized plan'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).pushNamed('/onboarding'),
+          onTap: () => context.go('/onboarding'),
         ),
       );
 }

@@ -35,6 +35,7 @@ import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
@@ -253,15 +254,28 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+
+    // Use GoRouter so context.go('/programs/current') resolves correctly.
+    final router = GoRouter(
+      initialLocation: '/proposals',
+      routes: [
+        GoRoute(
+          path: '/proposals',
+          builder: (_, __) =>
+              const ProgramProposalsScreen(sessionId: 'sess-001'),
+        ),
+        GoRoute(
+          path: '/programs/current',
+          builder: (_, __) => const ProgramDetailScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          home: ProgramProposalsScreen(sessionId: 'sess-001'),
-          routes: {
-            '/programs/current': (_) => const ProgramDetailScreen(),
-          },
-        ),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pump();

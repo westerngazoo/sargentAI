@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_exception.dart';
 import '../models/program_proposal.dart';
@@ -72,7 +73,7 @@ class _ProgramProposalsScreenState
           .read(programServiceProvider)
           .chooseProgram(widget.sessionId, proposal.archetypeId);
       if (!mounted) return;
-      await Navigator.of(context).pushReplacementNamed('/programs/current');
+      context.go('/programs/current');
     } on ApiException catch (e) {
       if (!mounted) return;
       final msg = e.statusCode == 409

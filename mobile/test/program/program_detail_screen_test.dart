@@ -32,6 +32,7 @@ import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
@@ -313,15 +314,23 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(authControllerProvider);
+
+    // GoRouter is required because CurrentProgramCard uses context.go().
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+        GoRoute(
+          path: '/programs/current',
+          builder: (_, __) => const ProgramDetailScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          home: const HomeShell(),
-          routes: {
-            '/programs/current': (_) => const ProgramDetailScreen(),
-          },
-        ),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pump();
@@ -381,25 +390,23 @@ void main() {
     addTearDown(container.dispose);
     container.read(authControllerProvider);
 
-    // Track all navigator pushes.
-    final List<String> pushedRoutes = [];
+    // GoRouter is required because CurrentProgramCard uses context.go().
+    // /onboarding is the current CTA destination (SPEC-0014 §2.5.4).
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+        GoRoute(
+          path: '/onboarding',
+          builder: (_, __) => const Scaffold(body: Text('onboarding-sentinel')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          home: const HomeShell(),
-          onGenerateRoute: (settings) {
-            if (settings.name != null) {
-              pushedRoutes.add(settings.name!);
-            }
-            return MaterialPageRoute<void>(
-              builder: (_) => Scaffold(
-                body: Text('route: ${settings.name}'),
-              ),
-              settings: settings,
-            );
-          },
-        ),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pump();
@@ -417,20 +424,9 @@ void main() {
     await tester.tap(ctaFinder.first);
     await tester.pumpAndSettle();
 
-    // A route toward the photo / match / session flow must have been pushed.
-    final matchRoutes = pushedRoutes.where(
-      (r) =>
-          r.contains('photo') ||
-          r.contains('match') ||
-          r.contains('session') ||
-          r.contains('onboarding'),
-    );
-    expect(
-      matchRoutes,
-      isNotEmpty,
-      reason: '"Get your program" CTA must navigate toward the match flow; '
-          'pushed routes: $pushedRoutes',
-    );
+    // Navigation toward the match/onboarding flow must have occurred.
+    expect(find.text('onboarding-sentinel'), findsOneWidget,
+        reason: '"Get your program" CTA must navigate toward the match flow');
   });
 
   // -------------------------------------------------------------------------

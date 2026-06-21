@@ -119,7 +119,10 @@ impl IntoResponse for ApiError {
                 StatusCode::UNPROCESSABLE_ENTITY,
                 json!({"error": "unprocessable", "reason": reason}),
             ),
-            ApiError::Conflict { reason } => (StatusCode::CONFLICT, json!({"error": reason})),
+            ApiError::Conflict { reason } => (
+                StatusCode::CONFLICT,
+                json!({"error": "conflict", "reason": reason}),
+            ),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
                 (
