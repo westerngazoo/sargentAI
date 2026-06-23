@@ -74,7 +74,7 @@ pub(crate) struct SyntheticChooseRequest {
 // Lookup table  (9 entries — 3 shapes × 3 fat bands)
 // ---------------------------------------------------------------------------
 
-/// Map a (shape, fat_band) pair to the synthetic [`FrameFeatures`] used for
+/// Map a (`shape`, `fat_band`) pair to the synthetic [`FrameFeatures`] used for
 /// ranking. Values are calibrated so each combination's closest archetype
 /// matches the bodybuilding phenotype the user selected.
 ///

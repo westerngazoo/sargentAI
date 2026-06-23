@@ -188,12 +188,9 @@ class _ShapeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(shape.label,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(
-                                color: isSelected ? cs.primary : null,
-                                fontWeight: FontWeight.w600)),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: isSelected ? cs.primary : null,
+                            fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
                     Text(shape.description,
                         style: Theme.of(context).textTheme.bodySmall),
@@ -252,10 +249,8 @@ class _FatBandTile extends StatelessWidget {
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(band.label,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(band.sublabel,
-              style: Theme.of(context).textTheme.bodySmall),
+          Text(band.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(band.sublabel, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
       selected: isSelected,
