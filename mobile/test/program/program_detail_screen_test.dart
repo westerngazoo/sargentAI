@@ -391,14 +391,15 @@ void main() {
     container.read(authControllerProvider);
 
     // GoRouter is required because CurrentProgramCard uses context.go().
-    // /onboarding is the current CTA destination (SPEC-0014 §2.5.4).
+    // /programs/get is the CTA destination (R-0030).
     final router = GoRouter(
       initialLocation: '/home',
       routes: [
         GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
         GoRoute(
-          path: '/onboarding',
-          builder: (_, __) => const Scaffold(body: Text('onboarding-sentinel')),
+          path: '/programs/get',
+          builder: (_, __) =>
+              const Scaffold(body: Text('onboarding-sentinel')),
         ),
       ],
     );
