@@ -398,8 +398,7 @@ void main() {
         GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
         GoRoute(
           path: '/programs/get',
-          builder: (_, __) =>
-              const Scaffold(body: Text('onboarding-sentinel')),
+          builder: (_, __) => const Scaffold(body: Text('onboarding-sentinel')),
         ),
       ],
     );
