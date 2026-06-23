@@ -6,7 +6,7 @@
 //! - `GET /programs/me/current`                  — active program
 //! - `GET /programs/me`                          — history (paginated)
 
-mod handlers;
+pub(crate) mod handlers;
 
 use axum::{
     routing::{get, post},

@@ -21,12 +21,14 @@ pub mod pose;
 pub mod profile;
 pub mod program;
 pub mod storage;
+pub(crate) mod synthetic;
 pub mod workout;
 
 use std::{sync::Arc, time::Duration};
 
 use axum::Router;
 use sqlx::PgPool;
+use tower_http::cors::CorsLayer;
 
 use crate::{pose::PoseEstimator, storage::ObjectStore};
 
@@ -58,5 +60,7 @@ pub fn app(state: AppState) -> Router {
         .merge(photo::routes())
         .merge(matching::routes())
         .merge(program::routes())
+        .merge(synthetic::routes::routes())
         .with_state(state)
+        .layer(CorsLayer::permissive())
 }
