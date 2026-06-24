@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/dio_provider.dart';
 import '../models/program_proposal.dart';
+import '../models/synthetic_match.dart';
 import '../models/user_program.dart';
 
 /// Typed client over the four R-0014 program endpoints. Every transport or
@@ -51,6 +52,38 @@ class ProgramService {
       return UserProgram.fromJson(res.data!);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// `POST /match/synthetic` — get top-3 proposals from body shape + fat band.
+  Future<SyntheticMatchResponse> syntheticMatch(
+      BodyShape shape, FatBand fatBand) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/match/synthetic',
+        data: {'shape': shape.value, 'fat_band': fatBand.value},
+      );
+      return SyntheticMatchResponse.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// `POST /programs/synthetic` — choose a proposal from a synthetic match.
+  Future<UserProgram> chooseSyntheticProgram(
+      String archetypeId, BodyShape shape, FatBand fatBand) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/programs/synthetic',
+        data: {
+          'archetype_id': archetypeId,
+          'shape': shape.value,
+          'fat_band': fatBand.value,
+        },
+      );
+      return UserProgram.fromJson(res.data!);
+    } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }
   }

@@ -200,7 +200,7 @@ class CurrentProgramCard extends ConsumerWidget {
           title: const Text('Get your program'),
           subtitle: const Text('Take a photo to get a personalized plan'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.go('/onboarding'),
+          onTap: () => context.go('/programs/get'),
         ),
       );
 }
