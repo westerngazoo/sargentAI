@@ -19,15 +19,18 @@ Manual data entry is a point of friction for many users, leading to missed logs 
 ## 3. Acceptance criteria
 
 - **AC1. Voice Input Button:** A persistent microphone button is accessible across primary screens in the Flutter app to initiate voice interaction.
-- **AC2. Speech-to-Text Processing:** The app captures the user's speech and accurately transcribes it into text using an on-device or cloud STT engine.
-- **AC3. Intent Parsing (LLM):** The transcribed text is sent to a backend endpoint that uses an LLM to parse the intent (e.g., logging a meal, logging a workout) and extract structured data (food name, grams, exercise name, reps, weight).
-- **AC4. Automatic Logging:** Once parsed, the backend automatically creates the corresponding nutrition or workout log entries.
-- **AC5. User Confirmation/Fallback:** If the intent is ambiguous or missing required fields (e.g., "Log some chicken"), the assistant prompts the user for clarification before logging.
-- **AC6. Missing Log Reminders:** A scheduled background job or chron service evaluates the user's daily routine (e.g., expected meal times, scheduled workout days from their active `UserProgram`).
-- **AC7. Alert System:** If a scheduled meal or workout is not logged within a configurable grace period, the app sends a local or push notification reminding the user.
-- **AC8. Voice-Activated from Notification:** Users can tap the reminder notification to immediately open the app into voice-listening mode.
-- **AC9. Tests:** Flutter widget tests verify the presence of the microphone button and the voice-listening UI states. Backend tests verify the prompt construction for the LLM intent parser and the creation of database records from structured LLM outputs.
-- **AC10. Privacy and Scope Guard:** Voice audio is not stored long-term. Only the extracted structured data is retained.
+- **AC2. Live Session Hands-Free Commands:** During an active workout session, the user can speak commands hands-free (e.g., "Finished squats set 1, reps 10, weight 40kg"). The app registers the log and precise timing.
+- **AC3. Audio Ducking & Background Playback:** The voice assistant operates seamlessly alongside other audio sources (like background music). When listening or speaking, it uses audio ducking (lowering music volume) without completely stopping the user's media, potentially via native OS integration (iOS `AVAudioSession` mix/duck options, Android AudioFocus).
+- **AC4. Energy Expenditure Calculation:** When a set is logged via voice with specific weight, reps, and timing, the backend calculates biomechanical work done (joules) and converts this to estimated active calories burned, accounting for time under tension and rest periods between sets.
+- **AC5. Speech-to-Text Processing:** The app captures the user's speech and accurately transcribes it into text using an on-device or cloud STT engine.
+- **AC6. Intent Parsing (LLM):** The transcribed text is sent to a backend endpoint that uses an LLM to parse the intent (e.g., logging a meal, logging a workout) and extract structured data (food name, grams, exercise name, reps, weight).
+- **AC7. Automatic Logging:** Once parsed, the backend automatically creates the corresponding nutrition or workout log entries.
+- **AC8. User Confirmation/Fallback:** If the intent is ambiguous or missing required fields (e.g., "Log some chicken"), the assistant prompts the user for clarification before logging.
+- **AC9. Missing Log Reminders:** A scheduled background job or chron service evaluates the user's daily routine (e.g., expected meal times, scheduled workout days from their active `UserProgram`).
+- **AC10. Alert System:** If a scheduled meal or workout is not logged within a configurable grace period, the app sends a local or push notification reminding the user.
+- **AC11. Voice-Activated from Notification:** Users can tap the reminder notification to immediately open the app into voice-listening mode.
+- **AC12. Tests:** Flutter widget tests verify the presence of the microphone button, audio ducking interactions, and the voice-listening UI states. Backend tests verify the prompt construction for the LLM intent parser, the energy expenditure formula, and the creation of database records from structured LLM outputs.
+- **AC13. Privacy and Scope Guard:** Voice audio is not stored long-term. Only the extracted structured data is retained.
 
 ## 4. Constraints & Non-goals
 
