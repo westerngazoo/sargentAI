@@ -29,6 +29,11 @@ class HomeShell extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('fitAI'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.mic),
+            tooltip: 'Voice hub',
+            onPressed: () => context.go('/hub'),
+          ),
           TextButton(
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
             child: const Text('Logout'),
