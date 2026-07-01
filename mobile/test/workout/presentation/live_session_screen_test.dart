@@ -44,7 +44,10 @@ import '../../support/program_fakes.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
-  setUpAll(registerWorkoutFallbacks);
+  setUpAll(() {
+    registerWorkoutFallbacks();
+    setupFlutterTtsMock();
+  });
 
   late MockWorkoutRepository repo;
 

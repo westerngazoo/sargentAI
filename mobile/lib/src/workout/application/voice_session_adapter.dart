@@ -38,14 +38,11 @@ class VoiceSessionAdapter {
   Future<void> _initTts() async {
     try {
       await _tts.setSharedInstance(true);
-      await _tts.setIosAudioCategory(
-          IosTextToSpeechAudioCategory.playback,
-          [
-            IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-            IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-            IosTextToSpeechAudioCategoryOptions.mixWithOthers
-          ]
-      );
+      await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
+        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        IosTextToSpeechAudioCategoryOptions.mixWithOthers
+      ]);
     } catch (_) {}
   }
 
@@ -53,7 +50,8 @@ class VoiceSessionAdapter {
     _isActive = true;
     try {
       _audioHandler = await AudioService.init(
-        builder: () => AudioServiceHandler(onMediaButtonPress: _handleMediaButton),
+        builder: () =>
+            AudioServiceHandler(onMediaButtonPress: _handleMediaButton),
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'com.example.fitai.channel.audio',
           androidNotificationChannelName: 'FitAI Workout',
@@ -66,9 +64,10 @@ class VoiceSessionAdapter {
     final currentState = _ref.read(sessionDriverProvider);
     _lastExerciseIndex = currentState.currentExercise;
     final draft = currentState.draft;
-    _lastSetCount = (draft != null && currentState.currentExercise < draft.exercises.length)
-        ? draft.exercises[currentState.currentExercise].sets.length
-        : 0;
+    _lastSetCount =
+        (draft != null && currentState.currentExercise < draft.exercises.length)
+            ? draft.exercises[currentState.currentExercise].sets.length
+            : 0;
 
     _driverSubscription = _ref.listen<SessionDriverState>(
       sessionDriverProvider,
@@ -91,18 +90,22 @@ class VoiceSessionAdapter {
   void _handleMediaButton() {
     final state = _ref.read(sessionDriverProvider);
     final draft = state.draft;
-    if (draft == null || state.currentExercise >= draft.exercises.length) return;
+    if (draft == null || state.currentExercise >= draft.exercises.length)
+      return;
 
     final exercise = draft.exercises[state.currentExercise];
     if (exercise.sets.isNotEmpty) {
       // Repeat the last set
       _ref.read(sessionDriverProvider.notifier).logSet(exercise.sets.last);
     } else {
-      _ref.read(sessionDriverProvider.notifier).logSet(const SetDraft(reps: null, weightKg: null, rpe: null));
+      _ref
+          .read(sessionDriverProvider.notifier)
+          .logSet(const SetDraft(reps: null, weightKg: null, rpe: null));
     }
   }
 
-  void _onSessionStateChanged(SessionDriverState? previous, SessionDriverState current) async {
+  void _onSessionStateChanged(
+      SessionDriverState? previous, SessionDriverState current) async {
     if (current.done) {
       await _speak(TtsScripts.workoutDone);
       return;

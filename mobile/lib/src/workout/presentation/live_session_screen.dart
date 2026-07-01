@@ -62,7 +62,8 @@ class LiveSessionScreen extends ConsumerWidget {
                 ref.watch(voiceSessionAdapterProvider);
                 final isVoiceMode = ref.watch(voiceModeProvider);
                 return IconButton(
-                  icon: Icon(isVoiceMode ? Icons.headset_mic : Icons.headset_off),
+                  icon:
+                      Icon(isVoiceMode ? Icons.headset_mic : Icons.headset_off),
                   onPressed: () {
                     ref.read(voiceModeProvider.notifier).state = !isVoiceMode;
                   },

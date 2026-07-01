@@ -7,7 +7,8 @@ class TtsScripts {
     }
   }
 
-  static String setStart(int setNumber, int totalSets, int reps, double? weight) {
+  static String setStart(
+      int setNumber, int totalSets, int reps, double? weight) {
     if (weight != null) {
       return 'Set $setNumber of $totalSets. $reps reps at ${weight.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} kg. Go.';
     } else {
