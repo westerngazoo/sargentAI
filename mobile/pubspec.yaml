@@ -14,6 +14,9 @@ dependencies:
   go_router: ^14.6.0
   dio: ^5.7.0
   flutter_secure_storage: ^9.2.2
+  flutter_tts: ^4.2.5
+  audio_service: ^0.18.19
+  just_audio: ^0.10.6
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +28,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/audio/silence.mp3

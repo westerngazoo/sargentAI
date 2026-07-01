@@ -7,6 +7,7 @@ import '../domain/exercise_draft.dart';
 import '../domain/muscle_group.dart';
 import '../domain/set_draft.dart';
 import 'preset_exercises.dart';
+import '../application/voice_session_adapter.dart';
 
 /// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
 /// business logic (validation, the state machine) is driver-side; this widget
@@ -52,7 +53,24 @@ class LiveSessionScreen extends ConsumerWidget {
         if (discard ?? false) driver.abandon();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Workout')),
+        appBar: AppBar(
+          title: const Text('Workout'),
+          actions: [
+            Consumer(
+              builder: (context, ref, _) {
+                // Ensure the adapter is instantiated to listen to the provider
+                ref.watch(voiceSessionAdapterProvider);
+                final isVoiceMode = ref.watch(voiceModeProvider);
+                return IconButton(
+                  icon: Icon(isVoiceMode ? Icons.headset_mic : Icons.headset_off),
+                  onPressed: () {
+                    ref.read(voiceModeProvider.notifier).state = !isVoiceMode;
+                  },
+                );
+              },
+            ),
+          ],
+        ),
         body: SafeArea(
           child: Column(
             children: [
