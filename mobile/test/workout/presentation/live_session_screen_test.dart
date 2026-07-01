@@ -29,6 +29,7 @@ import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
+import '../../flutter_tts_mock.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/presentation/preset_exercises.dart';
@@ -43,7 +44,10 @@ import '../../support/program_fakes.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
-  setUpAll(registerWorkoutFallbacks);
+  setUpAll(() {
+    registerWorkoutFallbacks();
+    setupFlutterTtsMock();
+  });
 
   late MockWorkoutRepository repo;
 
