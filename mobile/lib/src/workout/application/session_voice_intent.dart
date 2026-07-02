@@ -27,6 +27,12 @@ class FinishSessionIntent extends SessionVoiceIntent {
   const FinishSessionIntent();
 }
 
+/// "pause", "stand by", "stop listening" → suspend the hands-free loop
+/// without touching the session.
+class PauseSessionIntent extends SessionVoiceIntent {
+  const PauseSessionIntent();
+}
+
 /// Nothing matched — carries the transcript for the coach to echo back.
 class UnknownSessionIntent extends SessionVoiceIntent {
   const UnknownSessionIntent(this.transcript);
@@ -43,6 +49,9 @@ SessionVoiceIntent parseSessionVoiceIntent(String transcript) {
   if (_any(t, ['finish', 'save workout', 'end workout', 'we are done']) ||
       t == 'done') {
     return const FinishSessionIntent();
+  }
+  if (_any(t, ['pause', 'stand by', 'stop listening'])) {
+    return const PauseSessionIntent();
   }
   if (_any(t, ['next', 'skip'])) return const NextExerciseIntent();
 

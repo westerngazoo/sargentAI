@@ -65,4 +65,8 @@ void main() {
   test('empty → UnknownSessionIntent', () {
     expect(parseSessionVoiceIntent('  '), isA<UnknownSessionIntent>());
   });
+
+  test('"pause" → PauseSessionIntent', () {
+    expect(parseSessionVoiceIntent('pause'), isA<PauseSessionIntent>());
+  });
 }

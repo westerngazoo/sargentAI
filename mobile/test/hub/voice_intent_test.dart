@@ -73,4 +73,25 @@ void main() {
   test('empty transcript → UnknownIntent', () {
     expect(parseVoiceIntent('   '), isA<UnknownIntent>());
   });
+
+  test('"plan workout" → ShowProgramIntent (plan outranks workout)', () {
+    expect(parseVoiceIntent('plan workout'), isA<ShowProgramIntent>());
+  });
+
+  test('"stop" → StopIntent', () {
+    expect(parseVoiceIntent('stop'), isA<StopIntent>());
+  });
+
+  group('parseMacros', () {
+    test('extracts all three macros', () {
+      final m = parseMacros('45 protein 70 carbs 25 fat')!;
+      expect(m.proteinG, 45);
+      expect(m.carbsG, 70);
+      expect(m.fatG, 25);
+    });
+
+    test('returns null when nothing was heard', () {
+      expect(parseMacros('no idea sergeant'), isNull);
+    });
+  });
 }

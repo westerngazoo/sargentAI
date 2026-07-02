@@ -1,7 +1,27 @@
-// Shared voice fakes: a scriptable speech engine and a recording TTS.
+// Shared voice fakes: a scriptable speech engine, a recording TTS, and a
+// nutrition-service mock for voice-logged meals.
 
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
+import 'package:fitai/src/nutrition/models/nutrition_log.dart';
+import 'package:fitai/src/nutrition/services/nutrition_service.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockNutritionService extends Mock implements NutritionService {}
+
+NutritionLog sampleNutritionLog({
+  double proteinG = 40,
+  double carbsG = 60,
+  double fatG = 20,
+}) =>
+    NutritionLog(
+      id: 'nut-uuid-001',
+      performedOn: '2026-07-02',
+      proteinG: proteinG,
+      carbsG: carbsG,
+      fatG: fatG,
+      calories: 4 * proteinG + 4 * carbsG + 9 * fatG,
+    );
 
 /// Emits queued transcripts, one final result per `listen()` call.
 class ScriptedSpeechInput implements SpeechInput {
@@ -17,7 +37,7 @@ class ScriptedSpeechInput implements SpeechInput {
   @override
   Future<void> listen(OnTranscript onTranscript) async {
     final t = _next < transcripts.length ? transcripts[_next++] : '';
-    onTranscript(t, true);
+    await onTranscript(t, true);
   }
 
   @override

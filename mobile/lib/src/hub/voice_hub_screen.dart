@@ -1,7 +1,8 @@
-// R-0032 (slice 1) — the voice hub: a central speak button ringed by every
-// primary action. Tap an option or dictate it; both roads lead to the same
-// screens. STT runs through the [SpeechInput] seam; intent mapping is the
-// pure [parseVoiceIntent] (LLM-backed parsing arrives with the full R-0032).
+// R-0032 — the voice hub: a central speak button ringed by every primary
+// action. Tapping the mic opens a hands-free conversation with the
+// [Sergeant] (prompt → listen → act → re-listen); tapping an option does the
+// same thing by hand. Navigation requested by the sergeant is consumed here
+// (notifiers hold no BuildContext).
 
 import 'dart:math' as math;
 
@@ -12,8 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../core/brand.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../workout/application/session_driver.dart';
-import 'speech_input.dart';
-import 'voice_intent.dart';
+import 'sergeant.dart';
 
 /// One ring option: an icon + label that fires [onTap].
 class _HubOption {
@@ -33,9 +33,6 @@ class VoiceHubScreen extends ConsumerStatefulWidget {
 
 class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
     with SingleTickerProviderStateMixin {
-  bool _listening = false;
-  String _transcript = '';
-  String? _hint;
   late final AnimationController _pulse;
 
   @override
@@ -53,68 +50,6 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
     super.dispose();
   }
 
-  void _setListening(bool value) {
-    setState(() => _listening = value);
-    if (value) {
-      _pulse.repeat();
-    } else {
-      _pulse.stop();
-      _pulse.reset();
-    }
-  }
-
-  Future<void> _toggleListening() async {
-    final speech = ref.read(speechInputProvider);
-    if (_listening) {
-      await speech.stop();
-      if (mounted) _setListening(false);
-      return;
-    }
-    final ready = await speech.initialize();
-    if (!mounted) return;
-    if (!ready) {
-      setState(() => _hint = 'Voice input is not available here — '
-          'tap an option instead.');
-      return;
-    }
-    setState(() {
-      _transcript = '';
-      _hint = null;
-    });
-    _setListening(true);
-    await speech.listen((transcript, isFinal) {
-      if (!mounted) return;
-      setState(() => _transcript = transcript);
-      if (isFinal) {
-        _setListening(false);
-        _act(parseVoiceIntent(transcript));
-      }
-    });
-  }
-
-  void _act(VoiceIntent intent) {
-    switch (intent) {
-      case LogWorkoutIntent():
-        _startWorkout();
-      case LogMealIntent(:final proteinG, :final carbsG, :final fatG):
-        showMealQuickLogSheet(context,
-            proteinG: proteinG, carbsG: carbsG, fatG: fatG);
-      case ShowProgramIntent():
-        context.go('/programs/current');
-      case BodyMatchIntent():
-        context.go('/programs/get');
-      case ShowHistoryIntent():
-        context.go('/home');
-      case ShowProfileIntent():
-        context.go('/onboarding');
-      case UnknownIntent(:final transcript):
-        setState(() => _hint = transcript.isEmpty
-            ? 'Didn\'t catch that — try "log a meal" or "start a workout".'
-            : 'Didn\'t understand "$transcript" — try "log a meal" or '
-                '"start a workout".');
-    }
-  }
-
   void _startWorkout() {
     ref.read(sessionDriverProvider.notifier).start();
     context.go('/session');
@@ -122,6 +57,20 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
 
   @override
   Widget build(BuildContext context) {
+    final sergeant = ref.watch(sergeantProvider);
+
+    // Consume the sergeant's navigation effect.
+    ref.listen(sergeantProvider, (prev, next) {
+      if (next.navigateTo != null) {
+        final target = next.navigateTo!;
+        ref.read(sergeantProvider.notifier).consumeNavigation();
+        context.go(target);
+      }
+      if ((prev?.listening ?? false) != next.listening) {
+        next.listening ? _pulse.repeat() : _pulse.stop();
+      }
+    });
+
     final options = [
       _HubOption(Icons.fitness_center, 'Workout', _startWorkout),
       _HubOption(
@@ -155,12 +104,19 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        if (_listening) _PulseRings(animation: _pulse),
+                        if (sergeant.listening) _PulseRings(animation: _pulse),
                         for (var i = 0; i < options.length; i++)
                           _positioned(options[i], i, options.length, radius),
                         _SpeakButton(
-                          listening: _listening,
-                          onTap: _toggleListening,
+                          listening: sergeant.listening,
+                          conversing: sergeant.conversing,
+                          onTap: () {
+                            final notifier =
+                                ref.read(sergeantProvider.notifier);
+                            sergeant.conversing
+                                ? notifier.stop()
+                                : notifier.start();
+                          },
                         ),
                       ],
                     ),
@@ -175,17 +131,18 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _listening
+                  color: sergeant.listening
                       ? Theme.of(context).colorScheme.primaryContainer
                       : Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  _listening
-                      ? (_transcript.isEmpty ? 'Listening…' : '“$_transcript”')
-                      : (_hint ??
-                          'Tap the mic and say what you want to do — '
-                              'or tap an option.'),
+                  sergeant.listening && sergeant.transcript.isNotEmpty
+                      ? '“${sergeant.transcript}”'
+                      : (sergeant.line.isEmpty
+                          ? 'Tap the mic to talk to your sergeant — '
+                              'or tap an option.'
+                          : sergeant.line),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
@@ -245,21 +202,27 @@ class _PulseRings extends StatelessWidget {
 }
 
 class _SpeakButton extends StatelessWidget {
-  const _SpeakButton({required this.listening, required this.onTap});
+  const _SpeakButton({
+    required this.listening,
+    required this.conversing,
+    required this.onTap,
+  });
 
   final bool listening;
+  final bool conversing;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final active = listening || conversing;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (listening ? cs.error : cs.primary).withValues(alpha: 0.35),
+            color: (active ? cs.error : cs.primary).withValues(alpha: 0.35),
             blurRadius: 24,
             spreadRadius: 2,
             offset: const Offset(0, 8),
@@ -268,7 +231,7 @@ class _SpeakButton extends StatelessWidget {
       ),
       child: Material(
         shape: const CircleBorder(),
-        color: listening ? cs.error : cs.primary,
+        color: active ? cs.error : cs.primary,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
@@ -276,7 +239,7 @@ class _SpeakButton extends StatelessWidget {
             width: 112,
             height: 112,
             child: Icon(
-              listening ? Icons.stop : Icons.mic,
+              active ? Icons.stop : Icons.mic,
               size: 48,
               color: cs.onPrimary,
             ),

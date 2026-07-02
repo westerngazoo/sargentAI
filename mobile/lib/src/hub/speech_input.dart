@@ -4,12 +4,16 @@
 // is confined to [PluginSpeechInput]. Tests override [speechInputProvider]
 // with a fake — mirroring the `Arc<dyn PoseEstimator>` pattern backend-side.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// Callback fired with the running transcript; `isFinal` marks the last one.
-typedef OnTranscript = void Function(String transcript, bool isFinal);
+/// Returns a [FutureOr] so engines (and test fakes) can await the handling
+/// chain — the hands-free loops depend on that ordering.
+typedef OnTranscript = FutureOr<void> Function(String transcript, bool isFinal);
 
 /// What the voice hub needs from a speech engine — nothing more.
 abstract class SpeechInput {

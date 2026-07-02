@@ -64,7 +64,9 @@ class LiveSessionScreen extends ConsumerWidget {
               selectedIcon: const Icon(Icons.headset_mic),
               onPressed: () {
                 final notifier = ref.read(voiceCoachProvider.notifier);
-                coach.enabled ? notifier.disable() : notifier.enable();
+                coach.enabled
+                    ? notifier.disable()
+                    : notifier.enable(handsFree: true);
               },
             ),
             const SizedBox(width: 8),

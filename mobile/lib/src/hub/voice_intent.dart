@@ -44,6 +44,11 @@ class ShowProfileIntent extends VoiceIntent {
   const ShowProfileIntent();
 }
 
+/// "stop", "cancel", "pause" → end the hands-free conversation.
+class StopIntent extends VoiceIntent {
+  const StopIntent();
+}
+
 /// Nothing matched — carries the transcript so the UI can echo it back.
 class UnknownIntent extends VoiceIntent {
   const UnknownIntent(this.transcript);
@@ -58,6 +63,9 @@ VoiceIntent parseVoiceIntent(String transcript) {
   final t = transcript.toLowerCase().trim();
   if (t.isEmpty) return const UnknownIntent('');
 
+  if (_matchesAny(t, ['stop', 'cancel', 'pause', 'never mind', 'stand by'])) {
+    return const StopIntent();
+  }
   if (_matchesAny(t, [
     'meal',
     'food',
@@ -75,6 +83,8 @@ VoiceIntent parseVoiceIntent(String transcript) {
       fatG: _grams(t, 'fat'),
     );
   }
+  // "plan my workout" is a program request, so 'plan' outranks 'workout'.
+  if (_matchesAny(t, ['plan'])) return const ShowProgramIntent();
   if (_matchesAny(
       t, ['workout', 'session', 'train', 'exercise', 'gym', 'lift'])) {
     return const LogWorkoutIntent();
@@ -82,7 +92,7 @@ VoiceIntent parseVoiceIntent(String transcript) {
   if (_matchesAny(t, ['body type', 'body match', 'match me', 'find my type'])) {
     return const BodyMatchIntent();
   }
-  if (_matchesAny(t, ['program', 'plan', 'routine'])) {
+  if (_matchesAny(t, ['program', 'routine'])) {
     return const ShowProgramIntent();
   }
   if (_matchesAny(t, ['history', 'past', 'log list', 'sessions'])) {
@@ -92,6 +102,18 @@ VoiceIntent parseVoiceIntent(String transcript) {
     return const ShowProfileIntent();
   }
   return UnknownIntent(transcript);
+}
+
+/// Macro follow-up parser for the hands-free wizard ("45 protein, 70 carbs,
+/// 25 fat" after being asked). Returns null when no macro was heard.
+({double? proteinG, double? carbsG, double? fatG})? parseMacros(
+    String transcript) {
+  final t = transcript.toLowerCase().trim();
+  final p = _grams(t, 'protein');
+  final c = _grams(t, 'carb');
+  final f = _grams(t, 'fat');
+  if (p == null && c == null && f == null) return null;
+  return (proteinG: p, carbsG: c, fatG: f);
 }
 
 bool _matchesAny(String t, List<String> keywords) => keywords.any(t.contains);
