@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/brand.dart';
+import '../../core/theme/app_theme.dart';
 
 /// The fitAI brand mark shown on the auth screens and splash: a gradient
 /// roundel with the dumbbell glyph, the wordmark, and a tagline.
@@ -19,11 +20,7 @@ class BrandHeader extends StatelessWidget {
           width: 84,
           height: 84,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [cs.primary, cs.tertiary],
-            ),
+            gradient: sunsetGradient(),
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(
@@ -33,7 +30,7 @@ class BrandHeader extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(Icons.fitness_center, size: 40, color: cs.onPrimary),
+          child: Icon(Icons.fitness_center, size: 40, color: Colors.white),
         ),
         const SizedBox(height: 16),
         Text(

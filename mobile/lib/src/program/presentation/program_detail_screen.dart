@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../models/user_program.dart';
@@ -185,15 +186,10 @@ class CurrentProgramCard extends ConsumerWidget {
       error: (_, __) => _getProgramCta(context),
       data: (program) {
         if (program == null) return _getProgramCta(context);
-        final cs = Theme.of(context).colorScheme;
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [cs.primary, cs.tertiary],
-            ),
+            gradient: sunsetGradient(),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Material(
@@ -212,13 +208,13 @@ class CurrentProgramCard extends ConsumerWidget {
                           'YOUR PROGRAM',
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: cs.onPrimary.withValues(alpha: 0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w700,
                                   ),
                         ),
                         const Spacer(),
-                        Icon(Icons.arrow_forward, color: cs.onPrimary),
+                        Icon(Icons.arrow_forward, color: Colors.white),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -227,7 +223,7 @@ class CurrentProgramCard extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: cs.onPrimary,
+                            color: Colors.white,
                           ),
                     ),
                     const SizedBox(height: 14),
@@ -255,15 +251,10 @@ class CurrentProgramCard extends ConsumerWidget {
   }
 
   Widget _getProgramCta(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.primary, cs.tertiary],
-        ),
+        gradient: sunsetGradient(),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Material(
@@ -277,8 +268,8 @@ class CurrentProgramCard extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: cs.onPrimary.withValues(alpha: 0.18),
-                  child: Icon(Icons.fitness_center, color: cs.onPrimary),
+                  backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  child: Icon(Icons.fitness_center, color: Colors.white),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -289,20 +280,20 @@ class CurrentProgramCard extends ConsumerWidget {
                         'Get your program',
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: cs.onPrimary,
+                                  color: Colors.white,
                                 ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Take a photo to get a personalized plan',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onPrimary.withValues(alpha: 0.85),
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward, color: cs.onPrimary),
+                Icon(Icons.arrow_forward, color: Colors.white),
               ],
             ),
           ),
@@ -321,22 +312,21 @@ class _StatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: cs.onPrimary.withValues(alpha: 0.18),
+        color: Colors.white.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: cs.onPrimary),
+          Icon(icon, size: 14, color: Colors.white),
           const SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: cs.onPrimary,
+                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                 ),
           ),
