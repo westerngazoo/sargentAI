@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../application/session_driver.dart';
-import '../domain/session_draft.dart';
 import '../domain/set_draft.dart';
 import 'voice_session_audio_handler.dart';
 
@@ -20,7 +19,7 @@ final audioHandlerProvider =
       androidNotificationOngoing: true,
     ),
   );
-  return handler as VoiceSessionAudioHandler;
+  return handler;
 });
 
 // A provider to allow mocking TTS in tests
@@ -64,7 +63,6 @@ class VoiceSessionAdapter extends Notifier<void> {
   void build() {}
 
   void activate() async {
-    final tts = ref.read(flutterTtsProvider);
     final handler = await ref.read(audioHandlerProvider.future);
 
     handler.onMediaButtonPress = () {
@@ -81,8 +79,8 @@ class VoiceSessionAdapter extends Notifier<void> {
     _driverSub?.close();
     _driverSub = null;
 
-    final tts = ref.read(flutterTtsProvider);
     try {
+      final tts = ref.read(flutterTtsProvider);
       await tts.stop();
     } catch (_) {}
 
@@ -103,9 +101,6 @@ class VoiceSessionAdapter extends Notifier<void> {
       // A more robust implementation would read the target reps from the draft if available.
     }
   }
-
-  String _fmt(double n) =>
-      n == n.roundToDouble() ? n.toInt().toString() : n.toString();
 
   Future<void> _speak(String text) async {
     final tts = ref.read(flutterTtsProvider);
@@ -153,11 +148,6 @@ class VoiceSessionAdapter extends Notifier<void> {
     _prevState = state;
 
     if (isNewExercise) {
-      // Find targets (using first set of the exercise as a rough target if available)
-      int? targetReps;
-      double? targetWeight;
-      int numSets = exercise.sets
-          .length; // Actually we want to announce planned sets, but currently driver only holds logged sets.
       // For R-0027, if we read from UserProgram we'd have target values.
       // But for now, we just say the exercise name since draft only has logged sets.
       // The spec says: Next: [name]. [N] sets of [R] reps at [W] kg.

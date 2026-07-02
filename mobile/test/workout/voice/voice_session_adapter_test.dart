@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
-import 'package:fitai/src/workout/domain/exercise_draft.dart';
-import 'package:fitai/src/workout/domain/session_draft.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/voice/voice_session_adapter.dart';
 import 'package:fitai/src/workout/voice/voice_session_audio_handler.dart';
@@ -43,8 +41,6 @@ void main() {
   });
 
   test('toggle voice mode activates adapter and hooks button press', () async {
-    final adapter = container.read(voiceSessionAdapterProvider.notifier);
-
     container.read(voiceModeProvider.notifier).toggle();
 
     await Future.delayed(Duration.zero);
