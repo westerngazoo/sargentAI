@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dev_login.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
 import 'auth_form.dart';
@@ -60,6 +61,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: const Text('Create an account'),
                     ),
                   ),
+                  if (DevLogin.enabled) ...[
+                    const SizedBox(height: 4),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.bug_report_outlined, size: 18),
+                      label: const Text('Use test account'),
+                      onPressed: _busy
+                          ? null
+                          : () => _submit(DevLogin.email, DevLogin.password),
+                    ),
+                  ],
                 ],
               ),
             ),

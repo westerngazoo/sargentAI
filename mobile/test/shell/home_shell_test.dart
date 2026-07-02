@@ -6,7 +6,7 @@
 //   (onboardingDismissedProvider true) and leaves the shell usable; nothing is
 //   saved (no PUT).
 // SAC11 -> AC11: the shell renders no feature logger UI; the AppBar is titled
-//   'fitAI' and offers Logout.
+//   the brand name and offers Logout.
 //
 // The refactored shell (SPEC-0008 §2.2/§3.5) drives the prompt through
 // `AsyncValue.when` over profileProvider and drops the old GET /auth/me read —
@@ -19,6 +19,7 @@
 // not start pending network timers.
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
+import 'package:fitai/src/core/brand.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
@@ -127,7 +128,7 @@ void main() {
         .thenAnswer((_) async => sampleProfile(userId: 'u-1'));
     await pumpShell(tester);
 
-    expect(find.widgetWithText(AppBar, 'fitAI'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, Brand.appName), findsOneWidget);
     expect(find.textContaining('Logout'), findsOneWidget);
     for (final feature in const ['Workout', 'Nutrition', 'Photo']) {
       expect(find.textContaining(feature), findsNothing);

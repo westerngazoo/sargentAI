@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/brand.dart';
+
 /// The fitAI brand mark shown on the auth screens and splash: a gradient
 /// roundel with the dumbbell glyph, the wordmark, and a tagline.
 class BrandHeader extends StatelessWidget {
@@ -35,13 +37,13 @@ class BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'fitAI',
+          Brand.appName,
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         if (!compact) ...[
           const SizedBox(height: 4),
           Text(
-            'Train smarter. Every session, personalized.',
+            Brand.tagline,
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme

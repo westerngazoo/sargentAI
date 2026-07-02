@@ -13,6 +13,7 @@ import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/auth/domain/auth_state.dart';
 import 'package:fitai/src/auth/presentation/login_screen.dart';
+import 'package:fitai/src/core/dev_login.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:flutter/material.dart';
@@ -132,5 +133,20 @@ void main() {
 
     expect(find.textContaining('Exception'), findsNothing);
     expect(find.textContaining('DioException'), findsNothing);
+  });
+
+  testWidgets('debug quick login submits the DevLogin test account (real flow)',
+      (tester) async {
+    // flutter test always runs in debug mode, so the button must be present.
+    when(() => repo.login(DevLogin.email, DevLogin.password))
+        .thenAnswer((_) async => sampleToken(userId: 'u-test'));
+    when(() => tokenStore.write(any())).thenAnswer((_) async {});
+    final container = await pumpLogin(tester);
+
+    await tester.tap(find.text('Use test account'));
+    await tester.pumpAndSettle();
+
+    verify(() => repo.login(DevLogin.email, DevLogin.password)).called(1);
+    expect(container.read(authControllerProvider), isA<AuthAuthenticated>());
   });
 }

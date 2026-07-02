@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/brand.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../workout/application/session_driver.dart';
 import 'speech_input.dart';
@@ -135,7 +136,7 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('fitAI'),
+        title: const Text(Brand.appName),
         leading: BackButton(onPressed: () => context.go('/home')),
       ),
       body: SafeArea(

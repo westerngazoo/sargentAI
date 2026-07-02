@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/application/auth_controller.dart';
+import '../core/brand.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
 import '../program/presentation/program_detail_screen.dart';
@@ -27,7 +28,7 @@ class HomeShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('fitAI'),
+        title: const Text(Brand.appName),
         actions: [
           IconButton.filledTonal(
             icon: const Icon(Icons.mic),

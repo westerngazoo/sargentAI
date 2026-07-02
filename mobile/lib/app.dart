@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'src/core/brand.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/router/app_router.dart';
 
@@ -12,7 +13,7 @@ class FitAiApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'fitAI',
+      title: Brand.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
