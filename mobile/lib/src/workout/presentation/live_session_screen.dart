@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/session_driver.dart';
+import '../application/voice_coach.dart';
 import '../domain/exercise_draft.dart';
 import '../domain/muscle_group.dart';
 import '../domain/set_draft.dart';
@@ -19,6 +20,7 @@ class LiveSessionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sessionDriverProvider);
     final driver = ref.read(sessionDriverProvider.notifier);
+    final coach = ref.watch(voiceCoachProvider);
     final draft = state.draft;
 
     if (draft == null) {
@@ -52,7 +54,24 @@ class LiveSessionScreen extends ConsumerWidget {
         if (discard ?? false) driver.abandon();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Workout')),
+        appBar: AppBar(
+          title: const Text('Workout'),
+          actions: [
+            IconButton(
+              tooltip: coach.enabled ? 'Voice coach off' : 'Voice coach on',
+              isSelected: coach.enabled,
+              icon: const Icon(Icons.headset_off_outlined),
+              selectedIcon: const Icon(Icons.headset_mic),
+              onPressed: () {
+                final notifier = ref.read(voiceCoachProvider.notifier);
+                coach.enabled
+                    ? notifier.disable()
+                    : notifier.enable(handsFree: true);
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
         body: SafeArea(
           child: Column(
             children: [
@@ -77,6 +96,7 @@ class LiveSessionScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (coach.enabled) _CoachBar(coach: coach),
               _FinishBar(state: state, driver: driver),
             ],
           ),
@@ -90,6 +110,57 @@ class LiveSessionScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _AddExerciseSheet(driver: driver),
+    );
+  }
+}
+
+/// The voice-coach strip: mic to dictate a set ("10 reps at 100 kilos",
+/// "next", "finish workout") and the coach's last line for screen-on use.
+class _CoachBar extends ConsumerWidget {
+  const _CoachBar({required this.coach});
+
+  final VoiceCoachState coach;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          IconButton.filled(
+            tooltip: coach.listening ? 'Stop listening' : 'Dictate a set',
+            icon: Icon(coach.listening ? Icons.stop : Icons.mic),
+            style: IconButton.styleFrom(
+              backgroundColor: coach.listening ? cs.error : cs.primary,
+              foregroundColor: cs.onPrimary,
+            ),
+            onPressed: () => ref.read(voiceCoachProvider.notifier).dictate(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              coach.listening
+                  ? (coach.transcript.isEmpty
+                      ? 'Listening…'
+                      : '“${coach.transcript}”')
+                  : (coach.coachLine.isEmpty
+                      ? 'Tap the mic: "10 reps at 60 kilos", "next", '
+                          '"finish workout".'
+                      : coach.coachLine),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: cs.onPrimaryContainer),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
