@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dev_login.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
 import 'auth_form.dart';
+import 'brand_header.dart';
 
 /// Login screen (AC2/AC9). Drives `AuthController.login`; on success the
 /// session state change drives the router redirect to `/home` — there is no
@@ -37,17 +39,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Log in')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: AuthForm(
-          submitLabel: 'Log in',
-          busy: _busy,
-          errorText: _error,
-          onSubmit: _submit,
-          footer: TextButton(
-            onPressed: _busy ? null : () => context.go('/register'),
-            child: const Text('Create an account'),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const BrandHeader(),
+                  const SizedBox(height: 32),
+                  AuthForm(
+                    submitLabel: 'Log in',
+                    busy: _busy,
+                    errorText: _error,
+                    onSubmit: _submit,
+                    footer: TextButton(
+                      onPressed: _busy ? null : () => context.go('/register'),
+                      child: const Text('Create an account'),
+                    ),
+                  ),
+                  if (DevLogin.enabled) ...[
+                    const SizedBox(height: 4),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.bug_report_outlined, size: 18),
+                      label: const Text('Use test account'),
+                      onPressed: _busy
+                          ? null
+                          : () => _submit(DevLogin.email, DevLogin.password),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

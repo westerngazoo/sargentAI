@@ -10,6 +10,7 @@
 // defines profileProvider, profileRepositoryProvider, and
 // onboardingDismissedProvider.
 
+import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/domain/profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +26,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         profileRepositoryProvider.overrideWithValue(repo),
+        authUserIdProvider.overrideWith((_) => 'u-test'),
       ],
     );
     addTearDown(container.dispose);

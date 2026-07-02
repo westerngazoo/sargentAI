@@ -1,5 +1,6 @@
 //! Nutrition-log surface: full CRUD under `/nutrition`.
 
+mod foods;
 mod handlers;
 
 use axum::{
@@ -12,6 +13,7 @@ use crate::AppState;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/nutrition", post(handlers::create).get(handlers::list))
+        .route("/nutrition/foods", get(foods::search))
         .route(
             "/nutrition/:id",
             get(handlers::get_one)

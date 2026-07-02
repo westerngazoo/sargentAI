@@ -45,6 +45,12 @@ pub enum ApiError {
     #[error("conflict: {reason}")]
     Conflict { reason: &'static str },
 
+    /// An upstream dependency (e.g. the USDA food API, R-0032 nutrient
+    /// lookup) failed, timed out, or returned an unusable payload. Maps to
+    /// 502 `upstream_error` — retryable by the client.
+    #[error("upstream error")]
+    Upstream,
+
     #[error("internal error")]
     Internal(#[from] eyre::Report),
 
@@ -123,6 +129,7 @@ impl IntoResponse for ApiError {
                 StatusCode::CONFLICT,
                 json!({"error": "conflict", "reason": reason}),
             ),
+            ApiError::Upstream => (StatusCode::BAD_GATEWAY, json!({"error": "upstream_error"})),
             ApiError::Internal(e) => {
                 tracing::error!(error = %e, "internal error");
                 (

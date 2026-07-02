@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../application/session_driver.dart';
+import '../application/voice_coach.dart';
 import '../domain/exercise_draft.dart';
+import '../domain/muscle_activation.dart';
 import '../domain/muscle_group.dart';
 import '../domain/set_draft.dart';
+import 'muscle_map.dart';
 import 'preset_exercises.dart';
 
 /// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
@@ -19,6 +22,7 @@ class LiveSessionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(sessionDriverProvider);
     final driver = ref.read(sessionDriverProvider.notifier);
+    final coach = ref.watch(voiceCoachProvider);
     final draft = state.draft;
 
     if (draft == null) {
@@ -52,7 +56,22 @@ class LiveSessionScreen extends ConsumerWidget {
         if (discard ?? false) driver.abandon();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Workout')),
+        appBar: AppBar(
+          title: const Text('Workout'),
+          actions: [
+            IconButton(
+              tooltip: coach.enabled ? 'Voice coach off' : 'Voice coach on',
+              isSelected: coach.enabled,
+              icon: const Icon(Icons.headset_off_outlined),
+              selectedIcon: const Icon(Icons.headset_mic),
+              onPressed: () {
+                final notifier = ref.read(voiceCoachProvider.notifier);
+                coach.enabled ? notifier.disable() : notifier.enable();
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
         body: SafeArea(
           child: Column(
             children: [
@@ -62,6 +81,11 @@ class LiveSessionScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (draft.exercises.isNotEmpty)
+                      _TargetMusclesCard(
+                        exercise: draft.exercises[state.currentExercise
+                            .clamp(0, draft.exercises.length - 1)],
+                      ),
                     for (var i = 0; i < draft.exercises.length; i++)
                       _ExerciseCard(
                         index: i,
@@ -77,6 +101,7 @@ class LiveSessionScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              if (coach.enabled) _CoachBar(coach: coach),
               _FinishBar(state: state, driver: driver),
             ],
           ),
@@ -90,6 +115,94 @@ class LiveSessionScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _AddExerciseSheet(driver: driver),
+    );
+  }
+}
+
+/// The activated-muscles panel (ported from the-goose-factor): the current
+/// exercise's primary movers in olive, assisters in brass, on the anatomy
+/// chart.
+class _TargetMusclesCard extends StatelessWidget {
+  const _TargetMusclesCard({required this.exercise});
+
+  final ExerciseDraft exercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final activation =
+        activationFor(exercise.name, group: exercise.muscleGroup);
+    if (activation.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TARGET MUSCLES — ${exercise.name.toUpperCase()}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            MuscleMap(activation: activation),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The voice-coach strip: mic to dictate a set ("10 reps at 100 kilos",
+/// "next", "finish workout") and the coach's last line for screen-on use.
+class _CoachBar extends ConsumerWidget {
+  const _CoachBar({required this.coach});
+
+  final VoiceCoachState coach;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          IconButton.filled(
+            tooltip: coach.listening ? 'Stop listening' : 'Dictate a set',
+            icon: Icon(coach.listening ? Icons.stop : Icons.mic),
+            style: IconButton.styleFrom(
+              backgroundColor: coach.listening ? cs.error : cs.primary,
+              foregroundColor: cs.onPrimary,
+            ),
+            onPressed: () => ref.read(voiceCoachProvider.notifier).dictate(),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              coach.listening
+                  ? (coach.transcript.isEmpty
+                      ? 'Listening…'
+                      : '“${coach.transcript}”')
+                  : (coach.coachLine.isEmpty
+                      ? 'Tap the mic and say "done" — I will ask your reps '
+                          'and kilos. End every answer with "over".'
+                      : coach.coachLine),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: cs.onPrimaryContainer),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -363,7 +476,17 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
           TextField(
             controller: _name,
             decoration: const InputDecoration(labelText: 'Exercise name'),
+            onChanged: (_) => setState(() {}),
           ),
+          // Target-muscle preview for the picked/typed lift.
+          Builder(builder: (context) {
+            final activation = activationFor(_name.text, group: _group);
+            if (activation.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: MuscleMap(activation: activation),
+            );
+          }),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
