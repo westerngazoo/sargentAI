@@ -73,4 +73,22 @@ void main() {
   test('empty transcript → UnknownIntent', () {
     expect(parseVoiceIntent('   '), isA<UnknownIntent>());
   });
+
+  group('hub option label mapping', () {
+    test('intent → label', () {
+      expect(hubOptionLabelForIntent(const LogWorkoutIntent()), 'Workout');
+      expect(hubOptionLabelForIntent(const ShowProgramIntent()), 'Program');
+      expect(
+          hubOptionLabelForIntent(const UnknownIntent('x')), isNull);
+    });
+
+    test('spoken option name highlights before full parse', () {
+      expect(matchedHubOptionLabel('open program please'), 'Program');
+      expect(matchedHubOptionLabel('start workout'), 'Workout');
+    });
+
+    test('keyword parse fills in when label not spoken verbatim', () {
+      expect(matchedHubOptionLabel('time to train'), 'Workout');
+    });
+  });
 }

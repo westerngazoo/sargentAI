@@ -11,18 +11,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-/// Scripted speech engine: emits [transcript] as final on listen().
+/// Scripted speech engine: emits [transcript] as final on listen(), or as a
+/// partial-only stream when [finalOnStop] is true (mirrors real STT where the
+/// user taps stop before the engine marks the result final).
 class FakeSpeechInput implements SpeechInput {
-  FakeSpeechInput({this.available = true, this.transcript = ''});
+  FakeSpeechInput({
+    this.available = true,
+    this.transcript = '',
+    this.finalOnStop = false,
+  });
 
   final bool available;
   final String transcript;
+  final bool finalOnStop;
 
   @override
   Future<bool> initialize() async => available;
 
   @override
   Future<void> listen(OnTranscript onTranscript) async {
+    if (finalOnStop) {
+      onTranscript(transcript, false);
+      return;
+    }
     onTranscript(transcript, true);
   }
 
@@ -118,6 +129,40 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('program-sentinel'), findsOneWidget);
+  });
+
+  testWidgets('stopping dictate with a partial transcript activates the option',
+      (tester) async {
+    await tester.pumpWidget(_app(FakeSpeechInput(
+      transcript: 'show my program',
+      finalOnStop: true,
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pump();
+
+    expect(find.textContaining('show my program'), findsOneWidget);
+    expect(find.textContaining('→ Program'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pumpAndSettle();
+
+    expect(find.text('program-sentinel'), findsOneWidget);
+  });
+
+  testWidgets('dictate mode highlights the matching ring option', (tester) async {
+    await tester.pumpWidget(_app(FakeSpeechInput(
+      transcript: 'start workout',
+      finalOnStop: true,
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pump();
+
+    expect(find.textContaining('Workout'), findsWidgets);
+    expect(find.textContaining('start workout'), findsOneWidget);
   });
 
   testWidgets('dictating a meal with macros prefills the sheet',
