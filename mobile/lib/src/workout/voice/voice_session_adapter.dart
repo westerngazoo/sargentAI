@@ -10,7 +10,8 @@ import '../domain/set_draft.dart';
 import 'voice_session_audio_handler.dart';
 
 // Provides the singleton audio handler, initialized lazily.
-final audioHandlerProvider = FutureProvider<VoiceSessionAudioHandler>((ref) async {
+final audioHandlerProvider =
+    FutureProvider<VoiceSessionAudioHandler>((ref) async {
   final handler = await AudioService.init(
     builder: () => VoiceSessionAudioHandler(),
     config: const AudioServiceConfig(
@@ -35,7 +36,8 @@ final flutterTtsProvider = Provider<FlutterTts>((ref) {
   return tts;
 });
 
-final voiceModeProvider = NotifierProvider<VoiceModeNotifier, bool>(VoiceModeNotifier.new);
+final voiceModeProvider =
+    NotifierProvider<VoiceModeNotifier, bool>(VoiceModeNotifier.new);
 
 class VoiceModeNotifier extends Notifier<bool> {
   @override
@@ -94,13 +96,8 @@ class VoiceSessionAdapter extends Notifier<void> {
     final state = ref.read(sessionDriverProvider);
     final lastSet = state.lastSet;
     if (lastSet != null) {
-      ref.read(sessionDriverProvider.notifier).logSet(
-        SetDraft(
-          reps: lastSet.reps,
-          weightKg: lastSet.weightKg,
-          rpe: lastSet.rpe
-        )
-      );
+      ref.read(sessionDriverProvider.notifier).logSet(SetDraft(
+          reps: lastSet.reps, weightKg: lastSet.weightKg, rpe: lastSet.rpe));
     } else {
       // If there's no previous set logged, we can't repeat it.
       // A more robust implementation would read the target reps from the draft if available.
@@ -159,7 +156,8 @@ class VoiceSessionAdapter extends Notifier<void> {
       // Find targets (using first set of the exercise as a rough target if available)
       int? targetReps;
       double? targetWeight;
-      int numSets = exercise.sets.length; // Actually we want to announce planned sets, but currently driver only holds logged sets.
+      int numSets = exercise.sets
+          .length; // Actually we want to announce planned sets, but currently driver only holds logged sets.
       // For R-0027, if we read from UserProgram we'd have target values.
       // But for now, we just say the exercise name since draft only has logged sets.
       // The spec says: Next: [name]. [N] sets of [R] reps at [W] kg.

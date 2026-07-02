@@ -58,7 +58,9 @@ class LiveSessionScreen extends ConsumerWidget {
           actions: [
             IconButton(
               icon: Icon(
-                ref.watch(voiceModeProvider) ? Icons.headset_mic : Icons.headset_off,
+                ref.watch(voiceModeProvider)
+                    ? Icons.headset_mic
+                    : Icons.headset_off,
               ),
               onPressed: () => ref.read(voiceModeProvider.notifier).toggle(),
             ),

@@ -10,7 +10,9 @@ import 'package:fitai/src/workout/voice/voice_session_audio_handler.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class MockFlutterTts extends Mock implements FlutterTts {}
-class MockVoiceSessionAudioHandler extends Mock implements VoiceSessionAudioHandler {}
+
+class MockVoiceSessionAudioHandler extends Mock
+    implements VoiceSessionAudioHandler {}
 
 void main() {
   late MockFlutterTts mockTts;
@@ -26,14 +28,14 @@ void main() {
     mockAudioHandler = MockVoiceSessionAudioHandler();
     when(() => mockTts.speak(any())).thenAnswer((_) async => 1);
     when(() => mockTts.stop()).thenAnswer((_) async => 1);
-    when(() => mockTts.setIosAudioCategory(any(), any())).thenAnswer((_) async => 1);
+    when(() => mockTts.setIosAudioCategory(any(), any()))
+        .thenAnswer((_) async => 1);
 
-    container = ProviderContainer(
-      overrides: [
-        flutterTtsProvider.overrideWithValue(mockTts),
-        audioHandlerProvider.overrideWith((ref) => Future.value(mockAudioHandler)),
-      ]
-    );
+    container = ProviderContainer(overrides: [
+      flutterTtsProvider.overrideWithValue(mockTts),
+      audioHandlerProvider
+          .overrideWith((ref) => Future.value(mockAudioHandler)),
+    ]);
   });
 
   tearDown(() {
@@ -75,7 +77,9 @@ void main() {
 
     clearInteractions(mockTts);
 
-    container.read(sessionDriverProvider.notifier).logSet(const SetDraft(reps: 10, weightKg: 100));
+    container
+        .read(sessionDriverProvider.notifier)
+        .logSet(const SetDraft(reps: 10, weightKg: 100));
 
     await Future.delayed(Duration.zero);
 
