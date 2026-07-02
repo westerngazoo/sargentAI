@@ -10,6 +10,7 @@
 
 import 'dart:async';
 
+import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/workout/application/session_list_controller.dart';
 import 'package:fitai/src/workout/application/workouts_provider.dart';
@@ -34,6 +35,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repo),
+        authUserIdProvider.overrideWith((_) => 'u-test'),
       ],
     );
     addTearDown(container.dispose);

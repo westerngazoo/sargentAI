@@ -447,6 +447,11 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    // Resolve the cold-start restore before the widget reads the provider —
+    // mirrors production, where the auth-gate makes this screen reachable
+    // only once AuthAuthenticated (so userId is set on the first fetch).
+    container.read(authControllerProvider);
+    await tester.pump();
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,

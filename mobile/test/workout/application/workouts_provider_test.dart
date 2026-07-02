@@ -7,6 +7,7 @@
 // RED until package:fitai/src/workout/application/workouts_provider.dart
 // defines workoutsProvider over workoutRepositoryProvider.
 
+import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/workout/application/workouts_provider.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repo),
+        authUserIdProvider.overrideWith((_) => 'u-test'),
       ],
     );
     addTearDown(container.dispose);
