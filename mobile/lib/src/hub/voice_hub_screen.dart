@@ -127,27 +127,9 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: sergeant.listening
-                      ? Theme.of(context).colorScheme.primaryContainer
-                      : Theme.of(context).colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  sergeant.listening && sergeant.transcript.isNotEmpty
-                      ? '“${sergeant.transcript}”'
-                      : (sergeant.line.isEmpty
-                          ? 'Tap the mic and speak — finish every '
-                              'command with "over".'
-                          : sergeant.line),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
+              child: sergeant.history.isEmpty
+                  ? _HintPill(sergeant: sergeant)
+                  : _ChatThread(sergeant: sergeant),
             ),
           ],
         ),
@@ -161,6 +143,110 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
     return Transform.translate(
       offset: Offset(radius * math.cos(angle), radius * math.sin(angle)),
       child: _OptionButton(option: option),
+    );
+  }
+}
+
+/// The idle hint (shown before any conversation).
+class _HintPill extends StatelessWidget {
+  const _HintPill({required this.sergeant});
+
+  final SergeantState sergeant;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color:
+            sergeant.listening ? cs.primaryContainer : cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        sergeant.listening && sergeant.transcript.isNotEmpty
+            ? '“${sergeant.transcript}”'
+            : (sergeant.line.isEmpty
+                ? 'Tap the mic and speak — finish every command with "over".'
+                : sergeant.line),
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+}
+
+/// The agent chat thread: the sergeant conversation as bubbles (last few
+/// turns), with the live transcript while listening.
+class _ChatThread extends StatelessWidget {
+  const _ChatThread({required this.sergeant});
+
+  final SergeantState sergeant;
+
+  @override
+  Widget build(BuildContext context) {
+    final turns = sergeant.history.length > 4
+        ? sergeant.history.sublist(sergeant.history.length - 4)
+        : sergeant.history;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final turn in turns)
+          _ChatBubble(fromUser: turn.fromUser, text: turn.text),
+        if (sergeant.listening)
+          _ChatBubble(
+            fromUser: true,
+            text: sergeant.transcript.isEmpty
+                ? 'Listening…'
+                : sergeant.transcript,
+            live: true,
+          ),
+      ],
+    );
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  const _ChatBubble({
+    required this.fromUser,
+    required this.text,
+    this.live = false,
+  });
+
+  final bool fromUser;
+  final String text;
+  final bool live;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Align(
+      alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 420),
+        decoration: BoxDecoration(
+          color: fromUser
+              ? (live ? cs.primaryContainer : cs.primary)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(fromUser ? 16 : 4),
+            bottomRight: Radius.circular(fromUser ? 4 : 16),
+          ),
+        ),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: fromUser
+                    ? (live ? cs.onPrimaryContainer : cs.onPrimary)
+                    : cs.onSurface,
+                fontStyle: live ? FontStyle.italic : FontStyle.normal,
+              ),
+        ),
+      ),
     );
   }
 }

@@ -17,6 +17,9 @@ import 'voice_intent.dart';
 import 'voice_protocol.dart';
 import 'voice_output.dart';
 
+/// One bubble in the hub's chat thread.
+typedef ChatTurn = ({bool fromUser, String text});
+
 @immutable
 class SergeantState {
   const SergeantState({
@@ -24,6 +27,7 @@ class SergeantState {
     this.listening = false,
     this.transcript = '',
     this.line = '',
+    this.history = const [],
     this.awaitingMacros = false,
     this.navigateTo,
   });
@@ -37,6 +41,9 @@ class SergeantState {
   /// The sergeant's last spoken line — also rendered in the hub pill.
   final String line;
 
+  /// The conversation so far, oldest first (capped), for the chat thread.
+  final List<ChatTurn> history;
+
   /// A meal was requested without macros; the next dictation answers them.
   final bool awaitingMacros;
 
@@ -48,6 +55,7 @@ class SergeantState {
     bool? listening,
     String? transcript,
     String? line,
+    List<ChatTurn>? history,
     bool? awaitingMacros,
     String? navigateTo,
     bool clearNavigation = false,
@@ -57,6 +65,7 @@ class SergeantState {
         listening: listening ?? this.listening,
         transcript: transcript ?? this.transcript,
         line: line ?? this.line,
+        history: history ?? this.history,
         awaitingMacros: awaitingMacros ?? this.awaitingMacros,
         navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
       );
@@ -118,6 +127,7 @@ class Sergeant extends Notifier<SergeantState> {
         await _idleRound();
         return;
       }
+      state = state.copyWith(history: _appended(fromUser: true, text: command));
       final keepListening = await _handle(command);
       if (keepListening && state.conversing) await _listenOnce();
     });
@@ -282,8 +292,15 @@ class Sergeant extends Notifier<SergeantState> {
   }
 
   Future<void> _say(String line) async {
-    state = state.copyWith(line: line);
+    state = state.copyWith(
+        line: line, history: _appended(fromUser: false, text: line));
     await ref.read(voiceOutputProvider).speak(line);
+  }
+
+  /// History with one turn appended, capped to the last 12.
+  List<ChatTurn> _appended({required bool fromUser, required String text}) {
+    final next = [...state.history, (fromUser: fromUser, text: text)];
+    return next.length > 12 ? next.sublist(next.length - 12) : next;
   }
 }
 

@@ -231,7 +231,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('purple monkey dishwasher'), findsOneWidget);
+    // Visible both as the user's bubble and in the sergeant's echo.
+    expect(find.textContaining('purple monkey dishwasher'),
+        findsAtLeastNWidgets(1));
     expect(find.byIcon(Icons.mic), findsOneWidget); // conversation ended
   });
 
