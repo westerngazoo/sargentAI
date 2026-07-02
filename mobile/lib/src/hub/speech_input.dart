@@ -47,6 +47,12 @@ class PluginSpeechInput implements SpeechInput {
   Future<void> listen(OnTranscript onTranscript) => _engine.listen(
         onResult: (SpeechRecognitionResult r) =>
             onTranscript(r.recognizedWords, r.finalResult),
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          listenMode: stt.ListenMode.dictation,
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 6),
+        ),
       );
 
   @override

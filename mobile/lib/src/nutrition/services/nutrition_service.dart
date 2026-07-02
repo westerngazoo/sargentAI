@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/network/dio_provider.dart';
+import '../models/food_info.dart';
 import '../models/nutrition_log.dart';
 
 /// Thin client over `POST /nutrition` and `GET /nutrition`. Transport and
@@ -33,6 +34,21 @@ class NutritionService {
         },
       );
       return NutritionLog.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// `GET /nutrition/foods?q=…` — USDA nutrient lookup, macros per 100 g.
+  Future<List<FoodInfo>> searchFoods(String query) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/foods',
+        queryParameters: {'q': query},
+      );
+      return (res.data!['foods'] as List<dynamic>)
+          .map((e) => FoodInfo.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

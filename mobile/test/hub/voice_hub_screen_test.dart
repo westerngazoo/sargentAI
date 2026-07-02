@@ -7,6 +7,7 @@
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/hub/speech_input.dart';
+import 'package:fitai/src/hub/sergeant.dart';
 import 'package:fitai/src/hub/voice_hub_screen.dart';
 import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/nutrition/services/nutrition_service.dart';
@@ -50,6 +51,8 @@ void main() {
           carbsG: any(named: 'carbsG'),
           fatG: any(named: 'fatG'),
         )).thenAnswer((_) async => sampleNutritionLog());
+    when(() => nutritionService.searchFoods(any()))
+        .thenAnswer((_) async => const []);
 
     final router = GoRouter(
       initialLocation: '/hub',
@@ -229,5 +232,37 @@ void main() {
 
     expect(find.textContaining('purple monkey dishwasher'), findsOneWidget);
     expect(find.byIcon(Icons.mic), findsOneWidget); // conversation ended
+  });
+
+  testWidgets('portion dictation looks up nutrients and logs the meal',
+      (tester) async {
+    await tester.pumpWidget(app(
+        ScriptedSpeechInput(['log a meal 200 grams of chicken breast over'])));
+    await tester.pumpAndSettle();
+    when(() => nutritionService.searchFoods('chicken breast'))
+        .thenAnswer((_) async => [sampleFoodInfo()]);
+
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pumpAndSettle();
+
+    // 200 g of 31/0/3.5 per 100 g → 62 protein, 0 carbs, 7 fat.
+    verify(() => nutritionService.create(
+          performedOn: any(named: 'performedOn'),
+          proteinG: 62,
+          carbsG: 0,
+          fatG: 7,
+        )).called(1);
+    expect(voiceOut.spoken.join(' '), contains('chicken breast'));
+  });
+
+  testWidgets('"over and out" ends the conversation', (tester) async {
+    await tester.pumpWidget(app(ScriptedSpeechInput(['over and out'])));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pumpAndSettle();
+
+    expect(voiceOut.spoken.join(' '), contains('Roger. Out.'));
+    expect(container.read(sergeantProvider).conversing, isFalse);
   });
 }

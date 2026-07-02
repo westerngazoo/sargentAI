@@ -1,3 +1,5 @@
+import '../../hub/voice_protocol.dart';
+
 // Pure parser for in-session dictation (R-0032 slice) — "10 reps at 100
 // kilos RPE 8", "next exercise", "finish workout" → typed intents the
 // [VoiceCoach] applies to the [SessionDriver].
@@ -50,7 +52,7 @@ SessionVoiceIntent parseSessionVoiceIntent(String transcript) {
       t == 'done') {
     return const FinishSessionIntent();
   }
-  if (_any(t, ['pause', 'stand by', 'stop listening'])) {
+  if (_any(t, ['pause', 'stand by', 'stop listening']) || isOut(t)) {
     return const PauseSessionIntent();
   }
   if (_any(t, ['next', 'skip'])) return const NextExerciseIntent();

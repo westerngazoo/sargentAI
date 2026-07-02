@@ -141,8 +141,8 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
                   sergeant.listening && sergeant.transcript.isNotEmpty
                       ? '“${sergeant.transcript}”'
                       : (sergeant.line.isEmpty
-                          ? 'Tap the mic to talk to your sergeant — '
-                              'or tap an option.'
+                          ? 'Tap the mic and speak — finish every '
+                              'command with "over".'
                           : sergeant.line),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -236,7 +236,7 @@ class _SpeakButton extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: active ? null : sunsetGradient(),
+            gradient: active ? null : brandGradient(),
             color: active ? cs.error : null,
           ),
           child: InkWell(

@@ -1,21 +1,21 @@
-// Sargent AI design system v2 — Apple restraint, SpaceX precision, Venice
-// Beach warmth. One place owns color, type, and shape.
+// Sargent AI design system v3 — military issue. Apple restraint, SpaceX
+// precision, drill-sergeant green. One place owns color, type, and shape.
 //
-// Palette: deep launch-pad slate surfaces (dark) / warm sand (light) with a
-// Venice-sunset accent (coral → dusk magenta) reserved for the few things
-// that matter: the hero card, the mic, and primary actions. Everything else
-// stays quiet — hairline-free surfaces, generous whitespace, tight display
-// type.
+// Palette: night-ops green-black surfaces (dark) / field khaki (light) with
+// an olive-drab accent gradient reserved for the few things that matter:
+// the hero card, the mic, and primary actions. Everything else stays quiet —
+// hairline-free surfaces, generous whitespace, tight display type.
 
 import 'package:flutter/material.dart';
 
 abstract final class AppTheme {
-  /// Venice sunset coral — the single accent everything keys off.
-  static const seed = Color(0xFFFF6B45);
+  /// Olive drab — the single accent everything keys off.
+  static const seed = Color(0xFF6B8E23);
 
-  /// Sunset gradient endpoints (hero card, brand roundel, speak button).
-  static const sunsetStart = Color(0xFFFF7A59);
-  static const sunsetEnd = Color(0xFFE0447C);
+  /// Brand gradient endpoints (hero card, brand roundel, speak button):
+  /// bright olive into deep forest.
+  static const gradStart = Color(0xFF87A144);
+  static const gradEnd = Color(0xFF39511F);
 
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -27,39 +27,44 @@ abstract final class AppTheme {
       brightness: brightness,
       dynamicSchemeVariant: DynamicSchemeVariant.vibrant,
     );
-    // SpaceX slate (dark) / Venice sand (light) neutrals; sunset accents.
+    // Night-ops green-black (dark) / field khaki (light); olive accents,
+    // brass for highlights.
     final scheme = isDark
         ? base.copyWith(
-            primary: sunsetStart,
-            onPrimary: const Color(0xFF1C0D08),
-            primaryContainer: const Color(0xFF3B1D12),
-            onPrimaryContainer: const Color(0xFFFFD9CC),
-            tertiary: sunsetEnd,
-            surface: const Color(0xFF0D1117),
-            onSurface: const Color(0xFFF0EEEB),
-            onSurfaceVariant: const Color(0xFF9AA3AF),
-            surfaceContainerLowest: const Color(0xFF0A0D12),
-            surfaceContainerLow: const Color(0xFF141A22),
-            surfaceContainer: const Color(0xFF171E27),
-            surfaceContainerHigh: const Color(0xFF1D2530),
-            surfaceContainerHighest: const Color(0xFF242E3B),
-            outlineVariant: const Color(0xFF2A333F),
+            primary: const Color(0xFF9FB65A),
+            onPrimary: const Color(0xFF161C06),
+            primaryContainer: const Color(0xFF2E3A14),
+            onPrimaryContainer: const Color(0xFFDCE8AE),
+            secondaryContainer: const Color(0xFF232D15),
+            onSecondaryContainer: const Color(0xFFD4DDB6),
+            tertiary: const Color(0xFFC9B458),
+            surface: const Color(0xFF0C0F0A),
+            onSurface: const Color(0xFFEFF0E9),
+            onSurfaceVariant: const Color(0xFF99A18A),
+            surfaceContainerLowest: const Color(0xFF090C07),
+            surfaceContainerLow: const Color(0xFF141A10),
+            surfaceContainer: const Color(0xFF171E13),
+            surfaceContainerHigh: const Color(0xFF1D2617),
+            surfaceContainerHighest: const Color(0xFF242F1D),
+            outlineVariant: const Color(0xFF2C3722),
           )
         : base.copyWith(
-            primary: const Color(0xFFE8502B),
+            primary: const Color(0xFF4F6420),
             onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFFFE0D5),
-            onPrimaryContainer: const Color(0xFF551D0C),
-            tertiary: const Color(0xFFC2417F),
-            surface: const Color(0xFFFAF6F0),
-            onSurface: const Color(0xFF1C1B1A),
-            onSurfaceVariant: const Color(0xFF6E675F),
+            primaryContainer: const Color(0xFFDCE5B2),
+            onPrimaryContainer: const Color(0xFF1B2405),
+            secondaryContainer: const Color(0xFFE4E6CC),
+            onSecondaryContainer: const Color(0xFF3A4028),
+            tertiary: const Color(0xFF7C6A32),
+            surface: const Color(0xFFF2F1E6),
+            onSurface: const Color(0xFF1A1C14),
+            onSurfaceVariant: const Color(0xFF696E58),
             surfaceContainerLowest: Colors.white,
             surfaceContainerLow: Colors.white,
-            surfaceContainer: const Color(0xFFF3EDE5),
-            surfaceContainerHigh: const Color(0xFFEDE5DA),
-            surfaceContainerHighest: const Color(0xFFE6DCCF),
-            outlineVariant: const Color(0xFFE0D6C8),
+            surfaceContainer: const Color(0xFFEAE9D9),
+            surfaceContainerHigh: const Color(0xFFE2E1CC),
+            surfaceContainerHighest: const Color(0xFFD9D8BF),
+            outlineVariant: const Color(0xFFD3D2B8),
           );
 
     final baseTheme = ThemeData(colorScheme: scheme, useMaterial3: true);
@@ -182,9 +187,9 @@ abstract final class AppTheme {
   }
 }
 
-/// The signature sunset gradient — hero card, brand roundel, speak button.
-LinearGradient sunsetGradient() => const LinearGradient(
+/// The signature brand gradient — hero card, brand roundel, speak button.
+LinearGradient brandGradient() => const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [AppTheme.sunsetStart, AppTheme.sunsetEnd],
+      colors: [AppTheme.gradStart, AppTheme.gradEnd],
     );

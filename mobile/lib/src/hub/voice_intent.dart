@@ -104,6 +104,21 @@ VoiceIntent parseVoiceIntent(String transcript) {
   return UnknownIntent(transcript);
 }
 
+/// Food-quantity parser for the nutrient-lookup path ("200 grams of chicken
+/// breast"). Returns null when no "N grams of X" phrase was heard.
+({double grams, String food})? parseFoodQuantity(String transcript) {
+  final t = transcript.toLowerCase().trim();
+  final m = RegExp(r'(\d+(?:\.\d+)?)\s*(?:g|grams?)\s+(?:of\s+)?([a-z][a-z ]*)')
+      .firstMatch(t);
+  if (m == null) return null;
+  final grams = double.tryParse(m.group(1)!);
+  final food = m.group(2)!.trim();
+  if (grams == null || grams <= 0 || food.isEmpty) return null;
+  // "40 grams of protein" is a macro dictation, not a food lookup.
+  if (RegExp(r'^(protein|carb|fat|calorie|kcal)').hasMatch(food)) return null;
+  return (grams: grams, food: food);
+}
+
 /// Macro follow-up parser for the hands-free wizard ("45 protein, 70 carbs,
 /// 25 fat" after being asked). Returns null when no macro was heard.
 ({double? proteinG, double? carbsG, double? fatG})? parseMacros(

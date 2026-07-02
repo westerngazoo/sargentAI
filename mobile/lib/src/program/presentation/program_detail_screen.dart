@@ -189,7 +189,7 @@ class CurrentProgramCard extends ConsumerWidget {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            gradient: sunsetGradient(),
+            gradient: brandGradient(),
             borderRadius: BorderRadius.circular(24),
           ),
           child: Material(
@@ -254,7 +254,7 @@ class CurrentProgramCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: sunsetGradient(),
+        gradient: brandGradient(),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Material(

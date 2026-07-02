@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../hub/speech_input.dart';
+import '../../hub/voice_protocol.dart';
 import '../../hub/voice_output.dart';
 import '../../program/application/program_providers.dart';
 import '../domain/set_draft.dart';
@@ -131,11 +132,18 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
       return;
     }
     state = state.copyWith(listening: true, transcript: '');
+    var handled = false;
     await speech.listen((transcript, isFinal) async {
+      if (handled) return;
       state = state.copyWith(transcript: transcript);
-      if (!isFinal) return;
+      // "over" terminates the command instantly — no silence timeout.
+      final over = endsWithOver(transcript);
+      if (!isFinal && !over) return;
+      handled = true;
+      if (over && !isFinal) await speech.stop();
       state = state.copyWith(listening: false);
-      if (transcript.trim().isEmpty) {
+      final command = stripOver(transcript);
+      if (command.isEmpty) {
         // Silence: in hands-free, quietly re-arm a few times, then stand by
         // without speaking (mid-rest chatter would be worse than silence).
         _silences += 1;
@@ -145,7 +153,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         return;
       }
       _silences = 0;
-      final keepListening = await _apply(parseSessionVoiceIntent(transcript));
+      final keepListening = await _apply(parseSessionVoiceIntent(command));
       if (keepListening && state.handsFree && state.enabled) {
         await _listenOnce();
       }

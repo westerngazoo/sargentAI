@@ -20,7 +20,7 @@ class BrandHeader extends StatelessWidget {
           width: 84,
           height: 84,
           decoration: BoxDecoration(
-            gradient: sunsetGradient(),
+            gradient: brandGradient(),
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
               BoxShadow(

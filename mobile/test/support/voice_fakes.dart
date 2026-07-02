@@ -3,6 +3,7 @@
 
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
+import 'package:fitai/src/nutrition/models/food_info.dart';
 import 'package:fitai/src/nutrition/models/nutrition_log.dart';
 import 'package:fitai/src/nutrition/services/nutrition_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -57,3 +58,18 @@ class RecordingVoiceOutput implements VoiceOutput {
   @override
   Future<void> stop() async {}
 }
+
+FoodInfo sampleFoodInfo({
+  String name = 'Chicken, breast, grilled',
+  double proteinG = 31,
+  double carbsG = 0,
+  double fatG = 3.5,
+  double kcal = 165,
+}) =>
+    FoodInfo(
+      name: name,
+      proteinGPer100g: proteinG,
+      carbsGPer100g: carbsG,
+      fatGPer100g: fatG,
+      kcalPer100g: kcal,
+    );

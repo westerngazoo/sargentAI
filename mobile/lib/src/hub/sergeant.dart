@@ -11,8 +11,10 @@ import '../nutrition/services/nutrition_service.dart';
 import '../program/application/program_providers.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/voice_coach.dart';
+import '../nutrition/models/food_info.dart';
 import 'speech_input.dart';
 import 'voice_intent.dart';
+import 'voice_protocol.dart';
 import 'voice_output.dart';
 
 @immutable
@@ -83,7 +85,7 @@ class Sergeant extends Notifier<SergeantState> {
     _idleRounds = 0;
     state = state.copyWith(conversing: true, awaitingMacros: false);
     await _say('Sergeant here. Say: start workout, plan workout, '
-        'log a meal — or stop.');
+        'log a meal. Finish every command with over.');
     await _listenOnce();
   }
 
@@ -100,16 +102,23 @@ class Sergeant extends Notifier<SergeantState> {
   Future<void> _listenOnce() async {
     final speech = ref.read(speechInputProvider);
     state = state.copyWith(listening: true, transcript: '');
+    var handled = false;
     await speech.listen((transcript, isFinal) async {
+      if (handled) return;
       state = state.copyWith(transcript: transcript);
-      if (!isFinal) return;
+      // "over" terminates the command instantly — no silence timeout.
+      final over = endsWithOver(transcript);
+      if (!isFinal && !over) return;
+      handled = true;
+      if (over && !isFinal) await speech.stop();
       state = state.copyWith(listening: false);
       if (!state.conversing) return;
-      if (transcript.trim().isEmpty) {
+      final command = stripOver(transcript);
+      if (command.isEmpty) {
         await _idleRound();
         return;
       }
-      final keepListening = await _handle(transcript);
+      final keepListening = await _handle(command);
       if (keepListening && state.conversing) await _listenOnce();
     });
   }
@@ -126,6 +135,11 @@ class Sergeant extends Notifier<SergeantState> {
   }
 
   Future<bool> _handle(String transcript) async {
+    if (isOut(transcript)) {
+      await _say('Roger. Out.');
+      state = state.copyWith(conversing: false);
+      return false;
+    }
     if (state.awaitingMacros) return _handleMacros(transcript);
 
     switch (parseVoiceIntent(transcript)) {
@@ -138,8 +152,11 @@ class Sergeant extends Notifier<SergeantState> {
         if (proteinG != null && carbsG != null && fatG != null) {
           return _logMeal(proteinG, carbsG, fatG);
         }
+        final portion = parseFoodQuantity(transcript);
+        if (portion != null) return _logFood(portion.food, portion.grams);
         state = state.copyWith(awaitingMacros: true);
-        await _say('Tell me the grams of protein, carbs, and fat.');
+        await _say('Tell me the grams of protein, carbs, and fat — '
+            'or say a portion, like 200 grams of chicken breast.');
         return true;
       case LogWorkoutIntent():
         await _say('Starting your session.');
@@ -188,6 +205,11 @@ class Sergeant extends Notifier<SergeantState> {
   }
 
   Future<bool> _handleMacros(String transcript) async {
+    final portion = parseFoodQuantity(transcript);
+    if (portion != null) {
+      state = state.copyWith(awaitingMacros: false);
+      return _logFood(portion.food, portion.grams);
+    }
     final macros = parseMacros(transcript);
     if (macros == null) {
       _idleRounds += 1;
@@ -203,7 +225,7 @@ class Sergeant extends Notifier<SergeantState> {
     return _logMeal(macros.proteinG ?? 0, macros.carbsG ?? 0, macros.fatG ?? 0);
   }
 
-  Future<bool> _logMeal(double p, double c, double f) async {
+  Future<bool> _logMeal(double p, double c, double f, {String? label}) async {
     try {
       final today = DateTime.now();
       final iso = '${today.year.toString().padLeft(4, '0')}-'
@@ -212,13 +234,39 @@ class Sergeant extends Notifier<SergeantState> {
       final log = await ref
           .read(nutritionServiceProvider)
           .create(performedOn: iso, proteinG: p, carbsG: c, fatG: f);
-      await _say('Meal logged: ${_g(p)} protein, ${_g(c)} carbs, '
+      final what = label == null ? 'Meal logged' : 'Logged $label';
+      await _say('$what: ${_g(p)} protein, ${_g(c)} carbs, '
           '${_g(f)} fat — ${log.calories.round()} calories. What else?');
       return true;
     } catch (_) {
       await _say('Could not save the meal — try again in a moment.');
       return true;
     }
+  }
+
+  /// Nutrient lookup: "`<grams>` grams of `<food>`" → USDA macros → meal.
+  Future<bool> _logFood(String food, double grams) async {
+    await _say('Looking up $food.');
+    List<FoodInfo> matches;
+    try {
+      matches = await ref.read(nutritionServiceProvider).searchFoods(food);
+    } catch (_) {
+      matches = const [];
+    }
+    final match = matches.where((f) => f.hasData).firstOrNull;
+    if (match == null) {
+      state = state.copyWith(awaitingMacros: true);
+      await _say('Could not find $food — tell me the grams of protein, '
+          'carbs, and fat instead.');
+      return true;
+    }
+    final factor = grams / 100.0;
+    return _logMeal(
+      double.parse((match.proteinGPer100g * factor).toStringAsFixed(1)),
+      double.parse((match.carbsGPer100g * factor).toStringAsFixed(1)),
+      double.parse((match.fatGPer100g * factor).toStringAsFixed(1)),
+      label: '${_g(grams)} grams of $food',
+    );
   }
 
   Future<String?> _programSummary() async {
