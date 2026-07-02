@@ -6,6 +6,7 @@ import '../application/session_driver.dart';
 import '../domain/exercise_draft.dart';
 import '../domain/muscle_group.dart';
 import '../domain/set_draft.dart';
+import '../voice/voice_session_adapter.dart';
 import 'preset_exercises.dart';
 
 /// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
@@ -52,7 +53,17 @@ class LiveSessionScreen extends ConsumerWidget {
         if (discard ?? false) driver.abandon();
       },
       child: Scaffold(
-        appBar: AppBar(title: const Text('Workout')),
+        appBar: AppBar(
+          title: const Text('Workout'),
+          actions: [
+            IconButton(
+              icon: Icon(
+                ref.watch(voiceModeProvider) ? Icons.headset_mic : Icons.headset_off,
+              ),
+              onPressed: () => ref.read(voiceModeProvider.notifier).toggle(),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: Column(
             children: [
