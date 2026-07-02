@@ -24,9 +24,15 @@ class NextExerciseIntent extends SessionVoiceIntent {
   const NextExerciseIntent();
 }
 
-/// "finish workout", "done", "save it" → submit the session.
+/// "finish workout", "save workout" → submit the session.
 class FinishSessionIntent extends SessionVoiceIntent {
   const FinishSessionIntent();
+}
+
+/// "done", "finished set" → the coach starts the guided questions
+/// (reps → kilos), filling the set like a form.
+class SetDoneIntent extends SessionVoiceIntent {
+  const SetDoneIntent();
 }
 
 /// "pause", "stand by", "stop listening" → suspend the hands-free loop
@@ -48,9 +54,15 @@ SessionVoiceIntent parseSessionVoiceIntent(String transcript) {
   final t = transcript.toLowerCase().trim();
   if (t.isEmpty) return const UnknownSessionIntent('');
 
-  if (_any(t, ['finish', 'save workout', 'end workout', 'we are done']) ||
-      t == 'done') {
+  // Finishing the WORKOUT needs the workout named ("finish workout") so a
+  // bare "done"/"finished" can mean "set done" (guided logging).
+  final saysWorkout = t.contains('workout') || t.contains('session');
+  if ((saysWorkout && ['finish', 'save', 'end'].any(t.contains)) ||
+      t.contains('save it')) {
     return const FinishSessionIntent();
+  }
+  if (_any(t, ['done', 'finished', 'finish'])) {
+    return const SetDoneIntent();
   }
   if (_any(t, ['pause', 'stand by', 'stop listening']) || isOut(t)) {
     return const PauseSessionIntent();

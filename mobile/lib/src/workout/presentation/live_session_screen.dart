@@ -192,8 +192,8 @@ class _CoachBar extends ConsumerWidget {
                       ? 'Listening…'
                       : '“${coach.transcript}”')
                   : (coach.coachLine.isEmpty
-                      ? 'Tap the mic: "10 reps at 60 kilos", "next", '
-                          '"finish workout".'
+                      ? 'Tap the mic and say "done" — I will ask your reps '
+                          'and kilos. End every answer with "over".'
                       : coach.coachLine),
               style: Theme.of(context)
                   .textTheme

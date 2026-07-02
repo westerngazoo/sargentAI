@@ -57,10 +57,16 @@ class VoiceCoachState {
 final voiceCoachProvider =
     NotifierProvider<VoiceCoach, VoiceCoachState>(VoiceCoach.new);
 
+/// The guided-logging question currently awaiting an answer.
+enum _Pending { none, reps, weight }
+
 class VoiceCoach extends Notifier<VoiceCoachState> {
   /// Consecutive silent listens tolerated before standing by (hands-free).
   static const _maxSilences = 3;
   int _silences = 0;
+  _Pending _pending = _Pending.none;
+  int? _draftReps;
+  double? _draftWeight;
 
   @override
   VoiceCoachState build() => const VoiceCoachState();
@@ -77,8 +83,9 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
     state = state.copyWith(enabled: true, handsFree: handsFree);
 
     final exercises = _session.draft?.exercises ?? const [];
-    final prompt =
-        handsFree ? 'Tell me your set.' : 'Tap the mic and tell me your set.';
+    final prompt = handsFree
+        ? 'Say done when your set is in.'
+        : 'Key the mic and say done when your set is in.';
     if (exercises.isEmpty) {
       final planned = await _loadPlan();
       if (planned.isNotEmpty) {
@@ -101,6 +108,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
 
   /// Turns the coach off, stopping any speech in either direction.
   Future<void> disable() async {
+    _resetPending();
     await ref.read(speechInputProvider).stop();
     await ref.read(voiceOutputProvider).stop();
     state = const VoiceCoachState();
@@ -148,14 +156,20 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         // Silence: in hands-free, quietly re-arm a few times, then stand by
         // without speaking (mid-rest chatter would be worse than silence).
         _silences += 1;
-        if (state.handsFree && state.enabled && _silences < _maxSilences) {
+        final questionOpen = _pending != _Pending.none;
+        if ((state.handsFree || questionOpen) &&
+            state.enabled &&
+            _silences < _maxSilences) {
           await _listenOnce();
         }
         return;
       }
       _silences = 0;
-      final keepListening = await _apply(parseSessionVoiceIntent(command));
-      if (keepListening && state.handsFree && state.enabled) {
+      final keepListening = _pending != _Pending.none
+          ? await _answer(command)
+          : await _apply(parseSessionVoiceIntent(command));
+      final questionOpen = _pending != _Pending.none;
+      if (keepListening && state.enabled && (state.handsFree || questionOpen)) {
         await _listenOnce();
       }
     });
@@ -165,6 +179,19 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
   Future<bool> _apply(SessionVoiceIntent intent) async {
     switch (intent) {
       case LogSetIntent(:final reps, :final weightKg, :final rpe):
+        // Partial dictation → switch to guided questions for the rest.
+        if (reps == null && weightKg != null) {
+          _draftWeight = weightKg;
+          _pending = _Pending.reps;
+          await _say('How many reps?');
+          return true;
+        }
+        if (reps != null && weightKg == null && rpe == null) {
+          _draftReps = reps;
+          _pending = _Pending.weight;
+          await _say('How many kilos? Or say bodyweight.');
+          return true;
+        }
         final rejection =
             _driver.logSet(SetDraft(reps: reps, weightKg: weightKg, rpe: rpe));
         if (rejection != null) {
@@ -201,6 +228,10 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
           return true;
         }
         return false;
+      case SetDoneIntent():
+        _pending = _Pending.reps;
+        await _say('Good. How many reps?');
+        return true;
       case PauseSessionIntent():
         await _say('Standing by. Tap the mic when you are ready.');
         return false;
@@ -209,6 +240,67 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
             'ten reps at sixty kilos.');
         return true;
     }
+  }
+
+  /// One guided answer: reps → kilos → logged. "over" has already been
+  /// stripped; "pause"/"cancel"/"out" abandons the questions.
+  Future<bool> _answer(String command) async {
+    final t = command.toLowerCase().trim();
+    if (isOut(t) || t.contains('cancel') || t.contains('pause')) {
+      _resetPending();
+      await _say('Standing by. Tap the mic when you are ready.');
+      return false;
+    }
+    switch (_pending) {
+      case _Pending.reps:
+        final reps = _firstInt(t);
+        if (reps == null) {
+          await _say('Just the number of reps.');
+          return true;
+        }
+        _draftReps = reps;
+        if (_draftWeight != null) return _logGuidedSet();
+        _pending = _Pending.weight;
+        await _say('How many kilos? Or say bodyweight.');
+        return true;
+      case _Pending.weight:
+        final bodyweight =
+            ['bodyweight', 'body weight', 'no weight', 'none'].any(t.contains);
+        if (!bodyweight) {
+          final w = _firstDouble(t);
+          if (w == null) {
+            await _say('Kilos as a number — or say bodyweight.');
+            return true;
+          }
+          _draftWeight = w;
+        }
+        return _logGuidedSet();
+      case _Pending.none:
+        return true; // unreachable — guarded by the caller
+    }
+  }
+
+  Future<bool> _logGuidedSet() async {
+    final rejection =
+        _driver.logSet(SetDraft(reps: _draftReps, weightKg: _draftWeight));
+    _resetPending();
+    if (rejection != null) {
+      await _say(rejection);
+      return false;
+    }
+    final logged = _session.lastSet;
+    final parts = [
+      if (logged?.reps != null) '${logged!.reps} reps',
+      if (logged?.weightKg != null) 'at ${_trim(logged!.weightKg!)} kilos',
+    ].join(' ');
+    await _say('Logged $parts. Rest up — say done when the next set is in.');
+    return false;
+  }
+
+  void _resetPending() {
+    _pending = _Pending.none;
+    _draftReps = null;
+    _draftWeight = null;
   }
 
   Future<List<String>> _loadPlan() async {
@@ -239,3 +331,13 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
 }
 
 String _trim(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
+
+int? _firstInt(String t) {
+  final m = RegExp(r'\d+').firstMatch(t);
+  return m == null ? null : int.tryParse(m.group(0)!);
+}
+
+double? _firstDouble(String t) {
+  final m = RegExp(r'\d+(?:\.\d+)?').firstMatch(t);
+  return m == null ? null : double.tryParse(m.group(0)!);
+}

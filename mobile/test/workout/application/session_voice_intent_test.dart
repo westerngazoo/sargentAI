@@ -45,8 +45,14 @@ void main() {
           isA<FinishSessionIntent>());
     });
 
-    test('"done" alone → FinishSessionIntent', () {
-      expect(parseSessionVoiceIntent('done'), isA<FinishSessionIntent>());
+    test('"done" alone starts guided set logging', () {
+      expect(parseSessionVoiceIntent('done'), isA<SetDoneIntent>());
+      expect(parseSessionVoiceIntent('finished set'), isA<SetDoneIntent>());
+    });
+
+    test('"save workout" also finishes', () {
+      expect(
+          parseSessionVoiceIntent('save workout'), isA<FinishSessionIntent>());
     });
 
     test('finish wins over numbers ("finish workout at 5") ', () {

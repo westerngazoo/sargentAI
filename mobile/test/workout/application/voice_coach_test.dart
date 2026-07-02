@@ -147,4 +147,50 @@ void main() {
     expect(
         container.read(voiceCoachProvider).coachLine, contains('Standing by'));
   });
+
+  test('guided logging: done → reps → kilos → logged set', () async {
+    final container = makeContainer(['done', '10 over', '100 over']);
+    container.read(sessionDriverProvider.notifier).start();
+    final coach = container.read(voiceCoachProvider.notifier);
+    await coach.enable();
+
+    // One mic press: "done" opens the questions; answers auto-listen.
+    await coach.dictate();
+
+    final last = container.read(sessionDriverProvider).lastSet;
+    expect(last, isNotNull);
+    expect(last!.reps, 10);
+    expect(last.weightKg, 100);
+    expect(voiceOut.spoken.join(' '), contains('How many reps?'));
+    expect(voiceOut.spoken.join(' '), contains('How many kilos?'));
+    expect(container.read(voiceCoachProvider).coachLine,
+        contains('Logged 10 reps at 100 kilos'));
+  });
+
+  test('bare reps dictation asks for kilos; bodyweight logs reps-only',
+      () async {
+    final container = makeContainer(['12 reps', 'bodyweight over']);
+    container.read(sessionDriverProvider.notifier).start();
+    final coach = container.read(voiceCoachProvider.notifier);
+    await coach.enable();
+
+    await coach.dictate();
+
+    final last = container.read(sessionDriverProvider).lastSet;
+    expect(last!.reps, 12);
+    expect(last.weightKg, isNull);
+  });
+
+  test('"cancel" during a question abandons the guided set', () async {
+    final container = makeContainer(['done', 'cancel']);
+    container.read(sessionDriverProvider.notifier).start();
+    final coach = container.read(voiceCoachProvider.notifier);
+    await coach.enable();
+
+    await coach.dictate();
+
+    expect(container.read(sessionDriverProvider).lastSet, isNull);
+    expect(
+        container.read(voiceCoachProvider).coachLine, contains('Standing by'));
+  });
 }
