@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
 import 'auth_form.dart';
+import 'brand_header.dart';
 
 /// Register screen (AC1/AC9). Drives `AuthController.register` (which
 /// auto-logs-in on success). A 400/409 renders a readable inline message and
@@ -37,17 +38,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: AuthForm(
-          submitLabel: 'Create account',
-          busy: _busy,
-          errorText: _error,
-          onSubmit: _submit,
-          footer: TextButton(
-            onPressed: _busy ? null : () => context.go('/login'),
-            child: const Text('Back to log in'),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const BrandHeader(compact: true),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your account',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 24),
+                  AuthForm(
+                    submitLabel: 'Create account',
+                    busy: _busy,
+                    errorText: _error,
+                    onSubmit: _submit,
+                    footer: TextButton(
+                      onPressed: _busy ? null : () => context.go('/login'),
+                      child: const Text('Back to log in'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

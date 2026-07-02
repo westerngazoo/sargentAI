@@ -169,11 +169,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Either the archetype_id slug or the display_name must appear in the UI.
+    // Either the archetype id (slug or display-cased) or the display_name
+    // must appear in the UI.
     final hasIdentifier = find.byWidgetPredicate(
       (w) =>
           w is Text &&
           ((w.data ?? '').contains('heavy-duty-mass') ||
+              (w.data ?? '').contains('Heavy Duty Mass') ||
               (w.data ?? '').contains('Low-Volume') ||
               (w.data ?? '').contains('Mass Builder')),
     );

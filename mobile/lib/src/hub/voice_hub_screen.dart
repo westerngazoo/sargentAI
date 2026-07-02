@@ -30,16 +30,43 @@ class VoiceHubScreen extends ConsumerStatefulWidget {
   ConsumerState<VoiceHubScreen> createState() => _VoiceHubScreenState();
 }
 
-class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen> {
+class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
+    with SingleTickerProviderStateMixin {
   bool _listening = false;
   String _transcript = '';
   String? _hint;
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  void _setListening(bool value) {
+    setState(() => _listening = value);
+    if (value) {
+      _pulse.repeat();
+    } else {
+      _pulse.stop();
+      _pulse.reset();
+    }
+  }
 
   Future<void> _toggleListening() async {
     final speech = ref.read(speechInputProvider);
     if (_listening) {
       await speech.stop();
-      if (mounted) setState(() => _listening = false);
+      if (mounted) _setListening(false);
       return;
     }
     final ready = await speech.initialize();
@@ -50,15 +77,15 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen> {
       return;
     }
     setState(() {
-      _listening = true;
       _transcript = '';
       _hint = null;
     });
+    _setListening(true);
     await speech.listen((transcript, isFinal) {
       if (!mounted) return;
       setState(() => _transcript = transcript);
       if (isFinal) {
-        setState(() => _listening = false);
+        _setListening(false);
         _act(parseVoiceIntent(transcript));
       }
     });
@@ -127,6 +154,7 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
+                        if (_listening) _PulseRings(animation: _pulse),
                         for (var i = 0; i < options.length; i++)
                           _positioned(options[i], i, options.length, radius),
                         _SpeakButton(
@@ -141,14 +169,25 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: Text(
-                _listening
-                    ? (_transcript.isEmpty ? 'Listening…' : '“$_transcript”')
-                    : (_hint ??
-                        'Tap the mic and say what you want to do — '
-                            'or tap an option.'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _listening
+                      ? Theme.of(context).colorScheme.primaryContainer
+                      : Theme.of(context).colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  _listening
+                      ? (_transcript.isEmpty ? 'Listening…' : '“$_transcript”')
+                      : (_hint ??
+                          'Tap the mic and say what you want to do — '
+                              'or tap an option.'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ),
           ],
@@ -167,6 +206,43 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen> {
   }
 }
 
+/// Expanding, fading rings behind the mic while listening.
+class _PulseRings extends StatelessWidget {
+  const _PulseRings({required this.animation});
+
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = animation.value;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            for (final phase in const [0.0, 0.5])
+              _ring(cs, ((t + phase) % 1.0)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _ring(ColorScheme cs, double t) => Container(
+        width: 112 + 90 * t,
+        height: 112 + 90 * t,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: cs.primary.withValues(alpha: (1 - t) * 0.45),
+            width: 3,
+          ),
+        ),
+      );
+}
+
 class _SpeakButton extends StatelessWidget {
   const _SpeakButton({required this.listening, required this.onTap});
 
@@ -176,20 +252,33 @@ class _SpeakButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Material(
-      shape: const CircleBorder(),
-      color: listening ? cs.error : cs.primary,
-      elevation: 6,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox(
-          width: 112,
-          height: 112,
-          child: Icon(
-            listening ? Icons.stop : Icons.mic,
-            size: 48,
-            color: cs.onPrimary,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: (listening ? cs.error : cs.primary).withValues(alpha: 0.35),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        shape: const CircleBorder(),
+        color: listening ? cs.error : cs.primary,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 112,
+            height: 112,
+            child: Icon(
+              listening ? Icons.stop : Icons.mic,
+              size: 48,
+              color: cs.onPrimary,
+            ),
           ),
         ),
       ),
@@ -211,18 +300,35 @@ class _OptionButton extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Material(
-            shape: const CircleBorder(),
-            color: cs.secondaryContainer,
-            elevation: 2,
-            child: SizedBox(
-              width: 64,
-              height: 64,
-              child: Icon(option.icon, color: cs.onSecondaryContainer),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: cs.shadow.withValues(alpha: 0.10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              shape: const CircleBorder(),
+              color: cs.secondaryContainer,
+              child: SizedBox(
+                width: 64,
+                height: 64,
+                child: Icon(option.icon, color: cs.onSecondaryContainer),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(option.label, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 6),
+          Text(
+            option.label,
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
