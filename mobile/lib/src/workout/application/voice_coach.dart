@@ -11,6 +11,7 @@ import '../../hub/speech_input.dart';
 import '../../hub/voice_protocol.dart';
 import '../../hub/voice_output.dart';
 import '../../program/application/program_providers.dart';
+import '../domain/muscle_activation.dart';
 import '../domain/set_draft.dart';
 import 'session_driver.dart';
 import 'session_voice_intent.dart';
@@ -86,7 +87,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         }
         _driver.selectExercise(0);
         await _say('Plan loaded — ${planned.length} exercises. First up: '
-            '${planned.first}. $prompt');
+            '${planned.first}${_target(planned.first)}. $prompt');
       } else {
         await _say('Voice coach on. No plan found — add an exercise, '
             'then dictate your sets.');
@@ -182,7 +183,8 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         final exercises = _session.draft?.exercises ?? const [];
         if (i + 1 < exercises.length) {
           _driver.selectExercise(i + 1);
-          await _say('Next up: ${exercises[i + 1].name}.');
+          final next = exercises[i + 1];
+          await _say('Next up: ${next.name}${_target(next.name)}.');
         } else {
           await _say('That was the last exercise. '
               'Say finish workout to save.');
@@ -216,6 +218,12 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
     } catch (_) {
       return const [];
     }
+  }
+
+  /// " — target chest" (empty for unknown lifts).
+  String _target(String exerciseName) {
+    final label = activationFor(exerciseName).targetLabel;
+    return label.isEmpty ? '' : ' — target $label';
   }
 
   String _currentName() {

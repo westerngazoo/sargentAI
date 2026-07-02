@@ -162,9 +162,9 @@ class Sergeant extends Notifier<SergeantState> {
         await _say('Starting your session.');
         ref.read(sessionDriverProvider.notifier).start();
         state = state.copyWith(conversing: false, navigateTo: '/session');
-        // Fire-and-forget: the coach announces the plan and runs its own
-        // hands-free loop on the session screen.
-        ref.read(voiceCoachProvider.notifier).enable(handsFree: true);
+        // Fire-and-forget: the coach announces the plan; push-to-talk —
+        // the user keys the mic (later: earbud/watch button) per command.
+        ref.read(voiceCoachProvider.notifier).enable();
         return false;
       case ShowProgramIntent():
         final summary = await _programSummary();

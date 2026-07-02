@@ -205,7 +205,8 @@ void main() {
     expect(find.text('session-sentinel'), findsOneWidget);
     final coach = container.read(voiceCoachProvider);
     expect(coach.enabled, isTrue);
-    expect(coach.handsFree, isTrue);
+    // Push-to-talk: the mic (later: earbud/watch button) re-arms per command.
+    expect(coach.handsFree, isFalse);
     // The coach preloaded the plan into the session.
     final session = container.read(sessionDriverProvider);
     expect(session.draft!.exercises,

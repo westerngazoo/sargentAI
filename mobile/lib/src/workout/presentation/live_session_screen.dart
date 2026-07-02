@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../application/session_driver.dart';
 import '../application/voice_coach.dart';
 import '../domain/exercise_draft.dart';
+import '../domain/muscle_activation.dart';
 import '../domain/muscle_group.dart';
 import '../domain/set_draft.dart';
+import 'muscle_map.dart';
 import 'preset_exercises.dart';
 
 /// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
@@ -64,9 +66,7 @@ class LiveSessionScreen extends ConsumerWidget {
               selectedIcon: const Icon(Icons.headset_mic),
               onPressed: () {
                 final notifier = ref.read(voiceCoachProvider.notifier);
-                coach.enabled
-                    ? notifier.disable()
-                    : notifier.enable(handsFree: true);
+                coach.enabled ? notifier.disable() : notifier.enable();
               },
             ),
             const SizedBox(width: 8),
@@ -81,6 +81,11 @@ class LiveSessionScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
+                    if (draft.exercises.isNotEmpty)
+                      _TargetMusclesCard(
+                        exercise: draft.exercises[state.currentExercise
+                            .clamp(0, draft.exercises.length - 1)],
+                      ),
                     for (var i = 0; i < draft.exercises.length; i++)
                       _ExerciseCard(
                         index: i,
@@ -110,6 +115,43 @@ class LiveSessionScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _AddExerciseSheet(driver: driver),
+    );
+  }
+}
+
+/// The activated-muscles panel (ported from the-goose-factor): the current
+/// exercise's primary movers in olive, assisters in brass, on the anatomy
+/// chart.
+class _TargetMusclesCard extends StatelessWidget {
+  const _TargetMusclesCard({required this.exercise});
+
+  final ExerciseDraft exercise;
+
+  @override
+  Widget build(BuildContext context) {
+    final activation =
+        activationFor(exercise.name, group: exercise.muscleGroup);
+    if (activation.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TARGET MUSCLES — ${exercise.name.toUpperCase()}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    letterSpacing: 1.1,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            MuscleMap(activation: activation),
+          ],
+        ),
+      ),
     );
   }
 }
