@@ -476,7 +476,17 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
           TextField(
             controller: _name,
             decoration: const InputDecoration(labelText: 'Exercise name'),
+            onChanged: (_) => setState(() {}),
           ),
+          // Target-muscle preview for the picked/typed lift.
+          Builder(builder: (context) {
+            final activation = activationFor(_name.text, group: _group);
+            if (activation.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: MuscleMap(activation: activation),
+            );
+          }),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),

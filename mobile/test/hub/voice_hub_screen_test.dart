@@ -268,4 +268,23 @@ void main() {
     expect(voiceOut.spoken.join(' '), contains('Roger. Out.'));
     expect(container.read(sergeantProvider).conversing, isFalse);
   });
+
+  testWidgets('a preset meal by voice logs without lookup or macros',
+      (tester) async {
+    await tester
+        .pumpWidget(app(ScriptedSpeechInput(['log a protein shake over'])));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.mic));
+    await tester.pumpAndSettle();
+
+    verify(() => nutritionService.create(
+          performedOn: any(named: 'performedOn'),
+          proteinG: 30,
+          carbsG: 8,
+          fatG: 3,
+        )).called(1);
+    verifyNever(() => nutritionService.searchFoods(any()));
+    expect(find.textContaining('Protein shake'), findsAtLeastNWidgets(1));
+  });
 }

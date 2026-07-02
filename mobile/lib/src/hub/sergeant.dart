@@ -11,6 +11,7 @@ import '../nutrition/services/nutrition_service.dart';
 import '../program/application/program_providers.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/voice_coach.dart';
+import '../nutrition/domain/preset_meals.dart';
 import '../nutrition/models/food_info.dart';
 import 'speech_input.dart';
 import 'voice_intent.dart';
@@ -152,6 +153,17 @@ class Sergeant extends Notifier<SergeantState> {
     }
     if (state.awaitingMacros) return _handleMacros(transcript);
 
+    // A named preset meal works without any "meal" keyword ("log a protein
+    // shake") — but never when digits suggest a macro/portion dictation.
+    if (!RegExp(r'\d').hasMatch(transcript)) {
+      final preset = matchPresetMeal(transcript);
+      if (preset != null) {
+        _idleRounds = 0;
+        return _logMeal(preset.proteinG, preset.carbsG, preset.fatG,
+            label: preset.name);
+      }
+    }
+
     switch (parseVoiceIntent(transcript)) {
       case StopIntent():
         await _say('Standing by.');
@@ -164,9 +176,15 @@ class Sergeant extends Notifier<SergeantState> {
         }
         final portion = parseFoodQuantity(transcript);
         if (portion != null) return _logFood(portion.food, portion.grams);
+        final preset = matchPresetMeal(transcript);
+        if (preset != null) {
+          return _logMeal(preset.proteinG, preset.carbsG, preset.fatG,
+              label: preset.name);
+        }
         state = state.copyWith(awaitingMacros: true);
         await _say('Tell me the grams of protein, carbs, and fat — '
-            'or say a portion, like 200 grams of chicken breast.');
+            'a portion like 200 grams of chicken breast — or a preset, '
+            'like protein shake.');
         return true;
       case LogWorkoutIntent():
         await _say('Starting your session.');
@@ -219,6 +237,13 @@ class Sergeant extends Notifier<SergeantState> {
     if (portion != null) {
       state = state.copyWith(awaitingMacros: false);
       return _logFood(portion.food, portion.grams);
+    }
+    final followUpPreset = matchPresetMeal(transcript);
+    if (followUpPreset != null && !RegExp(r'\d').hasMatch(transcript)) {
+      state = state.copyWith(awaitingMacros: false);
+      return _logMeal(
+          followUpPreset.proteinG, followUpPreset.carbsG, followUpPreset.fatG,
+          label: followUpPreset.name);
     }
     final macros = parseMacros(transcript);
     if (macros == null) {

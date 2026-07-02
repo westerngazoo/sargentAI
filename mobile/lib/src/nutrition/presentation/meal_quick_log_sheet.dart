@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
+import '../domain/preset_meals.dart';
 import '../services/nutrition_service.dart';
 
 /// Opens the quick-log sheet; resolves once dismissed.
@@ -125,6 +126,28 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Log a meal', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 10),
+          // Preset meals — tap to prefill, tweak, save.
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final meal in presetMeals)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      label: Text(meal.name),
+                      onPressed: () => setState(() {
+                        _protein.text = _fmt(meal.proteinG);
+                        _carbs.text = _fmt(meal.carbsG);
+                        _fat.text = _fmt(meal.fatG);
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [

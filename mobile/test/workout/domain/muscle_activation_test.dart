@@ -29,4 +29,11 @@ void main() {
     expect(activationFor('Bench press').targetLabel, 'chest');
     expect(activationFor('Barbell squat').targetLabel, 'quads and glutes');
   });
+
+  test('expanded catalog: new lifts resolve to curated activations', () {
+    expect(activationFor('Hack squat').primary, contains(Region.quads));
+    expect(activationFor('T-bar row').primary, contains(Region.lats));
+    expect(activationFor('Skullcrusher').primary, {Region.triceps});
+    expect(activationFor('Plank').primary, {Region.core});
+  });
 }
