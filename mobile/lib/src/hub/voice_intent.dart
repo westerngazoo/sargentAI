@@ -51,6 +51,38 @@ class UnknownIntent extends VoiceIntent {
   final String transcript;
 }
 
+/// Hub ring labels — kept in sync with [VoiceHubScreen] option order.
+const hubOptionLabels = [
+  'Workout',
+  'Meal',
+  'Program',
+  'Body match',
+  'History',
+  'Profile',
+];
+
+/// Maps a parsed intent to the hub ring label it activates, if any.
+String? hubOptionLabelForIntent(VoiceIntent intent) => switch (intent) {
+      LogWorkoutIntent() => 'Workout',
+      LogMealIntent() => 'Meal',
+      ShowProgramIntent() => 'Program',
+      BodyMatchIntent() => 'Body match',
+      ShowHistoryIntent() => 'History',
+      ShowProfileIntent() => 'Profile',
+      UnknownIntent() => null,
+    };
+
+/// Best-effort match for live ring highlighting while the user dictates.
+/// Checks spoken option names first, then keyword intent parsing.
+String? matchedHubOptionLabel(String transcript) {
+  final t = transcript.toLowerCase().trim();
+  if (t.isEmpty) return null;
+  for (final label in hubOptionLabels) {
+    if (t.contains(label.toLowerCase())) return label;
+  }
+  return hubOptionLabelForIntent(parseVoiceIntent(transcript));
+}
+
 /// Parses a transcript into a [VoiceIntent]. Case-insensitive, first match
 /// wins in the order meal → workout → body match → program → history →
 /// profile (meal before workout so "log my lunch workout shake" stays food).
