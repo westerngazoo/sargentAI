@@ -24,13 +24,15 @@ import 'dart:async';
 
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
+import 'package:fitai/src/hub/speech_input.dart';
+import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
+import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
-import 'package:fitai/src/workout/voice/voice_session_adapter.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/presentation/preset_exercises.dart';
 import 'package:flutter/material.dart';
@@ -41,10 +43,12 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../support/profile_fakes.dart';
 import '../../support/program_fakes.dart';
+import '../../support/voice_fakes.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
   setUpAll(registerWorkoutFallbacks);
+  setUpAll(registerProgramFallbacks);
 
   late MockWorkoutRepository repo;
 
@@ -68,9 +72,14 @@ void main() {
     WidgetTester tester, {
     bool started = true,
   }) async {
+    final programService = MockProgramService();
+    when(() => programService.getCurrent()).thenAnswer((_) async => null);
     final container = ProviderContainer(
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repo),
+        programServiceProvider.overrideWithValue(programService),
+        speechInputProvider.overrideWithValue(ScriptedSpeechInput([])),
+        voiceOutputProvider.overrideWithValue(RecordingVoiceOutput()),
       ],
     );
     addTearDown(container.dispose);
@@ -443,34 +452,31 @@ void main() {
     });
   });
 
-  group('SAC8 voice mode toggle', () {
-    testWidgets('Toggle voice mode via AppBar icon button changes icon',
+  group('SAC8 voice coach toggle', () {
+    testWidgets('AppBar headset button toggles voiceCoachProvider',
         (tester) async {
       final (container, _) = await pumpSession(tester);
       await tester.pump();
 
-      // Initially headset_off
-      expect(find.byIcon(Icons.headset_off), findsOneWidget);
+      expect(find.byIcon(Icons.headset_off_outlined), findsOneWidget);
       expect(find.byIcon(Icons.headset_mic), findsNothing);
-      expect(container.read(voiceModeProvider), isFalse);
+      expect(container.read(voiceCoachProvider).enabled, isFalse);
 
-      // Tap toggle
-      await tester.tap(find.byIcon(Icons.headset_off));
+      await tester.tap(find.byIcon(Icons.headset_off_outlined));
+      await tester.pump();
       await tester.pump();
 
-      // Changes to headset_mic
       expect(find.byIcon(Icons.headset_mic), findsOneWidget);
-      expect(find.byIcon(Icons.headset_off), findsNothing);
-      expect(container.read(voiceModeProvider), isTrue);
+      expect(find.byIcon(Icons.headset_off_outlined), findsNothing);
+      expect(container.read(voiceCoachProvider).enabled, isTrue);
 
-      // Tap toggle again
       await tester.tap(find.byIcon(Icons.headset_mic));
       await tester.pump();
+      await tester.pump();
 
-      // Changes back to headset_off
-      expect(find.byIcon(Icons.headset_off), findsOneWidget);
+      expect(find.byIcon(Icons.headset_off_outlined), findsOneWidget);
       expect(find.byIcon(Icons.headset_mic), findsNothing);
-      expect(container.read(voiceModeProvider), isFalse);
+      expect(container.read(voiceCoachProvider).enabled, isFalse);
     });
   });
 }
