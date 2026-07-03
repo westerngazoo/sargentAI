@@ -7,6 +7,7 @@ import '../auth/domain/auth_state.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
 import '../hub/voice_hub_screen.dart';
+import '../measurements/presentation/progress_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
 import '../program/presentation/body_type_picker_screen.dart';
 import '../program/presentation/program_detail_screen.dart';
@@ -67,6 +68,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const BodyTypePickerScreen(),
       ),
       GoRoute(path: '/hub', builder: (_, __) => const VoiceHubScreen()),
+      GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
     ],
   );
 });

@@ -39,6 +39,11 @@ class HomeShell extends ConsumerWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.insights),
+            tooltip: 'Progress',
+            onPressed: () => context.go('/progress'),
+          ),
           IconButton.filledTonal(
             icon: const Icon(Icons.mic),
             tooltip: 'Voice hub',
