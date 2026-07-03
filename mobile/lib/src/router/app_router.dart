@@ -6,7 +6,9 @@ import '../auth/application/auth_controller.dart';
 import '../auth/domain/auth_state.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
+import '../hub/voice_hub_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
+import '../program/presentation/body_type_picker_screen.dart';
 import '../program/presentation/program_detail_screen.dart';
 import '../shell/home_shell.dart';
 import '../shell/splash_screen.dart';
@@ -60,6 +62,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/programs/current',
         builder: (_, __) => const ProgramDetailScreen(),
       ),
+      GoRoute(
+        path: '/programs/get',
+        builder: (_, __) => const BodyTypePickerScreen(),
+      ),
+      GoRoute(path: '/hub', builder: (_, __) => const VoiceHubScreen()),
     ],
   );
 });

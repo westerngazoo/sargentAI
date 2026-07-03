@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/application/auth_controller.dart';
+import '../core/brand.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
 import '../program/presentation/program_detail_screen.dart';
@@ -27,12 +28,19 @@ class HomeShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('fitAI'),
+        title: const Text(Brand.appName),
         actions: [
+          IconButton.filledTonal(
+            icon: const Icon(Icons.mic),
+            tooltip: 'Voice hub',
+            onPressed: () => context.go('/hub'),
+          ),
+          const SizedBox(width: 4),
           TextButton(
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
             child: const Text('Logout'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -46,6 +54,7 @@ class HomeShell extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _GreetingHeader(),
           // Profile-dependent onboarding prompt — hidden once dismissed or
           // once the profile loads.
           profile.when(
@@ -62,7 +71,48 @@ class HomeShell extends ConsumerWidget {
           ),
           // Program shortcut — always visible; manages its own async state.
           const CurrentProgramCard(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+            child: Text(
+              'Recent activity',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
           const Expanded(child: SessionList()),
+        ],
+      ),
+    );
+  }
+}
+
+/// Time-of-day greeting above the dashboard cards.
+class _GreetingHeader extends StatelessWidget {
+  const _GreetingHeader();
+
+  static String _greeting(int hour) => switch (hour) {
+        >= 5 && < 12 => 'Good morning',
+        >= 12 && < 18 => 'Good afternoon',
+        _ => 'Good evening',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _greeting(TimeOfDay.now().hour),
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Ready to train?',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
         ],
       ),
     );

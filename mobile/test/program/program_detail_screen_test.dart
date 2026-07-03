@@ -169,11 +169,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Either the archetype_id slug or the display_name must appear in the UI.
+    // Either the archetype id (slug or display-cased) or the display_name
+    // must appear in the UI.
     final hasIdentifier = find.byWidgetPredicate(
       (w) =>
           w is Text &&
           ((w.data ?? '').contains('heavy-duty-mass') ||
+              (w.data ?? '').contains('Heavy Duty Mass') ||
               (w.data ?? '').contains('Low-Volume') ||
               (w.data ?? '').contains('Mass Builder')),
     );
@@ -391,13 +393,13 @@ void main() {
     container.read(authControllerProvider);
 
     // GoRouter is required because CurrentProgramCard uses context.go().
-    // /onboarding is the current CTA destination (SPEC-0014 §2.5.4).
+    // /programs/get is the CTA destination (R-0030).
     final router = GoRouter(
       initialLocation: '/home',
       routes: [
         GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
         GoRoute(
-          path: '/onboarding',
+          path: '/programs/get',
           builder: (_, __) => const Scaffold(body: Text('onboarding-sentinel')),
         ),
       ],
@@ -447,6 +449,11 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    // Resolve the cold-start restore before the widget reads the provider —
+    // mirrors production, where the auth-gate makes this screen reachable
+    // only once AuthAuthenticated (so userId is set on the first fetch).
+    container.read(authControllerProvider);
+    await tester.pump();
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,

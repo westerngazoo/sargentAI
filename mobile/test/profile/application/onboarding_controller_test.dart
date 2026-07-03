@@ -14,6 +14,7 @@
 // package:fitai/src/profile/application/profile_providers.dart defines the
 // profile/repository providers.
 
+import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/profile/application/onboarding_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
@@ -34,6 +35,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         profileRepositoryProvider.overrideWithValue(repo),
+        authUserIdProvider.overrideWith((_) => 'u-test'),
       ],
     );
     addTearDown(container.dispose);

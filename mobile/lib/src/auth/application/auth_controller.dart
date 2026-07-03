@@ -8,6 +8,16 @@ import '../domain/session.dart';
 final authControllerProvider =
     NotifierProvider<AuthController, AuthState>(AuthController.new);
 
+/// The authenticated user's id, or `null` outside a session. User-scoped data
+/// providers watch this so an account switch (logout → different login) drops
+/// their caches instead of leaking the previous user's data.
+final authUserIdProvider = Provider<String?>(
+  (ref) => switch (ref.watch(authControllerProvider)) {
+    AuthAuthenticated(:final session) => session.userId,
+    _ => null,
+  },
+);
+
 /// The session state machine and the single source of truth for "am I logged
 /// in?" (SPEC-0007 §2.5, AC8). `build` starts in [AuthUnknown] and kicks off a
 /// restore from secure storage; the token is also cached in memory for the

@@ -2,6 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/application/auth_controller.dart';
 import '../models/user_program.dart';
 import '../services/program_service.dart';
 
@@ -10,6 +11,7 @@ import '../services/program_service.dart';
 /// Returns `null` when the user has no program yet (404). Any other error
 /// is surfaced as an [AsyncError] for the UI to handle.
 final currentProgramProvider = FutureProvider<UserProgram?>((ref) {
+  ref.watch(authUserIdProvider); // account switch drops the cache
   final service = ref.watch(programServiceProvider);
   return service.getCurrent();
 });
