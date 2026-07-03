@@ -15,7 +15,8 @@
 # ---------------------------------------------------------------------------
 FROM ubuntu:24.04 AS onnxruntime
 # Must match the ONNX Runtime 1.24 ABI that `ort-sys` 2.0.0-rc.12 targets
-# (see the `api-24` feature in backend/Cargo.toml).
+# (see the `api-24` feature in backend/Cargo.toml). Keep this in lockstep with
+# `ONNXRUNTIME_VERSION` in the `rust` job of .github/workflows/ci.yml.
 ARG ONNXRUNTIME_VERSION=1.24.2
 # Provided automatically by BuildKit: "amd64" or "arm64".
 ARG TARGETARCH
