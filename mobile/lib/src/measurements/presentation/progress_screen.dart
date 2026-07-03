@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../workout/application/workouts_provider.dart';
+import '../../workout/domain/muscle_group.dart';
+import '../../workout/domain/workout_session.dart';
 import '../application/strength_trend.dart';
 import '../models/measurement.dart';
 import '../services/measurement_service.dart';
@@ -49,10 +51,26 @@ class ProgressScreen extends ConsumerWidget {
             loading: () =>
                 const Card(child: SizedBox(height: 180, child: _Loading())),
             error: (_, __) => const _ErrorCard(),
+            data: (list) => _StrengthCard(workouts: list),
+          ),
+          workouts.maybeWhen(
             data: (list) {
-              final trend = computeStrengthTrend(list);
-              return _StrengthCard(trend: trend);
+              final balance = computeMuscleVolume(list);
+              if (balance.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Training balance',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _MuscleBalance(balance: balance),
+                  ],
+                ),
+              );
             },
+            orElse: () => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -290,14 +308,25 @@ class _MetricTile extends StatelessWidget {
       v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
 }
 
-class _StrengthCard extends StatelessWidget {
-  const _StrengthCard({required this.trend});
-  final StrengthTrend trend;
+class _StrengthCard extends StatefulWidget {
+  const _StrengthCard({required this.workouts});
+  final List<WorkoutSession> workouts;
+
+  @override
+  State<_StrengthCard> createState() => _StrengthCardState();
+}
+
+class _StrengthCardState extends State<_StrengthCard> {
+  /// null = "All lifts" (best overall); otherwise the selected lift name.
+  String? _lift;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    if (!trend.hasData) {
+    final overall = computeStrengthTrend(widget.workouts);
+    final lifts = computePerLiftTrends(widget.workouts);
+
+    if (!overall.hasData) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -314,22 +343,55 @@ class _StrengthCard extends StatelessWidget {
         ),
       );
     }
-    final e1rm = trend.best1rm.map((p) => p.value).toList();
-    final vol = trend.volume.map((p) => p.value).toList();
+
+    final selected =
+        _lift == null ? null : lifts.firstWhere((l) => l.name == _lift);
+    final e1rm =
+        (selected?.best1rm ?? overall.best1rm).map((p) => p.value).toList();
+    final vol = overall.volume.map((p) => p.value).toList();
+    final title = selected == null
+        ? 'Estimated 1RM · all lifts'
+        : 'Estimated 1RM · ${selected.name}';
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (lifts.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _LiftChip(
+                      label: 'All lifts',
+                      selected: _lift == null,
+                      onTap: () => setState(() => _lift = null),
+                    ),
+                    for (final l in lifts)
+                      _LiftChip(
+                        label: l.name,
+                        pr: l.isPr,
+                        selected: _lift == l.name,
+                        onTap: () => setState(() => _lift = l.name),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 6),
             if (e1rm.length >= 2) ...[
               Row(
                 children: [
                   Icon(Icons.trending_up, size: 16, color: cs.primary),
                   const SizedBox(width: 6),
-                  Text('Estimated 1RM (best set / session)',
-                      style: Theme.of(context).textTheme.labelMedium),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(title,
+                        style: Theme.of(context).textTheme.labelMedium,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  if (selected?.isPr ?? false) _PrBadge(cs: cs),
+                  const SizedBox(width: 8),
                   Text('${e1rm.last.round()} kg',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
@@ -337,13 +399,24 @@ class _StrengthCard extends StatelessWidget {
                           )),
                 ],
               ),
+              if (selected != null && selected.gain != 0) ...[
+                const SizedBox(height: 2),
+                Text(
+                  '${selected.gain > 0 ? '+' : ''}${selected.gain.round()} kg '
+                  'since you started tracking it',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: selected.gain > 0 ? cs.primary : cs.error,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
               const SizedBox(height: 8),
               TrendChart(series: [
                 ChartSeries(
                     label: 'e1RM', color: cs.primary, values: e1rm, unit: 'kg')
               ]),
             ],
-            if (vol.length >= 2) ...[
+            if (_lift == null && vol.length >= 2) ...[
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -370,6 +443,134 @@ class _StrengthCard extends StatelessWidget {
                       unit: 'kg')
                 ],
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LiftChip extends StatelessWidget {
+  const _LiftChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.pr = false,
+  });
+
+  final String label;
+  final bool selected;
+  final bool pr;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label),
+            if (pr) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.emoji_events, size: 13, color: cs.tertiary),
+            ],
+          ],
+        ),
+        selected: selected,
+        onSelected: (_) => onTap(),
+      ),
+    );
+  }
+}
+
+class _PrBadge extends StatelessWidget {
+  const _PrBadge({required this.cs});
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cs.tertiary.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.emoji_events, size: 12, color: cs.tertiary),
+          const SizedBox(width: 3),
+          Text('PR',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: cs.tertiary,
+                    fontWeight: FontWeight.w800,
+                  )),
+        ],
+      ),
+    );
+  }
+}
+
+/// Horizontal volume bars per muscle group — training-balance at a glance.
+class _MuscleBalance extends StatelessWidget {
+  const _MuscleBalance({required this.balance});
+  final List<({MuscleGroup group, double volume})> balance;
+
+  static const _labels = {
+    MuscleGroup.chest: 'Chest',
+    MuscleGroup.back: 'Back',
+    MuscleGroup.shoulders: 'Shoulders',
+    MuscleGroup.arms: 'Arms',
+    MuscleGroup.legs: 'Legs',
+    MuscleGroup.core: 'Core',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final max = balance.first.volume;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final b in balance) ...[
+              Row(
+                children: [
+                  SizedBox(
+                    width: 78,
+                    child: Text(_labels[b.group] ?? b.group.wire,
+                        style: Theme.of(context).textTheme.labelMedium),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: max <= 0 ? 0 : (b.volume / max),
+                        minHeight: 10,
+                        backgroundColor: cs.surfaceContainerHighest,
+                        color: cs.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 62,
+                    child: Text('${b.volume.round()} kg',
+                        textAlign: TextAlign.right,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            )),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
             ],
           ],
         ),
