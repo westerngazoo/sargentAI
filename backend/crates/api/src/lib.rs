@@ -22,6 +22,7 @@ pub mod profile;
 pub mod program;
 pub mod storage;
 pub(crate) mod synthetic;
+pub mod voice;
 pub mod workout;
 
 use std::{sync::Arc, time::Duration};
@@ -30,7 +31,12 @@ use axum::Router;
 use sqlx::PgPool;
 use tower_http::cors::CorsLayer;
 
-use crate::{pose::PoseEstimator, storage::ObjectStore};
+use crate::{
+    auth::GoogleAuthSettings,
+    pose::PoseEstimator,
+    storage::ObjectStore,
+    voice::VoiceIntentSettings,
+};
 
 /// Application state shared across handlers via `Router::with_state`.
 ///
@@ -43,6 +49,8 @@ pub struct AppState {
     pub jwt_ttl: Duration,
     pub store: Arc<dyn ObjectStore>,
     pub pose: Arc<dyn PoseEstimator>,
+    pub google: GoogleAuthSettings,
+    pub voice: VoiceIntentSettings,
 }
 
 /// Build the application router with all routes mounted.
@@ -61,6 +69,7 @@ pub fn app(state: AppState) -> Router {
         .merge(matching::routes())
         .merge(program::routes())
         .merge(synthetic::routes::routes())
+        .merge(voice::routes())
         .with_state(state)
         .layer(CorsLayer::permissive())
 }

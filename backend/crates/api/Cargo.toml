@@ -36,6 +36,7 @@ eyre.workspace = true
 tower-http.workspace = true
 # R-0032 — USDA FoodData Central nutrient lookup (nutrition/foods.rs).
 reqwest.workspace = true
+regex = "1"
 ort.workspace = true
 image.workspace = true
 

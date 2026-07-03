@@ -526,6 +526,7 @@ dependencies = [
  "image",
  "jsonwebtoken",
  "ort",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

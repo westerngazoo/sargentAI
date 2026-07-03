@@ -12,7 +12,10 @@ use validator::Validate;
 use fitai_core::{Email, UserId};
 
 use crate::{
-    auth::{password, token, AuthenticatedUser},
+    auth::{
+        google::{GoogleClaims, GoogleLoginRequest},
+        password, token, AuthenticatedUser,
+    },
     db,
     error::{ApiError, ApiResult},
     AppState,
@@ -96,7 +99,12 @@ pub(crate) async fn login(
         return Err(ApiError::Unauthorized);
     };
 
-    if password::verify(&req.password, &row.password_hash).is_err() {
+    let Some(hash) = row.password_hash.as_deref() else {
+        let _ = password::hash(&req.password);
+        return Err(ApiError::Unauthorized);
+    };
+
+    if password::verify(&req.password, hash).is_err() {
         return Err(ApiError::Unauthorized);
     }
 
@@ -114,4 +122,32 @@ pub(crate) async fn me(user: AuthenticatedUser) -> Json<MeResponse> {
     Json(MeResponse {
         user_id: user.user_id,
     })
+}
+
+/// `POST /auth/google` — verify ID token, find-or-create by email, issue JWT.
+pub(crate) async fn login_google(
+    State(state): State<AppState>,
+    req: Result<Json<GoogleLoginRequest>, JsonRejection>,
+) -> ApiResult<Json<LoginResponse>> {
+    let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
+    let audience = state
+        .google
+        .audience
+        .as_deref()
+        .ok_or(ApiError::Unauthorized)?;
+    let GoogleClaims { email } = state
+        .google
+        .verifier
+        .verify(&req.id_token, audience)
+        .await
+        .map_err(|_| ApiError::Unauthorized)?;
+    let email = Email::parse(&email).map_err(|_| ApiError::Unauthorized)?;
+    let user_id = db::find_or_create_google_user(&state.pool, email.as_str()).await?;
+    let (token, expires_at) =
+        token::encode(user_id, state.jwt_ttl, &state.jwt_secret).map_err(ApiError::Internal)?;
+    Ok(Json(LoginResponse {
+        token,
+        user_id,
+        expires_at,
+    }))
 }
