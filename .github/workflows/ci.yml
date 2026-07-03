@@ -32,8 +32,29 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/fitai_ci
       JWT_SECRET: ci-only-test-secret
+      # `ort` is built with `download-binaries` off (see backend/Cargo.toml), so
+      # cargo links/dlopens ONNX Runtime from a library we install below rather
+      # than fetching it from cdn.pyke.io. Keep this version in lockstep with
+      # `ARG ONNXRUNTIME_VERSION` in backend/Dockerfile.
+      ONNXRUNTIME_VERSION: 1.24.2
     steps:
       - uses: actions/checkout@v4
+      - name: install ONNX Runtime (for ort system linking)
+        run: |
+          set -euo pipefail
+          pkg="onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
+            -o /tmp/ort.tgz
+          sudo mkdir -p /opt/onnxruntime
+          sudo tar -xzf /tmp/ort.tgz -C /opt/onnxruntime --strip-components=1 "${pkg}/lib" "${pkg}/include"
+          test -e /opt/onnxruntime/lib/libonnxruntime.so
+          {
+            echo "ORT_STRATEGY=system"
+            echo "ORT_LIB_LOCATION=/opt/onnxruntime/lib"
+            echo "ORT_PREFER_DYNAMIC_LINK=1"
+            echo "LD_LIBRARY_PATH=/opt/onnxruntime/lib:${LD_LIBRARY_PATH:-}"
+          } >> "$GITHUB_ENV"
       - name: install toolchain
         run: rustup show  # reads rust-toolchain.toml
       - uses: Swatinem/rust-cache@v2
