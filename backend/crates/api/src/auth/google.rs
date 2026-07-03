@@ -23,13 +23,17 @@ pub struct LiveGoogleVerifier {
     client: reqwest::Client,
 }
 
+impl Default for LiveGoogleVerifier {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LiveGoogleVerifier {
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(5))
-                .build()
-                .expect("reqwest client"),
+            client: reqwest::Client::new(),
         }
     }
 }
@@ -47,10 +51,14 @@ pub struct StaticGoogleVerifier {
 }
 
 impl StaticGoogleVerifier {
-    pub fn from_rsa_pem(pem: &[u8]) -> Self {
-        Self {
-            decoding_key: DecodingKey::from_rsa_pem(pem).expect("valid test RSA PEM"),
-        }
+    /// Builds a verifier from an RSA public key PEM (integration tests only).
+    ///
+    /// # Errors
+    /// Returns an error when `pem` is not a valid RSA public key.
+    pub fn from_rsa_pem(pem: &[u8]) -> Result<Self, jsonwebtoken::errors::Error> {
+        Ok(Self {
+            decoding_key: DecodingKey::from_rsa_pem(pem)?,
+        })
     }
 }
 
@@ -76,8 +84,6 @@ struct GoogleJwtClaims {
     email: String,
     email_verified: Option<bool>,
     aud: String,
-    iss: String,
-    exp: i64,
 }
 
 async fn verify_with_jwks(
@@ -89,6 +95,7 @@ async fn verify_with_jwks(
     let kid = header.kid.ok_or(())?;
     let body = client
         .get("https://www.googleapis.com/oauth2/v3/certs")
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
         .map_err(|_| ())?

@@ -24,15 +24,13 @@ pub struct VoiceIntentSettings {
 }
 
 impl VoiceIntentSettings {
+    #[must_use]
     pub fn from_env() -> Self {
         Self {
             anthropic_api_key: std::env::var("ANTHROPIC_API_KEY")
                 .ok()
                 .map(|k| Arc::from(k.into_boxed_str())),
-            http: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(5))
-                .build()
-                .expect("reqwest client"),
+            http: reqwest::Client::new(),
         }
     }
 }
@@ -72,10 +70,9 @@ pub(crate) async fn intent(
         }
         ParsedAction::Workout(new) => {
             let session = db::insert_session(&state.pool, user.user_id, &new).await?;
-            let summary = session
-                .exercises
-                .first()
-                .map(|ex| {
+            let summary = session.exercises.first().map_or_else(
+                || "Workout logged.".to_string(),
+                |ex| {
                     let set = &ex.sets[0];
                     format!(
                         "Logged {} — {} reps{}.",
@@ -85,8 +82,8 @@ pub(crate) async fn intent(
                             .map(|w| format!(" at {} kg", w.get()))
                             .unwrap_or_default()
                     )
-                })
-                .unwrap_or_else(|| "Workout logged.".to_string());
+                },
+            );
             IntentResponse::logged_workout(session.id, summary)
         }
         ParsedAction::Response(r) => r,

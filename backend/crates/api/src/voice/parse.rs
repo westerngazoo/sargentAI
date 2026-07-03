@@ -10,7 +10,7 @@ use crate::error::{ApiError, ApiResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub enum IntentStatus {
+pub(super) enum IntentStatus {
     LoggedNutrition,
     LoggedWorkout,
     Clarify,
@@ -19,7 +19,7 @@ pub enum IntentStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct IntentResponse {
+pub(super) struct IntentResponse {
     pub status: IntentStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -32,7 +32,7 @@ pub struct IntentResponse {
 }
 
 impl IntentResponse {
-    pub fn clarify(prompt: impl Into<String>) -> Self {
+    pub(super) fn clarify(prompt: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::Clarify,
             message: None,
@@ -42,7 +42,7 @@ impl IntentResponse {
         }
     }
 
-    pub fn navigate(route: impl Into<String>, message: impl Into<String>) -> Self {
+    pub(super) fn navigate(route: impl Into<String>, message: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::Navigate,
             message: Some(message.into()),
@@ -52,7 +52,7 @@ impl IntentResponse {
         }
     }
 
-    pub fn logged_nutrition(id: uuid::Uuid, message: impl Into<String>) -> Self {
+    pub(super) fn logged_nutrition(id: uuid::Uuid, message: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::LoggedNutrition,
             message: Some(message.into()),
@@ -62,7 +62,7 @@ impl IntentResponse {
         }
     }
 
-    pub fn logged_workout(id: uuid::Uuid, message: impl Into<String>) -> Self {
+    pub(super) fn logged_workout(id: uuid::Uuid, message: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::LoggedWorkout,
             message: Some(message.into()),
@@ -72,7 +72,7 @@ impl IntentResponse {
         }
     }
 
-    pub fn unknown(message: impl Into<String>) -> Self {
+    pub(super) fn unknown(message: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::Unknown,
             message: Some(message.into()),
@@ -84,34 +84,34 @@ impl IntentResponse {
 }
 
 /// Parsed write models ready for persistence.
-pub enum ParsedAction {
+pub(super) enum ParsedAction {
     Nutrition(NewNutritionLog),
     Workout(NewWorkoutSession),
     Response(IntentResponse),
 }
 
-pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
-    let t = transcript.to_lowercase();
-    let t = t.trim();
-    if t.is_empty() {
+pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
+    let text = transcript.to_lowercase();
+    let text = text.trim();
+    if text.is_empty() {
         return ParsedAction::Response(IntentResponse::unknown(
             "Didn't catch that — try 'log a meal' or 'log 10 reps bench at 100 kg'.",
         ));
     }
 
     if matches_any(
-        t,
+        text,
         &["stop", "cancel", "pause", "never mind", "stand by", "out"],
     ) {
         return ParsedAction::Response(IntentResponse::navigate("/home", "Standing by."));
     }
 
-    if let Some(workout) = parse_workout_set(t, today) {
+    if let Some(workout) = parse_workout_set(text, today) {
         return ParsedAction::Workout(workout);
     }
 
     if matches_any(
-        t,
+        text,
         &[
             "meal",
             "food",
@@ -124,16 +124,16 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
             "macro",
         ],
     ) {
-        let p = grams(t, "protein");
-        let c = grams(t, "carb");
-        let f = grams(t, "fat");
-        if let (Some(p), Some(c), Some(f)) = (p, c, f) {
-            match NewNutritionLog::new(today, p, c, f, today) {
+        let protein_g = grams(text, "protein");
+        let carbs_g = grams(text, "carb");
+        let fat_g = grams(text, "fat");
+        if let (Some(protein_g), Some(carbs_g), Some(fat_g)) = (protein_g, carbs_g, fat_g) {
+            match NewNutritionLog::new(today, protein_g, carbs_g, fat_g, today) {
                 Ok(log) => return ParsedAction::Nutrition(log),
-                Err(e) => {
+                Err(err) => {
                     return ParsedAction::Response(IntentResponse::clarify(format!(
                         "Those macros didn't validate ({}) — try again.",
-                        e.field()
+                        err.field()
                     )));
                 }
             }
@@ -143,14 +143,14 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
         ));
     }
 
-    if matches_any(t, &["plan"]) {
+    if matches_any(text, &["plan"]) {
         return ParsedAction::Response(IntentResponse::navigate(
             "/programs/current",
             "Opening your program.",
         ));
     }
     if matches_any(
-        t,
+        text,
         &[
             "workout",
             "session",
@@ -166,22 +166,25 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
             "Starting your session.",
         ));
     }
-    if matches_any(t, &["body type", "body match", "match me", "find my type"]) {
+    if matches_any(
+        text,
+        &["body type", "body match", "match me", "find my type"],
+    ) {
         return ParsedAction::Response(IntentResponse::navigate(
             "/programs/get",
             "Opening body match.",
         ));
     }
-    if matches_any(t, &["program", "routine"]) {
+    if matches_any(text, &["program", "routine"]) {
         return ParsedAction::Response(IntentResponse::navigate(
             "/programs/current",
             "Opening your program.",
         ));
     }
-    if matches_any(t, &["history", "past", "log list", "sessions"]) {
+    if matches_any(text, &["history", "past", "log list", "sessions"]) {
         return ParsedAction::Response(IntentResponse::navigate("/home", "Your recent activity."));
     }
-    if matches_any(t, &["profile", "my details", "settings", "account"]) {
+    if matches_any(text, &["profile", "my details", "settings", "account"]) {
         return ParsedAction::Response(IntentResponse::navigate(
             "/onboarding",
             "Opening your profile.",
@@ -256,7 +259,7 @@ fn grams(t: &str, macro_name: &str) -> Option<f64> {
         .and_then(|m| m.as_str().parse().ok())
 }
 
-pub async fn parse_with_llm(
+pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     api_key: &str,
     transcript: &str,
@@ -279,6 +282,7 @@ pub async fn parse_with_llm(
     });
     let resp = client
         .post("https://api.anthropic.com/v1/messages")
+        .timeout(std::time::Duration::from_secs(5))
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")
@@ -300,7 +304,7 @@ pub async fn parse_with_llm(
         .ok_or(ApiError::Upstream)?;
     let parsed: serde_json::Value = serde_json::from_str(text.trim())
         .or_else(|_| extract_json_object(text))
-        .map_err(|_| ApiError::Upstream)?;
+        .map_err(|()| ApiError::Upstream)?;
     llm_json_to_action(&parsed, today)
 }
 
@@ -314,7 +318,8 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
     match v["action"].as_str() {
         Some("log_workout") => {
             let exercise = v["exercise"].as_str().unwrap_or("Exercise");
-            let reps = v["reps"].as_i64().ok_or(ApiError::Upstream)? as i32;
+            let reps = i32::try_from(v["reps"].as_i64().ok_or(ApiError::Upstream)?)
+                .map_err(|_| ApiError::Upstream)?;
             let weight = v["weight_kg"].as_f64();
             let set = NewSet::new(reps, weight, None).map_err(|_| ApiError::Upstream)?;
             let ex = NewExercise::new(exercise, None, vec![set]).map_err(|_| ApiError::Upstream)?;

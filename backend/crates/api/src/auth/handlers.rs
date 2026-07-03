@@ -140,7 +140,7 @@ pub(crate) async fn login_google(
         .verifier
         .verify(&req.id_token, audience)
         .await
-        .map_err(|_| ApiError::Unauthorized)?;
+        .map_err(|()| ApiError::Unauthorized)?;
     let email = Email::parse(&email).map_err(|_| ApiError::Unauthorized)?;
     let user_id = db::find_or_create_google_user(&state.pool, email.as_str()).await?;
     let (token, expires_at) =

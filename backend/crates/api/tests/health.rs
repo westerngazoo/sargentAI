@@ -19,7 +19,7 @@ use http_body_util::BodyExt;
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 
-use fitai_api::{app, AppState};
+use fitai_api::{app, auth::GoogleAuthSettings, voice::VoiceIntentSettings, AppState};
 
 /// Build an `AppState` with a *lazy* pool: the health route never touches the
 /// database, so `connect_lazy` lets these tests run without a live Postgres.
@@ -38,6 +38,8 @@ fn health_app() -> axum::Router {
         // The health route never estimates a pose; a default fake satisfies the
         // R-0013 `AppState.pose` field (mirrors the `store` field above).
         pose: Arc::new(fitai_api::pose::FakePoseEstimator::default()),
+        google: GoogleAuthSettings::default(),
+        voice: VoiceIntentSettings::default(),
     })
 }
 

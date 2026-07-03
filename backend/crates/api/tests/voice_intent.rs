@@ -7,7 +7,7 @@ mod common;
 use axum::http::StatusCode;
 use common::{body_json, build_app, post_json_with_auth, register_and_token};
 use serde_json::{json, Value};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_logs_workout_from_natural_language(pool: PgPool) {
@@ -17,8 +17,8 @@ async fn voice_intent_logs_workout_from_natural_language(pool: PgPool) {
     let resp = post_json_with_auth(
         &app,
         "/voice/intent",
+        Some(&format!("Bearer {token}")),
         json!({ "transcript": "I did 10 reps of 100 kg bench press" }),
-        &token,
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -45,8 +45,8 @@ async fn voice_intent_logs_meal_when_macros_present(pool: PgPool) {
     let resp = post_json_with_auth(
         &app,
         "/voice/intent",
+        Some(&format!("Bearer {token}")),
         json!({ "transcript": "log a meal 40 grams protein 60 carbs 20 fat" }),
-        &token,
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -62,8 +62,8 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
     let resp = post_json_with_auth(
         &app,
         "/voice/intent",
+        Some(&format!("Bearer {token}")),
         json!({ "transcript": "log a meal" }),
-        &token,
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -78,8 +78,8 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     let resp = post_json_with_auth(
         &app,
         "/voice/intent",
+        Some("Bearer bad.token.here"),
         json!({ "transcript": "log a meal" }),
-        "bad.token.here",
     )
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);

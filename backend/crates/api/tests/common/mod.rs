@@ -28,7 +28,7 @@ use tower::ServiceExt;
 
 use fitai_api::{
     app,
-    auth::{google::StaticGoogleVerifier, GoogleAuthSettings},
+    auth::GoogleAuthSettings,
     pose::FakePoseEstimator,
     storage::{LocalObjectStore, ObjectStore},
     voice::VoiceIntentSettings,

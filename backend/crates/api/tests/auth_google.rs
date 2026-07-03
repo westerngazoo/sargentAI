@@ -4,7 +4,7 @@
 
 mod common;
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use axum::http::StatusCode;
 use chrono::{Duration as ChronoDuration, Utc};
@@ -33,7 +33,7 @@ fn mint_google_token(email: &str, aud: &str, exp_offset: chrono::Duration) -> St
 
 fn google_app(pool: PgPool) -> axum::Router {
     let pub_pem = include_bytes!("fixtures/google_test_rsa_pub.pem");
-    let verifier = Arc::new(StaticGoogleVerifier::from_rsa_pem(pub_pem));
+    let verifier = Arc::new(StaticGoogleVerifier::from_rsa_pem(pub_pem).unwrap());
     build_app_with_google(pool, TEST_AUD, verifier)
 }
 
