@@ -61,7 +61,11 @@ async fn migration_creates_users_table_with_expected_columns(pool: PgPool) {
     );
 
     for (name, nullable, _) in &columns {
-        assert_eq!(nullable, "NO", "column `{name}` must be NOT NULL");
+        if *name == "password_hash" {
+            assert_eq!(nullable, "YES", "password_hash must be nullable (R-0033)");
+        } else {
+            assert_eq!(nullable, "NO", "column `{name}` must be NOT NULL");
+        }
     }
 }
 

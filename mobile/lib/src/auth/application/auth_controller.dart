@@ -71,6 +71,14 @@ class AuthController extends Notifier<AuthState> {
     state = AuthAuthenticated(Session(userId: token.userId));
   }
 
+  /// Google Sign-In (R-0033): same token handoff as password login.
+  Future<void> loginWithGoogle(String idToken) async {
+    final token =
+        await ref.read(authRepositoryProvider).loginWithGoogle(idToken);
+    _token = token;
+    state = AuthAuthenticated(Session(userId: token.userId));
+  }
+
   /// AC5/AC6: clear the in-memory token + persisted token and go
   /// unauthenticated. Called by the logout action AND the 401 sink.
   Future<void> logout() async {

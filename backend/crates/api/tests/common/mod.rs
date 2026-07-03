@@ -28,8 +28,10 @@ use tower::ServiceExt;
 
 use fitai_api::{
     app,
+    auth::GoogleAuthSettings,
     pose::FakePoseEstimator,
     storage::{LocalObjectStore, ObjectStore},
+    voice::VoiceIntentSettings,
     AppState,
 };
 
@@ -70,6 +72,8 @@ fn state_with_ttl(
         jwt_ttl: ttl,
         store: store.clone(),
         pose: Arc::new(pose),
+        google: GoogleAuthSettings::default(),
+        voice: VoiceIntentSettings::default(),
     };
     (state, store, dir)
 }
@@ -137,6 +141,23 @@ pub fn build_app_with_object_store(pool: PgPool, store: Arc<dyn ObjectStore>) ->
         jwt_ttl: TTL_24H,
         store,
         pose: Arc::new(FakePoseEstimator::default()),
+        google: GoogleAuthSettings::default(),
+        voice: VoiceIntentSettings::default(),
+    };
+    app(state)
+}
+
+/// Build a router with Google Sign-In configured for integration tests.
+pub fn build_app_with_google(
+    pool: PgPool,
+    audience: &str,
+    verifier: Arc<dyn fitai_api::auth::GoogleIdTokenVerifier>,
+) -> Router {
+    let (mut state, _store, dir) = state_with_ttl(pool, TTL_24H, FakePoseEstimator::default());
+    let _ = dir.keep();
+    state.google = GoogleAuthSettings {
+        audience: Some(Arc::from(audience)),
+        verifier,
     };
     app(state)
 }

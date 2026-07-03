@@ -41,6 +41,24 @@ class AuthApi {
     }
   }
 
+  /// `POST /auth/google` → 200 `{token,user_id,expires_at}`. 401 → [ApiException].
+  Future<AuthToken> loginWithGoogle(String idToken) async {
+    try {
+      final res = await _dio.post<dynamic>(
+        '/auth/google',
+        data: <String, String>{'id_token': idToken},
+      );
+      final body = res.data as Map<String, dynamic>;
+      return AuthToken(
+        jwt: body['token'] as String,
+        userId: body['user_id'] as String,
+        expiresAt: DateTime.parse(body['expires_at'] as String),
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// `GET /auth/me` → 200 `{user_id}` (requires a Bearer token).
   Future<String> me() async {
     try {

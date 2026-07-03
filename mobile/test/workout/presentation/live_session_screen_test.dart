@@ -24,9 +24,12 @@ import 'dart:async';
 
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
+import 'package:fitai/src/hub/speech_input.dart';
+import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
+import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
@@ -40,10 +43,12 @@ import 'package:mocktail/mocktail.dart';
 
 import '../../support/profile_fakes.dart';
 import '../../support/program_fakes.dart';
+import '../../support/voice_fakes.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
   setUpAll(registerWorkoutFallbacks);
+  setUpAll(registerProgramFallbacks);
 
   late MockWorkoutRepository repo;
 
@@ -67,9 +72,14 @@ void main() {
     WidgetTester tester, {
     bool started = true,
   }) async {
+    final programService = MockProgramService();
+    when(() => programService.getCurrent()).thenAnswer((_) async => null);
     final container = ProviderContainer(
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repo),
+        programServiceProvider.overrideWithValue(programService),
+        speechInputProvider.overrideWithValue(ScriptedSpeechInput([])),
+        voiceOutputProvider.overrideWithValue(RecordingVoiceOutput()),
       ],
     );
     addTearDown(container.dispose);
@@ -439,6 +449,34 @@ void main() {
       expect(stateOf(container).draft, isNull);
       expect(locationOf(router), '/home');
       verifyNever(() => repo.create(any()));
+    });
+  });
+
+  group('SAC8 voice coach toggle', () {
+    testWidgets('AppBar headset button toggles voiceCoachProvider',
+        (tester) async {
+      final (container, _) = await pumpSession(tester);
+      await tester.pump();
+
+      expect(find.byIcon(Icons.headset_off_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.headset_mic), findsNothing);
+      expect(container.read(voiceCoachProvider).enabled, isFalse);
+
+      await tester.tap(find.byIcon(Icons.headset_off_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byIcon(Icons.headset_mic), findsOneWidget);
+      expect(find.byIcon(Icons.headset_off_outlined), findsNothing);
+      expect(container.read(voiceCoachProvider).enabled, isTrue);
+
+      await tester.tap(find.byIcon(Icons.headset_mic));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byIcon(Icons.headset_off_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.headset_mic), findsNothing);
+      expect(container.read(voiceCoachProvider).enabled, isFalse);
     });
   });
 }

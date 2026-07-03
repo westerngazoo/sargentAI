@@ -21,8 +21,8 @@ pub struct UserRow {
     pub id: Uuid,
     pub email: String,
     // only crosses the seam via find_row_by_email → login (verify needs it);
-    // into_user strips it everywhere else.
-    pub password_hash: String,
+    // into_user strips it everywhere else. NULL for Google-only users (R-0033).
+    pub password_hash: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -100,6 +100,23 @@ pub async fn insert_user(pool: &PgPool, email: &str, password_hash: &str) -> Api
         }
         Err(e) => Err(ApiError::Database(e)),
     }
+}
+
+/// Find an existing user by email or create one without a password (Google).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on query failure.
+pub async fn find_or_create_google_user(pool: &PgPool, email: &str) -> ApiResult<UserId> {
+    if let Some(row) = find_row_by_email(pool, email).await? {
+        return Ok(UserId(row.id));
+    }
+    let id = Uuid::new_v4();
+    sqlx::query("INSERT INTO users (id, email, password_hash) VALUES ($1, $2, NULL)")
+        .bind(id)
+        .bind(email)
+        .execute(pool)
+        .await?;
+    Ok(UserId(id))
 }
 
 #[derive(Debug, FromRow)]
