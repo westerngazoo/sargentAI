@@ -36,12 +36,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pose = Arc::new(fitai_api::pose::OnnxPoseEstimator::load()?);
     tracing::info!("pose estimator loaded (MoveNet)");
 
+    let google_audience = std::env::var("GOOGLE_OAUTH_AUDIENCE").ok();
+    let google = fitai_api::auth::GoogleAuthSettings {
+        audience: google_audience
+            .clone()
+            .map(|a| Arc::from(a.into_boxed_str())),
+        verifier: Arc::new(fitai_api::auth::google::LiveGoogleVerifier::new()),
+    };
+    if google_audience.is_some() {
+        tracing::info!("Google Sign-In enabled");
+    }
+
     let state = AppState {
         pool,
         jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
         jwt_ttl: Duration::from_hours(24),
         store,
         pose,
+        google,
+        voice: fitai_api::voice::VoiceIntentSettings::from_env(),
     };
 
     let port: u16 = std::env::var("PORT")

@@ -149,4 +149,10 @@ void main() {
     verify(() => repo.login(DevLogin.email, DevLogin.password)).called(1);
     expect(container.read(authControllerProvider), isA<AuthAuthenticated>());
   });
+
+  testWidgets('Google button is hidden without GOOGLE_CLIENT_ID dart-define',
+      (tester) async {
+    await pumpLogin(tester);
+    expect(find.text('Continue with Google'), findsNothing);
+  });
 }

@@ -22,6 +22,12 @@ class AuthRepository {
     return token;
   }
 
+  Future<AuthToken> loginWithGoogle(String idToken) async {
+    final token = await _api.loginWithGoogle(idToken);
+    await _store.write(token);
+    return token;
+  }
+
   Future<String> me() => _api.me();
 
   Future<void> clear() => _store.clear();

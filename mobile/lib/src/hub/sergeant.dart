@@ -15,6 +15,7 @@ import '../nutrition/domain/preset_meals.dart';
 import '../nutrition/models/food_info.dart';
 import 'speech_input.dart';
 import 'voice_intent.dart';
+import 'voice_intent_service.dart';
 import 'voice_protocol.dart';
 import 'voice_output.dart';
 
@@ -153,6 +154,43 @@ class Sergeant extends Notifier<SergeantState> {
     }
     if (state.awaitingMacros) return _handleMacros(transcript);
 
+    // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
+    try {
+      final result =
+          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      return _handleBackendResult(result);
+    } catch (_) {
+      // Offline / upstream failure — local keyword parser keeps the hub usable.
+    }
+
+    return _handleLocal(transcript);
+  }
+
+  Future<bool> _handleBackendResult(VoiceIntentResult result) async {
+    _idleRounds = 0;
+    if (result.isLoggedNutrition || result.isLoggedWorkout) {
+      await _say(result.message ?? 'Logged.');
+      return true;
+    }
+    if (result.isClarify) {
+      state = state.copyWith(awaitingMacros: true);
+      await _say(result.prompt ?? 'Tell me more.');
+      return true;
+    }
+    if (result.isNavigate && result.route != null) {
+      await _say(result.message ?? 'Roger.');
+      state = state.copyWith(conversing: false, navigateTo: result.route);
+      if (result.route == '/session') {
+        ref.read(sessionDriverProvider.notifier).start();
+        ref.read(voiceCoachProvider.notifier).enable();
+      }
+      return false;
+    }
+    await _say(result.message ?? 'Did not catch that.');
+    return true;
+  }
+
+  Future<bool> _handleLocal(String transcript) async {
     // A named preset meal works without any "meal" keyword ("log a protein
     // shake") — but never when digits suggest a macro/portion dictation.
     if (!RegExp(r'\d').hasMatch(transcript)) {

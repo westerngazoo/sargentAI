@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/dev_login.dart';
+import '../../core/google_sign_in_config.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
+import '../data/google_sign_in_seam.dart';
 import 'auth_form.dart';
 import 'brand_header.dart';
 
@@ -29,6 +31,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       await ref.read(authControllerProvider.notifier).login(email, password);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _googleSignIn() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final idToken =
+          await ref.read(googleSignInSeamProvider).signInForIdToken();
+      if (idToken == null) return;
+      await ref.read(authControllerProvider.notifier).loginWithGoogle(idToken);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -61,6 +80,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: const Text('Create an account'),
                     ),
                   ),
+                  if (GoogleSignInConfig.enabled) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.login),
+                      label: const Text('Continue with Google'),
+                      onPressed: _busy ? null : _googleSignIn,
+                    ),
+                  ],
                   if (DevLogin.enabled) ...[
                     const SizedBox(height: 4),
                     OutlinedButton.icon(
