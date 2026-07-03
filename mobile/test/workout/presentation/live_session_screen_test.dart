@@ -30,6 +30,7 @@ import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
+import 'package:fitai/src/workout/voice/voice_session_adapter.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/presentation/preset_exercises.dart';
 import 'package:flutter/material.dart';
@@ -439,6 +440,37 @@ void main() {
       expect(stateOf(container).draft, isNull);
       expect(locationOf(router), '/home');
       verifyNever(() => repo.create(any()));
+    });
+  });
+
+  group('SAC8 voice mode toggle', () {
+    testWidgets('Toggle voice mode via AppBar icon button changes icon',
+        (tester) async {
+      final (container, _) = await pumpSession(tester);
+      await tester.pump();
+
+      // Initially headset_off
+      expect(find.byIcon(Icons.headset_off), findsOneWidget);
+      expect(find.byIcon(Icons.headset_mic), findsNothing);
+      expect(container.read(voiceModeProvider), isFalse);
+
+      // Tap toggle
+      await tester.tap(find.byIcon(Icons.headset_off));
+      await tester.pump();
+
+      // Changes to headset_mic
+      expect(find.byIcon(Icons.headset_mic), findsOneWidget);
+      expect(find.byIcon(Icons.headset_off), findsNothing);
+      expect(container.read(voiceModeProvider), isTrue);
+
+      // Tap toggle again
+      await tester.tap(find.byIcon(Icons.headset_mic));
+      await tester.pump();
+
+      // Changes back to headset_off
+      expect(find.byIcon(Icons.headset_off), findsOneWidget);
+      expect(find.byIcon(Icons.headset_mic), findsNothing);
+      expect(container.read(voiceModeProvider), isFalse);
     });
   });
 }
