@@ -36,7 +36,17 @@ bytes = "1"
 async-trait = "0.1"
 
 # R-0013 / SPEC-0013 §2.6 — in-process ONNX pose estimation + image decode.
-ort = "=2.0.0-rc.12"
+# `default-features = false` drops `download-binaries` (and its `ureq`/TLS chain),
+# so the build never reaches `cdn.pyke.io`. The ONNX Runtime shared library is
+# installed into the image and linked dynamically via `ORT_LIB_LOCATION` +
+# `ORT_PREFER_DYNAMIC_LINK` (see `backend/Dockerfile`). `api-24` matches the ONNX
+# Runtime 1.24 ABI that `ort-sys` 2.0.0-rc.12 targets.
+ort = { version = "=2.0.0-rc.12", default-features = false, features = [
+    "std",
+    "ndarray",
+    "tracing",
+    "api-24",
+] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 
 [workspace.lints.rust]
