@@ -99,11 +99,11 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
         ));
     }
 
-    if matches_any(t, &["stop", "cancel", "pause", "never mind", "stand by", "out"]) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/home",
-            "Standing by.",
-        ));
+    if matches_any(
+        t,
+        &["stop", "cancel", "pause", "never mind", "stand by", "out"],
+    ) {
+        return ParsedAction::Response(IntentResponse::navigate("/home", "Standing by."));
     }
 
     if let Some(workout) = parse_workout_set(t, today) {
@@ -113,7 +113,15 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
     if matches_any(
         t,
         &[
-            "meal", "food", "eat", "ate", "lunch", "dinner", "breakfast", "nutrition", "macro",
+            "meal",
+            "food",
+            "eat",
+            "ate",
+            "lunch",
+            "dinner",
+            "breakfast",
+            "nutrition",
+            "macro",
         ],
     ) {
         let p = grams(t, "protein");
@@ -143,7 +151,15 @@ pub fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
     }
     if matches_any(
         t,
-        &["workout", "session", "train", "exercise", "gym", "lift", "start workout"],
+        &[
+            "workout",
+            "session",
+            "train",
+            "exercise",
+            "gym",
+            "lift",
+            "start workout",
+        ],
     ) {
         return ParsedAction::Response(IntentResponse::navigate(
             "/session",
@@ -209,12 +225,13 @@ fn extract_exercise_name(t: &str) -> Option<String> {
         return Some("Deadlift".to_string());
     }
     // Fallback: strip numbers/units and use remainder if long enough.
-    let cleaned = Regex::new(r"\d+(?:\.\d+)?|\b(?:kg|kilos?|kilo|reps?|of|at|the|a|an|i|did|log|logged)\b")
-        .ok()?
-        .replace_all(t, " ")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
+    let cleaned =
+        Regex::new(r"\d+(?:\.\d+)?|\b(?:kg|kilos?|kilo|reps?|of|at|the|a|an|i|did|log|logged)\b")
+            .ok()?
+            .replace_all(t, " ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
     if cleaned.len() >= 3 {
         Some(cleaned)
     } else {
@@ -278,7 +295,9 @@ pub async fn parse_with_llm(
     let body_text = resp.text().await.map_err(|_| ApiError::Upstream)?;
     let json: serde_json::Value =
         serde_json::from_str(&body_text).map_err(|_| ApiError::Upstream)?;
-    let text = json["content"][0]["text"].as_str().ok_or(ApiError::Upstream)?;
+    let text = json["content"][0]["text"]
+        .as_str()
+        .ok_or(ApiError::Upstream)?;
     let parsed: serde_json::Value = serde_json::from_str(text.trim())
         .or_else(|_| extract_json_object(text))
         .map_err(|_| ApiError::Upstream)?;
@@ -299,16 +318,16 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
             let weight = v["weight_kg"].as_f64();
             let set = NewSet::new(reps, weight, None).map_err(|_| ApiError::Upstream)?;
             let ex = NewExercise::new(exercise, None, vec![set]).map_err(|_| ApiError::Upstream)?;
-            let session = NewWorkoutSession::new(today, vec![ex], today).map_err(|_| ApiError::Upstream)?;
+            let session =
+                NewWorkoutSession::new(today, vec![ex], today).map_err(|_| ApiError::Upstream)?;
             Ok(ParsedAction::Workout(session))
         }
         Some("log_meal") => {
             let p = v["protein_g"].as_f64().ok_or(ApiError::Upstream)?;
             let c = v["carbs_g"].as_f64().ok_or(ApiError::Upstream)?;
             let f = v["fat_g"].as_f64().ok_or(ApiError::Upstream)?;
-            let log = NewNutritionLog::new(today, p, c, f, today).map_err(|e| ApiError::Validation {
-                field: e.field(),
-            })?;
+            let log = NewNutritionLog::new(today, p, c, f, today)
+                .map_err(|e| ApiError::Validation { field: e.field() })?;
             Ok(ParsedAction::Nutrition(log))
         }
         Some("clarify") => Ok(ParsedAction::Response(IntentResponse::clarify(

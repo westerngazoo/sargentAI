@@ -153,8 +153,7 @@ pub fn build_app_with_google(
     audience: &str,
     verifier: Arc<dyn fitai_api::auth::GoogleIdTokenVerifier>,
 ) -> Router {
-    let (mut state, _store, dir) =
-        state_with_ttl(pool, TTL_24H, FakePoseEstimator::default());
+    let (mut state, _store, dir) = state_with_ttl(pool, TTL_24H, FakePoseEstimator::default());
     let _ = dir.keep();
     state.google = GoogleAuthSettings {
         audience: Some(Arc::from(audience)),

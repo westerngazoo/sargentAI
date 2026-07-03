@@ -32,10 +32,7 @@ use sqlx::PgPool;
 use tower_http::cors::CorsLayer;
 
 use crate::{
-    auth::GoogleAuthSettings,
-    pose::PoseEstimator,
-    storage::ObjectStore,
-    voice::VoiceIntentSettings,
+    auth::GoogleAuthSettings, pose::PoseEstimator, storage::ObjectStore, voice::VoiceIntentSettings,
 };
 
 /// Application state shared across handlers via `Router::with_state`.

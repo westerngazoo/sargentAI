@@ -28,12 +28,7 @@ fn mint_google_token(email: &str, aud: &str, exp_offset: chrono::Duration) -> St
         "email_verified": true,
         "exp": exp,
     });
-    encode(
-        &Header::new(Algorithm::RS256),
-        &claims,
-        &key,
-    )
-    .unwrap()
+    encode(&Header::new(Algorithm::RS256), &claims, &key).unwrap()
 }
 
 fn google_app(pool: PgPool) -> axum::Router {
@@ -47,12 +42,7 @@ async fn google_sign_in_creates_user_and_returns_jwt(pool: PgPool) {
     let app = google_app(pool.clone());
     let token = mint_google_token(TEST_EMAIL, TEST_AUD, ChronoDuration::hours(1));
 
-    let resp = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": token }),
-    )
-    .await;
+    let resp = post_json(&app, "/auth/google", json!({ "id_token": token })).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let body: Value = body_json(resp).await;
     assert!(body["token"].is_string());
@@ -72,23 +62,13 @@ async fn google_sign_in_reuses_existing_email(pool: PgPool) {
     let app = google_app(pool.clone());
     let token = mint_google_token(TEST_EMAIL, TEST_AUD, ChronoDuration::hours(1));
 
-    let first = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": token }),
-    )
-    .await;
+    let first = post_json(&app, "/auth/google", json!({ "id_token": token })).await;
     assert_eq!(first.status(), StatusCode::OK);
     let first_body: Value = body_json(first).await;
     let user_id = first_body["user_id"].as_str().unwrap();
 
     let token2 = mint_google_token(TEST_EMAIL, TEST_AUD, ChronoDuration::hours(1));
-    let second = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": token2 }),
-    )
-    .await;
+    let second = post_json(&app, "/auth/google", json!({ "id_token": token2 })).await;
     assert_eq!(second.status(), StatusCode::OK);
     let second_body: Value = body_json(second).await;
     assert_eq!(second_body["user_id"].as_str().unwrap(), user_id);
@@ -98,12 +78,7 @@ async fn google_sign_in_reuses_existing_email(pool: PgPool) {
 async fn google_only_user_cannot_password_login(pool: PgPool) {
     let app = google_app(pool);
     let token = mint_google_token(TEST_EMAIL, TEST_AUD, ChronoDuration::hours(1));
-    let resp = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": token }),
-    )
-    .await;
+    let resp = post_json(&app, "/auth/google", json!({ "id_token": token })).await;
     assert_eq!(resp.status(), StatusCode::OK);
 
     let login = post_json(
@@ -118,12 +93,7 @@ async fn google_only_user_cannot_password_login(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn bad_google_token_returns_401(pool: PgPool) {
     let app = google_app(pool);
-    let resp = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": "not.a.jwt" }),
-    )
-    .await;
+    let resp = post_json(&app, "/auth/google", json!({ "id_token": "not.a.jwt" })).await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
@@ -131,12 +101,7 @@ async fn bad_google_token_returns_401(pool: PgPool) {
 async fn expired_google_token_returns_401(pool: PgPool) {
     let app = google_app(pool);
     let token = mint_google_token(TEST_EMAIL, TEST_AUD, ChronoDuration::hours(-1));
-    let resp = post_json(
-        &app,
-        "/auth/google",
-        json!({ "id_token": token }),
-    )
-    .await;
+    let resp = post_json(&app, "/auth/google", json!({ "id_token": token })).await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 

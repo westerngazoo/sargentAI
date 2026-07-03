@@ -97,18 +97,17 @@ async fn verify_with_jwks(
         .map_err(|_| ())?;
     let jwks: serde_json::Value = serde_json::from_str(&body).map_err(|_| ())?;
     let keys = jwks["keys"].as_array().ok_or(())?;
-    let key = keys.iter().find(|k| k["kid"].as_str() == Some(&kid)).ok_or(())?;
+    let key = keys
+        .iter()
+        .find(|k| k["kid"].as_str() == Some(&kid))
+        .ok_or(())?;
     let n = key["n"].as_str().ok_or(())?;
     let e = key["e"].as_str().ok_or(())?;
     let decoding_key = DecodingKey::from_rsa_components(n, e).map_err(|_| ())?;
     verify_with_key(id_token, audience, &decoding_key)
 }
 
-fn verify_with_key(
-    id_token: &str,
-    audience: &str,
-    key: &DecodingKey,
-) -> Result<GoogleClaims, ()> {
+fn verify_with_key(id_token: &str, audience: &str, key: &DecodingKey) -> Result<GoogleClaims, ()> {
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_audience(&[audience]);
     validation.set_issuer(&["https://accounts.google.com", "accounts.google.com"]);

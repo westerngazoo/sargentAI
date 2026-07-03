@@ -38,7 +38,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let google_audience = std::env::var("GOOGLE_OAUTH_AUDIENCE").ok();
     let google = fitai_api::auth::GoogleAuthSettings {
-        audience: google_audience.clone().map(|a| Arc::from(a.into_boxed_str())),
+        audience: google_audience
+            .clone()
+            .map(|a| Arc::from(a.into_boxed_str())),
         verifier: Arc::new(fitai_api::auth::google::LiveGoogleVerifier::new()),
     };
     if google_audience.is_some() {
