@@ -3,9 +3,40 @@ import 'package:flutter/material.dart';
 import '../../core/brand.dart';
 import '../../core/theme/app_theme.dart';
 
-/// The Sargent AI brand mark: sergeant rank chevrons on the brand-gradient
-/// badge, the stenciled wordmark, and a tagline. Sizes itself relative to
-/// the available width so it reads well from phones to desktop.
+/// The gradient chevron roundel — the Sargent AI logo, reusable at any size
+/// (brand header, splash, app bars). Sergeant rank chevrons on the brand
+/// gradient.
+class BrandBadge extends StatelessWidget {
+  const BrandBadge({super.key, required this.size, this.shadow = true});
+
+  final double size;
+  final bool shadow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: brandGradient(),
+        borderRadius: BorderRadius.circular(size * 0.30),
+        boxShadow: shadow
+            ? [
+                BoxShadow(
+                  color: AppTheme.gradEnd.withValues(alpha: 0.4),
+                  blurRadius: size * 0.25,
+                  offset: Offset(0, size * 0.1),
+                ),
+              ]
+            : null,
+      ),
+      child: const CustomPaint(painter: _ChevronsPainter(color: Colors.white)),
+    );
+  }
+}
+
+/// The full brand mark: badge + stenciled wordmark + tagline. Sizes itself
+/// relative to available width so it reads from phones to desktop.
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key, this.compact = false});
 
@@ -25,24 +56,7 @@ class BrandHeader extends StatelessWidget {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: badge,
-              height: badge,
-              decoration: BoxDecoration(
-                gradient: brandGradient(),
-                borderRadius: BorderRadius.circular(badge * 0.30),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.gradEnd.withValues(alpha: 0.4),
-                    blurRadius: 26,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const CustomPaint(
-                painter: _ChevronsPainter(color: Colors.white),
-              ),
-            ),
+            BrandBadge(size: badge),
             SizedBox(height: badge * 0.18),
             Text(
               Brand.appName.toUpperCase(),

@@ -15,6 +15,7 @@ pub mod error;
 mod health;
 pub(crate) mod http;
 pub mod matching;
+pub mod measurements;
 pub mod nutrition;
 pub mod photo;
 pub mod pose;
@@ -65,6 +66,7 @@ pub fn app(state: AppState) -> Router {
         .merge(photo::routes())
         .merge(matching::routes())
         .merge(program::routes())
+        .merge(measurements::routes())
         .merge(synthetic::routes::routes())
         .merge(voice::routes())
         .with_state(state)

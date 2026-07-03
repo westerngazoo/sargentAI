@@ -8,9 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../models/user_program.dart';
+import 'progress_ring.dart';
 
 class ProgramDetailScreen extends ConsumerWidget {
   const ProgramDetailScreen({super.key});
@@ -42,22 +44,27 @@ class ProgramDetailScreen extends ConsumerWidget {
   }
 }
 
-class _ProgramDetail extends StatelessWidget {
+class _ProgramDetail extends ConsumerWidget {
   const _ProgramDetail({required this.program});
 
   final UserProgram program;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = program.program;
     final d = program.diet;
+    final progress = ref.watch(weeklyProgressProvider);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(_displayTitle(program.archetypeId),
             style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        if (progress != null) ...[
+          WeeklyProgressCard(progress: progress),
+          const SizedBox(height: 16),
+        ],
         _Section(
           title: 'Training',
           children: [
@@ -186,6 +193,7 @@ class CurrentProgramCard extends ConsumerWidget {
       error: (_, __) => _getProgramCta(context),
       data: (program) {
         if (program == null) return _getProgramCta(context);
+        final progress = ref.watch(weeklyProgressProvider);
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -217,27 +225,53 @@ class CurrentProgramCard extends ConsumerWidget {
                         Icon(Icons.arrow_forward, color: Colors.white),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      program.program.split,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                          ),
-                    ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        _StatPill(
-                          icon: Icons.calendar_today,
-                          label: '${program.program.daysPerWeek} days/week',
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                program.program.split,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(color: Colors.white),
+                              ),
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _StatPill(
+                                    icon: Icons.calendar_today,
+                                    label:
+                                        '${program.program.daysPerWeek} days/week',
+                                  ),
+                                  _StatPill(
+                                    icon: Icons.local_fire_department,
+                                    label: '${program.diet.estimatedKcal} kcal',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        _StatPill(
-                          icon: Icons.local_fire_department,
-                          label: '${program.diet.estimatedKcal} kcal',
-                        ),
+                        if (progress != null) ...[
+                          const SizedBox(width: 12),
+                          ProgressRing(
+                            ratio: progress.ratio,
+                            size: 72,
+                            stroke: 7,
+                            onGradient: true,
+                            label:
+                                '${progress.daysDone}/${progress.daysTarget}',
+                          ),
+                        ],
                       ],
                     ),
                   ],
