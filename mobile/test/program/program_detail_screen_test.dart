@@ -101,7 +101,13 @@ void main() {
       find.textContaining('4-day split'),
       findsAtLeastNWidgets(1),
     );
-    // Macro values from generatedDietJson.
+    // Macro values from generatedDietJson — in the nutrition card below the
+    // fold, so scroll it into view first.
+    await tester.scrollUntilVisible(
+      find.textContaining('176'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.textContaining('176'), findsAtLeastNWidgets(1)); // protein_g
     expect(
         find.textContaining('3200'), findsAtLeastNWidgets(1)); // estimated_kcal
@@ -139,6 +145,12 @@ void main() {
   testWidgets('AC9 program_detail_screen_shows_diet_approach', (tester) async {
     await pumpDetail(tester);
 
+    // Nutrition card is below the fold; scroll it into view.
+    await tester.scrollUntilVisible(
+      find.textContaining('high-protein structured clean bulk'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.textContaining('high-protein structured clean bulk'),
       findsAtLeastNWidgets(1),

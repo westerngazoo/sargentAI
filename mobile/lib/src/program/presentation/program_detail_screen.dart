@@ -13,6 +13,7 @@ import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../models/user_program.dart';
 import 'progress_ring.dart';
+import 'target_physique.dart';
 
 class ProgramDetailScreen extends ConsumerWidget {
   const ProgramDetailScreen({super.key});
@@ -60,13 +61,16 @@ class _ProgramDetail extends ConsumerWidget {
       children: [
         Text(_displayTitle(program.archetypeId),
             style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+        TargetPhysique(archetypeId: program.archetypeId),
+        const SizedBox(height: 16),
         if (progress != null) ...[
           WeeklyProgressCard(progress: progress),
           const SizedBox(height: 16),
         ],
         _Section(
           title: 'Training',
+          icon: Icons.fitness_center,
           children: [
             _InfoRow('Split', p.split),
             _InfoRow('Training', '${p.daysPerWeek} days/week'),
@@ -74,18 +78,19 @@ class _ProgramDetail extends ConsumerWidget {
                 'Session duration', '${p.estimatedSessionDurationMin} min'),
             _InfoRow('Intensity', p.intensityGuidance),
             _InfoRow('Rest', p.restGuidance),
-            _InfoRow('Progression', p.progressionGuidance),
+            _InfoRow('Progression', p.progressionGuidance, last: true),
           ],
         ),
         const SizedBox(height: 16),
         _Section(
           title: 'Highlight exercises',
+          icon: Icons.star_outline,
           children: [
             Wrap(
               spacing: 8,
-              runSpacing: 4,
+              runSpacing: 8,
               children: p.highlightExercises
-                  .map((e) => Chip(label: Text(e)))
+                  .map((e) => _ExercisePill(label: e))
                   .toList(),
             ),
           ],
@@ -93,11 +98,12 @@ class _ProgramDetail extends ConsumerWidget {
         const SizedBox(height: 16),
         _Section(
           title: 'Nutrition',
+          icon: Icons.restaurant_menu,
           children: [
             _InfoRow('Approach', d.approach),
             _InfoRow('Strategy', d.calorieStrategy),
-            _InfoRow('Meals', d.mealStructure),
-            const SizedBox(height: 8),
+            _InfoRow('Meals', d.mealStructure, last: true),
+            const SizedBox(height: 16),
             _MacroTable(diet: d),
           ],
         ),
@@ -113,68 +119,236 @@ String _displayTitle(String slug) => slug
     .join(' ');
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
+  const _Section({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
 
   final String title;
+  final IconData icon;
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const Divider(),
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 19, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Text(title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      )),
+            ],
+          ),
+          const SizedBox(height: 14),
           ...children,
         ],
-      );
+      ),
+    );
+  }
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.label, this.value);
+  const _InfoRow(this.label, this.value, {this.last = false});
 
   final String label;
   final String value;
+  final bool last;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 130,
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall,
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 130,
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
               ),
-            ),
-            Expanded(child: Text(value)),
-          ],
+              Expanded(
+                child: Text(value,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
         ),
-      );
+        if (!last)
+          Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ],
+    );
+  }
 }
 
+class _ExercisePill extends StatelessWidget {
+  const _ExercisePill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bolt, size: 15, color: cs.primary),
+          const SizedBox(width: 6),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+/// Macro breakdown: a proportional protein/carbs/fat bar (by calories) plus a
+/// pill per macro and the daily energy total.
 class _MacroTable extends StatelessWidget {
   const _MacroTable({required this.diet});
 
   final GeneratedDiet diet;
 
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _macroCell('Protein', '${diet.proteinG}g', context),
-          _macroCell('Carbs', '${diet.carbsG}g', context),
-          _macroCell('Fat', '${diet.fatG}g', context),
-          _macroCell('kcal', '${diet.estimatedKcal}', context),
-        ],
-      );
+  static const _protein = Color(0xFF4CAF50);
+  static const _carbs = Color(0xFFFFB74D);
+  static const _fat = Color(0xFF9C7BF0);
 
-  Widget _macroCell(String label, String value, BuildContext context) => Column(
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
-          Text(value),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    // Energy share drives the bar: 4/4/9 kcal per gram.
+    final pKcal = diet.proteinG * 4.0;
+    final cKcal = diet.carbsG * 4.0;
+    final fKcal = diet.fatG * 9.0;
+    final total = (pKcal + cKcal + fKcal).clamp(1.0, double.infinity);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: Row(
+            children: [
+              Expanded(
+                flex: (pKcal / total * 1000).round().clamp(1, 1000),
+                child: Container(height: 12, color: _protein),
+              ),
+              Expanded(
+                flex: (cKcal / total * 1000).round().clamp(1, 1000),
+                child: Container(height: 12, color: _carbs),
+              ),
+              Expanded(
+                flex: (fKcal / total * 1000).round().clamp(1, 1000),
+                child: Container(height: 12, color: _fat),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            _macroPill('Protein', '${diet.proteinG} g', _protein, context),
+            const SizedBox(width: 10),
+            _macroPill('Carbs', '${diet.carbsG} g', _carbs, context),
+            const SizedBox(width: 10),
+            _macroPill('Fat', '${diet.fatG} g', _fat, context),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Icon(Icons.local_fire_department,
+                size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Text('${diet.estimatedKcal}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    )),
+            const SizedBox(width: 4),
+            Text('kcal / day',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    )),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _macroPill(
+          String label, String value, Color color, BuildContext context) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration:
+                        BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(label,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          )),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      )),
+            ],
+          ),
+        ),
       );
 }
 
