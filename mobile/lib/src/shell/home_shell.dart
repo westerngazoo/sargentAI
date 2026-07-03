@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/application/auth_controller.dart';
+import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
@@ -28,7 +29,15 @@ class HomeShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(Brand.appName),
+        titleSpacing: 12,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BrandBadge(size: 30, shadow: false),
+            const SizedBox(width: 10),
+            Text(Brand.appName),
+          ],
+        ),
         actions: [
           IconButton.filledTonal(
             icon: const Icon(Icons.mic),
