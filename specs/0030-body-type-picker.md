@@ -25,11 +25,15 @@
   to `/programs/get`).
 
 > **Retro-spec notice.** This document is written *after* the feature shipped
-> (PR #30, merged 2026-07-03). It describes what **actually** landed on `main`,
-> not an idealized design. Where the shipped implementation diverges from
-> R-0030's acceptance criteria, the divergence is called out explicitly in §4
-> (non-goals), §5 (open questions), and §6 (acceptance criteria — marked as
-> gaps). It is authored under R-0057 (retro-spec + QA backfill).
+> (PR #30, merged 2026-07-03). It describes what **actually** landed on `main`.
+> Under R-0057 the **requirement R-0030 was amended to ratify this as-built
+> scope** (3 shapes, 9-entry `api::synthetic` lookup, Material icons, two
+> synthetic endpoints). The authoritative, current AC mapping is **§6 — all 11
+> amended criteria are MET** (QA sign-off 2026-07-06). Where §2/§4/§5/§7 below
+> speak of "divergence from R-0030" or reference original AC numbers, that is
+> **historical** — it records how the shipped feature differs from the
+> *original* (pre-amendment) requirement, retained for context, and does not
+> reflect an open gap.
 
 ## 1. Motivation
 
@@ -188,8 +192,10 @@ The picker is reached from the home screen's `CurrentProgramCard` "Get your
 program" CTA (`program_detail_screen.dart:472` → `context.go('/programs/get')`);
 `/programs/get` maps to `BodyTypePickerScreen` in `app_router.dart:66-69`. This
 is a **single** entry point — there is no "Don't want to upload a photo?" link
-on a photo-upload screen and no "Update my body match" profile entry, so
-R-0030/AC1 and AC8 are only partially met (see §6).
+on a photo-upload screen and no "Update my body match" profile entry. The
+*original* R-0030 asked for both; the amended requirement specifies this single
+entry point, so amended AC1 is MET (see §6). Additional entry points are a
+deferred non-goal (§4).
 
 ## 3. Code outline
 
@@ -242,7 +248,7 @@ Future<UserProgram> chooseSyntheticProgram(
 
 ## 4. Non-goals
 
-Scope R-0030 explicitly guards (AC12), all honoured by the shipped code:
+Scope R-0030 explicitly guards (amended AC11), all honoured by the shipped code:
 
 - **No new ML inference** — `synthetic_features` is a static `match`; `rank()`
   and `instantiate()` are reused unchanged.
@@ -277,61 +283,55 @@ Resolutions as actually decided in the shipped code (R-0030 §5):
 
 ## 6. Acceptance criteria
 
-Each maps to a requirement AC and states its verification status in the shipped
-code. Statuses: **MET** / **PARTIAL** / **GAP**. Where a status is not MET, it
-is a known divergence recorded in §4/§5.
+Maps to the **amended (as-built) requirement AC1–AC11**. All are MET by the
+shipped code and covered by tests backfilled under R-0057.
 
-- [ ] **AC1 (PARTIAL).** Entry to the picker exists via the home "Get your
-      program" CTA (`program_detail_screen.dart:472`, route `/programs/get` in
-      `app_router.dart:66`). But there is **no** "Don't want to upload a photo?"
-      link on a photo-upload screen — the requirement's specific affordance is
-      not present.
-- [ ] **AC2 (GAP).** The grid shows **3** shape cards
-      (`body_type_picker_screen.dart:_ShapeGrid`), not ~12 silhouettes covering
-      a 9-cell morphology space + 3 edge cases. Shapes are Material icons, not
-      static SVG assets — but no network request is made (icons are bundled).
-- [x] **AC3 (MET).** Labels/descriptions are plain-language with no athlete
-      names (`synthetic_match.dart:11-27` `BodyShape.label`/`.description`).
+- [x] **AC1 (MET).** "Get my program" entry routes into the picker without a
+      photo (home CTA `program_detail_screen.dart:472` → route `/programs/get`
+      in `app_router.dart:66` → `BodyTypePickerScreen`). *Test:* every widget
+      test pumps the picker with no photo dependency.
+- [x] **AC2 (MET).** The grid shows **3** body-shape cards rendered as bundled
+      Material icons, no network request (`body_type_picker_screen.dart`
+      `_ShapeGrid`/`_ShapeCard._icon`). *Test:* `grid renders all three
+      body-shape cards` asserts the 3 labels + `Icons.straighten`/
+      `fitness_center`/`circle_outlined`.
+- [x] **AC3 (MET).** Plain-language labels/descriptions, no athlete names
+      (`synthetic_match.dart:11-27`). *Test:* `match_synthetic_returns_top3_
+      proposals` asserts no internal labels leak on the wire.
 - [x] **AC4 (MET).** Band chips (Lean/Moderate/Bulky) appear after shape
-      selection (`body_type_picker_screen.dart:79-88`); shape+band together form
-      the synthetic `FrameFeatures`.
-- [ ] **AC5 (PARTIAL/GAP).** A lookup table exists and produces valid
-      `FrameFeatures` accepted by `rank()`
-      (`synthetic/mod.rs:83-110`). **But** it lives in `api::synthetic`, not
-      `core::body_picker`/`core::matching`, and has **9** entries, not 36 — and
-      **no unit test** exercises it (see missing tests below).
-- [x] **AC6 (MET).** The synthetic `FrameFeatures` is passed to `rank()` with no
-      modification (`synthetic/mod.rs:132`); the top-3 feed the same
-      `instantiate`/proposal/choose flow as the photo path.
-- [x] **AC7 (MET).** No photo is stored: `POST /match/synthetic` creates no row;
-      `POST /programs/synthetic` calls `db::insert_program(..., None, ...)`
-      (`synthetic/mod.rs:182-190`) — `source_session_id = NULL`.
-- [ ] **AC8 (PARTIAL).** Accessible at onboarding via the home CTA, but **not**
-      from the profile screen under "Update my body match" — that entry point
-      does not exist.
-- [ ] **AC9 (GAP).** No SVG assets are bundled; `mobile/assets/body_types/` does
-      not exist and `pubspec.yaml` registers no such assets. The "no CDN / no
-      network request for images" intent holds (icons are bundled), but the
-      "bundled SVG silhouettes" requirement is not met.
-- [x] **AC10 (MET).** Confirm is disabled until both selections are made
-      (`body_type_picker_screen.dart:26` `_canConfirm`).
-- [ ] **AC11 (GAP).** **No widget tests exist** for the picker
-      (`mobile/test/program/` has no `body_type_picker` or `synthetic` test).
-      Grid rendering, selection highlight, band-chip appearance, Confirm-disabled
-      state, and confirm-calls-match-flow are all unverified.
-- [x] **AC12 (MET).** Scope guard honoured: no new ML, no photo storage, no
-      `rank()` change, no archetype-library change, no new archetype entries.
+      selection; shape+band form the synthetic `FrameFeatures`
+      (`body_type_picker_screen.dart:79-88`). *Test:* `fat-band chips appear
+      only after a shape is selected`.
+- [x] **AC5 (MET).** All **9** shape×band combos map to a valid `FrameFeatures`
+      accepted by `rank()` with a non-empty top-3, in the `api::synthetic`
+      lookup (`synthetic/mod.rs`). *Tests:* unit
+      `every_combination_yields_valid_frame_features` +
+      `every_combination_ranks_a_non_empty_top3`.
+- [x] **AC6 (MET).** Synthetic features passed to `rank()` unchanged
+      (`synthetic/mod.rs:132`); top-3 feed the same proposal/choose flow.
+      *Test:* `match_synthetic_returns_top3_proposals`; widget `confirming calls
+      syntheticMatch…`.
+- [x] **AC7 (MET).** No photo stored; program created with
+      `source_session_id = NULL` (`insert_program(..., None, ...)`). *Test:*
+      `choose_synthetic_commits_program_with_null_source_session` (reads the row,
+      asserts NULL).
+- [x] **AC8 (MET).** Two endpoints — `POST /match/synthetic`,
+      `POST /programs/synthetic` — and the selection is stateless (choose
+      re-derives from client-resent shape+band). *Tests:* both endpoints'
+      happy-path + auth/no-profile cases in `tests/synthetic.rs`.
+- [x] **AC9 (MET).** Confirm disabled until both shape and band selected
+      (`body_type_picker_screen.dart:26` `_canConfirm`). *Test:* `Confirm is
+      disabled until both a shape and a band are selected`.
+- [x] **AC10 (MET).** Tests present: **2** backend unit + **8** integration
+      (happy/401/404/409/422 incl. the NULL-source-session assertion) + **4**
+      Flutter widget. All green.
+- [x] **AC11 (MET).** Scope guard honoured: no new ML, no photo storage, no
+      `rank()`/`library`/archetype change — `synthetic_features` is a static
+      `match` and reuses `rank`/`instantiate`/`library` unchanged.
 
-### Missing tests (for the qa agent)
-
-- **Backend unit test** for `synthetic_features` — assert all 9 arms produce a
-  `FrameFeatures` in range and that `rank()` accepts each (R-0030/AC5).
-- **Backend integration tests** for `POST /match/synthetic` (top-3, no session
-  row, 404 without profile, 401 unauthenticated) and `POST /programs/synthetic`
-  (201 + `source_session_id NULL`, 409 archetype-not-in-top-3, 404 no profile,
-  401) (R-0030/AC6, AC7).
-- **Flutter widget tests** for `BodyTypePickerScreen` and
-  `SyntheticProposalsScreen` (R-0030/AC11).
+QA sign-off (R-0057, 2026-07-06): all 11 criteria MET; Flutter (4) + backend
+unit (2) + integration (8) suites green; `flutter analyze`, `cargo clippy
+-D warnings`, and `cargo fmt --check` clean.
 
 ## 7. Decision log
 

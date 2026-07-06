@@ -212,6 +212,14 @@ without either (a) building the media-button/background-audio transport, or
 (b) the owner amending R-0027's acceptance criteria to bless the dictation
 model.
 
+> **Resolved (R-0057, 2026-07-06).** The owner chose to **rebuild the earbud
+> transport**: R-0027 is marked **Regressed** and the media-button +
+> background-audio transport is re-specified under
+> [R-0035](../requirements/0035-earbud-handsfree-training.md) (coexisting with
+> the R-0032 dictation mode, restoring the "no speech recognition" guard for the
+> earbud mode). R-0027 is retained for history and is not independently signed
+> off.
+
 ## 12. Decision log
 
 | Date | Decision | Rationale |

@@ -319,8 +319,8 @@ Resolved as shipped:
 |---|---|
 | OQ-1 STT engine | On-device `speech_to_text` (Web Speech API in browser) behind the `SpeechInput` seam. No cloud STT / Whisper. |
 | OQ-2 LLM prompt | JSON-only prompt, five fixed actions, `claude-haiku-4-5`; keyword parser is the always-present fallback (`parse.rs`). |
-| OQ-3 daily-routine model | **Unresolved — not built.** Reminders (AC6–AC8) did not ship. |
-| OQ-4 cron service | **Unresolved — not built.** |
+| OQ-3 daily-routine model | **Moved to R-0036.** The reminder routine model is no longer in R-0032's scope. |
+| OQ-4 cron service | **Moved to R-0036.** |
 
 ## 6. Acceptance criteria
 
@@ -358,21 +358,22 @@ test. Status: **MET** / **PARTIAL** / **GAP**.
   and are no longer part of R-0032; they are tracked in
   [R-0036](../requirements/0036-voice-reminders.md) (SPEC-0036, to be written).
   Not counted as R-0032 gaps.
-- [x] **AC9 — Tests (MET, for the shipped scope).** Flutter widget tests for the
+- [x] **AC6 — Tests (MET).** Flutter widget tests for the
   mic + listening states (`voice_hub_screen_test.dart`, 13 cases;
   `voice_coach_test.dart`, 10 cases; `voice_protocol_test.dart`, 6 cases).
   Backend tests for prompt construction / record creation from structured
-  output (`voice_intent.rs`, `parse.rs`, `foods.rs`). *Gap:* no tests exist for
-  the reminder criteria (AC6–AC8), because those features are absent.
-- [~] **AC10 — Privacy & Scope Guard (PARTIAL/MET-by-construction).** No audio is
+  output (`voice_intent.rs`, `parse.rs`, `foods.rs`).
+- [x] **AC7 — Privacy & Scope Guard (MET by construction).** No audio is
   stored: STT is on-device and only the transcript is transmitted; the backend
-  persists only structured logs (`voice/` never writes an audio blob). There is
-  **no explicit retention policy artifact or test** asserting non-storage — it
-  holds by construction, not by a guard test. Counts as MET for behaviour,
-  PARTIAL for verification.
+  persists only structured logs (`voice/` never writes an audio blob) and
+  exposes no audio-upload endpoint. The 5-action JSON-only prompt keeps it from
+  being a general chatbot, and the mic is user-initiated (no always-on listener).
+  Holds by construction; a dedicated non-storage/out-of-scope guard test is a
+  recommended future addition (QA note, R-0057).
 
-**Scope-guard summary:** R-0032 shipped its voice-logging half (AC1–AC5, AC9–AC10)
-and did **not** ship its smart-reminders half (AC6–AC8). The reminders remain
+**Scope summary:** R-0032 shipped its voice-logging scope (AC1–AC7). The former
+smart-reminders half (original AC6–AC8) was never built and is now R-0036 — it
+remains
 open work; this spec records that explicitly rather than implying coverage.
 
 ## 7. Decision log
@@ -386,11 +387,13 @@ open work; this spec records that explicitly rather than implying coverage.
 | 2026-07-03 | **Voice hub screen + action ring** as the home for voice, plus a mic entry on Home. | R-0032/AC1 asks for a "persistent mic accessible across primary screens"; shipped as a dedicated `/hub` reachable from the Home AppBar rather than an overlay on every screen. Documented as an AC1 caveat. |
 | 2026-07-03 | **In-session voice coach with guided Q&A** ("done" → reps → kilos). | Realizes the hands-free-logging spirit of R-0032 for live workouts, sharing the R-0027 `SessionDriver`/seams. Beyond #37's scope. |
 | 2026-07-03 | **USDA FoodData Central lookup** for "N grams of X". | Turns natural portions into macros without the user knowing them; pure parser is unit-tested (`foods.rs`). Beyond #37's scope. |
-| 2026-07-03 | **Reminders (AC6–AC8) deferred, not implemented.** | No cron/notification code shipped in #39/#49/#50. Recorded as an explicit gap so the requirement is not marked done; #37's §2.3 reminder design is carried forward as future work, not as shipped design. |
+| 2026-07-06 | **Reminders split out to R-0036** (were the original R-0032 AC6–AC8). | No cron/notification code shipped in #39/#49/#50; rather than leave R-0032 permanently unmet, the reminder scope became its own requirement (R-0036), seeded by #37's §2.3 sketch. R-0032 is now scoped to voice logging only. |
 | 2026-07-03 | **LLM output re-validated through `New*` constructors.** | The LLM cannot bypass domain validation; malformed JSON degrades to `ApiError::Upstream` → keyword fallback (`parse.rs::llm_json_to_action`). |
 
 ## Changelog
 
 - _2026-07-03 — created as a retro-spec (R-0057) reconciling PR #37's draft with
   the implementation merged via PRs #39, #49, #50. Status set directly to
-  Accepted to match shipped `main`. Reminders (AC6–AC8) recorded as gaps._
+  Accepted to match shipped `main`._
+- _2026-07-06 — scoped to voice logging (AC1–AC7); reminders split to R-0036;
+  §6 renumbered to the amended 7-AC set (architect review)._

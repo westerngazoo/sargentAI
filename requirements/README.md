@@ -21,7 +21,9 @@ written, and every requirement is owned by a `qa` agent run that verifies it.
 
 ## Status values
 
-`Draft` → `Accepted` → `Met` · (or `Superseded`)
+`Draft` → `Accepted` → `Met` · (or `Superseded`) · (or `Regressed` — was met/
+accepted then broken by a later change; points to the requirement that rebuilds
+it, e.g. R-0027 → R-0035)
 
 ## Relationship to specs
 

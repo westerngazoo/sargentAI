@@ -117,9 +117,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(FatBand.bulky.label));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Find my program'));
+    // Tap the confirm button by type (robust against layout/fold changes).
+    await tester.ensureVisible(find.byType(FilledButton));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Find my program'));
+    await tester.tap(find.byType(FilledButton));
     await tester.pump(); // kick off _confirm; syntheticMatch is invoked
 
     verify(() => programService.syntheticMatch(
