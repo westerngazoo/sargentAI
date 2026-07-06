@@ -1,13 +1,22 @@
 # R-0027 — Earbud-guided training
 
-- **Status:** Accepted
+- **Status:** Regressed — superseded by [R-0035](0035-earbud-handsfree-training.md) (2026-07-06, R-0057)
 - **Milestone:** M3 (fast-track differentiator)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-21
 - **Depends on:** R-0009 (Done — `SessionDriver` seam this plugs into),
   R-0014 (Done — `UserProgram` row this reads for the exercise plan)
-- **Realized by:** SPEC-0027 (to be written)
+- **Realized by:** [SPEC-0027](../specs/0027-earbud-guided-training.md) (as-built audit; documents the regression)
 - **QA:** `qa` agent run scoped to this requirement
+
+> **Regression note (R-0057, 2026-07-06).** The media-button + background-audio
+> transport this requirement specifies was built (PR #48) then **reverted** by
+> conflict-resolution commit `6b5bb7e` and replaced with the R-0032 voice-
+> **dictation** coach — which violates this requirement's AC14 scope guard ("no
+> speech recognition"). The hands-free earbud transport is being **rebuilt under
+> [R-0035](0035-earbud-handsfree-training.md)** (coexisting with the R-0032
+> dictation mode). SPEC-0027 has been updated to document the as-built regression;
+> this requirement is retained for history and is not independently signed off.
 
 ## 1. Statement
 

@@ -37,3 +37,9 @@ the requirement(s) it satisfies. The mapping is maintained in
 | [R-0002](0002-user-authentication.md) | User authentication (JWT + argon2; Postgres introduced) | M1 | Met |
 | [R-0003](0003-user-profile.md) | User profile CRUD (DOB/age, height, weight, sex, goals, body-fat) | M1 | Met |
 | [R-0004](0004-workout-log.md) | Workout log (sessions → exercises → sets; reps/weight/RPE; full CRUD) | M2 | Accepted |
+| … | _R-0005 … R-0026 exist as files but are not yet listed here — full index reconciliation tracked in issue #56._ | | |
+| [R-0027](0027-earbud-guided-training.md) | Earbud-guided training (voice-OUT, media-button advance) | M3 | **Regressed** → R-0035 |
+| [R-0030](0030-body-type-picker.md) | Visual body-type picker (synthetic match, no photo) | M3 | Accepted (as-built) |
+| [R-0032](0032-voice-assistant.md) | Voice logging assistant (STT → LLM intent → auto-log) | M9 | Accepted (as-built) |
+| [R-0035](0035-earbud-handsfree-training.md) | Earbud-guided hands-free training (rebuild of R-0027 transport) | M3 | Accepted |
+| [R-0036](0036-voice-reminders.md) | Smart missing-log reminders (split from R-0032) | M9 | Accepted |

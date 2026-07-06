@@ -1,119 +1,109 @@
 # R-0030 — Visual Body-Type Picker
 
-- **Status:** Accepted
+- **Status:** Accepted (amended to as-built 2026-07-06, R-0057)
 - **Milestone:** M3 (fast-track) / onboarding
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-22
 - **Depends on:** R-0013 (Done — matching flow this feeds into),
                   R-0014 (Done — proposals + program choice downstream)
-- **Realized by:** SPEC-0030 (to be written)
+- **Realized by:** [SPEC-0030](../specs/0030-body-type-picker.md)
 - **QA:** `qa` agent run scoped to this requirement
 
 ---
 
+> **Amendment note (R-0057, 2026-07-06).** This feature merged via PR #30 ahead
+> of its spec. During the retro-spec/QA reconciliation the owner elected to
+> **amend the acceptance criteria to the as-built scope** rather than build the
+> originally-specified richer picker. The original AC set (12 SVG silhouettes,
+> 36-entry lookup, `core` module, photo-screen link, profile entry point,
+> gender-aware grids) is preserved in the decision log; the criteria below are
+> what the shipped code is verified against. Items intentionally dropped are in
+> §4 non-goals.
+
 ## 1. Statement
 
 An alternative onboarding path where the user selects their approximate body
-type from a grid of reference silhouettes (no photo upload required). The
-selection produces a synthetic `FrameFeatures` that feeds the existing
-`rank()` function and the archetype-ranking → proposal → program-choice flow.
-The photo-upload path (R-0013) remains the primary, more accurate route.
+type from a small grid of reference shapes (no photo upload required). The
+selection produces a synthetic `FrameFeatures` that feeds the existing `rank()`
+function and the archetype-ranking → proposal → program-choice flow. The
+photo-upload path (R-0013) remains the primary, more accurate route.
 
 ---
 
 ## 2. Rationale
 
-Photo upload is high-friction. Some users won't want to upload a photo during
-onboarding; others want to re-match without a new photo. A silhouette picker
-removes the barrier while preserving the same downstream program-generation
-flow (R-0014). Privacy is improved: no photo is stored or processed.
+Photo upload is high-friction. A shape picker removes the barrier while
+preserving the same downstream program-generation flow (R-0014). Privacy is
+improved: no photo is stored or processed.
 
 ---
 
-## 3. Acceptance criteria
+## 3. Acceptance criteria (as-built)
 
-- **AC1.** A "Don't want to upload a photo?" link/button is visible on the
-  photo-upload screen and routes to the picker.
-- **AC2.** The picker screen shows a grid of ~12 reference silhouette images
-  covering the main morphology space: ectomorph / mesomorph / endomorph ×
-  lean / moderate / bulky (9 cells) plus 3 supplementary edge cases (e.g.
-  very tall-narrow, very wide-short, heavy-set). Images are static Flutter
-  asset SVGs — no network request.
-- **AC3.** Each silhouette is labelled with a plain-language description
-  (e.g. "Lean, narrow shoulders", "Broad shoulders, moderate build"). No
-  medical jargon, no famous athlete names.
-- **AC4.** The user selects one silhouette. A body-fat band selector (3
-  discrete chips: Lean / Moderate / Bulky) is shown after selection.
-  Combining silhouette + band gives the full synthetic `FrameFeatures`.
-- **AC5.** Each silhouette × band combination maps to a synthetic
-  `FrameFeatures` (from `crate::pose`) via a lookup table authored by the
-  team. The lookup table lives in `core::matching` or a new
-  `core::body_picker` module and is unit-tested for every combination
-  (12 silhouettes × 3 bands = 36 entries — all must produce valid
-  `FrameFeatures` accepted by `rank()`).
-- **AC6.** The synthetic `FrameFeatures` is passed to the existing
-  `rank()` function without modification. The resulting top-3 ranked matches
-  feed the existing proposals and program-choice flow (R-0014) identically
-  to the photo-upload path.
-- **AC7.** No photo is stored or processed when using the picker path.
-  No `photo_session` row is created that references a stored object.
-  (Whether a lightweight synthetic-features endpoint is used or the existing
-  photo-session endpoint is adapted is deferred to SPEC-0030.)
-- **AC8.** The picker is accessible at initial onboarding AND from the
-  profile screen under "Update my body match".
-- **AC9.** SVG assets are bundled in `mobile/assets/body_types/` — no CDN
-  dependency, no runtime network request for images.
-- **AC10.** The Confirm button is disabled until both a silhouette and a
-  body-fat band are selected.
-- **AC11.** Widget tests cover: grid renders all 12 silhouettes; tapping
-  a silhouette highlights it; band chips appear after selection; Confirm is
-  disabled before both selections; confirming with a given combination
-  calls the matching flow with the expected synthetic `FrameFeatures`.
-- **AC12.** Scope guard — no new ML inference, no photo storage, no changes
-  to the `rank()` function, no changes to the archetype library data, no
-  new archetype entries.
+- **AC1.** A program-start entry point ("Get my program") routes the user into
+  the body-shape picker without requiring a photo.
+- **AC2.** The picker shows a grid of **3 body-shape cards** spanning the coarse
+  morphology space (lean/narrow, athletic/moderate, broad/heavy), rendered as
+  **bundled Material icons** — no network request for imagery.
+- **AC3.** Each shape is labelled with a plain-language description (e.g. "Lean,
+  narrow build"). No medical jargon, no famous athlete names.
+- **AC4.** After selecting a shape, a body-fat band selector (3 chips:
+  Lean / Moderate / Bulky) is shown. Shape + band together give the full
+  synthetic `FrameFeatures`.
+- **AC5.** Each shape × band combination (3 × 3 = **9 entries**) maps to a
+  synthetic `FrameFeatures` via the `synthetic_features` lookup in the
+  `api::synthetic` module, unit-tested for **every one of the 9 combinations**
+  (each produces a valid `FrameFeatures` accepted by `rank()` with a non-empty
+  top-3).
+- **AC6.** The synthetic `FrameFeatures` is passed to the existing `rank()`
+  function **without modification**; the resulting ranked matches feed the
+  existing proposals and program-choice flow (R-0014) identically to the
+  photo-upload path.
+- **AC7.** No photo is stored or processed on this path. A program created from
+  the picker sets `source_session_id = NULL` — no `photo_session` row is
+  referenced.
+- **AC8.** The path is served by two endpoints: `POST /match/synthetic`
+  (returns ranked proposals) and `POST /programs/synthetic` (commits the chosen
+  program). The selection is **stateless** (not persisted as a re-match default).
+- **AC9.** The Confirm button is disabled until **both** a shape and a body-fat
+  band are selected.
+- **AC10.** Tests cover the feature: a backend unit test for all 9 lookup
+  entries; backend integration tests for both endpoints (happy path, auth
+  required, no-profile handling, `source_session_id` NULL); Flutter widget tests
+  (grid renders the 3 shapes; tapping highlights; band chips appear after a
+  shape is chosen; Confirm gated on both selections; confirming calls the
+  matching flow with the expected shape+band).
+- **AC11.** Scope guard — no new ML inference, no photo storage, no changes to
+  `rank()`, no changes to the archetype library data, no new archetype entries.
 
 ---
 
 ## 4. Constraints & non-goals
 
-- `rank()` must accept synthetic `FrameFeatures` without any code change.
-- SVG silhouettes are vector, bundled, no CDN.
-- Famous athlete names must not appear in silhouette labels or UI copy.
-- No biometric data stored from the picker path (no photo, no anthropometric
-  measurement).
+- `rank()` accepts synthetic `FrameFeatures` without any code change.
+- Shape imagery is bundled (Material icons), no CDN, no runtime network request.
+- Famous athlete names must not appear in labels or UI copy.
+- No biometric data stored from the picker path.
 - The picker does not replace photo upload — it is a fallback.
+- **Explicitly not built (deferred):** the 12-SVG silhouette grid, the 36-entry
+  lookup, a `core::body_picker` module, an in-photo-screen "don't want to upload"
+  link, a profile-screen "Update my body match" entry point, and gender-aware
+  (male/female) grids. Any of these can return as a follow-up requirement.
 
 ---
 
-## 5. Open questions (deferred to SPEC-0030)
-
-- **OQ-H1:** Does the Flutter client send synthetic `FrameFeatures` to a new
-  lightweight backend endpoint (`POST /match/synthetic`) or to the existing
-  photo-session flow adapted with a `synthetic: true` flag? Either path must
-  leave no stored photo object.
-- **OQ-H2:** Who authors the 12 SVG silhouettes and what morphology grid do
-  they cover exactly?
-- **OQ-H3:** How are the 36 lookup-table entries derived? (Formulaic mapping
-  from band combinations vs. hand-authored values reviewed by a sports-
-  science reference.)
-- **OQ-H4:** Does the picker save the user's selection so future re-matches
-  default to it, or is each visit stateless?
-- **OQ-H5:** Gender-aware silhouettes? (Two grids: male / female, selected
-  from the user's profile `sex` field.) Defer or include in v1?
-
----
-
-## 6. Decision log
+## 5. Decision log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-06-22 | SVG assets bundled in Flutter (`mobile/assets/body_types/`) | No CDN dependency; works offline; fast load. |
-| 2026-06-22 | Lookup table, not ML | 36 entries is hand-authorable; no inference needed; unit-testable. |
-| 2026-06-22 | Discrete 3-band chips (Lean/Moderate/Bulky) over a continuous slider | Lower cognitive load; maps cleanly to `Somatotype`/`WidthBand` enums already in `FrameProfile`. |
-| 2026-06-22 | `rank()` unchanged | Synthetic features must be valid `FrameFeatures`; the matching function needs no knowledge of how features were derived. |
-| 2026-06-22 | No photo stored | Privacy: the picker path is explicitly a no-photo path. |
+| 2026-06-22 | (original) 12 SVG silhouettes, 36-entry lookup, `core` module, photo-screen + profile entry points, gender grids | Richer morphology coverage. |
+| 2026-06-22 | Lookup table, not ML | Hand-authorable; no inference; unit-testable. |
+| 2026-06-22 | Discrete 3-band chips over a slider | Lower cognitive load; maps to existing enums. |
+| 2026-06-22 | `rank()` unchanged | Synthetic features must be valid `FrameFeatures`. |
+| 2026-06-22 | No photo stored | Privacy: picker is the no-photo path. |
+| 2026-07-06 | **Amend to as-built (R-0057):** 3 shapes (Material icons), 9-entry lookup in `api::synthetic`, `POST /match/synthetic` + `POST /programs/synthetic`, stateless, single home entry point, no gender grids | The reduced picker shipped, works, and is simpler; amending is more honest than building the 12-SVG version to satisfy a doc. Missing tests backfilled under R-0057. |
 
 ## Changelog
 
 - _2026-06-22 — created and **Accepted**._
+- _2026-07-06 — **amended to as-built** and tests backfilled under R-0057; SPEC-0030 written (retro-spec)._
