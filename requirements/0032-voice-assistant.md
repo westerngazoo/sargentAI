@@ -1,43 +1,76 @@
-# R-0032 — Voice Assistant and Smart Reminders
+# R-0032 — Voice Logging Assistant
 
-- **Status:** Discussing
+- **Status:** Accepted (amended to as-built 2026-07-06, R-0057)
 - **Milestone:** M9 (Voice Assistant & Automation)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-06-22
 - **Depends on:** R-0004 (Workout log), R-0005 (Nutrition log), R-0009 (Live workout logger)
-- **Realized by:** SPEC-0032 (to be written)
+- **Realized by:** [SPEC-0032](../specs/0032-voice-assistant.md)
 - **QA:** `qa` agent run scoped to this requirement
+
+---
+
+> **Amendment note (R-0057, 2026-07-06).** This feature merged via PRs #39/#49/#50
+> ahead of its spec (the spec drafted in PR #37 described a different, unbuilt
+> architecture and is superseded). During reconciliation the owner **scoped this
+> requirement down to the voice-logging half that actually shipped** and **spun
+> the smart-reminders half out to [R-0036](0036-voice-reminders.md)**. The
+> original reminder criteria (former AC6–AC8) now live in R-0036. Title changed
+> from "Voice Assistant and Smart Reminders" to "Voice Logging Assistant".
 
 ## 1. Statement
 
-The app features a persistent voice assistant accessible via a microphone button. Instead of typing to log meals or workouts, the user can speak natural language (e.g., "Log 150 grams of chicken breast for lunch" or "I just did 10 reps of 100kg bench press"). The app processes the speech, maps it to structured inputs, and logs it automatically. Additionally, a smart alert system proactively reminds the user to log missing meals or workouts based on their daily routine, ensuring consistent progress tracking.
+A voice logging assistant reached via a microphone button. Instead of typing to
+log meals or workouts, the user speaks natural language (e.g. "Log 150 grams of
+chicken breast for lunch" or "I just did 10 reps of 100 kg bench press"). The
+app transcribes the speech on-device, parses the intent, and logs it
+automatically — prompting for clarification when required fields are missing.
 
 ## 2. Rationale
 
-Manual data entry is a point of friction for many users, leading to missed logs and incomplete data for the ML model. By allowing hands-free, conversational logging and proactively reminding users of missing entries, we improve user compliance, data quality, and overall retention. This evolves the app from a passive tracker to an active, intelligent assistant.
+Manual data entry is a point of friction, leading to missed logs and incomplete
+data for the ML model. Hands-free, conversational logging improves compliance
+and data quality. (Proactive missing-log reminders — a separate concern — are
+tracked in R-0036.)
 
-## 3. Acceptance criteria
+## 3. Acceptance criteria (as-built)
 
-- **AC1. Voice Input Button:** A persistent microphone button is accessible across primary screens in the Flutter app to initiate voice interaction.
-- **AC2. Speech-to-Text Processing:** The app captures the user's speech and accurately transcribes it into text using an on-device or cloud STT engine.
-- **AC3. Intent Parsing (LLM):** The transcribed text is sent to a backend endpoint that uses an LLM to parse the intent (e.g., logging a meal, logging a workout) and extract structured data (food name, grams, exercise name, reps, weight).
-- **AC4. Automatic Logging:** Once parsed, the backend automatically creates the corresponding nutrition or workout log entries.
-- **AC5. User Confirmation/Fallback:** If the intent is ambiguous or missing required fields (e.g., "Log some chicken"), the assistant prompts the user for clarification before logging.
-- **AC6. Missing Log Reminders:** A scheduled background job or chron service evaluates the user's daily routine (e.g., expected meal times, scheduled workout days from their active `UserProgram`).
-- **AC7. Alert System:** If a scheduled meal or workout is not logged within a configurable grace period, the app sends a local or push notification reminding the user.
-- **AC8. Voice-Activated from Notification:** Users can tap the reminder notification to immediately open the app into voice-listening mode.
-- **AC9. Tests:** Flutter widget tests verify the presence of the microphone button and the voice-listening UI states. Backend tests verify the prompt construction for the LLM intent parser and the creation of database records from structured LLM outputs.
-- **AC10. Privacy and Scope Guard:** Voice audio is not stored long-term. Only the extracted structured data is retained.
+- **AC1. Voice input button.** A microphone entry point launches voice
+  interaction (from Home and inside the voice hub).
+- **AC2. Speech-to-text.** The app captures speech and transcribes it to text
+  **on-device** (via the `speech_to_text` plugin behind a `SpeechInput` seam).
+- **AC3. Intent parsing.** The transcript is sent to `POST /voice/intent`, which
+  uses an LLM (Anthropic `claude-haiku-4-5`, key-gated) to parse intent and
+  extract structured data, with an always-present keyword-parser fallback.
+- **AC4. Automatic logging.** Parsed intents create the corresponding nutrition
+  or workout log entries automatically.
+- **AC5. Confirmation / fallback.** If the intent is ambiguous or missing
+  required fields (e.g. "Log some chicken"), the assistant prompts for
+  clarification before logging.
+- **AC6. Tests.** Flutter widget tests cover the mic button and voice-listening
+  UI states (via a `FakeSpeechInput`); backend tests cover intent parsing and
+  DB-record creation from structured outputs, including the clarify path.
+- **AC7. Privacy / scope guard.** Voice audio is not stored; only the transcript
+  and extracted structured data are transmitted/retained. The assistant is
+  constrained to fitness/nutrition logging — not a general chatbot. The mic is
+  only active when the user initiates it (no always-on background listening).
 
-## 4. Constraints & Non-goals
+## 4. Constraints & non-goals
 
-- **No Always-On Listening:** The microphone is only active when the user explicitly taps the button.
-- **Not a General Chatbot:** The assistant is strictly constrained to fitness and nutrition logging capabilities. General conversational AI is out of scope.
+- On-device STT — no raw-audio upload endpoint, no server-side transcription.
+- Not a general conversational AI.
+- **Out of scope (moved to R-0036):** scheduled missing-log evaluation, reminder
+  notifications, and voice-activation from a notification.
 
-## 5. Open questions
+## 5. Decision log
 
-Deferred to SPEC-0032:
-- **OQ-1:** Which STT (Speech-to-Text) engine to use? Options include native OS APIs via Flutter plugins (e.g., `speech_to_text`) or a cloud service (e.g., Whisper API).
-- **OQ-2:** Prompt design and structure for the LLM intent parser (likely Claude) to reliably extract macro and workout data.
-- **OQ-3:** How to model the user's "daily routine" for the reminder system (e.g., inferred from past logs vs. explicitly configured meal times).
-- **OQ-4:** Implementation details for the chron service triggering alerts.
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-06-22 | (original) single requirement covering voice logging **and** smart reminders | Initial framing. |
+| 2026-07-06 | **Split (R-0057):** keep voice logging here; move reminders to R-0036 | The logging half shipped + is tested; the reminder half was never built. Splitting lets logging be signed off honestly. |
+| 2026-07-06 | On-device STT + `POST /voice/intent` (JSON), Claude `claude-haiku-4-5` + keyword fallback | Reflects what shipped; supersedes PR #37's backend-Whisper `POST /voice/log` design. |
+
+## Changelog
+
+- _2026-06-22 — created (Status Discussing)._
+- _2026-07-06 — **amended to as-built and split** under R-0057; reminders → R-0036; SPEC-0032 written (retro-spec); status → Accepted._

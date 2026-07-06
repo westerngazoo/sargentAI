@@ -194,3 +194,89 @@ pub(crate) async fn choose_synthetic(
         Json(UserProgramResponse::try_from(row)?),
     ))
 }
+
+// ---------------------------------------------------------------------------
+// Unit tests — the pure lookup table (R-0030 backfill).
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::{synthetic_features, BodyShape, FatBand};
+    use fitai_core::archetype::library;
+    use fitai_core::matching::rank;
+
+    /// The nine (shape, band) combinations the picker can emit.
+    const COMBINATIONS: [(BodyShape, FatBand); 9] = [
+        (BodyShape::Ectomorph, FatBand::Lean),
+        (BodyShape::Ectomorph, FatBand::Moderate),
+        (BodyShape::Ectomorph, FatBand::Bulky),
+        (BodyShape::Mesomorph, FatBand::Lean),
+        (BodyShape::Mesomorph, FatBand::Moderate),
+        (BodyShape::Mesomorph, FatBand::Bulky),
+        (BodyShape::Endomorph, FatBand::Lean),
+        (BodyShape::Endomorph, FatBand::Moderate),
+        (BodyShape::Endomorph, FatBand::Bulky),
+    ];
+
+    /// Every (shape, band) arm yields a `FrameFeatures` whose numeric ratio sits
+    /// in the matcher's valid `1.0..=2.5` span, whose banded descriptors are
+    /// present, and whose confidence is the exact `1.0` the doc-comment promises.
+    #[test]
+    fn every_combination_yields_valid_frame_features() {
+        for (shape, band) in COMBINATIONS {
+            let features = synthetic_features(shape, band);
+            assert!(
+                (1.0..=2.5).contains(&features.shoulder_to_waist),
+                "{shape:?}/{band:?} ratio {} out of the 1.0..=2.5 matcher span",
+                features.shoulder_to_waist
+            );
+            assert!(
+                features.clavicle_width.is_some(),
+                "{shape:?}/{band:?} must carry a clavicle band"
+            );
+            assert!(
+                features.limb_length.is_some(),
+                "{shape:?}/{band:?} must carry a limb band"
+            );
+            assert!(
+                (features.confidence - 1.0).abs() < f64::EPSILON,
+                "{shape:?}/{band:?} confidence must be exactly 1.0"
+            );
+        }
+    }
+
+    /// `rank` accepts every synthetic feature set and returns a ranked, ordered
+    /// top-3 with finite distances — the exact shape `synthetic_match` takes.
+    #[test]
+    fn every_combination_ranks_a_non_empty_top3() {
+        for (shape, band) in COMBINATIONS {
+            let features = synthetic_features(shape, band);
+            let ranked = rank(&features, library());
+
+            let top3: Vec<_> = ranked.iter().take(3).collect();
+            assert_eq!(
+                top3.len(),
+                3,
+                "{shape:?}/{band:?} must produce a full top-3 from the six-archetype library"
+            );
+
+            for m in &top3 {
+                assert!(
+                    m.distance.is_finite() && (0.0..=1.0).contains(&m.distance),
+                    "{shape:?}/{band:?} distance {} must be a finite score in 0.0..=1.0",
+                    m.distance
+                );
+            }
+
+            // Nearest-first: distances are non-decreasing across the top-3.
+            for pair in top3.windows(2) {
+                assert!(
+                    pair[0].distance <= pair[1].distance,
+                    "{shape:?}/{band:?} top-3 must be ordered nearest-first"
+                );
+            }
+        }
+    }
+}
