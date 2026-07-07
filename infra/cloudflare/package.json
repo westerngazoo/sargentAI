@@ -1,0 +1,19 @@
+{
+  "name": "fitai-cloudflare-container",
+  "private": true,
+  "type": "module",
+  "description": "SPIKE: deploy the fitai-api Rust+ONNX image to Cloudflare Containers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.107.0"
+  }
+}

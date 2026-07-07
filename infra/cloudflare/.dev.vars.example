@@ -1,0 +1,7 @@
+# Copy to `.dev.vars` for `wrangler dev` (git-ignored). For deploys, set the same
+# names as secrets: `wrangler secret put DATABASE_URL`, etc.
+DATABASE_URL=postgres://fitai:dev@host.docker.internal:5432/fitai
+JWT_SECRET=change-me-in-real-deploys
+ANTHROPIC_API_KEY=
+FDC_API_KEY=
+GOOGLE_OAUTH_AUDIENCE=

@@ -1,0 +1,29 @@
+{
+  // SPIKE — deploy the existing Rust+ONNX backend image to Cloudflare Containers.
+  // Not production: see README.md for the DB / photo-storage caveats.
+  "name": "fitai-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+
+  // The container runs our existing image. `image` is the build CONTEXT
+  // directory (must contain a Dockerfile) — here the Rust workspace at
+  // ../../backend, whose Dockerfile installs ONNX Runtime and builds fitai-api.
+  "containers": [
+    {
+      "class_name": "FitaiApi",
+      "image": "../../backend",
+      // 1 vCPU / 6 GiB — comfortable headroom for ONNX Runtime + Axum.
+      "instance_type": "standard-2",
+      "max_instances": 3
+    }
+  ],
+
+  // Containers are fronted by a Durable Object; the binding + migration are
+  // mandatory. `new_sqlite_classes` is required for container-backed DOs.
+  "durable_objects": {
+    "bindings": [{ "name": "FITAI_API", "class_name": "FitaiApi" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["FitaiApi"] }],
+
+  "observability": { "enabled": true }
+}
