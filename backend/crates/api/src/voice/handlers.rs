@@ -19,7 +19,9 @@ use crate::{
 
 #[derive(Clone, Default)]
 pub struct VoiceIntentSettings {
-    pub anthropic_api_key: Option<Arc<str>>,
+    /// Configured LLM endpoint, or `None` to use the keyword parser. Built from
+    /// env — `LLM_PROVIDER=ollama` points it at a local OpenAI-compatible server.
+    llm: Option<Arc<parse::LlmConfig>>,
     pub http: reqwest::Client,
 }
 
@@ -27,9 +29,7 @@ impl VoiceIntentSettings {
     #[must_use]
     pub fn from_env() -> Self {
         Self {
-            anthropic_api_key: std::env::var("ANTHROPIC_API_KEY")
-                .ok()
-                .map(|k| Arc::from(k.into_boxed_str())),
+            llm: parse::LlmConfig::from_env().map(Arc::new),
             http: reqwest::Client::new(),
         }
     }
@@ -47,8 +47,8 @@ pub(crate) async fn intent(
 ) -> ApiResult<Json<IntentResponse>> {
     let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
     let today = Utc::now().date_naive();
-    let action = if let Some(key) = state.voice.anthropic_api_key.as_deref() {
-        parse::parse_with_llm(&state.voice.http, key, &req.transcript, today)
+    let action = if let Some(cfg) = state.voice.llm.as_deref() {
+        parse::parse_with_llm(&state.voice.http, cfg, &req.transcript, today)
             .await
             .unwrap_or_else(|_| parse::parse_transcript(&req.transcript, today))
     } else {
