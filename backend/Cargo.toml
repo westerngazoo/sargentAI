@@ -19,7 +19,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 
 # R-0002 / SPEC-0002 §2.8 additions.
 fitai-core = { path = "crates/core" }
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "chrono"] }
+# `tls-rustls-ring` so hosted Postgres (Neon et al., sslmode=require) works;
+# rustls keeps the image OpenSSL-free (same choice as reqwest above).
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "chrono", "tls-rustls-ring"] }
 argon2 = "0.5"
 jsonwebtoken = "9"
 uuid = { version = "1", features = ["v4", "serde"] }
