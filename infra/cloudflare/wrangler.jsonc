@@ -5,13 +5,13 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-06-01",
 
-  // The container runs our existing image. `image` is the build CONTEXT
-  // directory (must contain a Dockerfile) — here the Rust workspace at
-  // ../../backend, whose Dockerfile installs ONNX Runtime and builds fitai-api.
+  // The container runs our existing image — the backend Dockerfile, which
+  // installs ONNX Runtime and builds fitai-api. The build context defaults to
+  // the Dockerfile's directory (the Rust workspace), matching its COPY paths.
   "containers": [
     {
       "class_name": "FitaiApi",
-      "image": "../../backend",
+      "image": "../../backend/Dockerfile",
       // 1 vCPU / 6 GiB — comfortable headroom for ONNX Runtime + Axum.
       "instance_type": "standard-2",
       "max_instances": 3
