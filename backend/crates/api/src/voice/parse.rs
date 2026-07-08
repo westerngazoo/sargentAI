@@ -259,14 +259,102 @@ fn grams(t: &str, macro_name: &str) -> Option<f64> {
         .and_then(|m| m.as_str().parse().ok())
 }
 
+/// Which wire protocol the configured LLM endpoint speaks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum LlmProvider {
+    /// Anthropic Messages API (`/v1/messages`, `x-api-key`, `content[0].text`).
+    Anthropic,
+    /// OpenAI-compatible chat API (`/chat/completions`, `Bearer`,
+    /// `choices[0].message.content`) — this is what a local Ollama serves.
+    OpenAiCompatible,
+}
+
+/// Resolved LLM endpoint. Built from env so local dev can point voice-intent
+/// parsing at Ollama (or any OpenAI-compatible server) instead of Anthropic,
+/// with the keyword parser still the fallback when no LLM is configured.
+#[derive(Debug, Clone)]
+pub(super) struct LlmConfig {
+    provider: LlmProvider,
+    /// Root URL without the endpoint path (e.g. `http://localhost:11434/v1`).
+    base_url: String,
+    model: String,
+    /// May be empty (Ollama needs no key).
+    api_key: String,
+}
+
+impl LlmConfig {
+    /// Pure resolver — no process env, so it is unit-testable. Returns `None`
+    /// when the LLM path should be skipped (Anthropic selected but no key),
+    /// which makes the caller fall back to the keyword parser.
+    fn resolve(
+        provider: Option<&str>,
+        base: Option<String>,
+        model: Option<String>,
+        key: Option<String>,
+    ) -> Option<Self> {
+        let key = key.filter(|k| !k.is_empty());
+        match provider.unwrap_or("anthropic") {
+            "anthropic" => Some(Self {
+                provider: LlmProvider::Anthropic,
+                base_url: base.unwrap_or_else(|| "https://api.anthropic.com".to_string()),
+                model: model.unwrap_or_else(|| "claude-haiku-4-5-20251001".to_string()),
+                // Anthropic requires a key; without one there is no LLM path.
+                api_key: key?,
+            }),
+            // "ollama" | "openai" | "openai-compatible" | anything else.
+            _ => Some(Self {
+                provider: LlmProvider::OpenAiCompatible,
+                base_url: base.unwrap_or_else(|| "http://localhost:11434/v1".to_string()),
+                model: model.unwrap_or_else(|| "llama3.2".to_string()),
+                api_key: key.unwrap_or_default(),
+            }),
+        }
+    }
+
+    /// Reads `LLM_PROVIDER` / `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`
+    /// (falling back to `ANTHROPIC_API_KEY` for the key). Returns `None` when
+    /// no LLM is configured, so voice parsing uses the keyword fallback.
+    pub(super) fn from_env() -> Option<Self> {
+        let provider = std::env::var("LLM_PROVIDER").ok();
+        Self::resolve(
+            provider.as_deref(),
+            std::env::var("LLM_BASE_URL").ok(),
+            std::env::var("LLM_MODEL").ok(),
+            std::env::var("LLM_API_KEY")
+                .ok()
+                .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok()),
+        )
+    }
+
+    fn timeout(&self) -> std::time::Duration {
+        // A local model can be slow on the first (model-load) request.
+        let secs = match self.provider {
+            LlmProvider::Anthropic => 8,
+            LlmProvider::OpenAiCompatible => 60,
+        };
+        std::time::Duration::from_secs(secs)
+    }
+}
+
+/// Extracts the assistant's text from a provider-specific response body.
+fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<String> {
+    let field = match provider {
+        LlmProvider::Anthropic => &json["content"][0]["text"],
+        LlmProvider::OpenAiCompatible => &json["choices"][0]["message"]["content"],
+    };
+    field.as_str().map(str::to_string)
+}
+
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
-    api_key: &str,
+    cfg: &LlmConfig,
     transcript: &str,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
-        "You parse gym voice commands into JSON only. Today is {today}. \
+        "{LLM_PROMPT_HEAD} Today is {today}. \
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
@@ -275,16 +363,38 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
-    let body = serde_json::json!({
-        "model": "claude-haiku-4-5-20251001",
-        "max_tokens": 256,
-        "messages": [{"role": "user", "content": prompt}]
-    });
-    let resp = client
-        .post("https://api.anthropic.com/v1/messages")
-        .timeout(std::time::Duration::from_secs(5))
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
+
+    let (body, req) = match cfg.provider {
+        LlmProvider::Anthropic => {
+            let body = serde_json::json!({
+                "model": cfg.model,
+                "max_tokens": 256,
+                "messages": [{"role": "user", "content": prompt}]
+            });
+            let req = client
+                .post(format!("{}/v1/messages", cfg.base_url))
+                .header("x-api-key", &cfg.api_key)
+                .header("anthropic-version", "2023-06-01");
+            (body, req)
+        }
+        LlmProvider::OpenAiCompatible => {
+            let body = serde_json::json!({
+                "model": cfg.model,
+                "max_tokens": 256,
+                "stream": false,
+                "response_format": {"type": "json_object"},
+                "messages": [{"role": "user", "content": prompt}]
+            });
+            let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
+            if !cfg.api_key.is_empty() {
+                req = req.header("authorization", format!("Bearer {}", cfg.api_key));
+            }
+            (body, req)
+        }
+    };
+
+    let resp = req
+        .timeout(cfg.timeout())
         .header("content-type", "application/json")
         .body(body.to_string())
         .send()
@@ -299,11 +409,9 @@ pub(super) async fn parse_with_llm(
     let body_text = resp.text().await.map_err(|_| ApiError::Upstream)?;
     let json: serde_json::Value =
         serde_json::from_str(&body_text).map_err(|_| ApiError::Upstream)?;
-    let text = json["content"][0]["text"]
-        .as_str()
-        .ok_or(ApiError::Upstream)?;
+    let text = extract_llm_text(cfg.provider, &json).ok_or(ApiError::Upstream)?;
     let parsed: serde_json::Value = serde_json::from_str(text.trim())
-        .or_else(|_| extract_json_object(text))
+        .or_else(|_| extract_json_object(&text))
         .map_err(|()| ApiError::Upstream)?;
     llm_json_to_action(&parsed, today)
 }
@@ -373,5 +481,61 @@ mod tests {
             ParsedAction::Response(r) => assert_eq!(r.status, IntentStatus::Clarify),
             _ => panic!("expected clarify"),
         }
+    }
+
+    #[test]
+    fn resolve_defaults_to_anthropic_when_key_present() {
+        let cfg = LlmConfig::resolve(None, None, None, Some("sk-ant".into())).unwrap();
+        assert_eq!(cfg.provider, LlmProvider::Anthropic);
+        assert_eq!(cfg.base_url, "https://api.anthropic.com");
+        assert_eq!(cfg.model, "claude-haiku-4-5-20251001");
+        assert_eq!(cfg.api_key, "sk-ant");
+    }
+
+    #[test]
+    fn resolve_anthropic_without_key_is_none() {
+        assert!(LlmConfig::resolve(Some("anthropic"), None, None, None).is_none());
+        // An empty key is treated as absent.
+        assert!(LlmConfig::resolve(Some("anthropic"), None, None, Some(String::new())).is_none());
+    }
+
+    #[test]
+    fn resolve_ollama_needs_no_key_and_defaults_to_localhost() {
+        let cfg = LlmConfig::resolve(Some("ollama"), None, None, None).unwrap();
+        assert_eq!(cfg.provider, LlmProvider::OpenAiCompatible);
+        assert_eq!(cfg.base_url, "http://localhost:11434/v1");
+        assert_eq!(cfg.model, "llama3.2");
+        assert!(cfg.api_key.is_empty());
+    }
+
+    #[test]
+    fn resolve_openai_compatible_honours_custom_base_and_model() {
+        let cfg = LlmConfig::resolve(
+            Some("openai-compatible"),
+            Some("http://gpu-box:8000/v1".into()),
+            Some("qwen3.5:9b".into()),
+            Some("token".into()),
+        )
+        .unwrap();
+        assert_eq!(cfg.provider, LlmProvider::OpenAiCompatible);
+        assert_eq!(cfg.base_url, "http://gpu-box:8000/v1");
+        assert_eq!(cfg.model, "qwen3.5:9b");
+        assert_eq!(cfg.api_key, "token");
+    }
+
+    #[test]
+    fn extract_text_reads_each_provider_shape() {
+        let anthropic = serde_json::json!({"content": [{"text": "hi from claude"}]});
+        assert_eq!(
+            extract_llm_text(LlmProvider::Anthropic, &anthropic).as_deref(),
+            Some("hi from claude")
+        );
+        let openai = serde_json::json!({"choices": [{"message": {"content": "hi from ollama"}}]});
+        assert_eq!(
+            extract_llm_text(LlmProvider::OpenAiCompatible, &openai).as_deref(),
+            Some("hi from ollama")
+        );
+        // Wrong shape → None (caller falls back).
+        assert!(extract_llm_text(LlmProvider::Anthropic, &openai).is_none());
     }
 }
