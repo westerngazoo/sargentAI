@@ -15,9 +15,11 @@
 # ---------------------------------------------------------------------------
 FROM ubuntu:24.04 AS onnxruntime
 # Must match the ONNX Runtime 1.24 ABI that `ort-sys` 2.0.0-rc.12 targets
-# (see the `api-24` feature in backend/Cargo.toml). Keep this in lockstep with
-# `ONNXRUNTIME_VERSION` in the `rust` job of .github/workflows/ci.yml.
+# (see the `api-24` feature in backend/Cargo.toml). This default is overridden
+# by CI in .github/workflows/ci.yml. Keep them in lockstep.
 ARG ONNXRUNTIME_VERSION=1.24.2
+ARG ONNXRUNTIME_CHECKSUM_X64=43725474ba5663642e17684717946693850e2005efbd724ac72da278fead25e6
+ARG ONNXRUNTIME_CHECKSUM_ARM64=6715b3d19965a2a6981e78ed4ba24f17a8c30d2d26420dbed10aac7ceca0085e
 # Provided automatically by BuildKit: "amd64" or "arm64".
 ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,14 +29,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 # Map Docker's TARGETARCH to ONNX Runtime's release-asset architecture name.
 RUN case "${TARGETARCH}" in \
-        amd64) ort_arch=x64 ;; \
-        arm64) ort_arch=aarch64 ;; \
+        amd64) ort_arch=x64; checksum="${ONNXRUNTIME_CHECKSUM_X64}" ;; \
+        arm64) ort_arch=aarch64; checksum="${ONNXRUNTIME_CHECKSUM_ARM64}" ;; \
         *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     pkg="onnxruntime-linux-${ort_arch}-${ONNXRUNTIME_VERSION}"; \
     curl --proto '=https' --tlsv1.2 -fsSL \
         "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
         -o /tmp/ort.tgz; \
+    echo "${checksum}  /tmp/ort.tgz" | sha256sum -c -; \
     mkdir -p /opt/onnxruntime; \
     tar -xzf /tmp/ort.tgz -C /opt/onnxruntime --strip-components=1 "${pkg}/lib" "${pkg}/include"; \
     rm /tmp/ort.tgz; \

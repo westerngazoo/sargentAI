@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  ONNXRUNTIME_VERSION: 1.24.2
+  ONNXRUNTIME_CHECKSUM_X64: 43725474ba5663642e17684717946693850e2005efbd724ac72da278fead25e6
+  ONNXRUNTIME_CHECKSUM_ARM64: 6715b3d19965a2a6981e78ed4ba24f17a8c30d2d26420dbed10aac7ceca0085e
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Don't cancel main runs; a fast-follow merge must still record a green build.
@@ -32,20 +37,24 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/fitai_ci
       JWT_SECRET: ci-only-test-secret
-      # `ort` is built with `download-binaries` off (see backend/Cargo.toml), so
-      # cargo links/dlopens ONNX Runtime from a library we install below rather
-      # than fetching it from cdn.pyke.io. Keep this version in lockstep with
-      # `ARG ONNXRUNTIME_VERSION` in backend/Dockerfile.
-      ONNXRUNTIME_VERSION: 1.24.2
     steps:
       - uses: actions/checkout@v4
+      - name: cache ONNX Runtime tarball
+        id: cache-onnx
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ort.tgz
+          key: onnxruntime-x64-${{ env.ONNXRUNTIME_VERSION }}-${{ env.ONNXRUNTIME_CHECKSUM_X64 }}
       - name: install ONNX Runtime (for ort system linking)
         run: |
           set -euo pipefail
           pkg="onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}"
-          curl --proto '=https' --tlsv1.2 -fsSL \
-            "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
-            -o /tmp/ort.tgz
+          if [ ! -f /tmp/ort.tgz ]; then
+            curl --proto '=https' --tlsv1.2 -fsSL \
+              "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
+              -o /tmp/ort.tgz
+          fi
+          echo "${ONNXRUNTIME_CHECKSUM_X64}  /tmp/ort.tgz" | sha256sum -c -
           sudo mkdir -p /opt/onnxruntime
           sudo tar -xzf /tmp/ort.tgz -C /opt/onnxruntime --strip-components=1 "${pkg}/lib" "${pkg}/include"
           test -e /opt/onnxruntime/lib/libonnxruntime.so
@@ -89,4 +98,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - name: build backend image
-        run: docker build -t fitai-api:ci backend
+        run: |
+          docker build -t fitai-api:ci \
+            --build-arg ONNXRUNTIME_VERSION="${ONNXRUNTIME_VERSION}" \
+            --build-arg ONNXRUNTIME_CHECKSUM_X64="${ONNXRUNTIME_CHECKSUM_X64}" \
+            --build-arg ONNXRUNTIME_CHECKSUM_ARM64="${ONNXRUNTIME_CHECKSUM_ARM64}" \
+            backend
