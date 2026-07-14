@@ -4,6 +4,7 @@
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod aggregate;
 pub mod archetype;
 pub mod matching;
 pub mod nutrition;
@@ -14,6 +15,10 @@ pub mod program;
 pub mod user;
 pub mod workout;
 
+pub use aggregate::{
+    summarize, Adherence, BodyPoint, BodyTrend, LiftSummary, MuscleVolume, TrainingSummary,
+    TrendPoint,
+};
 pub use archetype::{
     Archetype, ArchetypeError, Confidence, DietTemplate, FrameProfile, HeightBand, LengthBand,
     MacroEmphasis, ProgramTemplate, Provenance, Somatotype, StructureTag, TrainingPhilosophy,
