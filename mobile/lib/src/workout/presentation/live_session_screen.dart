@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../application/earbud_coach.dart';
 import '../application/session_driver.dart';
 import '../application/voice_coach.dart';
 import '../domain/exercise_draft.dart';
@@ -59,6 +60,20 @@ class LiveSessionScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Workout'),
           actions: [
+            Consumer(builder: (context, ref, _) {
+              // Watch the coach provider so that it is instantiated and kept alive
+              ref.watch(earbudCoachProvider);
+              final earbudOn = ref.watch(earbudModeProvider);
+              return IconButton(
+                tooltip: earbudOn ? 'Earbud coach off' : 'Earbud coach on',
+                isSelected: earbudOn,
+                icon: const Icon(Icons.headphones_outlined),
+                selectedIcon: const Icon(Icons.headphones),
+                onPressed: () {
+                  ref.read(earbudModeProvider.notifier).state = !earbudOn;
+                },
+              );
+            }),
             IconButton(
               tooltip: coach.enabled ? 'Voice coach off' : 'Voice coach on',
               isSelected: coach.enabled,
@@ -66,7 +81,13 @@ class LiveSessionScreen extends ConsumerWidget {
               selectedIcon: const Icon(Icons.headset_mic),
               onPressed: () {
                 final notifier = ref.read(voiceCoachProvider.notifier);
-                coach.enabled ? notifier.disable() : notifier.enable();
+                if (coach.enabled) {
+                  notifier.disable();
+                } else {
+                  // Mutual exclusivity
+                  ref.read(earbudModeProvider.notifier).state = false;
+                  notifier.enable();
+                }
               },
             ),
             const SizedBox(width: 8),
