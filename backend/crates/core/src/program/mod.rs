@@ -41,6 +41,21 @@ pub struct GeneratedProgram {
     pub highlight_exercises: Vec<String>,
 }
 
+/// The calorie direction the diet actually targets — derived from the SAME
+/// goal branch as the kcal math (R-0017 architect review): the archetype's
+/// `calorie_strategy` prose may say "surplus" while a `LoseFat` user's kcal is a
+/// deficit, so prose must never be parsed for intent. `serde(default)` keeps
+/// pre-existing stored diets deserializable (they read as `Maintain`, which
+/// keeps intent-dependent rules silent).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DietIntent {
+    Surplus,
+    Deficit,
+    #[default]
+    Maintain,
+}
+
 /// The concrete diet plan derived from an archetype's
 /// [`DietTemplate`](crate::archetype::DietTemplate) and the user's profile.
 /// `estimated_kcal` is recomputed from the rounded macro grams so the
@@ -49,6 +64,8 @@ pub struct GeneratedProgram {
 pub struct GeneratedDiet {
     pub approach: String,
     pub calorie_strategy: String,
+    #[serde(default)]
+    pub intent: DietIntent,
     pub macro_emphasis: MacroEmphasis,
     pub meal_structure: String,
     pub estimated_kcal: u32,
@@ -116,6 +133,7 @@ pub fn instantiate(
         diet: GeneratedDiet {
             approach: d.approach.clone(),
             calorie_strategy: d.calorie_strategy.clone(),
+            intent: diet_intent(profile),
             macro_emphasis: d.macro_emphasis,
             meal_structure: d.meal_structure.clone(),
             estimated_kcal: estimated_kcal_from_macros(p_g, c_g, f_g),
@@ -181,6 +199,22 @@ fn highlight_exercises_for_split(split: &str) -> Vec<String> {
 // ---------------------------------------------------------------------------
 // Diet derivation helpers (SPEC-0014 §2.2.2)
 // ---------------------------------------------------------------------------
+
+/// The diet's calorie direction from the user's primary goal — the SAME branch
+/// `kcal_target` multiplies by, so intent and kcal can never disagree.
+fn diet_intent(profile: &Profile) -> DietIntent {
+    match profile
+        .goals
+        .as_slice()
+        .first()
+        .copied()
+        .unwrap_or(Goal::Maintain)
+    {
+        Goal::LoseFat => DietIntent::Deficit,
+        Goal::BuildMuscle | Goal::GainStrength => DietIntent::Surplus,
+        Goal::Recomp | Goal::Maintain => DietIntent::Maintain,
+    }
+}
 
 /// Mifflin-St Jeor TDEE with goal multiplier (SPEC-0014 §2.2.2).
 fn kcal_target(profile: &Profile, today: NaiveDate) -> f64 {
