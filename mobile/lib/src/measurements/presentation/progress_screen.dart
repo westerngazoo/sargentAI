@@ -11,6 +11,7 @@ import '../../workout/domain/workout_session.dart';
 import '../application/strength_trend.dart';
 import '../models/measurement.dart';
 import '../services/measurement_service.dart';
+import 'coach_card.dart';
 import 'log_measurement_sheet.dart';
 import 'trend_chart.dart';
 
@@ -35,6 +36,7 @@ class ProgressScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
+          const CoachCard(),
           Text('Body composition',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),

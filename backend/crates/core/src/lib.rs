@@ -4,6 +4,7 @@
 
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
 
+pub mod adjust;
 pub mod aggregate;
 pub mod archetype;
 pub mod matching;
@@ -15,6 +16,7 @@ pub mod program;
 pub mod user;
 pub mod workout;
 
+pub use adjust::{suggest, Adjustment, Change, Severity};
 pub use aggregate::{
     summarize, Adherence, BodyPoint, BodyTrend, LiftSummary, MuscleVolume, TrainingSummary,
     TrendPoint,

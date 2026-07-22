@@ -22,6 +22,7 @@ pub mod pose;
 pub mod profile;
 pub mod program;
 pub mod storage;
+pub mod summary;
 pub(crate) mod synthetic;
 pub mod voice;
 pub mod workout;
@@ -63,6 +64,7 @@ pub fn app(state: AppState) -> Router {
         .merge(profile::routes())
         .merge(workout::routes())
         .merge(nutrition::routes())
+        .merge(summary::routes())
         .merge(photo::routes())
         .merge(matching::routes())
         .merge(program::routes())
