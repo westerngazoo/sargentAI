@@ -9,6 +9,7 @@ pub mod aggregate;
 pub mod archetype;
 pub mod matching;
 pub mod nutrition;
+pub mod periodize;
 pub mod photo;
 pub mod pose;
 pub mod profile;
@@ -28,6 +29,11 @@ pub use archetype::{
 };
 pub use matching::{rank, RankedMatch};
 pub use nutrition::{Grams, Macros, NewNutritionLog, NutritionError, NutritionLog};
+pub use periodize::{
+    block, linear, undulating, Block, BlockParams, DayProfile, E1rmMap, LinearParams,
+    PeriodizationScheme, PeriodizedProgram, PlanError, PlanParams, PrescribedExercise,
+    PrescribedSet, TrainingSession, TrainingWeek, UndulatingParams,
+};
 pub use photo::{
     Angle, ImageContentType, NewPhoto, PhotoError, PhotoSession, SessionPhoto, MAX_BYTES,
 };
