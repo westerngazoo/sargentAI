@@ -28,6 +28,7 @@ import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/shell/home_shell.dart';
+import 'package:fitai/src/workout/application/earbud_coach.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
@@ -452,7 +453,7 @@ void main() {
     });
   });
 
-  group('SAC8 voice coach toggle', () {
+  group('SAC8 coach toggles and media button parity', () {
     testWidgets('AppBar headset button toggles voiceCoachProvider',
         (tester) async {
       final (container, _) = await pumpSession(tester);
@@ -477,6 +478,72 @@ void main() {
       expect(find.byIcon(Icons.headset_off_outlined), findsOneWidget);
       expect(find.byIcon(Icons.headset_mic), findsNothing);
       expect(container.read(voiceCoachProvider).enabled, isFalse);
+    });
+
+    testWidgets('Earbud toggle is mutually exclusive with Voice Dictation',
+        (tester) async {
+      final (container, _) = await pumpSession(tester);
+      await tester.pump();
+
+      // Enable earbud mode
+      await tester.tap(find.byIcon(Icons.headphones_outlined));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.headphones), findsOneWidget);
+
+      // Now enable voice dictation — this must turn OFF the earbud mode.
+      await tester.tap(find.byIcon(Icons.headset_off_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      expect(container.read(voiceCoachProvider).enabled, isTrue);
+      // Earbud toggle should revert to outlined (off)
+      expect(find.byIcon(Icons.headphones_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.headphones), findsNothing);
+      expect(container.read(earbudModeProvider), isFalse);
+    });
+
+    testWidgets('Earbud coach advances the session identically to Log set',
+        (tester) async {
+      final (container, _) = await pumpSession(tester);
+      driverOf(container).addExercise('Bench press');
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Enable earbud mode
+      await tester.tap(find.byIcon(Icons.headphones_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      // First, log an initial set on-screen (button requires one set to exist now)
+      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '5');
+      await tester.tap(find.text('Log set'));
+      await tester.pump();
+
+      final exerciseBefore = stateOf(container).draft!.exercises.single;
+      expect(exerciseBefore.sets, hasLength(1));
+      expect(exerciseBefore.sets[0].reps, 5);
+
+      // Simulate media button press via the provider's initialized coach
+      // This should identically repeat the last set (reps: 5)
+      container.read(earbudCoachProvider).handleMediaButton();
+      await tester.pump();
+
+      final exerciseAfter = stateOf(container).draft!.exercises.single;
+      expect(exerciseAfter.sets, hasLength(2));
+
+      // Simulate on-screen 'Repeat last set' and then 'Log set' for parity
+      await tester.tap(find.text('Repeat last set'));
+      await tester.pump();
+      await tester.tap(find.text('Log set'));
+      await tester.pump();
+
+      final exerciseAfterScreen = stateOf(container).draft!.exercises.single;
+      expect(exerciseAfterScreen.sets, hasLength(3));
+
+      // Parity check: both advanced the set identically (repeating the 5-rep set)
+      expect(exerciseAfter.sets[1].reps, 5);
+      expect(exerciseAfterScreen.sets[2].reps, 5);
     });
   });
 }

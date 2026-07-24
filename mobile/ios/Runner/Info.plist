@@ -4,7 +4,11 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-		<key>NSMicrophoneUsageDescription</key>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSMicrophoneUsageDescription</key>
 	<string>Sargent AI uses the microphone so you can dictate sets and commands hands-free.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Sargent AI transcribes your voice to log workouts and meals hands-free.</string>

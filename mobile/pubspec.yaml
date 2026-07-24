@@ -8,6 +8,8 @@ environment:
   flutter: '>=3.41.0'
 
 dependencies:
+  audio_service: ^0.18.19
+  just_audio: ^0.10.6
   flutter:
     sdk: flutter
   flutter_riverpod: ^2.6.1
@@ -18,6 +20,7 @@ dependencies:
   flutter_tts: ^4.2.0
   flutter_svg: ^2.0.10
   google_sign_in: ^6.2.2
+  audio_session: ^0.2.4
 
 dev_dependencies:
   flutter_test:
@@ -29,3 +32,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/audio/silence.mp3
