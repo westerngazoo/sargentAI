@@ -6,7 +6,6 @@ import 'dart:async';
 import 'session_driver.dart';
 import '../../audio/tts_scripts.dart';
 import 'audio_service_handler.dart';
-import '../domain/set_draft.dart';
 import 'voice_coach.dart';
 
 final earbudModeProvider = StateProvider<bool>((ref) => false);
