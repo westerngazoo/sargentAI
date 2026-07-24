@@ -6,14 +6,22 @@ class AudioServiceHandler extends BaseAudioHandler {
   final void Function() onMediaButtonPress;
 
   AudioServiceHandler({required this.onMediaButtonPress}) {
-    _player.setAsset('assets/audio/silence.mp3');
-    _player.setLoopMode(LoopMode.all);
+    _initAudio();
 
     playbackState.add(PlaybackState(
       controls: [MediaControl.pause],
       playing: true,
       processingState: AudioProcessingState.ready,
     ));
+  }
+
+  Future<void> _initAudio() async {
+    try {
+      await _player.setAsset('assets/audio/silence.mp3');
+      await _player.setLoopMode(LoopMode.all);
+    } catch (_) {
+      // Silently degrade on load failure (AC11)
+    }
   }
 
   Future<void> startSilentLoop() async {

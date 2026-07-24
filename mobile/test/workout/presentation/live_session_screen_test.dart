@@ -453,7 +453,7 @@ void main() {
     });
   });
 
-  group('SAC8 coach toggles (earbud vs voice)', () {
+  group('SAC8 coach toggles and media button parity', () {
     testWidgets('AppBar headset button toggles voiceCoachProvider',
         (tester) async {
       final (container, _) = await pumpSession(tester);
@@ -501,6 +501,42 @@ void main() {
       expect(find.byIcon(Icons.headphones_outlined), findsOneWidget);
       expect(find.byIcon(Icons.headphones), findsNothing);
       expect(container.read(earbudModeProvider), isFalse);
+    });
+
+    testWidgets('Earbud coach advances the session identically to Log set',
+        (tester) async {
+      final (container, _) = await pumpSession(tester);
+      driverOf(container).addExercise('Bench press');
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Enable earbud mode
+      await tester.tap(find.byIcon(Icons.headphones_outlined));
+      await tester.pump();
+      await tester.pump();
+
+      final exerciseBefore = stateOf(container).draft!.exercises.single;
+      expect(exerciseBefore.sets, isEmpty);
+
+      // Simulate media button press via the provider's initialized coach
+      container.read(earbudCoachProvider).handleMediaButton();
+      await tester.pump();
+
+      final exerciseAfter = stateOf(container).draft!.exercises.single;
+      expect(exerciseAfter.sets, hasLength(1));
+
+      // Simulate on-screen log set
+      // _log() reads reps from the TextField. We need to enter text first.
+      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '1');
+      await tester.tap(find.text('Log set'));
+      await tester.pump();
+
+      final exerciseAfterScreen = stateOf(container).draft!.exercises.single;
+      expect(exerciseAfterScreen.sets, hasLength(2));
+
+      // Parity check: both advanced the set identically
+      expect(exerciseAfter.sets[0].reps, 1);
+      expect(exerciseAfterScreen.sets[1].reps, 1);
     });
   });
 }
