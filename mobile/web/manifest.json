@@ -1,11 +1,11 @@
 {
-    "name": "fitai",
-    "short_name": "fitai",
+    "name": "Sargent AI",
+    "short_name": "Sargent AI",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#101408",
+    "theme_color": "#39511F",
+    "description": "Your AI training sergeant \u2014 on your six, every set.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
