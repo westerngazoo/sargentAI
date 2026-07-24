@@ -92,8 +92,11 @@ class EarbudCoach {
           session.devicesChangedEventStream.listen((event) async {
         if (event.devicesRemoved.isNotEmpty) {
           final devices = await session.getDevices();
+          // ignore: experimental_member_use
           final hasBluetooth = devices.any((d) =>
+              // ignore: experimental_member_use
               d.type == AudioDeviceType.bluetoothA2dp ||
+              // ignore: experimental_member_use
               d.type == AudioDeviceType.bluetoothSco);
           if (!hasBluetooth && _isActive) {
             // Turn off earbud coach if no bluetooth audio devices remain
