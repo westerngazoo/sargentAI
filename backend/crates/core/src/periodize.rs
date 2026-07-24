@@ -221,12 +221,22 @@ pub enum PlanError {
 // Math helpers
 // ---------------------------------------------------------------------------
 
-fn round_to_plate(kg: f64, inc: f64) -> f64 {
+/// Snap a load to the nearest plate increment. Shared with `authoring` so the
+/// two modules cannot drift on load math (assumes `inc` finite and > 0 —
+/// callers validate `plate_kg`).
+pub(crate) fn round_to_plate(kg: f64, inc: f64) -> f64 {
     (kg / inc).round() * inc
 }
 
-fn load(e1rm: Option<f64>, pct: f64, inc: f64) -> Option<f64> {
+/// `Some(round_to_plate(e1rm × pct))`, or `None` when the lift has no e1RM.
+pub(crate) fn load(e1rm: Option<f64>, pct: f64, inc: f64) -> Option<f64> {
     e1rm.map(|r| round_to_plate(r * pct, inc))
+}
+
+/// The canonical e1RM/lift map key — trimmed, lowercased. Shared with R-0015's
+/// keying and `authoring` so lookups always agree.
+pub(crate) fn lift_key(name: &str) -> String {
+    name.trim().to_lowercase()
 }
 
 fn lerp(a: f64, b: f64, t: f64) -> f64 {
@@ -290,7 +300,7 @@ where
                 .lifts
                 .iter()
                 .map(|lift| {
-                    let e = e1rm.get(&lift.trim().to_lowercase()).copied();
+                    let e = e1rm.get(&lift_key(lift)).copied();
                     let set = PrescribedSet {
                         reps,
                         intensity_pct: pct,

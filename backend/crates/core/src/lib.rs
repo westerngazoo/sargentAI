@@ -7,6 +7,7 @@
 pub mod adjust;
 pub mod aggregate;
 pub mod archetype;
+pub mod authoring;
 pub mod matching;
 pub mod nutrition;
 pub mod periodize;
@@ -26,6 +27,10 @@ pub use archetype::{
     Archetype, ArchetypeError, Confidence, DietTemplate, FrameProfile, HeightBand, LengthBand,
     MacroEmphasis, ProgramTemplate, Provenance, Somatotype, StructureTag, TrainingPhilosophy,
     VolumeBand, WidthBand,
+};
+pub use authoring::{
+    materialize, AuthorError, AuthoredExercise, AuthoredProgram, ClassPrescription, IntensityClass,
+    MaterializedCycle, MaterializedDay, MaterializedEntry, Schedule, ScheduleEntry, WorkSetLine,
 };
 pub use matching::{rank, RankedMatch};
 pub use nutrition::{Grams, Macros, NewNutritionLog, NutritionError, NutritionLog};
