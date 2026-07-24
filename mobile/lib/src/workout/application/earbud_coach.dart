@@ -88,13 +88,13 @@ class EarbudCoach {
   Future<void> _listenForEarbudDisconnects() async {
     try {
       final session = await AudioSession.instance;
-      _deviceChangeSubscription = session.devicesChangedEventStream.listen((event) async {
+      _deviceChangeSubscription =
+          session.devicesChangedEventStream.listen((event) async {
         if (event.devicesRemoved.isNotEmpty) {
           final devices = await session.getDevices();
           final hasBluetooth = devices.any((d) =>
-            d.type == AudioDeviceType.bluetoothA2dp ||
-            d.type == AudioDeviceType.bluetoothSco
-          );
+              d.type == AudioDeviceType.bluetoothA2dp ||
+              d.type == AudioDeviceType.bluetoothSco);
           if (!hasBluetooth && _isActive) {
             // Turn off earbud coach if no bluetooth audio devices remain
             _ref.read(earbudModeProvider.notifier).state = false;
@@ -126,12 +126,15 @@ class EarbudCoach {
     }
 
     final exercise = draft.exercises[state.currentExercise];
-    final isLastSet = exercise.sets.length >= 3; // Use a default of 3 sets for now (free-form logic)
+    final isLastSet = exercise.sets.length >=
+        3; // Use a default of 3 sets for now (free-form logic)
 
     if (isLastSet) {
       // All sets logged for this exercise, advance to next exercise or finish
       if (state.currentExercise + 1 < draft.exercises.length) {
-        _ref.read(sessionDriverProvider.notifier).selectExercise(state.currentExercise + 1);
+        _ref
+            .read(sessionDriverProvider.notifier)
+            .selectExercise(state.currentExercise + 1);
       } else {
         _ref.read(sessionDriverProvider.notifier).finish();
       }
@@ -142,10 +145,14 @@ class EarbudCoach {
         _ref.read(sessionDriverProvider.notifier).logSet(exercise.sets.last);
       } else {
         // Read text fields from the driver's UI if possible, else log empty
-        final error = _ref.read(sessionDriverProvider.notifier).logSet(const SetDraft(reps: null, weightKg: null, rpe: null));
+        final error = _ref
+            .read(sessionDriverProvider.notifier)
+            .logSet(const SetDraft(reps: null, weightKg: null, rpe: null));
         if (error != null) {
           // Could not log empty set (validation), so default to 1 rep
-          _ref.read(sessionDriverProvider.notifier).logSet(const SetDraft(reps: 1, weightKg: null, rpe: null));
+          _ref
+              .read(sessionDriverProvider.notifier)
+              .logSet(const SetDraft(reps: 1, weightKg: null, rpe: null));
         }
       }
     }
@@ -182,7 +189,8 @@ class EarbudCoach {
       await _speak(TtsScripts.rest);
       await _tts.awaitSpeakCompletion(true);
       if (_isActive && currentSetCount < 3) {
-        await _speak(TtsScripts.setStart(currentSetCount + 1, null, null, null));
+        await _speak(
+            TtsScripts.setStart(currentSetCount + 1, null, null, null));
       }
     }
   }

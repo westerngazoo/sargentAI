@@ -1,5 +1,6 @@
 class TtsScripts {
-  static String exerciseStart(String name, int? sets, int? reps, double? weight) {
+  static String exerciseStart(
+      String name, int? sets, int? reps, double? weight) {
     if (sets == null || reps == null) {
       return 'Next: $name.';
     }
