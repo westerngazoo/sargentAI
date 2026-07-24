@@ -515,28 +515,35 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      // First, log an initial set on-screen (button requires one set to exist now)
+      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '5');
+      await tester.tap(find.text('Log set'));
+      await tester.pump();
+
       final exerciseBefore = stateOf(container).draft!.exercises.single;
-      expect(exerciseBefore.sets, isEmpty);
+      expect(exerciseBefore.sets, hasLength(1));
+      expect(exerciseBefore.sets[0].reps, 5);
 
       // Simulate media button press via the provider's initialized coach
+      // This should identically repeat the last set (reps: 5)
       container.read(earbudCoachProvider).handleMediaButton();
       await tester.pump();
 
       final exerciseAfter = stateOf(container).draft!.exercises.single;
-      expect(exerciseAfter.sets, hasLength(1));
+      expect(exerciseAfter.sets, hasLength(2));
 
-      // Simulate on-screen log set
-      // _log() reads reps from the TextField. We need to enter text first.
-      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '1');
+      // Simulate on-screen 'Repeat last set' and then 'Log set' for parity
+      await tester.tap(find.text('Repeat last set'));
+      await tester.pump();
       await tester.tap(find.text('Log set'));
       await tester.pump();
 
       final exerciseAfterScreen = stateOf(container).draft!.exercises.single;
-      expect(exerciseAfterScreen.sets, hasLength(2));
+      expect(exerciseAfterScreen.sets, hasLength(3));
 
-      // Parity check: both advanced the set identically
-      expect(exerciseAfter.sets[0].reps, 1);
-      expect(exerciseAfterScreen.sets[1].reps, 1);
+      // Parity check: both advanced the set identically (repeating the 5-rep set)
+      expect(exerciseAfter.sets[1].reps, 5);
+      expect(exerciseAfterScreen.sets[2].reps, 5);
     });
   });
 }

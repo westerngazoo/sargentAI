@@ -25,4 +25,5 @@ class TtsScripts {
 
   static const String rest = 'Rest.';
   static const String workoutDone = 'Workout done.';
+  static const String seedFirstSet = 'Log your first set on screen.';
 }

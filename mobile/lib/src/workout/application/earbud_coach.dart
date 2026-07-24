@@ -147,16 +147,8 @@ class EarbudCoach {
         // Repeat the last set
         _ref.read(sessionDriverProvider.notifier).logSet(exercise.sets.last);
       } else {
-        // Read text fields from the driver's UI if possible, else log empty
-        final error = _ref
-            .read(sessionDriverProvider.notifier)
-            .logSet(const SetDraft(reps: null, weightKg: null, rpe: null));
-        if (error != null) {
-          // Could not log empty set (validation), so default to 1 rep
-          _ref
-              .read(sessionDriverProvider.notifier)
-              .logSet(const SetDraft(reps: 1, weightKg: null, rpe: null));
-        }
+        // Must not fabricate data. Require the first set to be logged on-screen.
+        _speak(TtsScripts.seedFirstSet);
       }
     }
   }
