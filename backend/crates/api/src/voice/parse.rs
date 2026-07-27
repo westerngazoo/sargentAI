@@ -340,7 +340,10 @@ impl LlmConfig {
 }
 
 /// Extracts the assistant's tool call (if present) from a provider-specific response body.
-fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Option<serde_json::Value> {
+fn extract_llm_tool_call(
+    provider: LlmProvider,
+    json: &serde_json::Value,
+) -> Option<serde_json::Value> {
     match provider {
         LlmProvider::Anthropic => {
             let content = json["content"].as_array()?;
