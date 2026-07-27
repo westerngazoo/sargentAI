@@ -73,6 +73,29 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_logs_meal_with_history(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein, 60 carbs, 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": "Tell me the grams of protein, carbs, and fat." }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
