@@ -372,6 +372,7 @@ fn extract_llm_tool_call(
 
 const LLM_SYSTEM_PROMPT: &str = "You are a gym voice assistant. Map user intents to function calls. If an intent lacks required arguments (like macros for a meal), call 'clarify' to ask for them. NEVER guess macros.";
 
+#[allow(clippy::too_many_lines)]
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
