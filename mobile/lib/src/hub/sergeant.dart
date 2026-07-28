@@ -61,15 +61,16 @@ class SergeantState {
     bool? awaitingMacros,
     String? navigateTo,
     bool clearNavigation = false,
-  }) => SergeantState(
-    conversing: conversing ?? this.conversing,
-    listening: listening ?? this.listening,
-    transcript: transcript ?? this.transcript,
-    line: line ?? this.line,
-    history: history ?? this.history,
-    awaitingMacros: awaitingMacros ?? this.awaitingMacros,
-    navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
-  );
+  }) =>
+      SergeantState(
+        conversing: conversing ?? this.conversing,
+        listening: listening ?? this.listening,
+        transcript: transcript ?? this.transcript,
+        line: line ?? this.line,
+        history: history ?? this.history,
+        awaitingMacros: awaitingMacros ?? this.awaitingMacros,
+        navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
+      );
 }
 
 final sergeantProvider = NotifierProvider<Sergeant, SergeantState>(
@@ -163,14 +164,14 @@ class Sergeant extends Notifier<SergeantState> {
       // The current transcript was just appended to state.history, so we exclude the last element.
       final history = state.history.length > 1
           ? state.history
-                .sublist(0, state.history.length - 1)
-                .map(
-                  (turn) => {
-                    'role': turn.fromUser ? 'user' : 'assistant',
-                    'content': turn.text,
-                  },
-                )
-                .toList()
+              .sublist(0, state.history.length - 1)
+              .map(
+                (turn) => {
+                  'role': turn.fromUser ? 'user' : 'assistant',
+                  'content': turn.text,
+                },
+              )
+              .toList()
           : null;
 
       final result = await ref
@@ -298,7 +299,7 @@ class Sergeant extends Notifier<SergeantState> {
           transcript.isEmpty
               ? 'Say: start workout, plan workout, or log a meal.'
               : 'Did not get "$transcript" — say start workout, '
-                    'plan workout, or log a meal.',
+                  'plan workout, or log a meal.',
         );
         return true;
     }
@@ -340,8 +341,7 @@ class Sergeant extends Notifier<SergeantState> {
   Future<bool> _logMeal(double p, double c, double f, {String? label}) async {
     try {
       final today = DateTime.now();
-      final iso =
-          '${today.year.toString().padLeft(4, '0')}-'
+      final iso = '${today.year.toString().padLeft(4, '0')}-'
           '${today.month.toString().padLeft(2, '0')}-'
           '${today.day.toString().padLeft(2, '0')}';
       final log = await ref
