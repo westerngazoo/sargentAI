@@ -61,20 +61,20 @@ class SergeantState {
     bool? awaitingMacros,
     String? navigateTo,
     bool clearNavigation = false,
-  }) =>
-      SergeantState(
-        conversing: conversing ?? this.conversing,
-        listening: listening ?? this.listening,
-        transcript: transcript ?? this.transcript,
-        line: line ?? this.line,
-        history: history ?? this.history,
-        awaitingMacros: awaitingMacros ?? this.awaitingMacros,
-        navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
-      );
+  }) => SergeantState(
+    conversing: conversing ?? this.conversing,
+    listening: listening ?? this.listening,
+    transcript: transcript ?? this.transcript,
+    line: line ?? this.line,
+    history: history ?? this.history,
+    awaitingMacros: awaitingMacros ?? this.awaitingMacros,
+    navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
+  );
 }
 
-final sergeantProvider =
-    NotifierProvider<Sergeant, SergeantState>(Sergeant.new);
+final sergeantProvider = NotifierProvider<Sergeant, SergeantState>(
+  Sergeant.new,
+);
 
 class Sergeant extends Notifier<SergeantState> {
   /// Fruitless rounds (silence or unknown) tolerated before standing by.
@@ -90,13 +90,16 @@ class Sergeant extends Notifier<SergeantState> {
     await ref.read(voiceOutputProvider).initialize();
     if (!await speech.initialize()) {
       state = state.copyWith(
-          line: 'Voice input is not available here — tap an option instead.');
+        line: 'Voice input is not available here — tap an option instead.',
+      );
       return;
     }
     _idleRounds = 0;
     state = state.copyWith(conversing: true, awaitingMacros: false);
-    await _say('Sergeant here. Say: start workout, plan workout, '
-        'log a meal. Finish every command with over.');
+    await _say(
+      'Sergeant here. Say: start workout, plan workout, '
+      'log a meal. Finish every command with over.',
+    );
     await _listenOnce();
   }
 
@@ -156,8 +159,23 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      // Pass the history up to (but not including) this current turn.
+      // The current transcript was just appended to state.history, so we exclude the last element.
+      final history = state.history.length > 1
+          ? state.history
+                .sublist(0, state.history.length - 1)
+                .map(
+                  (turn) => {
+                    'role': turn.fromUser ? 'user' : 'assistant',
+                    'content': turn.text,
+                  },
+                )
+                .toList()
+          : null;
+
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, history: history);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
@@ -197,8 +215,12 @@ class Sergeant extends Notifier<SergeantState> {
       final preset = matchPresetMeal(transcript);
       if (preset != null) {
         _idleRounds = 0;
-        return _logMeal(preset.proteinG, preset.carbsG, preset.fatG,
-            label: preset.name);
+        return _logMeal(
+          preset.proteinG,
+          preset.carbsG,
+          preset.fatG,
+          label: preset.name,
+        );
       }
     }
 
@@ -216,13 +238,19 @@ class Sergeant extends Notifier<SergeantState> {
         if (portion != null) return _logFood(portion.food, portion.grams);
         final preset = matchPresetMeal(transcript);
         if (preset != null) {
-          return _logMeal(preset.proteinG, preset.carbsG, preset.fatG,
-              label: preset.name);
+          return _logMeal(
+            preset.proteinG,
+            preset.carbsG,
+            preset.fatG,
+            label: preset.name,
+          );
         }
         state = state.copyWith(awaitingMacros: true);
-        await _say('Tell me the grams of protein, carbs, and fat — '
-            'a portion like 200 grams of chicken breast — or a preset, '
-            'like protein shake.');
+        await _say(
+          'Tell me the grams of protein, carbs, and fat — '
+          'a portion like 200 grams of chicken breast — or a preset, '
+          'like protein shake.',
+        );
         return true;
       case LogWorkoutIntent():
         await _say('Starting your session.');
@@ -237,11 +265,15 @@ class Sergeant extends Notifier<SergeantState> {
         if (summary != null) {
           await _say(summary);
           state = state.copyWith(
-              conversing: false, navigateTo: '/programs/current');
+            conversing: false,
+            navigateTo: '/programs/current',
+          );
         } else {
           await _say('No plan yet — let us find your body match.');
-          state =
-              state.copyWith(conversing: false, navigateTo: '/programs/get');
+          state = state.copyWith(
+            conversing: false,
+            navigateTo: '/programs/get',
+          );
         }
         return false;
       case BodyMatchIntent():
@@ -262,10 +294,12 @@ class Sergeant extends Notifier<SergeantState> {
           state = state.copyWith(conversing: false);
           return false;
         }
-        await _say(transcript.isEmpty
-            ? 'Say: start workout, plan workout, or log a meal.'
-            : 'Did not get "$transcript" — say start workout, '
-                'plan workout, or log a meal.');
+        await _say(
+          transcript.isEmpty
+              ? 'Say: start workout, plan workout, or log a meal.'
+              : 'Did not get "$transcript" — say start workout, '
+                    'plan workout, or log a meal.',
+        );
         return true;
     }
   }
@@ -280,8 +314,11 @@ class Sergeant extends Notifier<SergeantState> {
     if (followUpPreset != null && !RegExp(r'\d').hasMatch(transcript)) {
       state = state.copyWith(awaitingMacros: false);
       return _logMeal(
-          followUpPreset.proteinG, followUpPreset.carbsG, followUpPreset.fatG,
-          label: followUpPreset.name);
+        followUpPreset.proteinG,
+        followUpPreset.carbsG,
+        followUpPreset.fatG,
+        label: followUpPreset.name,
+      );
     }
     final macros = parseMacros(transcript);
     if (macros == null) {
@@ -290,8 +327,10 @@ class Sergeant extends Notifier<SergeantState> {
         state = state.copyWith(conversing: false, awaitingMacros: false);
         return false;
       }
-      await _say('Grams of protein, carbs, and fat — for example: '
-          '40 protein, 60 carbs, 20 fat.');
+      await _say(
+        'Grams of protein, carbs, and fat — for example: '
+        '40 protein, 60 carbs, 20 fat.',
+      );
       return true;
     }
     state = state.copyWith(awaitingMacros: false);
@@ -301,15 +340,18 @@ class Sergeant extends Notifier<SergeantState> {
   Future<bool> _logMeal(double p, double c, double f, {String? label}) async {
     try {
       final today = DateTime.now();
-      final iso = '${today.year.toString().padLeft(4, '0')}-'
+      final iso =
+          '${today.year.toString().padLeft(4, '0')}-'
           '${today.month.toString().padLeft(2, '0')}-'
           '${today.day.toString().padLeft(2, '0')}';
       final log = await ref
           .read(nutritionServiceProvider)
           .create(performedOn: iso, proteinG: p, carbsG: c, fatG: f);
       final what = label == null ? 'Meal logged' : 'Logged $label';
-      await _say('$what: ${_g(p)} protein, ${_g(c)} carbs, '
-          '${_g(f)} fat — ${log.calories.round()} calories. What else?');
+      await _say(
+        '$what: ${_g(p)} protein, ${_g(c)} carbs, '
+        '${_g(f)} fat — ${log.calories.round()} calories. What else?',
+      );
       return true;
     } catch (_) {
       await _say('Could not save the meal — try again in a moment.');
@@ -329,8 +371,10 @@ class Sergeant extends Notifier<SergeantState> {
     final match = matches.where((f) => f.hasData).firstOrNull;
     if (match == null) {
       state = state.copyWith(awaitingMacros: true);
-      await _say('Could not find $food — tell me the grams of protein, '
-          'carbs, and fat instead.');
+      await _say(
+        'Could not find $food — tell me the grams of protein, '
+        'carbs, and fat instead.',
+      );
       return true;
     }
     final factor = grams / 100.0;
@@ -356,7 +400,9 @@ class Sergeant extends Notifier<SergeantState> {
 
   Future<void> _say(String line) async {
     state = state.copyWith(
-        line: line, history: _appended(fromUser: false, text: line));
+      line: line,
+      history: _appended(fromUser: false, text: line),
+    );
     await ref.read(voiceOutputProvider).speak(line);
   }
 

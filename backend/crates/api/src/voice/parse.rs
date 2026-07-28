@@ -336,40 +336,85 @@ impl LlmConfig {
     }
 }
 
-/// Extracts the assistant's text from a provider-specific response body.
-fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<String> {
-    let field = match provider {
-        LlmProvider::Anthropic => &json["content"][0]["text"],
-        LlmProvider::OpenAiCompatible => &json["choices"][0]["message"]["content"],
-    };
-    field.as_str().map(str::to_string)
-}
+const LLM_PROMPT_HEAD: &str = "You are a gym voice assistant. \
+You help users log their workouts and meals.";
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
-
+#[allow(clippy::too_many_lines)]
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: Option<&[super::handlers::Turn]>,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
-         Return ONE of:\n\
-         {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
-         {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
-         {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
-         {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
-         {{\"action\":\"unknown\",\"message\":\"...\"}}"
+        Call the appropriate tool if you have enough information, \
+        otherwise reply with a clarifying question."
     );
+
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+    if let Some(hist) = history {
+        for t in hist {
+            // Anthropic strictly requires messages to start with a 'user' turn.
+            // If the first message in history is from 'assistant', skip it.
+            if messages.is_empty() && t.role == "assistant" {
+                continue;
+            }
+            messages.push(serde_json::json!({"role": t.role, "content": t.content}));
+        }
+    }
+    messages.push(serde_json::json!({"role": "user", "content": transcript}));
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
+            let tools = serde_json::json!([
+                {
+                    "name": "log_workout",
+                    "description": "Log a workout set.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "exercise": {"type": "string"},
+                            "reps": {"type": "integer"},
+                            "weight_kg": {"type": "number"}
+                        },
+                        "required": ["exercise", "reps"]
+                    }
+                },
+                {
+                    "name": "log_meal",
+                    "description": "Log a meal with macros.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "protein_g": {"type": "number"},
+                            "carbs_g": {"type": "number"},
+                            "fat_g": {"type": "number"}
+                        },
+                        "required": ["protein_g", "carbs_g", "fat_g"]
+                    }
+                },
+                {
+                    "name": "navigate",
+                    "description": "Navigate to a different screen.",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "route": {"type": "string", "enum": ["/session", "/home", "/programs/current", "/programs/get", "/onboarding"]},
+                            "message": {"type": "string"}
+                        },
+                        "required": ["route", "message"]
+                    }
+                }
+            ]);
+
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "system": prompt,
+                "messages": messages,
+                "tools": tools,
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -378,12 +423,65 @@ pub(super) async fn parse_with_llm(
             (body, req)
         }
         LlmProvider::OpenAiCompatible => {
+            let tools = serde_json::json!([
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "log_workout",
+                        "description": "Log a workout set.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "exercise": {"type": "string"},
+                                "reps": {"type": "integer"},
+                                "weight_kg": {"type": "number"}
+                            },
+                            "required": ["exercise", "reps"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "log_meal",
+                        "description": "Log a meal with macros.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "protein_g": {"type": "number"},
+                                "carbs_g": {"type": "number"},
+                                "fat_g": {"type": "number"}
+                            },
+                            "required": ["protein_g", "carbs_g", "fat_g"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "navigate",
+                        "description": "Navigate to a different screen.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "route": {"type": "string", "enum": ["/session", "/home", "/programs/current", "/programs/get", "/onboarding"]},
+                                "message": {"type": "string"}
+                            },
+                            "required": ["route", "message"]
+                        }
+                    }
+                }
+            ]);
+
+            let mut oai_messages = vec![serde_json::json!({"role": "system", "content": prompt})];
+            oai_messages.extend(messages);
+
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
                 "stream": false,
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": oai_messages,
+                "tools": tools,
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
@@ -409,22 +507,56 @@ pub(super) async fn parse_with_llm(
     let body_text = resp.text().await.map_err(|_| ApiError::Upstream)?;
     let json: serde_json::Value =
         serde_json::from_str(&body_text).map_err(|_| ApiError::Upstream)?;
-    let text = extract_llm_text(cfg.provider, &json).ok_or(ApiError::Upstream)?;
-    let parsed: serde_json::Value = serde_json::from_str(text.trim())
-        .or_else(|_| extract_json_object(&text))
-        .map_err(|()| ApiError::Upstream)?;
-    llm_json_to_action(&parsed, today)
+
+    match cfg.provider {
+        LlmProvider::Anthropic => {
+            if let Some(content) = json["content"].as_array() {
+                for block in content {
+                    if block["type"].as_str() == Some("tool_use") {
+                        let name = block["name"].as_str().unwrap_or_default();
+                        let input = &block["input"];
+                        return handle_tool_call(name, input, today);
+                    }
+                }
+                // Fallback to text if no tool called.
+                for block in content {
+                    if block["type"].as_str() == Some("text") {
+                        if let Some(text) = block["text"].as_str() {
+                            return Ok(ParsedAction::Response(IntentResponse::clarify(text)));
+                        }
+                    }
+                }
+            }
+        }
+        LlmProvider::OpenAiCompatible => {
+            if let Some(msg) = json["choices"][0]["message"].as_object() {
+                if let Some(tool_calls) = msg.get("tool_calls").and_then(|t| t.as_array()) {
+                    if let Some(func) = tool_calls.first().and_then(|t| t.get("function")) {
+                        let name = func["name"].as_str().unwrap_or_default();
+                        let args_str = func["arguments"].as_str().unwrap_or("{}");
+                        let input: serde_json::Value =
+                            serde_json::from_str(args_str).unwrap_or(serde_json::json!({}));
+                        return handle_tool_call(name, &input, today);
+                    }
+                }
+                // Fallback to text if no tool called.
+                if let Some(text) = msg.get("content").and_then(|c| c.as_str()) {
+                    return Ok(ParsedAction::Response(IntentResponse::clarify(text)));
+                }
+            }
+        }
+    }
+
+    Err(ApiError::Upstream)
 }
 
-fn extract_json_object(text: &str) -> Result<serde_json::Value, ()> {
-    let start = text.find('{').ok_or(())?;
-    let end = text.rfind('}').ok_or(())?;
-    serde_json::from_str(&text[start..=end]).map_err(|_| ())
-}
-
-fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<ParsedAction> {
-    match v["action"].as_str() {
-        Some("log_workout") => {
+fn handle_tool_call(
+    name: &str,
+    v: &serde_json::Value,
+    today: NaiveDate,
+) -> ApiResult<ParsedAction> {
+    match name {
+        "log_workout" => {
             let exercise = v["exercise"].as_str().unwrap_or("Exercise");
             let reps = i32::try_from(v["reps"].as_i64().ok_or(ApiError::Upstream)?)
                 .map_err(|_| ApiError::Upstream)?;
@@ -435,7 +567,7 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
                 NewWorkoutSession::new(today, vec![ex], today).map_err(|_| ApiError::Upstream)?;
             Ok(ParsedAction::Workout(session))
         }
-        Some("log_meal") => {
+        "log_meal" => {
             let p = v["protein_g"].as_f64().ok_or(ApiError::Upstream)?;
             let c = v["carbs_g"].as_f64().ok_or(ApiError::Upstream)?;
             let f = v["fat_g"].as_f64().ok_or(ApiError::Upstream)?;
@@ -443,15 +575,12 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
                 .map_err(|e| ApiError::Validation { field: e.field() })?;
             Ok(ParsedAction::Nutrition(log))
         }
-        Some("clarify") => Ok(ParsedAction::Response(IntentResponse::clarify(
-            v["prompt"].as_str().unwrap_or("Can you say that again?"),
-        ))),
-        Some("navigate") => Ok(ParsedAction::Response(IntentResponse::navigate(
+        "navigate" => Ok(ParsedAction::Response(IntentResponse::navigate(
             v["route"].as_str().unwrap_or("/home"),
             v["message"].as_str().unwrap_or("Roger."),
         ))),
         _ => Ok(ParsedAction::Response(IntentResponse::unknown(
-            v["message"].as_str().unwrap_or("Didn't understand that."),
+            "Unknown action.",
         ))),
     }
 }
@@ -521,21 +650,5 @@ mod tests {
         assert_eq!(cfg.base_url, "http://gpu-box:8000/v1");
         assert_eq!(cfg.model, "qwen3.5:9b");
         assert_eq!(cfg.api_key, "token");
-    }
-
-    #[test]
-    fn extract_text_reads_each_provider_shape() {
-        let anthropic = serde_json::json!({"content": [{"text": "hi from claude"}]});
-        assert_eq!(
-            extract_llm_text(LlmProvider::Anthropic, &anthropic).as_deref(),
-            Some("hi from claude")
-        );
-        let openai = serde_json::json!({"choices": [{"message": {"content": "hi from ollama"}}]});
-        assert_eq!(
-            extract_llm_text(LlmProvider::OpenAiCompatible, &openai).as_deref(),
-            Some("hi from ollama")
-        );
-        // Wrong shape → None (caller falls back).
-        assert!(extract_llm_text(LlmProvider::Anthropic, &openai).is_none());
     }
 }
