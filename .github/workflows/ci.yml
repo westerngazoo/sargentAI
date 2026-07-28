@@ -86,7 +86,11 @@ jobs:
         with:
           flutter-version-file: mobile/.flutter-version
           channel: stable
-      - run: flutter pub get
+      # Plain `flutter pub get` rewrites pubspec.lock in place and accepts any
+      # already-valid resolution, so a lock resolved on a different SDK is
+      # silently tolerated and the job goes green on a lockfile that never
+      # matched the pinned toolchain. --enforce-lockfile fails instead.
+      - run: flutter pub get --enforce-lockfile
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
