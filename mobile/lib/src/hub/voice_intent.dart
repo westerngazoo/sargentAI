@@ -4,6 +4,9 @@
 // Deliberately dumb: the LLM-backed parser (R-0032 AC3) replaces this later;
 // the sealed intent type is the seam that stays.
 
+/// One bubble in the hub's chat thread.
+typedef ChatTurn = ({bool fromUser, String text});
+
 /// A recognised (or unrecognised) voice command.
 sealed class VoiceIntent {
   const VoiceIntent();

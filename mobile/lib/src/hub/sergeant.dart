@@ -19,9 +19,6 @@ import 'voice_intent_service.dart';
 import 'voice_protocol.dart';
 import 'voice_output.dart';
 
-/// One bubble in the hub's chat thread.
-typedef ChatTurn = ({bool fromUser, String text});
-
 @immutable
 class SergeantState {
   const SergeantState({
@@ -156,8 +153,9 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, state.history);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.

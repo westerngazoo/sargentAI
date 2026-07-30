@@ -345,12 +345,13 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
     field.as_str().map(str::to_string)
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only. If required fields are missing, return a clarify JSON instead of committing early.";
 
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[super::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
@@ -364,12 +365,21 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
+    let mut messages: Vec<serde_json::Value> = history
+        .iter()
+        .map(|turn| {
+            let role = if turn.from_user { "user" } else { "assistant" };
+            serde_json::json!({"role": role, "content": turn.text})
+        })
+        .collect();
+    messages.push(serde_json::json!({"role": "user", "content": prompt}));
+
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -383,7 +393,7 @@ pub(super) async fn parse_with_llm(
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
