@@ -1,0 +1,69 @@
+# Build the API container on native amd64 and deploy it to Cloudflare Containers.
+#
+# Why this exists rather than `wrangler deploy` from a laptop: Cloudflare
+# Containers only runs linux/amd64 images, and cross-building one from an arm64
+# Mac goes through QEMU, where `cc` reliably segfaults compiling ring's
+# `p256.c`. GitHub's ubuntu-latest runners are native amd64, so the same build
+# that already passes in ci.yml just works here.
+#
+# Requires one repository secret:
+#   CLOUDFLARE_API_TOKEN — needs "Workers Scripts: Edit" plus Containers access.
+#                          Create at https://dash.cloudflare.com/profile/api-tokens
+#
+# Manual by default: deploying is a deliberate act, not something every push
+# should trigger.
+
+name: deploy api
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to publish"
+        required: false
+        default: "latest"
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build (amd64) + deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/cloudflare
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      # Builds ../../backend/Dockerfile (the path in wrangler.jsonc) for
+      # linux/amd64 and pushes it to registry.cloudflare.com, then rolls the
+      # Worker + container binding forward.
+      #
+      # DATABASE_URL and JWT_SECRET are NOT set here — they are Worker secrets
+      # managed out of band with `wrangler secret put`, so no credential ever
+      # passes through CI.
+      - name: deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: smoke check
+        run: |
+          url="https://fitai-api.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev/health"
+          echo "probing $url"
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+            echo "  attempt $i -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "container did not report healthy" >&2
+          exit 1
