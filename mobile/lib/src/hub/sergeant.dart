@@ -159,7 +159,9 @@ class Sergeant extends Notifier<SergeantState> {
       final result = await ref.read(voiceIntentServiceProvider).parse(
             transcript,
             // Pass history excluding the just-appended current transcript.
-            history: state.history.isEmpty ? null : state.history.sublist(0, state.history.length - 1),
+            history: state.history.isEmpty
+                ? null
+                : state.history.sublist(0, state.history.length - 1),
           );
       return _handleBackendResult(result);
     } catch (_) {

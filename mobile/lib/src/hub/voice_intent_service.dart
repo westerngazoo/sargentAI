@@ -42,12 +42,14 @@ class VoiceIntentService {
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript, {List<ChatTurn>? history}) async {
+  Future<VoiceIntentResult> parse(String transcript,
+      {List<ChatTurn>? history}) async {
     try {
       final data = <String, dynamic>{'transcript': transcript};
       if (history != null && history.isNotEmpty) {
         data['history'] = history
-            .map((t) => {'role': t.fromUser ? 'user' : 'assistant', 'content': t.text})
+            .map((t) =>
+                {'role': t.fromUser ? 'user' : 'assistant', 'content': t.text})
             .toList();
       }
       final res = await _dio.post<Map<String, dynamic>>(
