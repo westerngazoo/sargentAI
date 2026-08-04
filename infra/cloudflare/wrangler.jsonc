@@ -11,9 +11,29 @@
   "containers": [
     {
       "class_name": "FitaiApi",
-      "image": "../../backend/Dockerfile",
-      // 1 vCPU / 6 GiB — comfortable headroom for ONNX Runtime + Axum.
-      "instance_type": "standard-2",
+      // A pre-built image, not the Dockerfile path. Containers only runs
+      // linux/amd64, so building from an arm64 Mac goes through QEMU, where
+      // `cc` segfaults compiling ring's `p256.c` -- nondeterministically, so
+      // a Dockerfile reference here fails roughly half the time.
+      //
+      // Publish a new revision with:
+      //   docker buildx build --platform linux/amd64 -t sargent-api:amd64 --load backend
+      //   npx wrangler containers push sargent-api:amd64
+      // or let .github/workflows/deploy-api.yml do it on a native amd64 runner.
+      "image": "registry.cloudflare.com/b29359bde5d3c868c259e1171c2fff5c/sargent-api:amd64",
+      // 1/4 vCPU / 1 GiB / 4 GB. Billing is per allocated GiB-second while the
+      // instance is awake, and the plan includes 25 GiB-hours/month — which
+      // `standard-2` (6 GiB) would exhaust in ~4 hours of uptime. At 1 GiB a
+      // single user's usage stays inside the included allowance.
+      //
+      // Verified, not assumed: the image was run under a hard `--memory=1g`
+      // cap against the real database — ONNX/MoveNet initialised, /health 200
+      // in ~3s, and 120 concurrent requests produced no OOM and no restart.
+      //
+      // The tradeoff is CPU, not memory: photo pose-inference is the only
+      // CPU-heavy path and will be slower on 1/4 vCPU. Raise to `standard-1`+
+      // if photo processing becomes the bottleneck.
+      "instance_type": "basic",
       "max_instances": 3
     }
   ],

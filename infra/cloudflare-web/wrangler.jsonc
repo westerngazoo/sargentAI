@@ -1,0 +1,24 @@
+{
+  // Static hosting for the Flutter web build on Workers static assets.
+  //
+  // Free-plan compatible (unlike the container-backed API in ../cloudflare,
+  // which needs Workers Paid). The build must be produced with the API base
+  // pointed at the deployed backend, e.g.
+  //
+  //   flutter build web --release \
+  //     --dart-define=API_BASE_URL=https://sargent-api.goosethropic.systems
+  //
+  // because API_BASE_URL is compile-time (AppConfig.apiBaseUrl), not runtime.
+  "name": "sargent-ai",
+  "compatibility_date": "2026-06-01",
+
+  "assets": {
+    // Flutter's release output.
+    "directory": "../../mobile/build/web",
+    // go_router owns client-side routing, so every unknown path must serve
+    // index.html rather than 404.
+    "not_found_handling": "single-page-application"
+  },
+
+  "observability": { "enabled": true }
+}
