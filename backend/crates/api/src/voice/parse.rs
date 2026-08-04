@@ -6,8 +6,8 @@ use fitai_core::{NewExercise, NewNutritionLog, NewSet, NewWorkoutSession};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ApiError, ApiResult};
 use super::handlers::Turn;
+use crate::error::{ApiError, ApiResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -483,7 +483,10 @@ fn anthropic_tools() -> serde_json::Value {
 }
 
 /// Extracts the tool call from a provider-specific response body.
-fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Option<serde_json::Value> {
+fn extract_llm_tool_call(
+    provider: LlmProvider,
+    json: &serde_json::Value,
+) -> Option<serde_json::Value> {
     match provider {
         LlmProvider::Anthropic => {
             let content = json["content"].as_array()?;
@@ -492,7 +495,10 @@ fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Opt
                     let mut args = block["input"].clone();
                     if let Some(name) = block["name"].as_str() {
                         if let Some(obj) = args.as_object_mut() {
-                            obj.insert("action".to_string(), serde_json::Value::String(name.to_string()));
+                            obj.insert(
+                                "action".to_string(),
+                                serde_json::Value::String(name.to_string()),
+                            );
                             return Some(args);
                         }
                     }
@@ -509,7 +515,10 @@ fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Opt
                     let args_str = call["function"]["arguments"].as_str()?;
                     if let Ok(mut args) = serde_json::from_str::<serde_json::Value>(args_str) {
                         if let Some(obj) = args.as_object_mut() {
-                            obj.insert("action".to_string(), serde_json::Value::String(name.to_string()));
+                            obj.insert(
+                                "action".to_string(),
+                                serde_json::Value::String(name.to_string()),
+                            );
                             return Some(args);
                         }
                     }
@@ -719,7 +728,8 @@ mod tests {
                 }
             ]
         });
-        let mut extracted_anthropic = extract_llm_tool_call(LlmProvider::Anthropic, &anthropic).unwrap();
+        let extracted_anthropic =
+            extract_llm_tool_call(LlmProvider::Anthropic, &anthropic).unwrap();
         assert_eq!(extracted_anthropic["action"], "clarify");
         assert_eq!(extracted_anthropic["prompt"], "How many reps?");
 
@@ -740,7 +750,8 @@ mod tests {
                 }
             ]
         });
-        let mut extracted_openai = extract_llm_tool_call(LlmProvider::OpenAiCompatible, &openai).unwrap();
+        let extracted_openai =
+            extract_llm_tool_call(LlmProvider::OpenAiCompatible, &openai).unwrap();
         assert_eq!(extracted_openai["action"], "log_workout");
         assert_eq!(extracted_openai["exercise"], "Squat");
         assert_eq!(extracted_openai["reps"], 5);
