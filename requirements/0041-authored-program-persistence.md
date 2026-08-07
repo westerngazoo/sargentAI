@@ -49,10 +49,11 @@ subscriptions) needs programs to exist in the database first.
 - **AC6. Ownership is enforced as absence.** A program owned by another user
   responds **404**, not 403 — the API must not disclose that an id exists.
 - **AC7. Materialize.** `GET /authored-programs/{id}/materialized` runs
-  `materialize(program, e1rm, plate_kg)` with **the caller's own e1RM**, sourced
-  from the R-0015 summary path (`LiftSummary.current_e1rm`), and returns the
-  concrete cycle with plate-rounded loads. A lift the caller has never trained
-  yields a `null` load rather than an error or a fabricated number.
+  `materialize(program, e1rm, plate_kg)` with **the caller's own e1RM**, derived
+  from R-0015's aggregation over the caller's logged sessions, and returns the
+  concrete cycle with plate-rounded loads. A lift the caller has not trained
+  **within the 8-week window** yields a `null` load rather than an error or a
+  fabricated number — a stale e1RM is a worse load anchor than none.
 - **AC8. Authentication.** Every endpoint requires a valid JWT; unauthenticated
   requests are **401**.
 - **AC9. Round-trip fidelity.** A program written and read back is byte-for-byte
@@ -74,7 +75,15 @@ subscriptions) needs programs to exist in the database first.
     visibility into someone else's program.
   - **Community/roster**, **subscriptions/billing** (M7).
   - Program-tied meal plans; weekday/date calendars.
-  - Any change to `core::authoring` itself — it is complete and reused as-is.
+  - ~~Any change to `core::authoring` itself.~~ **Amended 2026-08-04:** one
+    refactor of `core::authoring` is in scope — extracting the existing
+    validation behind a public `validate` entry point, over a shared `index()`
+    helper that `materialize` also uses. No behavioural change. This was forced
+    by architect review: the private `validate` cannot be exported as-is
+    (it takes an index map and `plate_kg`, and two of the eleven error variants
+    are raised outside it), and validating by calling `materialize` would make
+    `POST`'s coverage a side effect of another function's implementation.
+    `core::aggregate` also gains `current_e1rm` + `DEFAULT_WINDOW_WEEKS`.
 - `plate_kg` is a request-level concern for materialization, defaulted
   server-side; it is not stored on the program.
 

@@ -34,8 +34,11 @@ CREATE TABLE authored_programs (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX authored_programs_user_created_idx
-    ON authored_programs (user_id, created_at DESC);
+-- `id` is part of the ordering, not decoration: `created_at DESC` alone is not
+-- a total order, so two programs created in the same tick could swap places
+-- between requests. It also makes the index keyset-paginatable later.
+CREATE INDEX idx_authored_programs_user_created
+    ON authored_programs (user_id, created_at DESC, id DESC);
 ```
 
 `program` holds the whole serialized `AuthoredProgram`. `name` is duplicated out
@@ -65,19 +68,56 @@ error.
 
 ### 2.4 Validation (AC3)
 
-`POST` deserializes into `AuthoredProgram`, then calls the domain validator
-before touching the database. `materialize` is the only public entry point that
-validates, so v1 validates by calling `materialize` with an **empty** `E1rmMap`
-and a default plate: it exercises every `AuthorError` check while the `None`-load
-path makes the e1RM irrelevant, and the result is discarded.
+`POST` deserializes into `AuthoredProgram` and calls a **public domain
+validator** before touching the database.
 
-> **Note for the architect:** this is deliberate but slightly indirect — it
-> validates via a function whose primary job is materialization. The alternative
-> is exporting `authoring::validate` publicly from `core`. I lean toward
-> exporting `validate` as the honest interface; flagging it for your call.
+`core::authoring` is refactored so validation is a first-class entry point
+rather than a side effect of materialization:
+
+```rust
+/// Every program-level check, independent of any e1RM or plate increment.
+///
+/// # Errors
+/// [`AuthorError`] for a blank or duplicated exercise name, an empty or
+/// unreferenced schedule, or an invalid work-set line.
+pub fn validate(program: &AuthoredProgram) -> Result<(), AuthorError> {
+    index(program).map(|_| ())
+}
+
+/// key → exercise, rejecting blank/duplicate names, then the schedule and
+/// prescription checks. The single traversal `materialize` also needs.
+fn index(program: &AuthoredProgram)
+    -> Result<BTreeMap<String, &AuthoredExercise>, AuthorError>;
+```
+
+`materialize` becomes `let by_key = index(program)?; check_plate(plate_kg)?; …`
+— one traversal, no duplicated logic, no wasted allocation.
+
+This refactor is required, not cosmetic: the existing private `validate` takes
+an index map *and* `plate_kg`, and `BlankExercise`/`DuplicateExercise` are
+raised in `materialize`'s index loop rather than inside `validate`. Exporting it
+unchanged would silently lose two of the eleven tokens.
+
+Consequence: **`BadPlate` moves out of program validation** into
+materialization, so it is reachable from `/materialized` only — ten tokens from
+`POST`, one from `/materialized`.
+
+A core unit test pins the two entry points together so they cannot drift:
+`validate(p).is_ok() == materialize(p, &E1rmMap::new(), 2.5).is_ok()`.
+
+**Program name** is *request-level* validation, not a domain invariant: blank,
+whitespace-only, or over 120 chars → `ApiError::Validation { field: "name" }` →
+`400`. Deliberately not a new `AuthorError` variant, which would push an API
+concern into the domain model.
+
+**Malformed bodies** surface as axum's `JsonRejection`: `400` for syntax, `422`
+for shape, both with a plain-text body and **no `reason` field**. A client
+switching on `reason` must tolerate its absence on a 422.
 
 Each `AuthorError` variant maps to a fixed `&'static str` token on
-`ApiError::Unprocessable { reason }` → `422`:
+`ApiError::Unprocessable { reason }` → `422`, via an **exhaustive match with no
+`_` arm**, so a twelfth variant becomes a compile error rather than a silently
+wrong token:
 
 | `AuthorError` | `reason` token |
 |---|---|
@@ -100,36 +140,58 @@ name is recoverable client-side — the client holds the program it just sent.
 
 ### 2.5 Materialization (AC7)
 
+The e1RM derivation lives in **core**, not in the api crate:
+
 ```rust
-let summary = /* R-0015 path: sessions + measurements + target → summarize(...) */;
-let e1rm: E1rmMap = summary
-    .lifts
-    .iter()
-    .map(|l| (lift_key(&l.name), l.current_e1rm))
-    .collect();
+// core/src/aggregate.rs
+/// Per-lift current e1RM over the window, keyed for
+/// [`materialize`](crate::authoring::materialize) lookup.
+#[must_use]
+pub fn current_e1rm(today: NaiveDate, window_weeks: u32, sessions: &[WorkoutSession]) -> E1rmMap;
+
+/// The window every consumer of "what can this user currently lift" shares.
+pub const DEFAULT_WINDOW_WEEKS: u32 = 8;
+```
+
+so the handler is:
+
+```rust
+let sessions = db::find_sessions_by_user(&state.pool, user.user_id).await?;
+let e1rm = current_e1rm(today, DEFAULT_WINDOW_WEEKS, &sessions);
 let cycle = materialize(&program, &e1rm, plate_kg)?;
 ```
 
-`LiftSummary.current_e1rm` is a plain `f64`, so every lift the caller has trained
-contributes a value. A lift the caller has **never** trained is simply absent from
-the map, and `materialize` already emits `target_load_kg: None` for it — AC7's
-null-load path falls out of the existing domain behaviour with no special casing
-and no fabricated number.
+**Deliberately not** reusing `summary::handlers::fetch_inputs`, for three
+reasons: it is private (reuse would mean widening a sibling api module's
+internals — a lateral dependency, the opposite of pointing inward); it also
+fetches and deserializes the active *generated* program, so a corrupt
+`user_programs` row would produce a **500 from an authored-programs endpoint
+that has nothing to do with it**; and it computes muscle volume, adherence and
+body trend, all of which this endpoint discards. `db::find_sessions_by_user` is
+already `pub`.
 
-Reuses `summary`'s existing input-fetching rather than a second e1RM
-implementation, so there is one e1RM definition in the system (R-0015's).
+**AC7's null-load path is windowed.** `current_e1rm` considers only the last
+`DEFAULT_WINDOW_WEEKS`, so "a lift the caller has never trained" is really "has
+not trained in 8 weeks" — a lift last trained 9 weeks ago yields
+`target_load_kg: null`. That is the correct behaviour (a two-month-stale e1RM is
+a bad load anchor) but it is a decision, not an accident, and the AC7 mapping
+says so. The constant lives in one place; `summary/handlers.rs` switches to it
+rather than keeping a second `8`.
 
 `plate_kg` is an optional query parameter defaulting to `2.5` server-side
 (OQ-1), validated by `materialize` itself (`BadPlate` → `422`).
 
-### 2.6 Shared keying — one core change
+### 2.6 Keying stays in core
 
-`periodize::lift_key` is currently `pub(crate)`, so the api crate cannot reuse
-it. Inlining `name.trim().to_lowercase()` in the api crate would recreate exactly
-the keying drift SPEC-0039 §2.5 set out to prevent. Therefore: widen `lift_key`
-to `pub` and re-export it from `lib.rs`. Behaviour is unchanged; this is a
-visibility change only, and it keeps one keying rule across `aggregate`,
-`periodize`, `authoring` and now the api crate.
+`periodize::lift_key` stays `pub(crate)`. Putting `current_e1rm` in core (§2.5)
+means the api crate never needs to key a lift at all, so there is nothing to
+widen and no second copy of the rule to drift.
+
+Note for the record: SPEC-0039 §2.5's "one keying rule" claim is **not true
+today** — `aggregate::per_lift` inlines `trim()` + `to_lowercase()` rather than
+calling `lift_key`. Making `lift_key` public would have advertised a shared rule
+that isn't shared. Reconciling `per_lift` to call `lift_key` is worth doing but
+is out of scope here; this spec simply avoids adding a third copy.
 
 ### 2.7 DTOs
 
@@ -140,7 +202,10 @@ struct CreateRequest { program: AuthoredProgram }
 #[derive(Serialize)]
 struct ProgramResponse {           // fetch-one (AC5) + create (AC2)
     id: Uuid,
-    name: String,
+    // No `name` field: it is already inside `program`, and carrying it twice in
+    // one payload is two sources for one fact that will diverge the day update
+    // lands. The denormalized column exists for the list query (below), not for
+    // this response.
     program: AuthoredProgram,      // full round-trip value (AC9)
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -174,12 +239,17 @@ pub fn routes() -> Router<AppState> {
 }
 
 // authored/handlers.rs
+// Extractor order is an invariant, not a style choice: axum runs extractors
+// left to right, so `AuthenticatedUser` must precede `Path`/`Query`/`Json` in
+// every signature. Reversed, `GET /authored-programs/not-a-uuid` with no token
+// would return axum's 400 instead of AC8's 401.
 pub(crate) async fn create(
     State(state): State<AppState>,
     user: AuthenticatedUser,
     Json(body): Json<CreateRequest>,
 ) -> ApiResult<(StatusCode, Json<ProgramResponse>)> {
-    validate_program(&body.program).map_err(to_unprocessable)?;   // §2.4, before any write
+    check_name(&body.program.name)?;                              // §2.4, 400
+    validate(&body.program).map_err(to_unprocessable)?;           // §2.4, before any write
     let row: ProgramRow = sqlx::query_as(
         "INSERT INTO authored_programs (user_id, name, program) VALUES ($1, $2, $3) \
          RETURNING id, name, program, created_at, updated_at",
@@ -198,16 +268,36 @@ pub(crate) async fn materialized(
     Path(id): Path<Uuid>,
     Query(q): Query<MaterializeQuery>,       // plate_kg: Option<f64>
 ) -> ApiResult<Json<MaterializedCycle>> {
-    let program = load_owned(&state.pool, id, user.user_id).await?;   // 404 on non-owner
-    let e1rm = caller_e1rm(&state.pool, user).await?;                 // §2.5
+    let row = load_owned(&state.pool, id, user.user_id).await?;       // 404 on non-owner
+    let program = row.program()?;
+    let sessions = db::find_sessions_by_user(&state.pool, user.user_id).await?;
+    let e1rm = current_e1rm(today, DEFAULT_WINDOW_WEEKS, &sessions);  // §2.5
     let cycle = materialize(&program, &e1rm, q.plate_kg.unwrap_or(DEFAULT_PLATE_KG))
         .map_err(to_unprocessable)?;
     Ok(Json(cycle))
 }
+
+/// The one ownership-scoped read. Returns the **row**, not the program, so
+/// `fetch_one` can build its response from the same query rather than issuing a
+/// second one — otherwise the single-enforcement-point claim is false in
+/// exactly the place it matters.
+async fn load_owned(pool: &PgPool, id: Uuid, user_id: UserId) -> ApiResult<ProgramRow> {
+    sqlx::query_as(
+        "SELECT id, name, program, created_at, updated_at \
+         FROM authored_programs WHERE id = $1 AND user_id = $2",
+    )
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?
+    .ok_or(ApiError::NotFound)
+}
 ```
 
-`load_owned` is the single ownership-scoped read used by both `fetch_one` and
-`materialized`, so AC6 cannot be satisfied in one place and missed in the other.
+`ProgramRow::program(&self) -> ApiResult<AuthoredProgram>` deserializes the
+JSONB (`Internal` on failure), and `TryFrom<ProgramRow> for ProgramResponse`
+builds the response. Both `fetch_one` and `materialized` go through
+`load_owned`, so AC6 cannot be satisfied in one and missed in the other.
 
 ## 4. Non-goals
 
@@ -237,22 +327,40 @@ integration suite in §7 (AC10).
 
 `#[sqlx::test(migrations = "../../migrations")]` integration tests:
 
-1. each endpoint without a JWT → `401` (AC8)
+1. each endpoint without a JWT → `401` (AC8), including a **malformed** id with
+   no token → still `401`, pinning the extractor-order invariant in §3
 2. create valid program → `201`, id returned (AC2)
-3. create with a duplicate exercise name → `422 duplicate_exercise` (AC3)
-4. create with `load_pct = 1.5` → `422 bad_intensity` (AC3)
-5. create with an empty schedule → `422 no_schedule_days` (AC3)
-6. create with a schedule entry naming an unknown exercise → `422
-   unknown_exercise` (AC3)
-7. list returns only the caller's rows, newest first (AC4)
+3. **table-driven rejection sweep (AC3, AC10).** One `(mutation, expected_token)`
+   array covering **all ten** program-level tokens, one `POST` each:
+   `no_exercises`, `blank_exercise`, `duplicate_exercise`, `no_schedule_days`,
+   `no_scheduled_entries`, `unknown_exercise`, `empty_work_lines`,
+   `bad_intensity`, `bad_reps`, `bad_sets` — each asserting `422` **and** the
+   exact `reason`
+4. `/materialized?plate_kg=0` → `422 bad_plate` — the only path that reaches the
+   eleventh token after §2.4's refactor
+5. create with a blank / whitespace-only / >120-char name → `400` with
+   `field: "name"` (§2.4, request-level)
+6. list returns only the caller's rows, newest first (AC4)
+7. list with zero rows → `200 []`, not `404`
 8. fetch-one returns the stored program (AC5)
 9. second user fetching the first user's id → `404` (AC6)
 10. materialized after logging a Squat session → plate-rounded `target_load_kg`
     off the caller's e1RM (AC7)
 11. materialized for a program whose lift was never trained → `target_load_kg:
     null` (AC7)
-12. create → fetch-one round-trip deserializes to an `AuthoredProgram` equal to
-    the one sent (AC9)
+12. materialized uses **the caller's own** e1RM — seed sessions for user B and
+    assert user A's cycle is unaffected (the cross-user leak AC6 does not cover)
+13. create → fetch-one round-trip deserializes to an `AuthoredProgram` equal to
+    the one sent (AC9). Asserted on the **deserialized value** via the derived
+    `PartialEq`, never on JSON text: Postgres normalizes JSONB key order, so
+    byte-for-byte equality is not the guarantee and testing it would be flaky
+
+Core unit tests (no database):
+
+14. `validate` rejects each `AuthorError` variant it owns
+15. `validate(p).is_ok() == materialize(p, &E1rmMap::new(), 2.5).is_ok()` — pins
+    the two entry points together (§2.4)
+16. `to_unprocessable` maps all eleven variants to eleven **distinct** tokens
 
 ## 8. Decision log
 
@@ -263,9 +371,43 @@ integration suite in §7 (AC10).
 | 2026-07-29 | Non-owner → `404` through a single `load_owned` | Ownership as absence, enforced in one place so it cannot be half-applied. |
 | 2026-07-29 | `AuthorError` → fixed `&'static str` tokens | CLAUDE.md §6 forbids stringly-typed errors; accepts losing the dynamic name, which the client already has. |
 | 2026-07-29 | Build `E1rmMap` from R-0015's `summarize` | One e1RM definition in the system; no second implementation to drift. |
-| 2026-07-29 | Widen `periodize::lift_key` to `pub` | One keying rule across core and api; inlining `trim().to_lowercase()` would recreate the drift SPEC-0039 §2.5 prevented. |
+| 2026-08-04 | `lift_key` stays `pub(crate)`; `current_e1rm` moves into `core::aggregate` | Removes the api crate's need to key a lift at all. Supersedes the 2026-07-29 entry below, whose premise was wrong — `aggregate::per_lift` already inlines the rule, so `lift_key` was never the single shared path it claimed to be. |
+| 2026-08-04 | Public `authoring::validate` over a shared `index()` | Validation coverage must not be a side effect of `materialize`'s implementation; a future short-circuit there would silently weaken `POST`. |
+| 2026-08-04 | e1RM from `db::find_sessions_by_user`, not `summary`'s fetch path | Avoids a lateral api→api dependency on a private helper, and stops a corrupt generated-program row 500ing an unrelated endpoint. |
+| 2026-08-04 | AC7's "never trained" means "not in the last 8 weeks" | A two-month-stale e1RM is a bad load anchor; recorded so the windowing is a decision rather than a surprise. |
+| ~~2026-07-29~~ | ~~Widen `periodize::lift_key` to `pub`~~ | ~~One keying rule across core and api.~~ **Superseded** — see 2026-08-04 above. |
 
-## 9. Architect review — ACCEPT-WITH-CHANGES (2026-07-29)
+## 9. Architect review — ACCEPT-WITH-CHANGES (2026-07-29), all applied 2026-08-04
+
+Every required change below has been folded into the sections above. Summary of
+what moved, and why it mattered:
+
+| # | Change | Where |
+|---|---|---|
+| 1 | Public `validate` over a shared `index()`, not validation-by-`materialize` | §2.4 |
+| 2 | `db::find_sessions_by_user` + `core::aggregate::current_e1rm`, not `summary`'s private fetch | §2.5 |
+| 3 | `lift_key` stays `pub(crate)` | §2.6 |
+| 4 | `load_owned` returns the row | §3 |
+| 5 | AC7 is windowed; constant hoisted to core | §2.5, §6 |
+| 6 | `to_unprocessable` exhaustive, no `_` arm | §2.4 |
+| 7 | Program-name validation at request level → 400 | §2.4 |
+| 8 | `name` dropped from `ProgramResponse` | §2.7 |
+| 9 | Test plan table-driven over all ten tokens + `bad_plate` | §7 |
+| 10 | `ORDER BY created_at DESC, id DESC` + matching index | §2.1 |
+
+Two knock-on corrections worth stating plainly, since both contradict what this
+spec originally claimed:
+
+- **`BadPlate` is no longer reachable from `POST`.** Splitting validation from
+  materialization means plate validation belongs to the latter. The §2.4 table
+  is therefore ten-plus-one, not eleven.
+- **R-0041 §4's "no change to `core::authoring`" is now false**, and the
+  requirement has been amended. The change is a refactor that extracts existing
+  behaviour behind a public entry point — no behavioural change — but the
+  non-goal as written did not survive, and pretending otherwise would make the
+  requirement lie about its own scope.
+
+### Original review record
 
 Reviewed pre-implementation. The shape was accepted (self-contained module,
 whole-value JSONB, ownership-as-absence, materialization delegated to pure
