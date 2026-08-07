@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fitai-web",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "9500",
+        "--web-hostname",
+        "127.0.0.1"
+      ],
+      "port": 9500,
+      "cwd": "mobile"
+    }
+  ]
+}

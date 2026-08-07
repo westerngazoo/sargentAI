@@ -1,0 +1,49 @@
+# Fly.io deployment for fitai-api.
+#
+# Builds the existing backend/Dockerfile unchanged — same image as CI, with
+# ONNX Runtime fetched from Microsoft's official release (never cdn.pyke.io,
+# which is the 403 source tracked in #55).
+#
+# Region note: `iad` (Ashburn) is chosen to sit next to the Neon database in
+# us-east-1 — the API is chatty with Postgres, so co-locating matters more
+# than proximity to the user.
+#
+# Secrets are NOT in this file. Set them once with:
+#   flyctl secrets set DATABASE_URL='postgresql://...neon.tech/neondb?sslmode=require'
+#   flyctl secrets set JWT_SECRET='<random 32+ bytes>'
+# Optional: ANTHROPIC_API_KEY, FDC_API_KEY, GOOGLE_OAUTH_AUDIENCE.
+
+app = "sargent-ai-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Photos land on the machine's ephemeral disk. Acceptable for now; a volume
+  # or S3/R2 is required before progress photos are relied upon.
+  PHOTO_STORE_ROOT = "/tmp/photos"
+  RUST_LOG = "info"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Scale to zero when idle to stay inside the free allowance; the first
+  # request after idle pays a cold start (ONNX session init is the bulk of it).
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  # ONNX Runtime + Axum: 512 MB is too tight once the MoveNet session is
+  # initialised, so 1 GB is the floor here.
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
