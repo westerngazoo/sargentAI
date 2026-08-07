@@ -8,7 +8,14 @@
 use chrono::{Datelike, Duration, NaiveDate, Weekday};
 use serde::{Deserialize, Serialize};
 
+use crate::authoring::E1rmMap;
+use crate::periodize::lift_key;
 use crate::workout::{LoadKg, MuscleGroup, WorkoutSession};
+
+/// The window every consumer of "what can this user currently lift" shares —
+/// the aggregation default (SPEC-0015 OQ-1), reused by authored-program
+/// materialization (SPEC-0041 §2.5) so there is exactly one such number.
+pub const DEFAULT_WINDOW_WEEKS: u32 = 8;
 
 /// No new e1RM peak within this many trailing sessions ⇒ a stall.
 const STALL_N: usize = 3;
@@ -101,11 +108,8 @@ pub fn summarize(
     measurements: &[BodyPoint],
     target_days_per_week: u32,
 ) -> TrainingSummary {
-    let start = today - Duration::weeks(i64::from(window_weeks));
-    let in_window: Vec<&WorkoutSession> = sessions
-        .iter()
-        .filter(|s| s.performed_on > start && s.performed_on <= today)
-        .collect();
+    let start = window_start(today, window_weeks);
+    let in_window = sessions_in_window(sessions, start, today);
 
     TrainingSummary {
         window_weeks,
@@ -115,6 +119,40 @@ pub fn summarize(
         adherence: adherence(&in_window, target_days_per_week, window_weeks),
         body: body_trend(measurements, today, start),
     }
+}
+
+/// Per-lift current e1RM over the window, keyed for
+/// [`materialize`](crate::authoring::materialize) lookup.
+///
+/// The same numbers [`summarize`] reports as `LiftSummary.current_e1rm`, in the
+/// map shape authored-program materialization takes (SPEC-0041 §2.5). A lift
+/// with no session inside the window is simply absent — materialization then
+/// prescribes reps × % with no load, which is the honest answer for a lift whose
+/// last data point is stale.
+#[must_use]
+pub fn current_e1rm(today: NaiveDate, window_weeks: u32, sessions: &[WorkoutSession]) -> E1rmMap {
+    let start = window_start(today, window_weeks);
+    per_lift(&sessions_in_window(sessions, start, today))
+        .into_iter()
+        .map(|l| (lift_key(&l.name), l.current_e1rm))
+        .collect()
+}
+
+fn window_start(today: NaiveDate, window_weeks: u32) -> NaiveDate {
+    today - Duration::weeks(i64::from(window_weeks))
+}
+
+/// The sessions falling in `(start, today]` — the half-open window every
+/// aggregate shares.
+fn sessions_in_window(
+    sessions: &[WorkoutSession],
+    start: NaiveDate,
+    today: NaiveDate,
+) -> Vec<&WorkoutSession> {
+    sessions
+        .iter()
+        .filter(|s| s.performed_on > start && s.performed_on <= today)
+        .collect()
 }
 
 fn epley(reps: i32, weight_kg: f64) -> f64 {
@@ -582,6 +620,35 @@ mod tests {
         assert!(out.body.weight.is_empty());
         assert!(out.body.weight_slope_kg_per_week.abs() < f64::EPSILON);
         assert!(out.body.body_fat_slope.is_none());
+    }
+
+    /// SPEC-0041 §2.5 — the e1RM map materialization anchors on: keyed the same
+    /// way `authoring` looks lifts up, windowed by `window_weeks`, and empty
+    /// (rather than stale) for a lift last trained before the window.
+    #[test]
+    fn current_e1rm_is_keyed_and_windowed() {
+        let s = vec![
+            sess(
+                d(2026, 4, 30), // ~10 weeks before TODAY
+                vec![wex("Deadlift", None, vec![wset(5, Some(200.0))])],
+            ),
+            sess(
+                d(2026, 7, 2),
+                vec![wex("  Bench Press  ", None, vec![wset(5, Some(100.0))])],
+            ),
+        ];
+
+        let map = current_e1rm(TODAY(), DEFAULT_WINDOW_WEEKS, &s);
+        assert_eq!(map.len(), 1, "the 10-week-old deadlift is out of window");
+        let bench = map
+            .get("bench press")
+            .copied()
+            .expect("trimmed, lowercased");
+        assert!((bench - 100.0 * (1.0 + 5.0 / 30.0)).abs() < 1e-9);
+
+        // Widening the window brings the stale lift back.
+        assert_eq!(current_e1rm(TODAY(), 12, &s).len(), 2);
+        assert!(current_e1rm(TODAY(), DEFAULT_WINDOW_WEEKS, &[]).is_empty());
     }
 
     #[test]

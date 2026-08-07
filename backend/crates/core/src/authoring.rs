@@ -156,24 +156,16 @@ pub enum AuthorError {
 /// `None` load (reps × % still prescribed).
 ///
 /// # Errors
-/// [`AuthorError`] on any invalid input (validated up front — no panic).
+/// [`AuthorError`] on any invalid input (validated up front — no panic):
+/// everything [`validate`] rejects, plus [`AuthorError::BadPlate`] for a
+/// non-finite or non-positive `plate_kg`.
 pub fn materialize(
     program: &AuthoredProgram,
     e1rm: &E1rmMap,
     plate_kg: f64,
 ) -> Result<MaterializedCycle, AuthorError> {
-    // key(lower/trim) -> exercise. A case-insensitive duplicate name is a typed
-    // error (rather than silently shadowing one lift with another).
-    let mut by_key: BTreeMap<String, &AuthoredExercise> = BTreeMap::new();
-    for ex in program.core.iter().chain(&program.accessories) {
-        if ex.name.trim().is_empty() {
-            return Err(AuthorError::BlankExercise);
-        }
-        if by_key.insert(lift_key(&ex.name), ex).is_some() {
-            return Err(AuthorError::DuplicateExercise(ex.name.clone()));
-        }
-    }
-    validate(program, &by_key, plate_kg)?;
+    let by_key = index(program)?;
+    check_plate(plate_kg)?;
 
     // The lookup is fallible by construction (`get().ok_or`), so materialization
     // cannot panic on a stray reference even independently of `validate`.
@@ -227,14 +219,35 @@ pub fn materialize(
 /// Per-lift current estimated 1RM, keyed by [`lift_key`].
 pub type E1rmMap = BTreeMap<String, f64>;
 
-fn validate(
-    program: &AuthoredProgram,
-    by_key: &BTreeMap<String, &AuthoredExercise>,
-    plate_kg: f64,
-) -> Result<(), AuthorError> {
-    if !(plate_kg.is_finite() && plate_kg > 0.0) {
-        return Err(AuthorError::BadPlate);
+/// Every program-level check, independent of any e1RM or plate increment. The
+/// entry point a write endpoint calls before storing an authored program
+/// (SPEC-0041 §2.4), sharing one traversal with [`materialize`] so the two can
+/// never disagree about what a valid program is.
+///
+/// # Errors
+/// [`AuthorError`] for a blank or duplicated exercise name, an empty or
+/// unreferenced schedule, or an invalid work-set line. Never
+/// [`AuthorError::BadPlate`] — the plate increment belongs to materialization.
+pub fn validate(program: &AuthoredProgram) -> Result<(), AuthorError> {
+    index(program).map(|_| ())
+}
+
+/// key(lower/trim) -> exercise, rejecting blank/duplicate names, then the
+/// schedule and prescription checks. The single traversal [`materialize`] also
+/// needs: it wants the map, [`validate`] discards it.
+fn index(program: &AuthoredProgram) -> Result<BTreeMap<String, &AuthoredExercise>, AuthorError> {
+    // A case-insensitive duplicate name is a typed error (rather than silently
+    // shadowing one lift with another).
+    let mut by_key: BTreeMap<String, &AuthoredExercise> = BTreeMap::new();
+    for ex in program.core.iter().chain(&program.accessories) {
+        if ex.name.trim().is_empty() {
+            return Err(AuthorError::BlankExercise);
+        }
+        if by_key.insert(lift_key(&ex.name), ex).is_some() {
+            return Err(AuthorError::DuplicateExercise(ex.name.clone()));
+        }
     }
+
     if by_key.is_empty() {
         return Err(AuthorError::NoExercises);
     }
@@ -274,7 +287,17 @@ fn validate(
             }
         }
     }
-    Ok(())
+    Ok(by_key)
+}
+
+/// The plate increment is a materialization parameter, not a property of the
+/// authored program — so it is checked here rather than in [`validate`].
+fn check_plate(plate_kg: f64) -> Result<(), AuthorError> {
+    if plate_kg.is_finite() && plate_kg > 0.0 {
+        Ok(())
+    } else {
+        Err(AuthorError::BadPlate)
+    }
 }
 
 #[cfg(test)]
@@ -463,6 +486,134 @@ mod tests {
             materialize(&no_lines, &e1rm(), 2.5),
             Err(AuthorError::EmptyWorkLines)
         );
+    }
+
+    /// SPEC-0041 §7.14 — every program-level variant is reachable from the
+    /// public `validate` entry point, not just from `materialize`. `BadPlate` is
+    /// absent by design: after SPEC-0041 §2.4 it belongs to materialization.
+    #[test]
+    fn validate_rejects_every_program_level_variant() {
+        let cases: Vec<(AuthoredProgram, AuthorError)> = vec![
+            (
+                {
+                    let mut p = program();
+                    p.core.clear();
+                    p.accessories.clear();
+                    p.schedule.days = vec![Vec::new(); 1];
+                    p
+                },
+                AuthorError::NoExercises,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.accessories.push(ex("   "));
+                    p
+                },
+                AuthorError::BlankExercise,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.accessories.push(ex("SQUAT"));
+                    p
+                },
+                AuthorError::DuplicateExercise("SQUAT".into()),
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.schedule.days.clear();
+                    p
+                },
+                AuthorError::NoScheduleDays,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.schedule.days = vec![Vec::new(); 3];
+                    p
+                },
+                AuthorError::NoScheduledEntries,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.schedule.days[0] = vec![ScheduleEntry {
+                        exercise: "Ghost Lift".into(),
+                        class: IntensityClass::Low,
+                    }];
+                    p
+                },
+                AuthorError::UnknownExercise("Ghost Lift".into()),
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.core[0].low.work.clear();
+                    p
+                },
+                AuthorError::EmptyWorkLines,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.core[0].low.work = vec![line(3, 5, 1.5)];
+                    p
+                },
+                AuthorError::BadIntensity,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.core[0].low.work = vec![line(3, 0, 0.7)];
+                    p
+                },
+                AuthorError::BadReps,
+            ),
+            (
+                {
+                    let mut p = program();
+                    p.core[0].low.work = vec![line(0, 5, 0.7)];
+                    p
+                },
+                AuthorError::BadSets,
+            ),
+        ];
+
+        assert!(validate(&program()).is_ok(), "the fixture must be valid");
+        for (p, expected) in cases {
+            assert_eq!(validate(&p), Err(expected));
+        }
+    }
+
+    /// SPEC-0041 §7.15 — the two entry points cannot drift: a program `validate`
+    /// accepts is exactly a program `materialize` accepts (at a valid plate).
+    #[test]
+    fn validate_agrees_with_materialize() {
+        let mut variants = vec![program()];
+        for mutate in [
+            (|p: &mut AuthoredProgram| p.core.clear()) as fn(&mut AuthoredProgram),
+            |p| p.accessories.push(ex("   ")),
+            |p| p.accessories.push(ex("SQUAT")),
+            |p| p.schedule.days.clear(),
+            |p| p.schedule.days = vec![Vec::new(); 3],
+            |p| p.core[0].low.work.clear(),
+            |p| p.core[0].high.work = vec![line(1, 1, 2.0)],
+            |p| p.core[0].medium.warmup_sets = 0,
+        ] {
+            let mut p = program();
+            mutate(&mut p);
+            variants.push(p);
+        }
+
+        for p in &variants {
+            assert_eq!(
+                validate(p).is_ok(),
+                materialize(p, &E1rmMap::new(), 2.5).is_ok(),
+                "validate and materialize disagree on {p:?}"
+            );
+        }
     }
 
     #[test]
