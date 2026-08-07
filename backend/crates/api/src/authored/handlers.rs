@@ -33,9 +33,6 @@ const DEFAULT_PLATE_KG: f64 = 2.5;
 /// Longest accepted program name. Request-level, not a domain invariant.
 const MAX_NAME_CHARS: usize = 120;
 
-/// The columns `load_owned` and `create` both return — see [`ProgramRow`].
-const PROGRAM_COLUMNS: &str = "id, name, program, created_at, updated_at";
-
 // ---------------------------------------------------------------------------
 // DTOs (SPEC-0041 §2.7)
 // ---------------------------------------------------------------------------
@@ -134,12 +131,15 @@ pub(crate) async fn create(
 
     let json = serde_json::to_value(&body.program)
         .map_err(|e| ApiError::Internal(eyre::eyre!("serialise authored program: {e}")))?;
-    let row: ProgramRow = sqlx::query_as(&format!(
+    let row: ProgramRow = sqlx::query_as(
         "INSERT INTO authored_programs (user_id, name, program) VALUES ($1, $2, $3) \
-         RETURNING {PROGRAM_COLUMNS}"
-    ))
+         RETURNING id, name, program, created_at, updated_at",
+    )
     .bind(user.user_id.0)
-    .bind(&body.program.name)
+    // Store what was validated. `check_name` measures the *trimmed* name, so
+    // binding the raw one would let `"x"` plus 100k spaces pass a 120-char cap
+    // and then come back out of the list endpoint at full length.
+    .bind(body.program.name.trim())
     .bind(json)
     .fetch_one(&state.pool)
     .await?;
@@ -203,9 +203,10 @@ pub(crate) async fn materialized(
 /// the place it matters. A row owned by someone else yields zero rows and
 /// therefore the same `NotFound` as a genuinely missing id (AC6).
 async fn load_owned(pool: &PgPool, id: Uuid, user_id: UserId) -> ApiResult<ProgramRow> {
-    sqlx::query_as(&format!(
-        "SELECT {PROGRAM_COLUMNS} FROM authored_programs WHERE id = $1 AND user_id = $2"
-    ))
+    sqlx::query_as(
+        "SELECT id, name, program, created_at, updated_at \
+         FROM authored_programs WHERE id = $1 AND user_id = $2",
+    )
     .bind(id)
     .bind(user_id.0)
     .fetch_optional(pool)

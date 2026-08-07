@@ -247,6 +247,47 @@ async fn every_program_level_rejection_has_its_own_token(pool: PgPool) {
 // §7.4 — `bad_plate`, the eleventh token, reachable only from /materialized
 // ---------------------------------------------------------------------------
 
+/// `?plate_kg=` must actually change the rounding, not merely be accepted.
+/// A 5x100 kg squat gives Epley e1RM 116.667; High is 88% of that = 102.667.
+/// Rounding is to the *nearest* increment, so that is 102.5 on the 2.5 kg
+/// default and 105.0 on 5 kg plates — the disagreement is what proves the
+/// parameter is applied rather than merely parsed.
+#[sqlx::test(migrations = "../../migrations")]
+async fn plate_kg_changes_the_rounding(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "a@b.com", "8charsmin").await;
+    log_lift(&app, &token, "Squat", 5, 100.0).await;
+    let id = create_program(&app, &token, &program()).await;
+
+    let res = get_with_auth(
+        &app,
+        &format!("/authored-programs/{id}/materialized?plate_kg=5"),
+        Some(&bearer(&token)),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    let coarse = body_json(res).await;
+    assert_eq!(
+        first_load(&coarse, 0).as_f64().unwrap(),
+        105.0,
+        "5 kg plates: 102.667 rounds to the nearest 5, which is 105"
+    );
+
+    let res = get_with_auth(
+        &app,
+        &format!("/authored-programs/{id}/materialized?plate_kg=2.5"),
+        Some(&bearer(&token)),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::OK);
+    let fine = body_json(res).await;
+    assert_eq!(
+        first_load(&fine, 0).as_f64().unwrap(),
+        102.5,
+        "2.5 kg plates land on 102.5 — so the query parameter is really applied"
+    );
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn zero_plate_is_the_only_materialize_only_rejection(pool: PgPool) {
     let app = build_app(pool);
@@ -313,9 +354,25 @@ async fn list_is_owner_scoped_and_newest_first(pool: PgPool) {
     let body = body_json(res).await;
     let rows = body.as_array().unwrap();
     assert_eq!(rows.len(), 3, "only the caller's own rows");
-    assert_eq!(rows[0]["name"], "third", "newest first");
-    assert_eq!(rows[1]["name"], "second");
-    assert_eq!(rows[2]["name"], "first");
+    // Membership is deterministic; order is asserted as a property rather than a
+    // fixed sequence, because `created_at DESC, id DESC` falls back to a random
+    // UUIDv4 on a microsecond tie and the exact sequence would then be arbitrary.
+    let names: std::collections::BTreeSet<&str> =
+        rows.iter().map(|r| r["name"].as_str().unwrap()).collect();
+    assert_eq!(
+        names,
+        ["first", "second", "third"].into_iter().collect(),
+        "exactly the caller's three programs"
+    );
+    let stamps: Vec<&str> = rows
+        .iter()
+        .map(|r| r["created_at"].as_str().unwrap())
+        .collect();
+    assert!(
+        stamps.windows(2).all(|w| w[0] >= w[1]),
+        "newest first: {stamps:?}"
+    );
+    assert_eq!(rows[0]["name"], "third", "newest of the three");
     // The list is a pure projection: no program body on the wire.
     assert!(rows[0].get("program").is_none());
 }
