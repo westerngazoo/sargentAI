@@ -143,9 +143,31 @@ pub enum AuthorError {
     BadReps,
     #[error("sets must be >= 1")]
     BadSets,
+    #[error("a work-set line may prescribe at most {MAX_SETS_PER_LINE} sets")]
+    TooManySets,
+    #[error("a cycle may materialize at most {MAX_TOTAL_SETS} work sets in total")]
+    CycleTooLarge,
     #[error("plate_kg must be finite and > 0")]
     BadPlate,
 }
+
+/// The most sets one work-set line may prescribe.
+///
+/// `sets` is client-controlled and drives an expansion — `materialize` emits one
+/// [`PrescribedSet`] per set — so without a ceiling a ~330-byte request expands
+/// without bound: `u32::MAX` sets is roughly 137 GB, i.e. an allocation failure
+/// and process abort that takes the API down for every user. A magnitude bound
+/// is therefore part of validity, not merely of well-formedness.
+///
+/// 100 is far above any real prescription (a 20-set drop-set block is extreme).
+pub const MAX_SETS_PER_LINE: u32 = 100;
+
+/// The most work sets a whole cycle may materialize.
+///
+/// [`MAX_SETS_PER_LINE`] alone is not enough: the request-body limit still
+/// allows many thousands of lines, and their product is what gets allocated.
+/// 10 000 is generous — 7 days x 10 exercises x 5 lines x 10 sets is 3 500.
+pub const MAX_TOTAL_SETS: u64 = 10_000;
 
 // ---------------------------------------------------------------------------
 // Materialization
@@ -284,10 +306,43 @@ fn index(program: &AuthoredProgram) -> Result<BTreeMap<String, &AuthoredExercise
                 if line.sets < 1 {
                     return Err(AuthorError::BadSets);
                 }
+                if line.sets > MAX_SETS_PER_LINE {
+                    return Err(AuthorError::TooManySets);
+                }
             }
         }
     }
+
+    total_sets_budget(program, &by_key)?;
+
     Ok(by_key)
+}
+
+/// Reject a program whose *scheduled* expansion would be too large.
+///
+/// Counts what `materialize` will actually allocate — only scheduled
+/// `(exercise, class)` pairs, so an unscheduled class cannot inflate the total —
+/// and saturates rather than overflowing, since the whole point is that the
+/// operands are attacker-controlled.
+fn total_sets_budget(
+    program: &AuthoredProgram,
+    by_key: &BTreeMap<String, &AuthoredExercise>,
+) -> Result<(), AuthorError> {
+    let mut total: u64 = 0;
+    for day in &program.schedule.days {
+        for entry in day {
+            let Some(ex) = by_key.get(&lift_key(&entry.exercise)) else {
+                continue; // unknown exercises are rejected separately
+            };
+            for line in &ex.prescription(entry.class).work {
+                total = total.saturating_add(u64::from(line.sets));
+                if total > MAX_TOTAL_SETS {
+                    return Err(AuthorError::CycleTooLarge);
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The plate increment is a materialization parameter, not a property of the
@@ -329,6 +384,85 @@ mod tests {
                 work: vec![line(5, 3, 0.88)],
             },
         }
+    }
+
+    /// A ~330-byte program whose single line prescribes an absurd number of
+    /// sets. Before the magnitude bound this validated cleanly and then expanded
+    /// to one `PrescribedSet` per set at materialize time — 8 million sets is
+    /// ~244 MB, and `u32::MAX` is ~137 GB, i.e. an allocation failure and a
+    /// process abort that takes the API down for every user.
+    fn set_bomb(sets: u32) -> AuthoredProgram {
+        let mut e = ex("Squat");
+        e.low = ClassPrescription {
+            warmup_sets: 0,
+            work: vec![line(sets, 1, 0.5)],
+        };
+        AuthoredProgram {
+            name: "bomb".into(),
+            core: vec![e],
+            accessories: vec![],
+            schedule: Schedule {
+                days: vec![vec![ScheduleEntry {
+                    exercise: "Squat".into(),
+                    class: IntensityClass::Low,
+                }]],
+            },
+        }
+    }
+
+    #[test]
+    fn a_line_may_not_prescribe_an_unbounded_number_of_sets() {
+        assert_eq!(
+            validate(&set_bomb(8_000_000)),
+            Err(AuthorError::TooManySets),
+            "a set count that would allocate hundreds of MB must be rejected"
+        );
+        assert_eq!(
+            validate(&set_bomb(u32::MAX)),
+            Err(AuthorError::TooManySets),
+            "the u32 ceiling must not reach the expansion"
+        );
+    }
+
+    #[test]
+    fn the_set_bomb_never_reaches_materialize() {
+        // The point of the bound: `materialize` must refuse *before* allocating,
+        // so this returns rather than exhausting memory.
+        assert_eq!(
+            materialize(&set_bomb(u32::MAX), &e1rm(), 2.5),
+            Err(AuthorError::TooManySets)
+        );
+    }
+
+    #[test]
+    fn a_line_at_the_cap_is_still_accepted() {
+        assert!(validate(&set_bomb(MAX_SETS_PER_LINE)).is_ok());
+        assert_eq!(
+            validate(&set_bomb(MAX_SETS_PER_LINE + 1)),
+            Err(AuthorError::TooManySets)
+        );
+    }
+
+    #[test]
+    fn many_legal_lines_cannot_add_up_past_the_cycle_budget() {
+        // Each line is individually legal; the product is what would allocate.
+        let mut e = ex("Squat");
+        e.low = ClassPrescription {
+            warmup_sets: 0,
+            work: vec![line(MAX_SETS_PER_LINE, 1, 0.5); 200],
+        };
+        let prog = AuthoredProgram {
+            name: "wide".into(),
+            core: vec![e],
+            accessories: vec![],
+            schedule: Schedule {
+                days: vec![vec![ScheduleEntry {
+                    exercise: "Squat".into(),
+                    class: IntensityClass::Low,
+                }]],
+            },
+        };
+        assert_eq!(validate(&prog), Err(AuthorError::CycleTooLarge));
     }
 
     fn e1rm() -> E1rmMap {

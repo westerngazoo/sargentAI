@@ -243,6 +243,8 @@ fn to_unprocessable(e: &AuthorError) -> ApiError {
         AuthorError::BadIntensity => "bad_intensity",
         AuthorError::BadReps => "bad_reps",
         AuthorError::BadSets => "bad_sets",
+        AuthorError::TooManySets => "too_many_sets",
+        AuthorError::CycleTooLarge => "cycle_too_large",
         AuthorError::BadPlate => "bad_plate",
     };
     ApiError::Unprocessable { reason }
@@ -275,10 +277,19 @@ mod tests {
             AuthorError::BadIntensity,
             AuthorError::BadReps,
             AuthorError::BadSets,
+            AuthorError::TooManySets,
+            AuthorError::CycleTooLarge,
             AuthorError::BadPlate,
         ];
         let tokens: BTreeSet<&'static str> = all.iter().map(reason_of).collect();
-        assert_eq!(tokens.len(), 11, "tokens must be eleven and all distinct");
+        assert_eq!(
+            tokens.len(),
+            all.len(),
+            "every variant needs its own distinct token"
+        );
+        // Pinned deliberately: `reason` is a public wire contract clients switch
+        // on, so growing the set should be a conscious act, not a silent one.
+        assert_eq!(tokens.len(), 13, "token count changed — update clients too");
     }
 
     #[test]
