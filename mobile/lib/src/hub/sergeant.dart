@@ -156,8 +156,22 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
+      // Pass the capped turn history to support multi-turn conversational intent (R-0037).
+      // `_appended` already pushed the current transcript to state.history. We must exclude it
+      // here because the backend appends the transcript as the final user message.
+      final historyExcludingCurrent = state.history.isNotEmpty
+          ? state.history.sublist(0, state.history.length - 1)
+          : <ChatTurn>[];
+
+      final historyLength = historyExcludingCurrent.length;
+      final start = historyLength > 6 ? historyLength - 6 : 0;
+      final historyPayload = historyExcludingCurrent.sublist(start).map((turn) => {
+        'role': turn.fromUser ? 'user' : 'assistant',
+        'content': turn.text,
+      }).toList();
+
       final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+          await ref.read(voiceIntentServiceProvider).parse(transcript, historyPayload);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.

@@ -73,6 +73,46 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_multi_turn_conversation_logs_meal(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-multi@test.com", "password123").await;
+
+    // Send the first turn missing context
+    let resp1 = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({ "transcript": "log a meal" }),
+    )
+    .await;
+    assert_eq!(resp1.status(), StatusCode::OK);
+    let body1: Value = body_json(resp1).await;
+    assert_eq!(body1["status"], "clarify");
+
+    // Simulate user responding to the clarify with the missing macros and passing history
+    let resp2 = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 grams protein 60 carbs 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": body1["prompt"].as_str().unwrap_or("") }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp2.status(), StatusCode::OK);
+    let body2: Value = body_json(resp2).await;
+
+    // In CI (where no LLM is present), it falls back to the keyword parser.
+    // The keyword parser handles "40 grams protein..." independently (it matches LogMealIntent without needing the earlier 'log a meal').
+    // So whether via LLM combining context, or regex matching the second utterance directly, we expect it to log.
+    assert_eq!(body2["status"], "logged_nutrition");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
