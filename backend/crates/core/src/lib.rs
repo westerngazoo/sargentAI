@@ -20,14 +20,18 @@ pub mod workout;
 
 pub use adjust::{suggest, Adjustment, Change, Severity};
 pub use aggregate::{
-    summarize, Adherence, BodyPoint, BodyTrend, LiftSummary, MuscleVolume, TrainingSummary,
-    TrendPoint,
+    current_e1rm, summarize, Adherence, BodyPoint, BodyTrend, LiftSummary, MuscleVolume,
+    TrainingSummary, TrendPoint, DEFAULT_WINDOW_WEEKS,
 };
 pub use archetype::{
     Archetype, ArchetypeError, Confidence, DietTemplate, FrameProfile, HeightBand, LengthBand,
     MacroEmphasis, ProgramTemplate, Provenance, Somatotype, StructureTag, TrainingPhilosophy,
     VolumeBand, WidthBand,
 };
+// `authoring::validate` is deliberately NOT re-exported here: a bare
+// `fitai_core::validate` says nothing about *what* it validates. Callers reach
+// it as `fitai_core::authoring::validate`, where the module name carries the
+// meaning (SPEC-0041 §2.4).
 pub use authoring::{
     materialize, AuthorError, AuthoredExercise, AuthoredProgram, ClassPrescription, IntensityClass,
     MaterializedCycle, MaterializedDay, MaterializedEntry, Schedule, ScheduleEntry, WorkSetLine,

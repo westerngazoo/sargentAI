@@ -4,7 +4,9 @@
 
 use axum::{extract::State, Json};
 use chrono::{NaiveDate, Utc};
-use fitai_core::{suggest, summarize, Adjustment, BodyPoint, TrainingSummary};
+use fitai_core::{
+    suggest, summarize, Adjustment, BodyPoint, TrainingSummary, DEFAULT_WINDOW_WEEKS,
+};
 use serde::Serialize;
 use sqlx::PgPool;
 
@@ -16,9 +18,6 @@ use crate::{
     error::{ApiError, ApiResult},
     AppState,
 };
-
-/// Default aggregation window (SPEC-0015 OQ-1).
-const WINDOW_WEEKS: u32 = 8;
 
 /// `GET /training-summary` — the caller's aggregated facts (R-0015).
 pub(crate) async fn training_summary(
@@ -46,7 +45,7 @@ pub(crate) async fn adjustments(
     let inputs = fetch_inputs(&state.pool, user).await?;
     let Some(parts) = &inputs.program else {
         return Ok(Json(AdjustmentsResponse {
-            window_weeks: WINDOW_WEEKS,
+            window_weeks: DEFAULT_WINDOW_WEEKS,
             suggestions: Vec::new(),
             reason: Some("no_active_program"),
         }));
@@ -54,7 +53,7 @@ pub(crate) async fn adjustments(
     let summary = inputs.summarize(Utc::now().date_naive());
     let suggestions = suggest(&summary, &parts.program, &parts.diet);
     Ok(Json(AdjustmentsResponse {
-        window_weeks: WINDOW_WEEKS,
+        window_weeks: DEFAULT_WINDOW_WEEKS,
         suggestions,
         reason: None,
     }))
@@ -93,7 +92,7 @@ impl SummaryInputs {
             .map_or(0, |p| u32::from(p.program.days_per_week));
         summarize(
             today,
-            WINDOW_WEEKS,
+            DEFAULT_WINDOW_WEEKS,
             &self.sessions,
             &self.measurements,
             target,
