@@ -5,7 +5,8 @@
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-04
 - **Depends on:** R-0015 (per-lift e1RM trend, body trend, adherence — the
-                  measured signal), R-0004 (workout log), R-0034 (measurements)
+                  measured signal), R-0004 (workout log), the body-measurements log (shipped in PR #52;
+                  register id unassigned — flagged in #91)
 - **Realized by:** SPEC-0042 (to be written)
 - **QA:** `qa` agent run scoped to this requirement
 
@@ -69,7 +70,16 @@ sensibly auto-adjust toward a goal that was never stated.
 - **AC10. Tests.** Per kind: on-pace, behind, ahead, achieved-early, missed,
   insufficient-data, and a decreasing-target (fat loss) case. Plus ownership
   (404), auth (401), and typed rejection of an invalid goal (target date in the
-  past at creation, non-finite or non-positive target, unknown lift).
+  past at creation, non-finite / non-positive / absurd-magnitude target,
+  blank or over-length lift name). *Amended 2026-08-08:* "unknown lift" was
+  originally listed here but is unenforceable — lifts are free-text exercise
+  names with no registry — so blank/over-length is the enforceable proxy and
+  a goal for a not-yet-trained lift is a supported flow (SPEC-0042 §2.2.3).
+- **AC11. Abandon a goal.** *(Added 2026-08-08 by amendment.)*
+  `DELETE` removes the caller's goal (204; non-owner 404). Without it, the
+  "no update — delete and recreate" mutation story is impossible and dead
+  `Missed` rows accumulate forever. This is user data hygiene, not status
+  mutation; AC8's read-only rule governs status computation and is untouched.
 
 ## 4. Constraints & non-goals
 
@@ -111,3 +121,6 @@ sensibly auto-adjust toward a goal that was never stated.
 ## Changelog
 
 - _2026-08-04 — created (Draft)._
+- _2026-08-08 — amended with SPEC-0042's architect review: AC10 unknown-lift
+  rejection replaced by the enforceable proxy; AC11 (delete) added; the
+  dangling R-0034 dependency reference corrected (id never existed — #91)._
