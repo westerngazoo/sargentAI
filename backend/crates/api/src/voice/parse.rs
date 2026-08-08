@@ -351,11 +351,11 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: Option<&[super::handlers::ChatTurn]>,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
-    let prompt = format!(
+    let system_instructions = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
@@ -364,12 +364,33 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+
+    // In OpenAI-Compatible APIs, we use the system role. For Anthropic we handle it at the top level,
+    // but we can also just put it in a user message or system parameter.
+
+    if let Some(hist) = history {
+        for turn in hist {
+            messages.push(serde_json::json!({
+                "role": turn.role,
+                "content": turn.content
+            }));
+        }
+    }
+
+    let final_user_message = format!("Transcript: \"{transcript}\"");
+    messages.push(serde_json::json!({
+        "role": "user",
+        "content": final_user_message
+    }));
+
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
             let body = serde_json::json!({
                 "model": cfg.model,
+                "system": system_instructions,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -378,12 +399,18 @@ pub(super) async fn parse_with_llm(
             (body, req)
         }
         LlmProvider::OpenAiCompatible => {
+            let mut oa_messages = vec![serde_json::json!({
+                "role": "system",
+                "content": system_instructions
+            })];
+            oa_messages.extend(messages);
+
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": oa_messages
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
