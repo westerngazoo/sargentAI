@@ -9,6 +9,10 @@ requirement loop in [`CLAUDE.md`](CLAUDE.md) §4.
 
 `Backlog` → `Discussing` → `Spec'd` → `In progress` → `In review` → `Done`
 
+Additionally: `Draft` — the requirement is recorded but not yet accepted;
+`Parked` — deliberately shelved; `Regressed` — was done, then broken by a later
+change (points at the requirement that rebuilds it).
+
 ## Milestones
 
 ### M0 — Foundation  ·  *complete*
@@ -75,7 +79,10 @@ screen on top of it.
 | R-0010 | Nutrition logger UI (manual entry first) — deferred until after the fast-track chain | SPEC-0010 | Backlog |
 | R-0011 | Dashboard: trends, current program, weekly plan — deferred until after the fast-track chain | SPEC-0011 | Backlog |
 | R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | **Regressed** (transport reverted by `6b5bb7e`; rebuilt as R-0035 — R-0057) |
-| R-0035 | Earbud-guided hands-free training (**rebuild** of R-0027's reverted media-button + background-audio transport; coexists with R-0032 voice dictation). Depends on R-0009 + R-0014 | SPEC-0035 | Accepted |
+| R-0035 | Earbud-guided hands-free training (**rebuild** of R-0027's reverted media-button + background-audio transport; coexists with R-0032 voice dictation). Depends on R-0009 + R-0014 | SPEC-0035 | Done — merged via PR #71 (`35318cb`) |
+| R-0030 | Visual body-type picker: synthetic archetype match, no-photo onboarding path | SPEC-0030 | Done — merged on main (`4bb5053`, `ebd84c9`); accepted as-built in the R-0057 pass (PR #66) |
+| R-0033 | Google Sign-In (OAuth2 auth extension) | SPEC-0033 (to be written) | Done — merged via PR #49 (`a982c46`) |
+| R-0029 | Web frontend client | SPEC-0029 (to be written) | In progress — served today by the Flutter web build, deployed via PR #84 |
 
 > **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
 > **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
@@ -102,9 +109,11 @@ Move from heuristic adjustment to learned adjustment from real logs.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0015 | Time-series log aggregation (per user, per time window) | SPEC-0015 | Backlog |
+| R-0015 | Time-series log aggregation (per user, per time window) | SPEC-0015 | Done — merged via PR #70 (`d70649d`) |
 | R-0016 | Response-inference model (linfa regression / trees): which inputs correlate with positive outcomes | SPEC-0016 | Backlog |
-| R-0017 | Program adjustment engine: tweak volume / frequency / intensity / rest / macros | SPEC-0017 | Backlog |
+| R-0017 | Program adjustment engine: tweak volume / frequency / intensity / rest / macros; summary/adjustments endpoints + Coach card | SPEC-0017 | Done — merged via PR #73 (`9d1bea6`) |
+| R-0031 | Nutrition LLM substitution (lightweight LLM feature) | SPEC-0031 (to be written) | Backlog (requirement Accepted) |
+| R-0042 | Goal targets & pace tracking — the measurement half of adaptive intelligence | SPEC-0042 (to be written) | Draft — requirement recorded via PR #88 |
 
 ### M6 — Photo pipeline & compliance
 
@@ -138,6 +147,39 @@ Everything needed to ship to the public.
 | R-0024 | Privacy policy + health-data compliance (LATAM + GDPR-adjacent rules) | SPEC-0024 | Backlog |
 | R-0025 | App Store + Play Store accounts, metadata, screenshots | SPEC-0025 | Backlog |
 | R-0026 | Production deployment: AWS *or* Azure, managed Postgres, S3/Blob, CI promotion | SPEC-0026 | Backlog |
+
+> **Deployment state (2026-08-08).** The web app and API are live on
+> **Cloudflare** — Workers static assets for the web client, Cloudflare
+> Containers for the API image (PR #84; container spike #67) — with the
+> database on **Neon** Postgres. Supporting infra merged: ONNX Runtime built
+> into the image (#62, #65), pubspec lockfile CI guard (#82), Flutter pin fix
+> 3.41.2 → 3.44.9 (#90). R-0026 remains open: its "AWS *or* Azure" wording
+> predates the Cloudflare + Neon reality and needs an owner decision when M8
+> becomes the focus.
+
+### M9 — Voice assistant & automation
+
+Voice as a first-class input: dictated logging today, reminders and
+conversational intent later.
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0032 | Voice logging assistant: STT → LLM intent → auto-log; voice hub (speak button, radial action ring, preset library, anatomy chart, USDA) | SPEC-0032 | Done — shipped in slices via PRs #39, #49, #50; accepted as-built in the R-0057 pass (PR #66) |
+| R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
+| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | Parked — draft recorded via PR #74; see issue #89 |
+
+### M-Platform — Trainer marketplace
+
+Two-sided platform: trainers author programs, clients follow them. Built
+bottom-up (authoring first, payments last).
+
+| Req | Capability | Spec | Status |
+|-----|------------|------|--------|
+| R-0038 | Periodization engines: linear, undulating (DUP), block | SPEC-0038 | Done — merged via PR #75 (`b6961de`) |
+| R-0039 | Program authoring model: trainer/self-authored programs | SPEC-0039 | Done — merged via PR #76 (`39997af`) |
+| R-0040 | Trainer/client roles | — | Backlog — requirement not yet written (tracked in issue #77) |
+| R-0041 | Authored-program persistence + serving (API) | SPEC-0041 | Done — merged via PR #85 (`e4dc736`) |
+| R-0043 | Generated-plan endpoints | SPEC-0043 (to be written) | Draft — requirement recorded via PR #88 |
 
 ## Deferred (not yet on a milestone)
 
@@ -253,6 +295,17 @@ suite (CI gate); 261 Flutter tests passing. Architect **APPROVE**; QA
 **SIGN-OFF** AC1–AC11. Wire privacy: `internal_name`/`sources` never cross the
 wire. Scope guard held: no ML, no earbud, no nutrition-log UI (AC11).
 
-Next focus is **R-0027 — earbud-guided training** — the differentiator
-hands-free voice-out in-gym experience. Depends on R-0009 (`Done`) and R-0014
-(`Done`).
+**Reconciled 2026-08-08 (issue #56).** Shipped since the narrative above:
+R-0027's earbud transport was reverted on main (`6b5bb7e`) — the requirement is
+**Regressed** — and rebuilt as **R-0035**, now **Done** (PR #71, `35318cb`).
+**R-0030** (body-type picker), **R-0032** (voice assistant) and **R-0033**
+(Google Sign-In) are on main; R-0030/R-0032 were accepted as-built in the
+R-0057 reconciliation pass (PR #66). M5 opened with **R-0015** log aggregation
+(PR #70) and **R-0017** adjustment engine + Coach card (PR #73). The trainer
+platform shipped **R-0038** periodization engines (PR #75), **R-0039** program
+authoring (PR #76) and **R-0041** authored-program persistence (PR #85). Draft
+requirements recorded but not implemented: **R-0042** and **R-0043** (PR #88)
+and **R-0037** (parked — issue #89); **R-0040** (roles) exists only as issue
+#77. The web app + API run on Cloudflare with Neon Postgres (see the M8 note).
+Next work is chosen by the owner from the open Draft / Accepted / Backlog rows
+above.
