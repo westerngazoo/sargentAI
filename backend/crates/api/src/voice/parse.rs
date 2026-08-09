@@ -364,8 +364,10 @@ fn extract_llm_tool_call(
     }
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands. You must call a tool. If the user query is incomplete, use the clarify tool.";
+const LLM_PROMPT_HEAD: &str =
+    "You parse gym voice commands. You must call a tool. If the user query is incomplete, use the clarify tool.";
 
+#[allow(clippy::too_many_lines)]
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
