@@ -338,7 +338,10 @@ impl LlmConfig {
 }
 
 /// Extracts the tool call from a provider-specific response body.
-fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Option<(String, serde_json::Value)> {
+fn extract_llm_tool_call(
+    provider: LlmProvider,
+    json: &serde_json::Value,
+) -> Option<(String, serde_json::Value)> {
     match provider {
         LlmProvider::Anthropic => {
             let content = json["content"].as_array()?;
@@ -460,19 +463,22 @@ pub(super) async fn parse_with_llm(
                     "required": ["message"]
                 }
             }
-        })
+        }),
     ];
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
-            let anthropic_tools: Vec<serde_json::Value> = tools.into_iter().map(|t| {
-                let f = &t["function"];
-                serde_json::json!({
-                    "name": f["name"],
-                    "description": f["description"],
-                    "input_schema": f["parameters"]
+            let anthropic_tools: Vec<serde_json::Value> = tools
+                .into_iter()
+                .map(|t| {
+                    let f = &t["function"];
+                    serde_json::json!({
+                        "name": f["name"],
+                        "description": f["description"],
+                        "input_schema": f["parameters"]
+                    })
                 })
-            }).collect();
+                .collect();
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
@@ -529,7 +535,11 @@ pub(super) async fn parse_with_llm(
     llm_json_to_action(&tool_name, &args, today)
 }
 
-fn llm_json_to_action(tool_name: &str, v: &serde_json::Value, today: NaiveDate) -> ApiResult<ParsedAction> {
+fn llm_json_to_action(
+    tool_name: &str,
+    v: &serde_json::Value,
+    today: NaiveDate,
+) -> ApiResult<ParsedAction> {
     match tool_name {
         "log_workout" => {
             let exercise = v["exercise"].as_str().unwrap_or("Exercise");
