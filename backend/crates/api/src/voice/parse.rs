@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ApiError, ApiResult};
+use crate::voice::handlers::ChatMessage;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -336,40 +337,149 @@ impl LlmConfig {
     }
 }
 
-/// Extracts the assistant's text from a provider-specific response body.
-fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<String> {
-    let field = match provider {
-        LlmProvider::Anthropic => &json["content"][0]["text"],
-        LlmProvider::OpenAiCompatible => &json["choices"][0]["message"]["content"],
-    };
-    field.as_str().map(str::to_string)
+/// Extracts the tool call from a provider-specific response body.
+fn extract_llm_tool_call(provider: LlmProvider, json: &serde_json::Value) -> Option<(String, serde_json::Value)> {
+    match provider {
+        LlmProvider::Anthropic => {
+            let content = json["content"].as_array()?;
+            for block in content {
+                if block["type"] == "tool_use" {
+                    let name = block["name"].as_str()?;
+                    let input = block["input"].clone();
+                    return Some((name.to_string(), input));
+                }
+            }
+            None
+        }
+        LlmProvider::OpenAiCompatible => {
+            let tool_call = &json["choices"][0]["message"]["tool_calls"][0];
+            let name = tool_call["function"]["name"].as_str()?;
+            let args_str = tool_call["function"]["arguments"].as_str()?;
+            let args: serde_json::Value = serde_json::from_str(args_str).ok()?;
+            Some((name.to_string(), args))
+        }
+    }
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands. You must call a tool. If the user query is incomplete, use the clarify tool.";
 
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
+    history: &[ChatMessage],
     transcript: &str,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
-    let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
-         Return ONE of:\n\
-         {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
-         {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
-         {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
-         {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
-         {{\"action\":\"unknown\",\"message\":\"...\"}}"
-    );
+    let mut messages: Vec<serde_json::Value> = history
+        .iter()
+        .map(|msg| {
+            serde_json::json!({
+                "role": msg.role,
+                "content": msg.content
+            })
+        })
+        .collect();
+
+    messages.push(serde_json::json!({
+        "role": "user",
+        "content": transcript
+    }));
+
+    let tools = vec![
+        serde_json::json!({
+            "type": "function",
+            "function": {
+                "name": "log_workout",
+                "description": "Log a workout set.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "exercise": {"type": "string"},
+                        "reps": {"type": "integer"},
+                        "weight_kg": {"type": "number"}
+                    },
+                    "required": ["exercise", "reps"]
+                }
+            }
+        }),
+        serde_json::json!({
+            "type": "function",
+            "function": {
+                "name": "log_meal",
+                "description": "Log a meal with macros.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "protein_g": {"type": "number"},
+                        "carbs_g": {"type": "number"},
+                        "fat_g": {"type": "number"}
+                    },
+                    "required": ["protein_g", "carbs_g", "fat_g"]
+                }
+            }
+        }),
+        serde_json::json!({
+            "type": "function",
+            "function": {
+                "name": "clarify",
+                "description": "Ask the user a question if information is missing.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {"type": "string"}
+                    },
+                    "required": ["prompt"]
+                }
+            }
+        }),
+        serde_json::json!({
+            "type": "function",
+            "function": {
+                "name": "navigate",
+                "description": "Navigate to a different screen.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "route": {"type": "string", "enum": ["/session", "/home", "/programs/current", "/programs/get", "/onboarding"]},
+                        "message": {"type": "string"}
+                    },
+                    "required": ["route", "message"]
+                }
+            }
+        }),
+        serde_json::json!({
+            "type": "function",
+            "function": {
+                "name": "unknown",
+                "description": "Use if the intent is not understood.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "message": {"type": "string"}
+                    },
+                    "required": ["message"]
+                }
+            }
+        })
+    ];
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
+            let anthropic_tools: Vec<serde_json::Value> = tools.into_iter().map(|t| {
+                let f = &t["function"];
+                serde_json::json!({
+                    "name": f["name"],
+                    "description": f["description"],
+                    "input_schema": f["parameters"]
+                })
+            }).collect();
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "system": format!("{LLM_PROMPT_HEAD} Today is {today}."),
+                "messages": messages,
+                "tools": anthropic_tools,
+                "tool_choice": {"type": "any"}
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -378,12 +488,18 @@ pub(super) async fn parse_with_llm(
             (body, req)
         }
         LlmProvider::OpenAiCompatible => {
+            let mut oai_messages = vec![serde_json::json!({
+                "role": "system",
+                "content": format!("{LLM_PROMPT_HEAD} Today is {today}.")
+            })];
+            oai_messages.extend(messages);
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
                 "stream": false,
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": oai_messages,
+                "tools": tools,
+                "tool_choice": "required"
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
@@ -409,22 +525,13 @@ pub(super) async fn parse_with_llm(
     let body_text = resp.text().await.map_err(|_| ApiError::Upstream)?;
     let json: serde_json::Value =
         serde_json::from_str(&body_text).map_err(|_| ApiError::Upstream)?;
-    let text = extract_llm_text(cfg.provider, &json).ok_or(ApiError::Upstream)?;
-    let parsed: serde_json::Value = serde_json::from_str(text.trim())
-        .or_else(|_| extract_json_object(&text))
-        .map_err(|()| ApiError::Upstream)?;
-    llm_json_to_action(&parsed, today)
+    let (tool_name, args) = extract_llm_tool_call(cfg.provider, &json).ok_or(ApiError::Upstream)?;
+    llm_json_to_action(&tool_name, &args, today)
 }
 
-fn extract_json_object(text: &str) -> Result<serde_json::Value, ()> {
-    let start = text.find('{').ok_or(())?;
-    let end = text.rfind('}').ok_or(())?;
-    serde_json::from_str(&text[start..=end]).map_err(|_| ())
-}
-
-fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<ParsedAction> {
-    match v["action"].as_str() {
-        Some("log_workout") => {
+fn llm_json_to_action(tool_name: &str, v: &serde_json::Value, today: NaiveDate) -> ApiResult<ParsedAction> {
+    match tool_name {
+        "log_workout" => {
             let exercise = v["exercise"].as_str().unwrap_or("Exercise");
             let reps = i32::try_from(v["reps"].as_i64().ok_or(ApiError::Upstream)?)
                 .map_err(|_| ApiError::Upstream)?;
@@ -435,7 +542,7 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
                 NewWorkoutSession::new(today, vec![ex], today).map_err(|_| ApiError::Upstream)?;
             Ok(ParsedAction::Workout(session))
         }
-        Some("log_meal") => {
+        "log_meal" => {
             let p = v["protein_g"].as_f64().ok_or(ApiError::Upstream)?;
             let c = v["carbs_g"].as_f64().ok_or(ApiError::Upstream)?;
             let f = v["fat_g"].as_f64().ok_or(ApiError::Upstream)?;
@@ -443,10 +550,10 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
                 .map_err(|e| ApiError::Validation { field: e.field() })?;
             Ok(ParsedAction::Nutrition(log))
         }
-        Some("clarify") => Ok(ParsedAction::Response(IntentResponse::clarify(
+        "clarify" => Ok(ParsedAction::Response(IntentResponse::clarify(
             v["prompt"].as_str().unwrap_or("Can you say that again?"),
         ))),
-        Some("navigate") => Ok(ParsedAction::Response(IntentResponse::navigate(
+        "navigate" => Ok(ParsedAction::Response(IntentResponse::navigate(
             v["route"].as_str().unwrap_or("/home"),
             v["message"].as_str().unwrap_or("Roger."),
         ))),
@@ -524,18 +631,35 @@ mod tests {
     }
 
     #[test]
-    fn extract_text_reads_each_provider_shape() {
-        let anthropic = serde_json::json!({"content": [{"text": "hi from claude"}]});
-        assert_eq!(
-            extract_llm_text(LlmProvider::Anthropic, &anthropic).as_deref(),
-            Some("hi from claude")
-        );
-        let openai = serde_json::json!({"choices": [{"message": {"content": "hi from ollama"}}]});
-        assert_eq!(
-            extract_llm_text(LlmProvider::OpenAiCompatible, &openai).as_deref(),
-            Some("hi from ollama")
-        );
+    fn extract_tool_call_reads_each_provider_shape() {
+        let anthropic = serde_json::json!({
+            "content": [{
+                "type": "tool_use",
+                "name": "log_meal",
+                "input": {"protein_g": 30.0, "carbs_g": 0.0, "fat_g": 5.0}
+            }]
+        });
+        let (name, args) = extract_llm_tool_call(LlmProvider::Anthropic, &anthropic).unwrap();
+        assert_eq!(name, "log_meal");
+        assert_eq!(args["protein_g"], 30.0);
+
+        let openai = serde_json::json!({
+            "choices": [{
+                "message": {
+                    "tool_calls": [{
+                        "function": {
+                            "name": "clarify",
+                            "arguments": "{\"prompt\": \"how much?\"}"
+                        }
+                    }]
+                }
+            }]
+        });
+        let (name, args) = extract_llm_tool_call(LlmProvider::OpenAiCompatible, &openai).unwrap();
+        assert_eq!(name, "clarify");
+        assert_eq!(args["prompt"], "how much?");
+
         // Wrong shape → None (caller falls back).
-        assert!(extract_llm_text(LlmProvider::Anthropic, &openai).is_none());
+        assert!(extract_llm_tool_call(LlmProvider::Anthropic, &openai).is_none());
     }
 }
