@@ -507,3 +507,34 @@ async fn an_expired_goal_is_anchored_at_its_deadline(pool: PgPool) {
         "two goals, two anchor dates, one honest answer each"
     );
 }
+
+// ---------------------------------------------------------------------------
+// §2.6 — the per-user goal cap (AC12; the R-0041 DoS lesson, self-inflicted
+// variant: every stored goal is an assess per list read, every expired goal
+// its own summarize anchor)
+// ---------------------------------------------------------------------------
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn the_twenty_sixth_goal_is_rejected_with_its_own_token(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "a@b.com", "8charsmin").await;
+
+    for i in 0..25 {
+        create_goal(&app, &token, strength_body(&format!("Lift {i}"), 100.0)).await;
+    }
+
+    let res = post_json_with_auth(
+        &app,
+        "/goals",
+        Some(&bearer(&token)),
+        strength_body("One Too Many", 100.0),
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let body = body_json(res).await;
+    assert_eq!(body["reason"], "too_many_goals");
+
+    // The cap is per-user, not global: a second user still creates freely.
+    let (_id, other) = register_and_token(&app, "b@b.com", "8charsmin").await;
+    create_goal(&app, &other, strength_body("Squat", 100.0)).await;
+}

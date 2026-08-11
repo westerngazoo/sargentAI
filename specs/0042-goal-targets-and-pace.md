@@ -145,8 +145,11 @@ Day-count → `f64` casts carry `#[allow(clippy::cast_precision_loss)]` with a
     wrong-signed while the remaining fraction ≥ 0.25) → `AtRisk`
   - else → `Behind`
 
-  The remaining fraction is `dir × (target − current) / (target − baseline)`
-  and is **skipped** (that AtRisk arm disabled) when the baseline is late-bound
+  The remaining fraction is `(target − current) / (target − baseline)` —
+  signed over signed (*amended in code review*: the original `dir ×`
+  numerator over the same span reduced to a magnitude divide that went
+  negative whenever work remained on a downward goal, making the stalled
+  `AtRisk` arm unreachable for every cut). It is **skipped** (that AtRisk arm disabled) when the baseline is late-bound
   or `|target − baseline|` is ~0 — no division by an unknown or zero span.
 - **Endgame, documented:** as `weeks_remaining → 0` the band vanishes while
   `gap` converges to the fixed shortfall, so anyone short of target slides
@@ -157,11 +160,23 @@ Day-count → `f64` casts carry `#[allow(clippy::cast_precision_loss)]` with a
 
 A stored `None` baseline is **not** a permanent `InsufficientData` trap. When
 the stored value is `None` but the signal has a current value, `assess` uses
-`base_eff = current`: required pace becomes `(target − current) /
+`base_eff = current` for **pace**: required pace becomes `(target − current) /
 weeks_remaining`, the report carries `baseline: None`, and the meaning is
 "unknown start; here is the pace needed from here". `InsufficientData {
 NoSignal }` is reserved for *neither* stored baseline *nor* current signal.
 Nothing is written — AC8 holds.
+
+**Direction, however, must not anchor at `current`** (*amended in code review,
+owner decision*): the moment `current` crosses the target, `target > current`
+flips sign and the goal reinterprets itself as a reduction goal — an overshoot
+("Squat 140" trained through to 150) read as `Behind`, then terminally
+`Missed`. Direction for a late-bound goal anchors at the **earliest in-window
+observation** — the trend's own starting position. This realizes the owner's
+"direction from the trend" decision robustly: the trajectory earliest → now
+carries the same sign as the slope in any established monotone trend, *and*
+supplies the position reference the slope's bare sign lacks — a falling trend
+sitting wholly below an above target is correctly *not* achieved, where a
+literal slope-sign rule would call it a completed cut.
 
 #### 2.2.4 Deadlines and terminality (AC6)
 
@@ -178,7 +193,8 @@ target; anything else — including insufficient data at the deadline — is
 #### 2.2.5 Consistency
 
 No projection. Observed = mean sessions/week over the trailing
-`min(full ISO weeks since set_on, DEFAULT_WINDOW_WEEKS)` **completed** weeks —
+`min(full ISO weeks since set_on, weeks fully inside the window)`
+**completed** weeks —
 the in-progress week is excluded, and weeks absent from
 `Adherence.weekly_days` count as **zero** (the aggregate omits empty weeks;
 core fills them). A since-`set_on` lifetime mean is both uncomputable from the
@@ -187,6 +203,12 @@ collapse; the requirement says *sustained*. Compared against
 `sessions_per_week` with the same 25 % band. `Achieved` only at the deadline
 (sustaining a rate cannot be finished early); the pre-deadline ceiling is
 `Ahead`.
+
+*Amended in code review:* countable weeks are capped at those **fully covered**
+by the half-open aggregate window `(anchor − 7·W days, anchor]` — the oldest
+nominal week always straddles the boundary, so counting it read its missing
+days as zeros: a perfect 4/wk sustainer showed a mean of 3.5 and, at any
+non-Monday deadline, `Missed`.
 
 ### 2.3 Data floors (AC5)
 
@@ -257,6 +279,14 @@ No status column — derived state stored is derived state stale (AC8).
 | `GET` | `/goals/:id` | one goal + report |
 | `DELETE` | `/goals/:id` | abandon a goal, `204` (R-0042 AC11, added by amendment) |
 
+`POST` additionally enforces `MAX_GOALS_PER_USER = 25` (R-0042 AC12,
+code-review amendment, owner-approved) with the fixed token `too_many_goals`:
+every stored goal is an `assess` per list read and every expired goal its own
+`summarize` anchor, so unbounded count is the R-0041 DoS lesson,
+self-inflicted. Checked-then-inserted without a transaction — a racing pair can
+land at cap+1, which bounds nothing meaningful; a resource guard, not an
+invariant.
+
 All owner-scoped through one `load_owned` (404, never 403 — AC3);
 `AuthenticatedUser` precedes `Path`/`Json` everywhere; `:id` route syntax.
 
@@ -324,8 +354,8 @@ AC11 (amendment) delete; tests below.
 Core unit tests (no database) — table-driven `(goal, signal, today) →
 expected` covering, per kind: ahead / on-track / behind / at-risk /
 achieved-early (and its reversion on regression) / missed / each
-`InsufficientReason`; the fat-loss `dir = −1` case where rising weight is
-`Behind`; band boundaries at `gap = ±band`; **achieved-at-creation**;
+`InsufficientReason`; the fat-loss `dir = −1` case where rising weight with most of the journey
+remaining is `AtRisk` (re-derived from the corrected fraction); band boundaries at `gap = ±band`; **achieved-at-creation**;
 **Body with both metrics set and differing statuses** (severity fold);
 **late-bound baseline** transitioning out of `InsufficientData` after three
 sessions; **endgame**: same shortfall at 3 weeks out (`Behind`) vs 5 days out
@@ -367,8 +397,28 @@ unknown-lift drop + requirement amendment (7 → §2.4), whole-value storage
 floor (10 → §2.2.2), target magnitude caps (11 → §2.4), pinned week arithmetic
 + clippy allowance (12 → §2.2.2), and the expanded test table (13 → §7).
 
+### §9 addendum — code review round (2026-08-09), all applied
+
+The implementation review (PR #93) found two blocking defects **in the spec
+text itself**, inherited faithfully by the code, plus two majors:
+
+1. *Late-bound overshoot* — direction anchored at `current` flipped past the
+   crossing (§2.2.3 amendment; owner decision: direction from the trend,
+   realized as the earliest-in-window anchor).
+2. *`remaining_fraction` sign* — the `dir ×` form made the stalled-`AtRisk`
+   arm unreachable for every downward goal (§2.2.2 amendment; §7's fat-loss
+   expectation re-derived accordingly).
+3. *Consistency window truncation* — the oldest trailing week was partially
+   outside the aggregate window and read as zeros (§2.2.5 amendment).
+4. *Unbounded goal count* — self-DoS on `GET /goals` (§2.6 cap; owner
+   decision: 25; R-0042 AC12).
+
+Nine regression tests pin these, including the false-`Achieved` guard a naive
+slope-sign direction rule would have introduced.
+
 ## Changelog
 
 - _2026-08-08 — created (Draft)._
 - _2026-08-08 — architect review applied in full (§9); R-0042 amended in step
   (AC10 wording, AC11 delete)._
+- _2026-08-09 — code-review round applied (§9 addendum); R-0042 AC12 added._

@@ -448,6 +448,7 @@ pub fn assess(goal: &Goal, signal: &GoalSignal<'_>, today: NaiveDate) -> PaceRep
                     stored: stored_strength(&goal.baseline),
                     current: found.map(|l| l.current_e1rm),
                     observed: found.and_then(|l| established_slope(&l.e1rm, l.slope_kg_per_week)),
+                    earliest: found.and_then(|l| earliest(&l.e1rm)),
                     enough: found.is_some_and(|l| l.sessions >= MIN_STRENGTH_SESSIONS),
                 },
                 goal,
@@ -469,6 +470,7 @@ pub fn assess(goal: &Goal, signal: &GoalSignal<'_>, today: NaiveDate) -> PaceRep
                         stored: stored_weight,
                         current: latest(points),
                         observed: established_slope(points, signal.body.weight_slope_kg_per_week),
+                        earliest: earliest(points),
                         enough: meets_body_floor(points),
                     },
                     goal,
@@ -487,6 +489,7 @@ pub fn assess(goal: &Goal, signal: &GoalSignal<'_>, today: NaiveDate) -> PaceRep
                             .body
                             .body_fat_slope
                             .and_then(|s| established_slope(points, s)),
+                        earliest: earliest(points),
                         enough: meets_body_floor(points),
                     },
                     goal,
@@ -530,6 +533,12 @@ struct ScalarMetric {
     current: Option<f64>,
     /// The observed slope — `Some` only when a trend is established (§2.3).
     observed: Option<f64>,
+    /// The earliest in-window observation — the trend's own starting position.
+    /// For a late-bound goal this anchors *direction* (§2.2.3, amended): the
+    /// trajectory earliest → current says which way the user is actually
+    /// travelling, and unlike the slope's bare sign it carries the position
+    /// reference needed to tell "overshot the target" from "never reached it".
+    earliest: Option<f64>,
     /// Whether the per-kind observation floor is met (§2.3).
     enough: bool,
 }
@@ -539,11 +548,18 @@ fn assess_scalar(m: ScalarMetric, goal: &Goal, today: NaiveDate) -> MetricPace {
     let weeks_remaining = weeks_between(today, goal.target_date).max(0.0);
     let base_eff = m.stored.or(m.current);
     let late_bound = m.stored.is_none();
+    // Direction anchor (§2.2.3, amended after code review): a late-bound goal
+    // must NOT infer direction from `current` — the moment current crosses the
+    // target, `target > current` flips and the goal reinterprets itself as a
+    // reduction goal, turning an overshoot into Behind and, at the deadline,
+    // Missed. The earliest in-window observation is a stable position the
+    // journey demonstrably started from, so direction survives the crossing.
+    let base_dir = m.stored.or(m.earliest).or(m.current);
 
     // §2.2.4 — post-deadline is terminal: achieved iff the (deadline-
     // anchored) current demonstrably met the target; anything else is missed.
     if today > goal.target_date {
-        let status = match (base_eff, m.current) {
+        let status = match (base_dir, m.current) {
             (Some(base), Some(current)) if target_met(m.target, base, current) => {
                 PaceStatus::Achieved
             }
@@ -586,8 +602,10 @@ fn assess_scalar(m: ScalarMetric, goal: &Goal, today: NaiveDate) -> MetricPace {
 
     // Achieved is a current-state check and precedes the floors: an
     // already-met target needs no trend to be reported as met (§2.2.2).
+    // Direction comes from `base_dir`, not `base` — see its definition.
+    let dir_base = base_dir.unwrap_or(base);
     if let Some(current) = m.current {
-        if target_met(m.target, base, current) {
+        if target_met(m.target, dir_base, current) {
             let projected = m.observed.map(|o| o.mul_add(weeks_remaining, current));
             return row(PaceStatus::Achieved, m.observed, projected);
         }
@@ -613,11 +631,11 @@ fn assess_scalar(m: ScalarMetric, goal: &Goal, today: NaiveDate) -> MetricPace {
         );
     };
 
-    // Direction by explicit comparison, never `signum` (§2.2.2). Equality of
-    // target and base was decided by the Achieved check above (with a current
-    // value present) or by the floors (without one), so the two sides are
-    // genuinely apart here.
-    let dir: f64 = if m.target > base { 1.0 } else { -1.0 };
+    // Direction by explicit comparison, never `signum` (§2.2.2), anchored at
+    // `dir_base` (§2.2.3 amendment). Equality of target and anchor was decided
+    // by the Achieved check above (with a current value present) or by the
+    // floors (without one), so the two sides are genuinely apart here.
+    let dir: f64 = if m.target > dir_base { 1.0 } else { -1.0 };
     let projected = observed.mul_add(weeks_remaining, current);
     let gap = dir * (projected - m.target);
     let required = required_per_week(m.target, base_eff, late_bound, goal, weeks_remaining);
@@ -629,7 +647,7 @@ fn assess_scalar(m: ScalarMetric, goal: &Goal, today: NaiveDate) -> MetricPace {
         PaceStatus::OnTrack
     } else {
         let stalled = (dir > 0.0 && observed <= 0.0) || (dir < 0.0 && observed >= 0.0);
-        let most_remains = remaining_fraction(m.target, base, current, dir, late_bound)
+        let most_remains = remaining_fraction(m.target, base, current, late_bound)
             .is_some_and(|f| f >= AT_RISK_REMAINING_FRACTION);
         if weeks_remaining < AT_RISK_FINAL_WEEKS || (stalled && most_remains) {
             PaceStatus::AtRisk
@@ -715,7 +733,17 @@ fn trailing_weekly_mean(
         iso_week_monday(set_on) + Duration::weeks(1)
     };
     let completed = ((current_monday - first_full_monday).num_days() / 7).max(0);
-    let n = completed.min(i64::from(DEFAULT_WINDOW_WEEKS));
+    // Only weeks the aggregate window *fully* covers may be counted. The
+    // window is the half-open (anchor − 7·W days, anchor], so the week
+    // starting at `current_monday − k·7` is fully inside iff
+    // `current_monday − k·7 > anchor − 7·W`, i.e. k ≤ (7·W − 1 − d) / 7 with
+    // `d = anchor − current_monday ∈ [0, 6]`. Without this cap the oldest
+    // counted week is partially (worst case almost entirely) outside the
+    // window and its missing sessions read as zeros — a perfect 4/wk
+    // sustainer showed a mean of 3.5 and, at a non-Monday deadline, Missed.
+    let d = (anchor - current_monday).num_days();
+    let fully_inside = (7 * i64::from(DEFAULT_WINDOW_WEEKS) - 1 - d) / 7;
+    let n = completed.min(fully_inside);
     if n == 0 {
         return None;
     }
@@ -765,16 +793,17 @@ fn required_per_week(
     (weeks > 0.0).then(|| (target - base) / weeks)
 }
 
-/// `dir × (target − current) / (target − baseline)` (§2.2.2), or `None` when
-/// the baseline is late-bound or the span is ~0 — the `AtRisk` arm it feeds is
-/// then disabled rather than dividing by an unknown or zero span.
-fn remaining_fraction(
-    target: f64,
-    base: f64,
-    current: f64,
-    dir: f64,
-    late_bound: bool,
-) -> Option<f64> {
+/// `(target − current) / (target − baseline)` (§2.2.2, amended), or `None`
+/// when the baseline is late-bound or the span is ~0 — the `AtRisk` arm it
+/// feeds is then disabled rather than dividing by an unknown or zero span.
+///
+/// Signed over signed, deliberately: the original `dir × (target − current) /
+/// span` reduced (since `dir == sign(span)`) to `(target − current) / |span|`,
+/// which is *negative* whenever work remains on a downward goal — making the
+/// stalled-`AtRisk` arm unreachable for every fat-loss/cut goal. Dividing the
+/// signed remainder by the signed span yields the travelled-fraction
+/// symmetrically in both directions.
+fn remaining_fraction(target: f64, base: f64, current: f64, late_bound: bool) -> Option<f64> {
     if late_bound {
         return None;
     }
@@ -782,7 +811,7 @@ fn remaining_fraction(
     if span.abs() < SPAN_EPSILON {
         return None;
     }
-    Some(dir * (target - current) / span)
+    Some((target - current) / span)
 }
 
 /// The slope, but only when it is *established*: at least
@@ -819,6 +848,13 @@ fn meets_body_floor(points: &[TrendPoint]) -> bool {
 /// The latest value of a date-sorted trend, if any.
 fn latest(points: &[TrendPoint]) -> Option<f64> {
     points.last().map(|p| p.value)
+}
+
+/// The earliest in-window observation — the trend's starting position, used to
+/// anchor a late-bound goal's direction (§2.2.3, amended). Trend vectors are
+/// date-ascending by construction in `aggregate`.
+fn earliest(points: &[TrendPoint]) -> Option<f64> {
+    points.first().map(|p| p.value)
 }
 
 /// The goal's lift in the signal, matched by the canonical trimmed/lowercased
@@ -1285,11 +1321,16 @@ mod tests {
     fn body_status_matrix() {
         let cases: Vec<(&str, Goal, Sig, NaiveDate, PaceStatus)> = vec![
             (
-                "fat loss: rising weight is Behind, not Ahead (dir = −1)",
+                // Re-derived after the remaining_fraction sign fix (§9 code
+                // review, finding 2): weight *rising* on a cut with more than
+                // the whole journey remaining is wrong-signed pace + most-
+                // remains — the AtRisk arm this case previously could not
+                // reach. Behind would understate it.
+                "fat loss: rising weight is AtRisk, not Ahead (dir = −1)",
                 weight_goal(Some(90.0), 80.0),
                 weight_sig(91.0, 0.3),
                 TODAY(),
-                PaceStatus::Behind,
+                PaceStatus::AtRisk,
             ),
             (
                 "fat loss on track: falling at the required rate",
@@ -1803,5 +1844,158 @@ mod tests {
         assert!(json.contains("\"reason\":\"no_signal\""));
         let back: PaceReport = serde_json::from_str(&json).unwrap();
         assert_eq!(back, none);
+    }
+    // -----------------------------------------------------------------------
+    // Code-review round (SPEC-0042 §9 addendum): findings 1, 2, 3, 5
+    // -----------------------------------------------------------------------
+
+    /// Finding 1: a goal set before any data (`baseline: None`) whose user
+    /// then trains PAST the target must be Achieved — not flip to a phantom
+    /// reduction goal. Direction anchors at the earliest in-window point.
+    #[test]
+    fn late_bound_overshoot_is_achieved_not_behind() {
+        let sig = squat(150.0, 5.0, 8); // earliest in window = 115
+        let goal = strength_goal(None, 140.0);
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(report.status, PaceStatus::Achieved);
+
+        // And terminally: with the same (deadline-anchored) signal the
+        // verdict stays Achieved — the crossing does not read as Missed.
+        let report = assess(&goal, &sig.signal(), DEADLINE() + Duration::weeks(3));
+        assert_eq!(report.status, PaceStatus::Achieved);
+    }
+
+    /// The guard the naive "direction = slope sign" rule would break: a user
+    /// mid-cut (falling trend) with a target ABOVE them has not achieved
+    /// anything — the trajectory never reached the target from below.
+    #[test]
+    fn late_bound_falling_trend_below_target_is_not_falsely_achieved() {
+        let sig = squat(120.0, -2.0, 8); // earliest 134, all below target
+        let goal = strength_goal(None, 140.0);
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(report.status, PaceStatus::Behind);
+    }
+
+    /// Late-bound in the downward direction: journey started above the
+    /// target (earliest 84) and crossed below it — Achieved.
+    #[test]
+    fn late_bound_downward_crossing_is_achieved() {
+        let mut sig = Sig::empty();
+        sig.body.weight = vec![
+            TrendPoint {
+                on: d(2026, 2, 14),
+                value: 84.0,
+            },
+            TrendPoint {
+                on: d(2026, 2, 28),
+                value: 81.0,
+            },
+            TrendPoint {
+                on: d(2026, 3, 14),
+                value: 78.0,
+            },
+        ];
+        sig.body.weight_slope_kg_per_week = -1.5;
+        let goal = weight_goal(None, 80.0);
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(report.status, PaceStatus::Achieved);
+    }
+
+    /// Finding 2: the downward mirror of the pinned upward stalled case.
+    /// Base 90 → target 80, current 89, pace fully stalled, 90 % of the
+    /// journey remaining: `AtRisk`, exactly as the upward twin is.
+    #[test]
+    fn downward_stalled_goal_with_most_remaining_is_at_risk() {
+        let sig = weight_sig(89.0, 0.0);
+        let goal = weight_goal(Some(90.0), 80.0);
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(report.status, PaceStatus::AtRisk);
+    }
+
+    /// Finding 3: a perfect 4/wk sustainer whose deadline is a Friday. The
+    /// oldest trailing week is only partially covered by the aggregate window,
+    /// so counting it (as zero) diluted the mean to 3.5 and reported Missed.
+    #[test]
+    fn consistency_sustainer_with_non_monday_deadline_achieves() {
+        let deadline = d(2026, 5, 22); // a Friday
+        let mondays: Vec<(NaiveDate, u32)> = (0..7)
+            .map(|k| (d(2026, 5, 11) - Duration::weeks(k), 4))
+            .collect();
+        let sig = adher(&mondays);
+        let goal = Goal {
+            kind: GoalKind::Consistency {
+                sessions_per_week: 4,
+            },
+            baseline: Baseline::Consistency,
+            set_on: SET_ON(),
+            target_date: deadline,
+        };
+        let report = assess(&goal, &sig.signal(), deadline + Duration::days(4));
+        assert_eq!(report.status, PaceStatus::Achieved);
+        assert_eq!(report.metrics[0].current, Some(4.0));
+    }
+
+    /// Finding 5: Body rows the matrix was missing — terminal Missed.
+    #[test]
+    fn body_goal_past_deadline_short_of_target_is_missed() {
+        let sig = weight_sig(85.0, -0.5);
+        let goal = weight_goal(Some(90.0), 80.0);
+        let report = assess(&goal, &sig.signal(), DEADLINE() + Duration::days(1));
+        assert_eq!(report.status, PaceStatus::Missed);
+    }
+
+    /// Finding 5: Body with no observations at all — `NoSignal`, not a guess.
+    #[test]
+    fn body_goal_with_no_data_is_no_signal() {
+        let sig = Sig::empty();
+        let goal = weight_goal(None, 80.0);
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(
+            report.status,
+            PaceStatus::InsufficientData {
+                reason: InsufficientReason::NoSignal
+            }
+        );
+    }
+
+    /// Finding 5: enough body-fat observations but no computable slope —
+    /// `NoTrend`, the reason R-0015's `body_fat_slope` is an `Option`.
+    #[test]
+    fn body_fat_goal_without_a_slope_is_no_trend() {
+        let mut sig = Sig::empty();
+        sig.body.body_fat_pct = vec![
+            TrendPoint {
+                on: d(2026, 2, 14),
+                value: 20.0,
+            },
+            TrendPoint {
+                on: d(2026, 2, 28),
+                value: 19.0,
+            },
+            TrendPoint {
+                on: d(2026, 3, 14),
+                value: 18.0,
+            },
+        ];
+        sig.body.body_fat_slope = None;
+        let goal = Goal {
+            kind: GoalKind::Body {
+                target_weight_kg: None,
+                target_body_fat_pct: Some(15.0),
+            },
+            baseline: Baseline::Body {
+                weight_kg: None,
+                body_fat_pct: Some(20.0),
+            },
+            set_on: SET_ON(),
+            target_date: DEADLINE(),
+        };
+        let report = assess(&goal, &sig.signal(), TODAY());
+        assert_eq!(
+            report.status,
+            PaceStatus::InsufficientData {
+                reason: InsufficientReason::NoTrend
+            }
+        );
     }
 }

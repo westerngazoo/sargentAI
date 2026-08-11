@@ -37,6 +37,11 @@ pub(crate) struct CreateGoalRequest {
     target_date: NaiveDate,
 }
 
+/// The most goals one user may hold (R-0042 AC12). Bounds `GET /goals`' cost:
+/// each goal is one `assess`, and each expired goal is one extra `summarize`
+/// anchor. 25 is far beyond any real training situation.
+const MAX_GOALS_PER_USER: u32 = 25;
+
 /// Create (AC1) and fetch-one. The domain `Goal` round-trips whole — no
 /// re-modelled copy, no duplicated fields (the R-0041 AC9 pattern).
 #[derive(Debug, Serialize)]
@@ -149,6 +154,22 @@ pub(crate) async fn create(
 ) -> ApiResult<(StatusCode, Json<GoalResponse>)> {
     let today = Utc::now().date_naive();
     validate(&body.kind, today, body.target_date).map_err(|e| to_unprocessable(&e))?;
+
+    // Per-user cap (R-0042 AC12). Every stored goal costs an `assess` on every
+    // list read, and each *expired* goal contributes its own anchor date — its
+    // own full `summarize` pass. Unbounded count is therefore a self-inflicted
+    // R-0041-style DoS on `GET /goals`. Checked-then-inserted without a
+    // transaction: a racing pair of creates can land at cap+1, which bounds
+    // nothing meaningful — the cap is a resource guard, not an invariant.
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM goals WHERE user_id = $1")
+        .bind(user.user_id.0)
+        .fetch_one(&state.pool)
+        .await?;
+    if count >= i64::from(MAX_GOALS_PER_USER) {
+        return Err(ApiError::Unprocessable {
+            reason: "too_many_goals",
+        });
+    }
 
     let inputs = fetch_signal_inputs(&state.pool, &user).await?;
     let summary = inputs.summary_at(today);

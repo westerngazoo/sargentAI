@@ -75,6 +75,12 @@ sensibly auto-adjust toward a goal that was never stated.
   originally listed here but is unenforceable — lifts are free-text exercise
   names with no registry — so blank/over-length is the enforceable proxy and
   a goal for a not-yet-trained lift is a supported flow (SPEC-0042 §2.2.3).
+- **AC12. Bounded goal count.** *(Added 2026-08-09 by code-review amendment,
+  owner-approved.)* One user may hold at most 25 goals; the 26th create is
+  rejected with the fixed token `too_many_goals`. Every stored goal costs an
+  assessment on every list read and every expired goal its own aggregation
+  anchor, so an unbounded count is a self-inflicted denial of service — the
+  same magnitude-bound lesson as R-0041.
 - **AC11. Abandon a goal.** *(Added 2026-08-08 by amendment.)*
   `DELETE` removes the caller's goal (204; non-owner 404). Without it, the
   "no update — delete and recreate" mutation story is impossible and dead
@@ -121,6 +127,8 @@ sensibly auto-adjust toward a goal that was never stated.
 ## Changelog
 
 - _2026-08-04 — created (Draft)._
+- _2026-08-09 — AC12 (goal cap, owner-approved: 25) added from the
+  implementation code review._
 - _2026-08-08 — amended with SPEC-0042's architect review: AC10 unknown-lift
   rejection replaced by the enforceable proxy; AC11 (delete) added; the
   dangling R-0034 dependency reference corrected (id never existed — #91)._
