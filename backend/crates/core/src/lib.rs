@@ -8,6 +8,7 @@ pub mod adjust;
 pub mod aggregate;
 pub mod archetype;
 pub mod authoring;
+pub mod goals;
 pub mod matching;
 pub mod nutrition;
 pub mod periodize;
@@ -32,6 +33,11 @@ pub use archetype::{
 // `fitai_core::validate` says nothing about *what* it validates. Callers reach
 // it as `fitai_core::authoring::validate`, where the module name carries the
 // meaning (SPEC-0041 §2.4).
+//
+// `goals` is likewise NOT re-exported at the root: `goals::Goal` would collide
+// with the R-0003 `profile::Goal` (the coarse training *direction*), and
+// `goals::validate` has the same anonymity problem as `authoring::validate`.
+// Callers reach everything as `fitai_core::goals::…` (SPEC-0042 §2.1).
 pub use authoring::{
     materialize, AuthorError, AuthoredExercise, AuthoredProgram, ClassPrescription, IntensityClass,
     MaterializedCycle, MaterializedDay, MaterializedEntry, Schedule, ScheduleEntry, WorkSetLine,

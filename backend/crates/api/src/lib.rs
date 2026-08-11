@@ -13,6 +13,7 @@ pub mod auth;
 pub mod authored;
 pub mod db;
 pub mod error;
+pub mod goals;
 mod health;
 pub(crate) mod http;
 pub mod matching;
@@ -63,6 +64,7 @@ pub fn app(state: AppState) -> Router {
         .merge(archetype::routes())
         .merge(auth::routes())
         .merge(authored::routes())
+        .merge(goals::routes())
         .merge(profile::routes())
         .merge(workout::routes())
         .merge(nutrition::routes())
