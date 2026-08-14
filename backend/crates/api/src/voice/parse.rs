@@ -5,6 +5,7 @@ use chrono::NaiveDate;
 use fitai_core::{NewExercise, NewNutritionLog, NewSet, NewWorkoutSession};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use crate::voice::handlers::ChatTurn;
 
 use crate::error::{ApiError, ApiResult};
 
@@ -351,11 +352,24 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: Option<&[ChatTurn]>,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if let Some(turns) = history {
+        if !turns.is_empty() {
+            history_text.push_str("Conversation history:\n");
+            for turn in turns {
+                let speaker = if turn.from_user { "User" } else { "Assistant" };
+                history_text.push_str(&format!("{}: {}\n", speaker, turn.text));
+            }
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+         {history_text}Transcript: \"{transcript}\"\n\
+         If the request is missing required fields (e.g. workout reps or meal macros) based on the current context, return the clarify action to ask for them.\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
@@ -472,6 +486,36 @@ mod tests {
             }
             _ => panic!("expected workout"),
         }
+    }
+
+    #[test]
+    fn llm_json_to_action_parses_missing_macros_as_clarify() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let v = serde_json::json!({
+            "action": "clarify",
+            "prompt": "How many grams of protein, carbs, and fat?"
+        });
+        let action = llm_json_to_action(&v, today).unwrap();
+        match action {
+            ParsedAction::Response(r) => {
+                assert_eq!(r.status, IntentStatus::Clarify);
+                assert_eq!(r.prompt.as_deref(), Some("How many grams of protein, carbs, and fat?"));
+            }
+            _ => panic!("expected clarify"),
+        }
+    }
+
+    #[test]
+    fn llm_json_to_action_rejects_negative_macros() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let v = serde_json::json!({
+            "action": "log_meal",
+            "protein_g": -10.0,
+            "carbs_g": 0.0,
+            "fat_g": 0.0
+        });
+        let action = llm_json_to_action(&v, today);
+        assert!(matches!(action, Err(ApiError::Validation { field: "protein" })));
     }
 
     #[test]
