@@ -1,11 +1,12 @@
 //! Keyword + regex voice intent parser — CI-safe fallback when no LLM key is set.
 //! Mirrors the mobile keyword parser and adds workout set extraction.
 
+use crate::voice::handlers::ChatTurn;
 use chrono::NaiveDate;
 use fitai_core::{NewExercise, NewNutritionLog, NewSet, NewWorkoutSession};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use crate::voice::handlers::ChatTurn;
+use std::fmt::Write;
 
 use crate::error::{ApiError, ApiResult};
 
@@ -361,7 +362,7 @@ pub(super) async fn parse_with_llm(
             history_text.push_str("Conversation history:\n");
             for turn in turns {
                 let speaker = if turn.from_user { "User" } else { "Assistant" };
-                history_text.push_str(&format!("{}: {}\n", speaker, turn.text));
+                let _ = writeln!(history_text, "{}: {}", speaker, turn.text);
             }
         }
     }
@@ -499,7 +500,10 @@ mod tests {
         match action {
             ParsedAction::Response(r) => {
                 assert_eq!(r.status, IntentStatus::Clarify);
-                assert_eq!(r.prompt.as_deref(), Some("How many grams of protein, carbs, and fat?"));
+                assert_eq!(
+                    r.prompt.as_deref(),
+                    Some("How many grams of protein, carbs, and fat?")
+                );
             }
             _ => panic!("expected clarify"),
         }
@@ -515,7 +519,10 @@ mod tests {
             "fat_g": 0.0
         });
         let action = llm_json_to_action(&v, today);
-        assert!(matches!(action, Err(ApiError::Validation { field: "protein" })));
+        assert!(matches!(
+            action,
+            Err(ApiError::Validation { field: "protein" })
+        ));
     }
 
     #[test]

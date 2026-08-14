@@ -2,7 +2,6 @@
 
 import 'package:dio/dio.dart';
 import 'package:fitai/src/hub/voice_intent_service.dart';
-import 'package:fitai/src/hub/sergeant.dart' show ChatTurn;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
