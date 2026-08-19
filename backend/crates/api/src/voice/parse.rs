@@ -351,11 +351,12 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+         You must act as the assistant in the following conversation, handling the final user transcript. \n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
@@ -369,7 +370,10 @@ pub(super) async fn parse_with_llm(
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "system": prompt,
+                "messages": history.iter().map(|t| serde_json::json!({"role": t.role, "content": t.content}))
+                    .chain(std::iter::once(serde_json::json!({"role": "user", "content": transcript})))
+                    .collect::<Vec<_>>()
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -383,7 +387,10 @@ pub(super) async fn parse_with_llm(
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": std::iter::once(serde_json::json!({"role": "system", "content": prompt}))
+                    .chain(history.iter().map(|t| serde_json::json!({"role": t.role, "content": t.content})))
+                    .chain(std::iter::once(serde_json::json!({"role": "user", "content": transcript})))
+                    .collect::<Vec<_>>()
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
