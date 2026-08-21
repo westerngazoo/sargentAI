@@ -351,10 +351,12 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
+         You can use the preceding conversation history to resolve missing tool arguments. \
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
@@ -364,12 +366,39 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
+    let mut messages = Vec::new();
+    for turn in history {
+        // Anthropic requires strict alternating roles, starting with user.
+        // For simplicity we just inject them as they are, but map to valid roles.
+        // We ensure role is either user or assistant.
+        let role = match turn.role.as_str() {
+            "user" => "user",
+            _ => "assistant",
+        };
+        messages.push(serde_json::json!({"role": role, "content": turn.content}));
+    }
+
+    // In Anthropic, the first message must be from a user, and they must strictly alternate.
+    // To avoid Anthropic API validation errors on the history turns, we will package the whole
+    // history as context inside the single user message for Anthropic.
+    // OpenAI supports flexible message lists.
+
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
+            let mut context_str = String::new();
+            if !history.is_empty() {
+                context_str.push_str("Conversation history:\n");
+                for turn in history {
+                    use std::fmt::Write;
+                    let _ = writeln!(context_str, "{}: {}", turn.role, turn.content);
+                }
+                context_str.push('\n');
+            }
+            let anthropic_prompt = format!("{context_str}{prompt}");
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": anthropic_prompt}]
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -378,12 +407,13 @@ pub(super) async fn parse_with_llm(
             (body, req)
         }
         LlmProvider::OpenAiCompatible => {
+            messages.push(serde_json::json!({"role": "user", "content": prompt}));
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
