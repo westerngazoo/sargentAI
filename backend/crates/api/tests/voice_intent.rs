@@ -73,6 +73,35 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_logs_meal_with_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // A fake LLM configuration would be needed to test the history correctly in CI since CI
+    // doesn't have an active LLM running, but for the integration test we fall back to keyword
+    // parser which doesn't know history natively but our intent handler can accept it
+    // without crashing. Let's just verify history parses and doesn't break.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein 60 carbs 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": "Tell me protein, carbs, and fat in grams" }
+            ]
+        }),
+    )
+    .await;
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    // the local parser treats "40 protein 60 carbs 20 fat" as log meal due to keywords
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
