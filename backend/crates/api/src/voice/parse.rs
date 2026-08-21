@@ -389,11 +389,12 @@ pub(super) async fn parse_with_llm(
             if !history.is_empty() {
                 context_str.push_str("Conversation history:\n");
                 for turn in history {
-                    context_str.push_str(&format!("{}: {}\n", turn.role, turn.content));
+                    use std::fmt::Write;
+                    let _ = writeln!(context_str, "{}: {}", turn.role, turn.content);
                 }
-                context_str.push_str("\n");
+                context_str.push('\n');
             }
-            let anthropic_prompt = format!("{}{}", context_str, prompt);
+            let anthropic_prompt = format!("{context_str}{prompt}");
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
