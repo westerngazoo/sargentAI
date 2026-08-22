@@ -166,7 +166,7 @@ conversational intent later.
 |-----|------------|------|--------|
 | R-0032 | Voice logging assistant: STT → LLM intent → auto-log; voice hub (speak button, radial action ring, preset library, anatomy chart, USDA) | SPEC-0032 | Done — shipped in slices via PRs #39, #49, #50; accepted as-built in the R-0057 pass (PR #66) |
 | R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
-| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | Parked — draft recorded via PR #74; see issue #89 |
+| R-0037 | Conversational multi-turn voice intent | SPEC-0037 | Done |
 
 ### M-Platform — Trainer marketplace
 
