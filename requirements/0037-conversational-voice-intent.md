@@ -1,12 +1,12 @@
 # R-0037 — Conversational Voice Intent (multi-turn, tool-calling)
 
-- **Status:** Draft
+- **Status:** Done
 - **Milestone:** M9 (Voice Assistant & Automation)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-09
 - **Depends on:** R-0032 (voice logging — the single-shot path this evolves),
                   R-0004 (workout log), R-0005 (nutrition log)
-- **Realized by:** SPEC-0037 (to be written)
+- **Realized by:** SPEC-0037
 - **QA:** `qa` agent run scoped to this requirement
 
 ---
