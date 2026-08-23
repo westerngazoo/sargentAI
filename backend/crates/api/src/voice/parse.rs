@@ -8,12 +8,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ApiError, ApiResult};
 
-#[derive(Debug, Clone, Deserialize)]
-pub(super) struct ChatTurn {
-    pub from_user: bool,
-    pub text: String,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum IntentStatus {
@@ -357,22 +351,11 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
-    history: &[ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
-    use std::fmt::Write;
-    let mut history_text = String::new();
-    if !history.is_empty() {
-        history_text.push_str("Recent conversation history:\n");
-        for turn in history {
-            let role = if turn.from_user { "User" } else { "Assistant" };
-            let _ = writeln!(history_text, "{role}: {}", turn.text);
-        }
-    }
-
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         {history_text}Transcript: \"{transcript}\"\n\
+         Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
