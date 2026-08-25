@@ -524,6 +524,27 @@ mod tests {
     }
 
     #[test]
+    fn generate_prompt_with_history() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 9).unwrap();
+        let history = vec![
+            super::TurnRequest {
+                role: "user".into(),
+                content: "log a meal".into(),
+            },
+            super::TurnRequest {
+                role: "assistant".into(),
+                content: "How many grams of protein, carbs, and fat?".into(),
+            },
+        ];
+        let prompt = super::generate_prompt("40 protein, 60 carbs, 20 fat", &history, today);
+
+        assert!(prompt.contains("Conversation History:"));
+        assert!(prompt.contains("User: log a meal"));
+        assert!(prompt.contains("Assistant: How many grams of protein, carbs, and fat?"));
+        assert!(prompt.contains("Current Transcript: \"40 protein, 60 carbs, 20 fat\""));
+    }
+
+    #[test]
     fn extract_text_reads_each_provider_shape() {
         let anthropic = serde_json::json!({"content": [{"text": "hi from claude"}]});
         assert_eq!(
