@@ -83,6 +83,12 @@ impl IntentResponse {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct TurnRequest {
+    pub role: String,
+    pub content: String,
+}
+
 /// Parsed write models ready for persistence.
 pub(super) enum ParsedAction {
     Nutrition(NewNutritionLog),
@@ -345,24 +351,39 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
     field.as_str().map(str::to_string)
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only. You are in a conversation. Use the conversation history to deduce missing arguments. Return clarify with a specific question if something is missing.";
 
-pub(super) async fn parse_with_llm(
-    client: &reqwest::Client,
-    cfg: &LlmConfig,
-    transcript: &str,
-    today: NaiveDate,
-) -> ApiResult<ParsedAction> {
-    let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+fn generate_prompt(transcript: &str, history: &[TurnRequest], today: NaiveDate) -> String {
+    use std::fmt::Write;
+    let mut prompt = format!("{LLM_PROMPT_HEAD} Today is {today}.\n");
+    if !history.is_empty() {
+        prompt.push_str("Conversation History:\n");
+        for turn in history {
+            let role = if turn.role == "user" { "User" } else { "Assistant" };
+            writeln!(&mut prompt, "{}: {}", role, turn.content).unwrap();
+        }
+    }
+    write!(
+        &mut prompt,
+        "Current Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
          {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
          {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
-    );
+    ).unwrap();
+    prompt
+}
+
+pub(super) async fn parse_with_llm(
+    client: &reqwest::Client,
+    cfg: &LlmConfig,
+    transcript: &str,
+    history: &[TurnRequest],
+    today: NaiveDate,
+) -> ApiResult<ParsedAction> {
+    let prompt = generate_prompt(transcript, history, today);
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
