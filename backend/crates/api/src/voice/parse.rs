@@ -360,10 +360,10 @@ fn generate_prompt(transcript: &str, history: &[TurnRequest], today: NaiveDate) 
         prompt.push_str("Conversation History:\n");
         for turn in history {
             let role = if turn.role == "user" { "User" } else { "Assistant" };
-            writeln!(&mut prompt, "{}: {}", role, turn.content).unwrap();
+            let _ = writeln!(&mut prompt, "{}: {}", role, turn.content);
         }
     }
-    write!(
+    let _ = write!(
         &mut prompt,
         "Current Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
@@ -372,7 +372,7 @@ fn generate_prompt(transcript: &str, history: &[TurnRequest], today: NaiveDate) 
          {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
          {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
-    ).unwrap();
+    );
     prompt
 }
 
