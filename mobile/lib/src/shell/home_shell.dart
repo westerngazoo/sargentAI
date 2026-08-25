@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/application/auth_controller.dart';
 import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
+import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
 import '../program/presentation/program_detail_screen.dart';
@@ -44,6 +45,14 @@ class HomeShell extends ConsumerWidget {
             tooltip: 'Progress',
             onPressed: () => context.go('/progress'),
           ),
+          // Meal logging was previously reachable ONLY from the voice hub, so
+          // a user who never opened the mic had no way to log food at all.
+          IconButton.filledTonal(
+            icon: const Icon(Icons.restaurant),
+            tooltip: 'Log meal',
+            onPressed: () => showMealQuickLogSheet(context),
+          ),
+          const SizedBox(width: 4),
           IconButton.filledTonal(
             icon: const Icon(Icons.mic),
             tooltip: 'Voice hub',
