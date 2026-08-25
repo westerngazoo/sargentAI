@@ -13,7 +13,11 @@ class PhysiqueParams {
     required this.waist,
     required this.muscularity,
     required this.blurb,
+    this.label = 'Your target',
   });
+
+  /// Short human name, used to label this build in the comparison table.
+  final String label;
 
   /// Half-width of the shoulders (the V's top).
   final double shoulder;
@@ -34,36 +38,42 @@ class PhysiqueParams {
 /// aesthetic (V-taper, mass, powerbuilder…).
 const Map<String, PhysiqueParams> _byArchetype = {
   'classic-aesthetic-taper': PhysiqueParams(
+    label: 'Classic aesthetic',
     shoulder: 0.40,
     waist: 0.155,
     muscularity: 1.0,
     blurb: 'Wide shoulders, small waist — the golden-era X-frame.',
   ),
   'modern-precision-hypertrophy': PhysiqueParams(
+    label: 'Modern hypertrophy',
     shoulder: 0.38,
     waist: 0.17,
     muscularity: 1.05,
     blurb: 'Balanced, detailed, athletic — proportion over pure size.',
   ),
   'high-intensity-minimalist': PhysiqueParams(
+    label: 'Lean minimalist',
     shoulder: 0.36,
     waist: 0.175,
     muscularity: 0.95,
     blurb: 'Lean and hard — dense muscle, minimal excess.',
   ),
   'powerbuilder-leverage': PhysiqueParams(
+    label: 'Powerbuilder',
     shoulder: 0.40,
     waist: 0.225,
     muscularity: 1.18,
     blurb: 'Thick and powerful — a strongman-meets-bodybuilder build.',
   ),
   'heavy-duty-mass': PhysiqueParams(
+    label: 'Heavy-duty mass',
     shoulder: 0.41,
     waist: 0.215,
     muscularity: 1.2,
     blurb: 'Dense, heavy-duty mass — maximum muscle, blocky and strong.',
   ),
   'mass-monster-volume': PhysiqueParams(
+    label: 'Mass monster',
     shoulder: 0.44,
     waist: 0.24,
     muscularity: 1.25,
@@ -124,8 +134,15 @@ class TargetPhysique extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _tag(context, Icons.open_in_full,
-                        'Taper ${p.taper.toStringAsFixed(1)}:1'),
+                    // Tappable: the bare ratio means little on its own, so it
+                    // opens the table that shows where this build sits among
+                    // the others (owner request).
+                    InkWell(
+                      onTap: () => showTaperTable(context, archetypeId),
+                      borderRadius: BorderRadius.circular(999),
+                      child: _tag(context, Icons.open_in_full,
+                          'Taper ${p.taper.toStringAsFixed(1)}:1  ⓘ'),
+                    ),
                     _tag(
                       context,
                       Icons.fitness_center,
@@ -256,4 +273,96 @@ class _PhysiquePainter extends CustomPainter {
       old.p.shoulder != p.shoulder ||
       old.p.waist != p.waist ||
       old.p.muscularity != p.muscularity;
+}
+
+/// Comparison of every archetype's shoulder-to-waist figure, with the caller's
+/// own build highlighted.
+///
+/// The number on the card is `shoulder ÷ waist` of the **drawn silhouette**,
+/// not a body measurement — the sheet says so plainly. Shown on its own it
+/// invites comparison with the ~1.6:1 "golden ratio" people know from
+/// anthropometry, which it is not and would lose against. In a table it does
+/// the one job it can do honestly: rank these builds against each other.
+Future<void> showTaperTable(BuildContext context, String archetypeId) {
+  final cs = Theme.of(context).colorScheme;
+  final rows = _byArchetype.entries.toList()
+    ..sort((a, b) => b.value.taper.compareTo(a.value.taper));
+
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Taper by build',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Shoulder-to-waist of the target silhouette. A higher number is '
+              'a more dramatic V. It compares these builds with each other — '
+              'it is not a measurement of your body.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            ...rows.map((e) {
+              final mine = e.key == archetypeId;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      child: mine
+                          ? Icon(Icons.arrow_right, size: 18, color: cs.primary)
+                          : const SizedBox.shrink(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        e.value.label,
+                        style: TextStyle(
+                          fontWeight:
+                              mine ? FontWeight.w700 : FontWeight.w400,
+                          color: mine ? cs.primary : null,
+                        ),
+                      ),
+                    ),
+                    // Proportional bar so the ranking is readable at a glance.
+                    SizedBox(
+                      width: 96,
+                      child: LinearProgressIndicator(
+                        value: (e.value.taper / 3.0).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: cs.surfaceContainerHighest,
+                        color: mine ? cs.primary : cs.outlineVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 46,
+                      child: Text(
+                        '${e.value.taper.toStringAsFixed(1)}:1',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontWeight:
+                              mine ? FontWeight.w700 : FontWeight.w400,
+                          color: mine ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    ),
+  );
 }
