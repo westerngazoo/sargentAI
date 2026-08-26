@@ -31,3 +31,6 @@ android/local.properties
 
 # Wrangler local cache (contains account info)
 .wrangler/
+
+# Ephemeral git worktrees created for background agents
+.claude/worktrees/
