@@ -44,6 +44,12 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
   immediately with an analysis id; the result is polled. Synchronous analysis
   does not fit: the frame budget implies tens of seconds of serialized
   inference against a 5-second client read timeout.
+- **AC0b. Android floor.** *(Added 2026-08-27.)* Frame extraction requires
+  `getScaledFrameAtTime` (API 27), so **minSdk for this feature is 27**. The
+  alternative — full-resolution decode — is slowest and heaviest on precisely
+  the old hardware a lower floor would protect, so a degraded path is worse
+  than no path. Below 27 the feature is unavailable with a clear message; the
+  rest of the app is unaffected.
 - **AC1. Server-side inference.** The clip is uploaded and analyzed on the
   server, reusing R-0013's `PoseEstimator`. No on-device inference — the
   `project-specifics.md` decision stands (owner-confirmed): one model, improved
@@ -70,9 +76,15 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 - **AC6. Rep segmentation.** The series is split into individual reps by
   detecting the movement's turning points. Rep count is reported, and each rep
   is assessed separately — a set is not a single verdict.
-- **AC7. Optional calibration improves, never gates.** A user may mark joints on
-  a still frame once to supply limb-length ratios, normalizing angles to their
-  own body. Absence of calibration degrades precision, never blocks analysis.
+- **AC7. The analysis accepts optional calibration and degrades gracefully
+  without it.** `analyze` takes optional per-user limb-length ratios; absent
+  them it uses population normalizers, widens the reported uncertainty, and
+  changes no code path. *Amended 2026-08-27:* originally promised the
+  still-frame joint-marking **UI**, which v1 does not ship — the capture flow
+  is deferred to its own requirement. What v1 delivers is the seam and the
+  honest degradation; promising the UI here would have failed QA on an
+  unimplemented criterion. Calibration remains the natural remedy for the
+  hip-centre-vs-hip-crease bias in AC10c, which is why the seam exists now.
 
 ### The verdicts
 
@@ -194,6 +206,9 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 ## Changelog
 
 - _2026-08-25 — created (Draft)._
+- _2026-08-27 — AC7 re-scoped to the calibration seam (the marking UI is
+  deferred to its own requirement); AC0b sets the Android floor at API 27.
+  Both owner decisions from the SPEC-0044 rewrite._
 - _2026-08-25 — amended after SPEC-0044 architect review (REJECT): AC8/AC9/AC10
   rewritten to measurements that COCO-17 can actually produce; AC10b (state
   what is unmeasurable) and AC10c (uncertainty) added; AC0 (async) added.
