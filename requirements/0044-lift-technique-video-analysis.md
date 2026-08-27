@@ -40,6 +40,10 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 
 ### Capture and extraction
 
+- **AC0. Asynchronous analysis.** *(Added 2026-08-25.)* Upload returns
+  immediately with an analysis id; the result is polled. Synchronous analysis
+  does not fit: the frame budget implies tens of seconds of serialized
+  inference against a 5-second client read timeout.
 - **AC1. Server-side inference.** The clip is uploaded and analyzed on the
   server, reusing R-0013's `PoseEstimator`. No on-device inference — the
   `project-specifics.md` decision stands (owner-confirmed): one model, improved
@@ -72,12 +76,41 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 
 ### The verdicts
 
-- **AC8. Squat.** Depth (hip crease relative to knee at the bottom position),
-  knee valgus (front view only), and spine angle change through the rep.
-- **AC9. Bench press.** Bar-proxy path deviation, elbow flare angle, and
-  touch-point consistency across reps.
-- **AC10. Deadlift.** Hip-rise-before-bar (the "stripper deadlift"), spinal
-  flexion change from setup to lockout, and bar drift from the mid-foot.
+- **AC8. Squat.** Depth (hip relative to knee at the bottom position), knee
+  valgus (front view only), and **torso-lean change** through the rep.
+  *Amended 2026-08-25:* originally "spine angle change" — not measurable. The
+  pose model is COCO-17, which has **no spine landmark**; the shoulder→hip line
+  measures torso inclination, and a neutral spine and a rounded spine at the
+  same hip angle produce an identical line.
+- **AC9. Bench press.** Bar-proxy path deviation, **forearm angle at the touch
+  frame**, and touch-point consistency across reps.
+  *Amended 2026-08-25:* originally "elbow flare angle" — not measurable from
+  the prescribed side view. Flare is humerus abduction, a frontal-plane angle;
+  from a camera perpendicular to the bench the upper arm points along the lens
+  axis and the far arm is occluded. Forearm-vertical-under-the-bar is the
+  sagittal-plane equivalent and a real coaching cue.
+- **AC10. Deadlift.** Hip-rise-before-bar (the "stripper deadlift"),
+  **torso-lean change** through the pull, and bar drift from the **ankle**.
+  *Amended 2026-08-25:* originally "spinal flexion change ... and bar drift
+  from the mid-foot". Neither is measurable: COCO-17 has no spine landmark (see
+  AC8) and no foot landmark at all — it ends at the ankle, so mid-foot and foot
+  length do not exist. Drift is measured from the near-side ankle and
+  normalized by shank length, with the ankle disclosed as a posteriorly-biased
+  proxy for mid-foot.
+
+- **AC10b. Say what cannot be measured.** The analysis must never report a
+  fault it cannot observe. **Back rounding is not detectable** with this pose
+  model, and the spec and the UI must say so plainly rather than substituting
+  torso lean and letting a lifter read it as a spine check. A silent
+  substitution here is the exact failure AC12 forbids, on the fault most likely
+  to injure someone.
+- **AC10c. Uncertainty, not just confidence.** Every reported value carries an
+  uncertainty in its own unit, and `Borderline` means *the uncertainty interval
+  straddles the threshold* — not "close to it". MoveNet's keypoint error is
+  comparable to the decision margin for depth, and the model reports the hip
+  **joint centre** while the depth standard is the hip **crease**, a systematic
+  offset of several centimetres. A crisp pass/fail on a biased measurement is a
+  false verdict.
 - **AC11. Findings are measured, not adjectival.** Every fault carries a number
   and its unit (`hip 8° above parallel at the bottom`), the rep it occurred on,
   and a confidence. "Your depth is bad" is not an acceptable output.
@@ -161,3 +194,7 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 ## Changelog
 
 - _2026-08-25 — created (Draft)._
+- _2026-08-25 — amended after SPEC-0044 architect review (REJECT): AC8/AC9/AC10
+  rewritten to measurements that COCO-17 can actually produce; AC10b (state
+  what is unmeasurable) and AC10c (uncertainty) added; AC0 (async) added.
+  Three of the original criteria described physically impossible measurements._
