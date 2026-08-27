@@ -347,6 +347,8 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
 
 const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 
+use std::fmt::Write;
+
 use super::handlers::ChatTurn;
 
 pub(super) async fn parse_with_llm(
@@ -361,7 +363,7 @@ pub(super) async fn parse_with_llm(
         if !turns.is_empty() {
             history_str.push_str(" Conversation History:\n");
             for turn in turns {
-                history_str.push_str(&format!("{}: {}\n", turn.role, turn.content));
+                let _ = writeln!(history_str, "{}: {}", turn.role, turn.content);
             }
         }
     }
