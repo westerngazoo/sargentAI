@@ -63,7 +63,13 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
         &app,
         "/voice/intent",
         Some(&format!("Bearer {token}")),
-        json!({ "transcript": "log a meal" }),
+        json!({
+            "transcript": "log a meal",
+            "history": [
+                { "role": "user", "content": "I'm hungry" },
+                { "role": "assistant", "content": "What did you eat?" }
+            ]
+        }),
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
