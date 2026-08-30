@@ -1,6 +1,8 @@
 //! Keyword + regex voice intent parser — CI-safe fallback when no LLM key is set.
 //! Mirrors the mobile keyword parser and adds workout set extraction.
 
+use std::fmt::Write;
+
 use chrono::NaiveDate;
 use fitai_core::{NewExercise, NewNutritionLog, NewSet, NewWorkoutSession};
 use regex::Regex;
@@ -358,7 +360,7 @@ pub(super) async fn parse_with_llm(
     if let Some(turns) = history {
         for turn in turns {
             let role = if turn.from_user { "User" } else { "Assistant" };
-            history_text.push_str(&format!("{}: {}\n", role, turn.text));
+            let _ = writeln!(history_text, "{}: {}", role, turn.text);
         }
     }
 
