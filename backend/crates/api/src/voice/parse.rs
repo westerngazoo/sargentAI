@@ -351,10 +351,21 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[super::handlers::Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if !history.is_empty() {
+        history_text.push_str("Previous conversation:\n");
+        for turn in history {
+            let role = if turn.from_user { "User" } else { "Assistant" };
+            history_text.push_str(&format!("{}: {}\n", role, turn.text));
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
+         {history_text}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\

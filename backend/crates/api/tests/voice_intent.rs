@@ -84,3 +84,29 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_accepts_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // We verify it accepts history by passing a valid `history` field;
+    // whether the LLM responds to it correctly requires a real key,
+    // so here we just test that the schema parses without error.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 grams protein 60 carbs 20 fat",
+            "history": [
+                { "from_user": true, "text": "log a meal" },
+                { "from_user": false, "text": "Tell me protein, carbs, and fat in grams" }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
+}
