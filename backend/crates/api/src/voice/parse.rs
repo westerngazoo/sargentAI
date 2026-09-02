@@ -347,14 +347,24 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
 
 const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 
-fn build_prompt(transcript: &str, history: Option<&[crate::voice::handlers::ChatTurn]>, today: NaiveDate) -> String {
+use std::fmt::Write as _;
+
+fn build_prompt(
+    transcript: &str,
+    history: Option<&[crate::voice::handlers::ChatTurn]>,
+    today: NaiveDate,
+) -> String {
     let mut history_text = String::new();
     if let Some(h) = history {
         if !h.is_empty() {
             history_text.push_str("Conversation history:\n");
             for turn in h {
-                let role = if turn.role == "user" { "User" } else { "Assistant" };
-                history_text.push_str(&format!("{}: {}\n", role, turn.content));
+                let role = if turn.role == "user" {
+                    "User"
+                } else {
+                    "Assistant"
+                };
+                let _ = writeln!(history_text, "{}: {}", role, turn.content);
             }
         }
     }
@@ -561,8 +571,14 @@ mod tests {
     fn build_prompt_includes_history_correctly() {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
         let history = vec![
-            crate::voice::handlers::ChatTurn { role: "user".into(), content: "log a meal".into() },
-            crate::voice::handlers::ChatTurn { role: "assistant".into(), content: "How many grams?".into() },
+            crate::voice::handlers::ChatTurn {
+                role: "user".into(),
+                content: "log a meal".into(),
+            },
+            crate::voice::handlers::ChatTurn {
+                role: "assistant".into(),
+                content: "How many grams?".into(),
+            },
         ];
 
         let prompt = build_prompt("200 grams of chicken", Some(&history), today);
