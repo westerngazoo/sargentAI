@@ -351,11 +351,11 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[super::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
-    let prompt = format!(
+    let system_instruction = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
@@ -364,12 +364,43 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
+    let mut messages = Vec::new();
+
+    // Add history
+    for turn in history {
+        messages.push(serde_json::json!({
+            "role": turn.role,
+            "content": turn.content,
+        }));
+    }
+
+    // Add current transcript
+    let current_prompt = format!("{system_instruction}\n\nTranscript: \"{transcript}\"");
+
+    // Some providers handle system prompts via a specific role, but to keep it simple
+    // and compatible (especially for Ollama/OpenAiCompatible without strict system role support),
+    // we just prepend the instructions to the last user message.
+    if messages.is_empty() {
+        messages.push(serde_json::json!({"role": "user", "content": current_prompt}));
+    } else {
+        // If there's history, the current transcript is a user turn.
+        // We'll insert the system instructions into the very first message
+        // to set the context, and append the current transcript at the end.
+        if messages[0]["role"] == "user" {
+            let old_content = messages[0]["content"].as_str().unwrap_or("");
+            messages[0]["content"] = serde_json::json!(format!("{}\n\n{}", system_instruction, old_content));
+        } else {
+            messages.insert(0, serde_json::json!({"role": "user", "content": system_instruction}));
+        }
+        messages.push(serde_json::json!({"role": "user", "content": format!("Transcript: \"{}\"", transcript)}));
+    }
+
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -383,7 +414,7 @@ pub(super) async fn parse_with_llm(
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": messages
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {

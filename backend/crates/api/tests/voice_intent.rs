@@ -73,6 +73,32 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_accepts_history(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // This tests that the endpoint successfully deserializes `history` array
+    // and processes it without validation errors, even though the mock/fallback
+    // parser won't change behavior based on it.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "log a meal",
+            "history": [
+                { "role": "user", "content": "I ate something" },
+                { "role": "assistant", "content": "What did you eat?" }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "clarify");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
