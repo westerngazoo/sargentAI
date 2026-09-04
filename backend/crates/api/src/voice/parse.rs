@@ -359,7 +359,8 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         hist_str.push_str(" Conversation history:\n");
         for turn in history {
-            hist_str.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            use std::fmt::Write;
+            let _ = writeln!(hist_str, "{}: {}", turn.role, turn.content);
         }
     }
 
