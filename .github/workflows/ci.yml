@@ -82,10 +82,29 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+      # `flutter-version-file` pointing at a bare `.flutter-version` was NOT
+      # honoured: `channel: stable` won and CI silently installed whatever
+      # stable was current (3.47.2 on 2026-09-04, against a 3.44.9 pin). Read
+      # the pin ourselves and pass it as an explicit version, so the file stays
+      # the single source of truth and cannot be quietly ignored.
+      - id: flutter-pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: mobile/.flutter-version
-          channel: stable
+          flutter-version: ${{ steps.flutter-pin.outputs.version }}
+      # Assert the pin actually took. The lockfile guard below only catches the
+      # SYMPTOM of an unpinned toolchain; nothing was checking the pin itself,
+      # so a new stable release turned every PR red with a truthful-looking but
+      # misleading lockfile error.
+      - name: assert the pinned SDK is the one installed
+        run: |
+          want="$(cat .flutter-version)"
+          got="$(flutter --version | head -1 | awk '{print $2}')"
+          if [ "$want" != "$got" ]; then
+            echo "::error::Flutter pin is $want but CI installed $got"
+            exit 1
+          fi
+          echo "Flutter $got matches the pin"
       # Plain `flutter pub get` rewrites pubspec.lock in place and accepts any
       # already-valid resolution, so a lock resolved on a different SDK is
       # silently tolerated and the job goes green on a lockfile that never
