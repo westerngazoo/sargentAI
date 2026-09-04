@@ -38,10 +38,17 @@ class ApiException implements Exception {
   final int? statusCode;
   final String? field;
 
+  /// Fallback copy when the server sends no message of its own.
+  ///
+  /// These are deliberately generic: the same codes are raised by every
+  /// endpoint, so anything endpoint-specific is a lie somewhere else. 409 used
+  /// to read "that email is already registered" — a registration-flow
+  /// assumption that surfaced verbatim when a user logged a second meal on the
+  /// same day, since nutrition stores one row per day.
   static String _defaultMessage(int? status) => switch (status) {
         400 => 'please check your details',
         401 => 'invalid email or password',
-        409 => 'that email is already registered',
+        409 => 'that already exists',
         _ => 'something went wrong — please try again',
       };
 
