@@ -84,3 +84,34 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_multi_turn_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein, 50 carbs, 10 fat",
+            "history": [
+                {
+                    "role": "user",
+                    "content": "log a meal"
+                },
+                {
+                    "role": "assistant",
+                    "content": "What macros?"
+                }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+
+    // When using the fallback regex parser, it will be able to parse the intent properly with macros
+    assert_eq!(body["status"], "logged_nutrition");
+}

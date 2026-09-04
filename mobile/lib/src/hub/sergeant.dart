@@ -156,8 +156,17 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      // Pass all history except the one we just added for this command
+      final historyData = state.history
+          .take(state.history.length - 1)
+          .map((t) => ChatTurnData(
+                role: t.fromUser ? 'user' : 'assistant',
+                content: t.text,
+              ))
+          .toList();
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, history: historyData);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
@@ -173,7 +182,8 @@ class Sergeant extends Notifier<SergeantState> {
       return true;
     }
     if (result.isClarify) {
-      state = state.copyWith(awaitingMacros: true);
+      // Do not set awaitingMacros for backend LLM. The LLM is stateful via history,
+      // and setting awaitingMacros would hijack the next turn into the local regex.
       await _say(result.prompt ?? 'Tell me more.');
       return true;
     }
