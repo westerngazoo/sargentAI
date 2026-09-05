@@ -156,16 +156,8 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
-      final history = state.history.map((turn) {
-        return {
-          'role': turn.fromUser ? 'user' : 'assistant',
-          'content': turn.text,
-        };
-      }).toList();
-
-      final result = await ref
-          .read(voiceIntentServiceProvider)
-          .parse(transcript, history: history);
+      final result =
+          await ref.read(voiceIntentServiceProvider).parse(transcript);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
