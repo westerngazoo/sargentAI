@@ -73,6 +73,32 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_with_history_logs_meal(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // Simulate the assistant asked for macros and the user provided them.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein 60 carbs 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": "Tell me protein, carbs, and fat in grams." }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    // With dummy models/no key this hits the keyword fallback, which parses macros on its own
+    // but the payload tests that passing history does not break serialization.
+    assert_eq!(body["status"], "logged_nutrition");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
