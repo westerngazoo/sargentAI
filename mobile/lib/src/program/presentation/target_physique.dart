@@ -327,8 +327,7 @@ Future<void> showTaperTable(BuildContext context, String archetypeId) {
                       child: Text(
                         e.value.label,
                         style: TextStyle(
-                          fontWeight:
-                              mine ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: mine ? FontWeight.w700 : FontWeight.w400,
                           color: mine ? cs.primary : null,
                         ),
                       ),
@@ -350,8 +349,7 @@ Future<void> showTaperTable(BuildContext context, String archetypeId) {
                         '${e.value.taper.toStringAsFixed(1)}:1',
                         textAlign: TextAlign.right,
                         style: TextStyle(
-                          fontWeight:
-                              mine ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: mine ? FontWeight.w700 : FontWeight.w400,
                           color: mine ? cs.primary : cs.onSurfaceVariant,
                         ),
                       ),
