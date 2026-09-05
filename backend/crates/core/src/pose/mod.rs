@@ -15,21 +15,37 @@
 //! fabricated, when their keypoints are not confident). There is no `build` /
 //! `structure_tags` here to invent.
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::archetype::{LengthBand, WidthBand};
 
 /// Keypoints below this confidence score are treated as absent.
-const CONFIDENCE_FLOOR: f32 = 0.2;
+///
+/// Public since SPEC-0044 §2.10.1: `core::technique` must apply the *same*
+/// floor, not a second copy that can drift away from this one.
+pub const CONFIDENCE_FLOOR: f32 = 0.2;
 
 /// The library's matchable shoulder-to-waist envelope (mirrors
 /// `FrameProfile::SHOULDER_TO_WAIST`); the derived ratio is clamped into it.
 const RATIO_MIN: f64 = 1.0;
 const RATIO_MAX: f64 = 2.5;
 
-/// A single pose landmark in **normalized image coordinates** (`0.0..=1.0`) with
-/// the model's per-point confidence `score`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// A single pose landmark in the model's **normalized, isotropic canvas
+/// coordinates** (`0.0..=1.0`) with the model's per-point confidence `score`.
+///
+/// # The isotropy invariant (SPEC-0044 §2.2.2)
+///
+/// `x`/`y` are normalized to the *letterboxed square canvas* the model is fed —
+/// a single uniform scale plus a translation from source pixels — **not**
+/// independently to the source image's width and height. A uniform scale
+/// preserves angles and preserves length *ratios*, which is the only reason
+/// `distance_to`, [`derive_frame_features`] and every angle in
+/// `core::technique` are correct without an aspect correction.
+///
+/// Any `PoseEstimator` implementation — and any hand-authored test fixture —
+/// must emit coordinates in such a space.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Keypoint {
     pub x: f32,
     pub y: f32,
@@ -37,12 +53,15 @@ pub struct Keypoint {
 }
 
 impl Keypoint {
-    fn is_confident(self) -> bool {
+    /// Whether the model scored this point at or above [`CONFIDENCE_FLOOR`].
+    #[must_use]
+    pub fn is_confident(self) -> bool {
         self.score >= CONFIDENCE_FLOOR
     }
 
-    /// Euclidean distance to another keypoint, in normalized units.
-    fn distance_to(self, other: Keypoint) -> f64 {
+    /// Euclidean distance to another keypoint, in normalized canvas units.
+    #[must_use]
+    pub fn distance_to(self, other: Keypoint) -> f64 {
         let dx = f64::from(self.x) - f64::from(other.x);
         let dy = f64::from(self.y) - f64::from(other.y);
         dx.hypot(dy)
@@ -59,7 +78,11 @@ impl Keypoint {
 }
 
 /// The COCO-17 landmarks, in the model's fixed output order.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// The `snake_case` serde tokens are part of the stable on-disk series format
+/// (SPEC-0044 §2.10.2) — renaming a variant breaks stored analyses.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Landmark {
     Nose,
     LeftEye,
@@ -89,7 +112,12 @@ impl Landmark {
 }
 
 /// A full COCO-17 pose: the 17 landmarks addressed by name.
-#[derive(Clone, Copy, Debug, PartialEq)]
+///
+/// Serializes **transparently** as its bare `[Keypoint; 17]` array — the stored
+/// series is 400 poses deep, and a wrapper object per pose would put a field
+/// name on disk 400 times to say nothing (SPEC-0044 §2.10.2).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct PoseKeypoints {
     points: [Keypoint; 17],
 }
@@ -105,6 +133,13 @@ impl PoseKeypoints {
     #[must_use]
     pub fn get(&self, landmark: Landmark) -> Keypoint {
         self.points[landmark.index()]
+    }
+
+    /// All 17 keypoints in COCO-17 order — the accessor iteration and
+    /// round-tripping need, since `points` is private (SPEC-0044 §2.10.1).
+    #[must_use]
+    pub fn points(&self) -> &[Keypoint; 17] {
+        &self.points
     }
 
     /// The mean confidence across all 17 landmarks (the aggregate the derivation

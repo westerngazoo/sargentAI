@@ -414,3 +414,61 @@ fn derive_error_is_a_typed_value() {
         "a degenerate frame must yield Err(FrameError), got {result:?}"
     );
 }
+
+// ===========================================================================
+// The persistable surface (SPEC-0044 §2.10.1) — additive to R-0013
+// ===========================================================================
+
+#[test]
+fn a_pose_round_trips_as_a_bare_array() {
+    // R-0044 stores a few hundred poses per analysis, so a pose serializes
+    // *transparently* as its `[Keypoint; 17]`: a wrapper object would put a
+    // field name on disk once per frame to say nothing. The `snake_case`
+    // landmark tokens are part of that stable format.
+    let pose = valid_pose();
+    let json = serde_json::to_string(&pose).expect("a pose serializes");
+    assert!(
+        json.starts_with('[') && json.ends_with(']'),
+        "a pose must serialize as a bare array, got {json}"
+    );
+    let back: PoseKeypoints = serde_json::from_str(&json).expect("a pose deserializes");
+    assert_eq!(back, pose);
+
+    assert_eq!(
+        serde_json::to_string(&Landmark::LeftShoulder).unwrap(),
+        "\"left_shoulder\""
+    );
+}
+
+#[test]
+fn points_exposes_all_seventeen_in_coco_order() {
+    // `points` is private, so iteration and round-tripping need an accessor.
+    let pose = valid_pose();
+    let points = pose.points();
+    assert_eq!(points.len(), 17);
+    for landmark in [
+        Landmark::Nose,
+        Landmark::LeftShoulder,
+        Landmark::RightHip,
+        Landmark::RightAnkle,
+    ] {
+        assert_eq!(points[landmark.index()], pose.get(landmark));
+    }
+}
+
+#[test]
+fn the_confidence_floor_is_public_so_consumers_share_one_rule() {
+    // `core::technique` must apply the *same* floor, not a second copy that can
+    // drift away from this one.
+    let confident = Keypoint {
+        x: 0.5,
+        y: 0.5,
+        score: fitai_core::pose::CONFIDENCE_FLOOR,
+    };
+    let below = Keypoint {
+        score: fitai_core::pose::CONFIDENCE_FLOOR - 0.01,
+        ..confident
+    };
+    assert!(confident.is_confident());
+    assert!(!below.is_confident());
+}

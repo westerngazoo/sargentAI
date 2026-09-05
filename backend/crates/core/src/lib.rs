@@ -16,6 +16,7 @@ pub mod photo;
 pub mod pose;
 pub mod profile;
 pub mod program;
+pub mod technique;
 pub mod user;
 pub mod workout;
 
@@ -59,6 +60,10 @@ pub use profile::{
     BodyFatPercentage, Goal, Goals, HeightCm, NewProfile, Profile, ProfileError, Sex, WeightKg,
 };
 pub use program::{instantiate, GeneratedDiet, GeneratedProgram, ProgramProposal};
+// `technique` is NOT re-exported at the crate root: `fitai_core::analyze` says
+// nothing about *what* it analyses, and `Side`/`Unit`/`Metric` are generic
+// enough to collide. Callers reach it as `fitai_core::technique::…`, where the
+// module name carries the meaning (the `authoring`/`goals` precedent).
 pub use user::{Email, EmailParseError, User, UserId};
 pub use workout::{
     ExerciseName, LoadKg, MuscleGroup, NewExercise, NewSet, NewWorkoutSession, Reps, Rpe,
