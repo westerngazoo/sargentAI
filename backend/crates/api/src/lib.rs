@@ -54,6 +54,45 @@ pub struct AppState {
     pub voice: VoiceIntentSettings,
 }
 
+/// Apply pending migrations, tolerating versions the binary does not know.
+///
+/// # Why `ignore_missing(true)`
+///
+/// sqlx defaults to `ignore_missing: false`, which makes the migrator return
+/// [`MigrateError::VersionMissing`] when the database records a migration that
+/// is not embedded in this binary. Since `main` applies migrations at startup
+/// and propagates the error, that default means **rolling the image back to any
+/// earlier build makes the API refuse to boot** — permanently, until a new
+/// image ships. On Cloudflare Containers, where the instance sleeps and
+/// re-boots on demand, that turns a routine rollback into an outage with no
+/// way out except rolling forward.
+///
+/// The emergency path has to exist, so a newer-than-me schema is tolerated.
+///
+/// # The hazard this accepts, stated plainly
+///
+/// A rolled-back binary now runs against a **newer schema than it was built
+/// for**. That risk is not created by this flag — it is inherent to rolling
+/// back across any migration — but the flag is what makes it reachable, so it
+/// must be weighed per rollback rather than assumed safe. Additive migrations
+/// (new nullable columns, new tables) are generally fine; a rollback across a
+/// migration that *dropped* a constraint the old code depended on is not.
+///
+/// Migrations still run in order, still run exactly once, and a genuine
+/// failure still aborts startup.
+///
+/// # Errors
+///
+/// Returns [`MigrateError`] when a migration fails to apply, when an
+/// already-applied migration's checksum no longer matches (the guard that
+/// stops an existing migration being rewritten in place), or when the
+/// database is unreachable. Startup aborts in all three cases, by design.
+pub async fn run_migrations(pool: &sqlx::PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    let mut migrator = sqlx::migrate!("../../migrations");
+    migrator.set_ignore_missing(true);
+    migrator.run(pool).await
+}
+
 /// Build the application router with all routes mounted.
 ///
 /// `main.rs` wraps this with `axum::serve`. Tests call it directly via
