@@ -356,9 +356,10 @@ pub(super) async fn parse_with_llm(
 ) -> ApiResult<ParsedAction> {
     let mut history_text = String::new();
     if !history.is_empty() {
-        history_text.push_str(" Conversation so far:\n");
+        use std::fmt::Write;
+        let _ = writeln!(history_text, " Conversation so far:");
         for turn in history {
-            history_text.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            let _ = writeln!(history_text, "{}: {}", turn.role, turn.content);
         }
     }
 
