@@ -1,0 +1,108 @@
+# Build the Flutter web bundle and deploy it to Cloudflare Workers static assets.
+#
+# Why this exists: the web build was deployed by hand, so the live site drifted
+# behind main without anything reporting it — sargent.goosethropic.systems was
+# serving a bundle old enough to still carry the previous product name while
+# main had moved on. A hand-run deploy has no record of what it shipped.
+#
+# Requires one repository secret:
+#   CLOUDFLARE_API_TOKEN — needs "Workers Scripts: Edit".
+#                          Create at https://dash.cloudflare.com/profile/api-tokens
+#
+# Manual by default, matching deploy-api.yml: deploying is a deliberate act.
+
+name: deploy web
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "API origin compiled into the bundle"
+        required: true
+        default: "https://sargent-api.goosethropic.systems"
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build web + deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Read the pin explicitly rather than via `flutter-version-file`, which
+      # is silently ignored for a bare version file — `channel` wins and CI
+      # installs whatever stable is current. See ci.yml for the full story.
+      - id: flutter-pin
+        run: echo "version=$(cat mobile/.flutter-version)" >> "$GITHUB_OUTPUT"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter-pin.outputs.version }}
+
+      - name: assert the pinned SDK is the one installed
+        working-directory: mobile
+        run: |
+          want="$(cat .flutter-version)"
+          got="$(flutter --version | head -1 | awk '{print $2}')"
+          if [ "$want" != "$got" ]; then
+            echo "::error::Flutter pin is $want but CI installed $got"
+            exit 1
+          fi
+          echo "Flutter $got matches the pin"
+
+      - name: resolve dependencies against the lockfile
+        working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+
+      - name: build web
+        working-directory: mobile
+        run: |
+          flutter build web --release \
+            --dart-define=API_BASE_URL='${{ inputs.api_base_url }}'
+
+      # The failure this exists to prevent: AppConfig.apiBaseUrl is a
+      # compile-time String.fromEnvironment, so a bundle built without the
+      # define talks to nothing and fails only in the user's browser. Assert
+      # the origin is actually in the output before shipping it.
+      - name: verify the API base was compiled in
+        working-directory: mobile
+        run: |
+          set -e
+          if grep -rqF '${{ inputs.api_base_url }}' build/web; then
+            echo "found '${{ inputs.api_base_url }}' in the web bundle"
+          else
+            echo "API base URL not found in build/web — the --dart-define did not take" >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: deploy
+        working-directory: infra/cloudflare-web
+        run: |
+          npm ci
+          npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # Probe the custom domain, which is the URL people actually open.
+      # Deliberately NOT a `vars.`-interpolated workers.dev host: an unset
+      # variable silently produces a malformed URL that fails every attempt
+      # while the deploy itself succeeded (the bug this repo already has in
+      # deploy-api.yml).
+      - name: smoke check
+        run: |
+          url="https://sargent.goosethropic.systems"
+          echo "probing $url"
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+            echo "  attempt $i -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 6
+          done
+          echo "deployed site did not return 200" >&2
+          exit 1
