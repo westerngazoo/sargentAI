@@ -58,12 +58,22 @@ class BrandHeader extends StatelessWidget {
           children: [
             BrandBadge(size: badge),
             SizedBox(height: badge * 0.18),
-            Text(
-              Brand.appName.toUpperCase(),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    letterSpacing: 3.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+            // Scale-to-fit rather than trusting the name to be short: the
+            // wordmark is rendered uppercased at letterSpacing 3.5, so a
+            // longer product name silently overflows on a narrow phone. The
+            // seam exists to make renaming safe, so the render has to be safe
+            // for any name it is given.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                Brand.appName.toUpperCase(),
+                maxLines: 1,
+                softWrap: false,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      letterSpacing: 3.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
             ),
             if (!compact) ...[
               const SizedBox(height: 6),

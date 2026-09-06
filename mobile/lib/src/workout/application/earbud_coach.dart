@@ -62,7 +62,7 @@ class EarbudCoach {
             AudioServiceHandler(onMediaButtonPress: handleMediaButton),
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'com.fitai.channel.audio',
-          androidNotificationChannelName: 'FitAI Workout',
+          androidNotificationChannelName: 'Workout session',
           androidNotificationOngoing: true,
         ),
       );

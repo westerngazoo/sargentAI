@@ -1,4 +1,4 @@
-# Sargent AI web — Cloudflare Workers static assets
+# Goose Physics web — Cloudflare Workers static assets
 
 Hosts the Flutter web build. Free-plan compatible, unlike the container-backed
 API in [`../cloudflare`](../cloudflare), which needs Workers Paid.
@@ -55,7 +55,7 @@ The APK therefore is **not** distributed by this Worker; serve it separately
 
 ## Installing on a phone
 
-No APK required — the manifest sets `name: Sargent AI` and
+No APK required — the manifest sets `name: Goose Physics` and
 `display: standalone`, so **Add to Home Screen** installs it as an app icon.
 Building the APK instead needs a JDK (`assembleRelease` fails with "Unable to
 locate a Java Runtime" otherwise).

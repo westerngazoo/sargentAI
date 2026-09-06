@@ -10,6 +10,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:fitai/app.dart';
+import 'package:fitai/src/core/brand.dart';
 import 'package:fitai/src/core/network/dio_provider.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:flutter/material.dart';
@@ -87,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Now on the home shell, showing the /auth/me user.
-    expect(find.widgetWithText(AppBar, 'fitAI'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, Brand.appName), findsOneWidget);
     expect(find.textContaining('e2e-user'), findsOneWidget);
 
     // The token was persisted to secure storage.
