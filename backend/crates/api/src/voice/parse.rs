@@ -345,24 +345,36 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
     field.as_str().map(str::to_string)
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only. If required fields like weight or reps are missing for a workout, or protein, carbs, or fat are missing for a meal, you must use the `clarify` action to ask for them.";
 
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
-    let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
-         Return ONE of:\n\
-         {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
-         {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
-         {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
-         {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
-         {{\"action\":\"unknown\",\"message\":\"...\"}}"
+    use std::fmt::Write;
+
+    let mut prompt = format!(
+        "{LLM_PROMPT_HEAD}\n\
+         Today is {today}.\n"
     );
+
+    if !history.is_empty() {
+        prompt.push_str("Conversation history:\n");
+        for turn in history {
+            writeln!(&mut prompt, "{}: {}", turn.role, turn.content).unwrap();
+        }
+    }
+
+    prompt.push_str(&format!("\nTranscript: \"{transcript}\"\n\
+        Return ONE of:\n\
+        {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
+        {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
+        {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
+        {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
+        {{\"action\":\"unknown\",\"message\":\"...\"}}"));
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {

@@ -152,17 +152,23 @@ class Sergeant extends Notifier<SergeantState> {
       state = state.copyWith(conversing: false);
       return false;
     }
-    if (state.awaitingMacros) return _handleMacros(transcript);
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
+      final historyPayload = state.history.map((turn) {
+        return {
+          'role': turn.fromUser ? 'user' : 'assistant',
+          'content': turn.text,
+        };
+      }).toList();
       final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+          await ref.read(voiceIntentServiceProvider).parse(transcript, historyPayload);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
     }
 
+    if (state.awaitingMacros) return _handleMacros(transcript);
     return _handleLocal(transcript);
   }
 
@@ -173,7 +179,6 @@ class Sergeant extends Notifier<SergeantState> {
       return true;
     }
     if (result.isClarify) {
-      state = state.copyWith(awaitingMacros: true);
       await _say(result.prompt ?? 'Tell me more.');
       return true;
     }
