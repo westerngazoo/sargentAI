@@ -351,10 +351,16 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: Option<&[super::handlers::Turn]>,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let history_text = history.map_or_else(String::new, |h| {
+        let lines: Vec<_> = h.iter().map(|t| format!("{}: {}", t.role, t.content)).collect();
+        format!("\nConversation history:\n{}\n", lines.join("\n"))
+    });
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
+        "{LLM_PROMPT_HEAD} Today is {today}. {history_text}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
