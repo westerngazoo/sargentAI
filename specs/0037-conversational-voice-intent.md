@@ -29,6 +29,7 @@ pub(crate) struct Turn {
 #[derive(Debug, Deserialize)]
 pub(crate) struct IntentRequest {
     pub transcript: String,
+    #[serde(default)]
     pub history: Option<Vec<Turn>>,
 }
 ```
