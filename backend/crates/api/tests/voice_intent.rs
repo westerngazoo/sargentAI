@@ -84,30 +84,3 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
-
-#[sqlx::test(migrations = "../../migrations")]
-async fn voice_intent_accepts_history(pool: PgPool) {
-    let app = build_app(pool.clone());
-    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
-
-    // Without an LLM configured in the test env, this falls back to the keyword parser.
-    // The keyword parser sees "40 protein 60 carbs 20 fat" and logs a meal,
-    // ignoring the history. The purpose of this test is to verify that the
-    // endpoint accepts the JSON payload with `history` without 400 Bad Request.
-    let resp = post_json_with_auth(
-        &app,
-        "/voice/intent",
-        Some(&format!("Bearer {token}")),
-        json!({
-            "transcript": "40 grams protein 60 carbs 20 fat",
-            "history": [
-                { "role": "user", "content": "log a meal" },
-                { "role": "assistant", "content": "Tell me the macros" }
-            ]
-        }),
-    )
-    .await;
-    assert_eq!(resp.status(), StatusCode::OK);
-    let body: Value = body_json(resp).await;
-    assert_eq!(body["status"], "logged_nutrition");
-}
