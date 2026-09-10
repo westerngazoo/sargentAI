@@ -364,17 +364,17 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         prompt.push_str("Conversation history:\n");
         for turn in history {
-            let _ = writeln!(&mut prompt, "{}: {}", turn.role, turn.content);
+            writeln!(&mut prompt, "{}: {}", turn.role, turn.content).unwrap();
         }
     }
 
-    let _ = write!(prompt, "\nTranscript: \"{transcript}\"\n\
+    prompt.push_str(&format!("\nTranscript: \"{transcript}\"\n\
         Return ONE of:\n\
         {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
         {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
         {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
         {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
-        {{\"action\":\"unknown\",\"message\":\"...\"}}");
+        {{\"action\":\"unknown\",\"message\":\"...\"}}"));
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
