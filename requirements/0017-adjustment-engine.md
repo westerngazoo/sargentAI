@@ -1,6 +1,6 @@
 # R-0017 — Heuristic Program-Adjustment Engine
 
-- **Status:** Draft
+- **Status:** Met — merged via PR #73 (`9d1bea6`)
 - **Milestone:** M5 (ML inference — Phase 1)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-09
@@ -121,3 +121,5 @@ Y") for it to train on.
 ## Changelog
 
 - _2026-07-09 — created (Draft), pending owner sign-off of acceptance criteria._
+- _2026-09-10 — register correction: the Status line still read `Draft`
+  while ROADMAP recorded the merge. No acceptance criterion changed._
