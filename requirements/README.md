@@ -57,7 +57,7 @@ the requirement(s) it satisfies. The mapping is maintained in
 | [R-0033](0033-google-sign-in.md) | Google Sign-In (auth extension) | M3 | Accepted (implementation shipped — PR #49) |
 | [R-0035](0035-earbud-handsfree-training.md) | Earbud-guided hands-free training (rebuild of R-0027 transport) | M3 | Accepted (implementation shipped — PR #71) |
 | [R-0036](0036-voice-reminders.md) | Smart missing-log reminders (split from R-0032) | M9 | Accepted |
-| [R-0037](0037-conversational-voice-intent.md) | Conversational multi-turn voice intent | M9 | Draft (parked — issue #89) |
+| [R-0037](0037-conversational-voice-intent.md) | Conversational multi-turn voice intent | M9 | Done |
 | [R-0038](0038-periodization-engines.md) | Periodization engines: linear, undulating (DUP), block | M4+ / methodology | Draft (implementation shipped — PR #75) |
 | [R-0039](0039-program-authoring.md) | Program authoring model (trainer/self-authored) | M-Platform | Draft (implementation shipped — PR #76) |
 | [R-0041](0041-authored-program-persistence.md) | Authored-program persistence + serving (API) | M-Platform | Draft (implementation shipped — PR #85) |

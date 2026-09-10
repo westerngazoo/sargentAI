@@ -166,7 +166,7 @@ conversational intent later.
 |-----|------------|------|--------|
 | R-0032 | Voice logging assistant: STT → LLM intent → auto-log; voice hub (speak button, radial action ring, preset library, anatomy chart, USDA) | SPEC-0032 | Done — shipped in slices via PRs #39, #49, #50; accepted as-built in the R-0057 pass (PR #66) |
 | R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
-| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | Parked — draft recorded via PR #74; see issue #89 |
+| R-0037 | Conversational multi-turn voice intent | SPEC-0037 | Done — merged via PR #90 |
 
 ### M-Platform — Trainer marketplace
 
@@ -305,7 +305,7 @@ R-0057 reconciliation pass (PR #66). M5 opened with **R-0015** log aggregation
 platform shipped **R-0038** periodization engines (PR #75), **R-0039** program
 authoring (PR #76) and **R-0041** authored-program persistence (PR #85). Draft
 requirements recorded but not implemented: **R-0042** and **R-0043** (PR #88)
-and **R-0037** (parked — issue #89); **R-0040** (roles) exists only as issue
+and **R-0040** (roles) exists only as issue
 #77. The web app + API run on Cloudflare with Neon Postgres (see the M8 note).
 Next work is chosen by the owner from the open Draft / Accepted / Backlog rows
 above.

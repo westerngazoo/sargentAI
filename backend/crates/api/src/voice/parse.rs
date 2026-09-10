@@ -351,12 +351,24 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[super::handlers::Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    for turn in history {
+        let role = if turn.role == "user" { "User" } else { "Assistant" };
+        history_text.push_str(&format!("{role}: {}\n", turn.content));
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
-         Return ONE of:\n\
+         Consider the conversation history when parsing the user's latest transcript.\n\
+         \n\
+         History:\n\
+         {history_text}\
+         \n\
+         User: \"{transcript}\"\n\
+         Return ONE of the following JSON tool calls:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
          {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
@@ -480,6 +492,44 @@ mod tests {
         match parse_transcript("log a meal", today) {
             ParsedAction::Response(r) => assert_eq!(r.status, IntentStatus::Clarify),
             _ => panic!("expected clarify"),
+        }
+    }
+
+    #[test]
+    fn llm_json_to_action_parses_missing_arg_clarification() {
+        let json = serde_json::json!({
+            "action": "clarify",
+            "prompt": "How many grams of protein, carbs, and fat?"
+        });
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let action = llm_json_to_action(&json, today).unwrap();
+        match action {
+            ParsedAction::Response(r) => {
+                assert_eq!(r.status, IntentStatus::Clarify);
+                assert_eq!(r.prompt.as_deref(), Some("How many grams of protein, carbs, and fat?"));
+            }
+            _ => panic!("expected clarify response"),
+        }
+    }
+
+    #[test]
+    fn llm_json_to_action_parses_completed_workout() {
+        let json = serde_json::json!({
+            "action": "log_workout",
+            "exercise": "Squat",
+            "reps": 5,
+            "weight_kg": 120.5
+        });
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let action = llm_json_to_action(&json, today).unwrap();
+        match action {
+            ParsedAction::Workout(session) => {
+                assert_eq!(session.exercises.len(), 1);
+                assert_eq!(session.exercises[0].name.as_str(), "Squat");
+                assert_eq!(session.exercises[0].sets[0].reps.get(), 5);
+                assert_eq!(session.exercises[0].sets[0].weight_kg.unwrap().get(), 120.5);
+            }
+            _ => panic!("expected workout"),
         }
     }
 

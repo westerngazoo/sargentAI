@@ -156,8 +156,18 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
+      // Send the history (excluding the current turn which we haven't appended to state yet,
+      // actually we just appended it in `_listenOnce` right before calling `_handle`!)
+      // Wait, in `_listenOnce`: `state = state.copyWith(history: _appended(fromUser: true, text: command));`
+      // So the last item is the current turn. We should send history without it, because
+      // `transcript` parameter receives `command`.
+      final takeCount = state.history.isEmpty ? 0 : state.history.length - 1;
+      final turns = state.history.take(takeCount).map((t) => {
+        'role': t.fromUser ? 'user' : 'assistant',
+        'content': t.text,
+      }).toList();
       final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+          await ref.read(voiceIntentServiceProvider).parse(transcript, turns);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.

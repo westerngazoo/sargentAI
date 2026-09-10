@@ -73,6 +73,32 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_accepts_history(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "log a meal",
+            "history": [
+                { "role": "user", "content": "hello" },
+                { "role": "assistant", "content": "how can I help?" }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    // Since there's no LLM backend configured in this test by default, it will fall back to local parser,
+    // which just sees "log a meal" and returns clarify. We are just verifying that passing history
+    // does not cause a schema validation error (422 or 400).
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "clarify");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
