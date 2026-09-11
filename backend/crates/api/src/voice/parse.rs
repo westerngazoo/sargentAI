@@ -349,6 +349,8 @@ const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 
 use crate::voice::handlers::ChatTurn;
 
+use std::fmt::Write;
+
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
@@ -360,7 +362,7 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         conversation.push_str("Here is the conversation history:\n");
         for turn in history {
-            conversation.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            let _ = writeln!(conversation, "{}: {}", turn.role, turn.content);
         }
     }
 
