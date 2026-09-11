@@ -84,3 +84,43 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_logs_meal_with_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // First turn: incomplete intent
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({ "transcript": "log a meal" }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "clarify");
+
+    // For local fallback (which tests use by default unless LLM is mocked),
+    // it handles "40 protein 60 carbs 20 fat" as a full intent anyway if the keyword parser is used.
+    // We can simulate sending history here to ensure it compiles and accepts the payload.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 grams protein 60 carbs 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": "Tell me the grams of protein, carbs, and fat" }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    // With local fallback, "40 grams protein 60 carbs 20 fat" should parse as a logged meal
+    // or at least be accepted gracefully.
+    assert_eq!(body["status"], "logged_nutrition");
+}

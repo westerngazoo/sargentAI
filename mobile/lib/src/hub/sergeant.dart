@@ -15,12 +15,10 @@ import '../nutrition/domain/preset_meals.dart';
 import '../nutrition/models/food_info.dart';
 import 'speech_input.dart';
 import 'voice_intent.dart';
+import 'chat_turn.dart';
 import 'voice_intent_service.dart';
 import 'voice_protocol.dart';
 import 'voice_output.dart';
-
-/// One bubble in the hub's chat thread.
-typedef ChatTurn = ({bool fromUser, String text});
 
 @immutable
 class SergeantState {
@@ -156,8 +154,20 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      // The current transcript is already appended to history earlier in _listenOnce
+      // so we pass the current history without duplicating the last intent.
+      // Wait, _listenOnce appended the transcript BEFORE calling _handle:
+      // state = state.copyWith(history: _appended(fromUser: true, text: command));
+      // So the history includes the current command. The backend expects
+      // previous turns in 'history' and current command in 'transcript'.
+      // We should slice off the last element if it's the current transcript,
+      // or we just send the whole history except the last one.
+      final historyToPass = state.history.length > 1
+          ? state.history.sublist(0, state.history.length - 1)
+          : <ChatTurn>[];
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, historyToPass);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/api_exception.dart';
 import '../core/network/dio_provider.dart';
+import 'chat_turn.dart';
 
 class VoiceIntentResult {
   const VoiceIntentResult({
@@ -41,11 +42,19 @@ class VoiceIntentService {
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript) async {
+  Future<VoiceIntentResult> parse(String transcript, List<ChatTurn> history) async {
     try {
+      final serializedHistory = history.map((t) => {
+        'role': t.fromUser ? 'user' : 'assistant',
+        'content': t.text,
+      }).toList();
+
       final res = await _dio.post<Map<String, dynamic>>(
         '/voice/intent',
-        data: {'transcript': transcript},
+        data: {
+          'transcript': transcript,
+          'history': serializedHistory,
+        },
       );
       return VoiceIntentResult.fromJson(res.data!);
     } on DioException catch (e) {

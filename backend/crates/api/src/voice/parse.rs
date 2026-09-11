@@ -347,15 +347,27 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
 
 const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 
+use crate::voice::handlers::ChatTurn;
+
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut conversation = String::new();
+    if !history.is_empty() {
+        conversation.push_str("Here is the conversation history:\n");
+        for turn in history {
+            conversation.push_str(&format!("{}: {}\n", turn.role, turn.content));
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+         {conversation}\
+         Latest Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
