@@ -12,6 +12,7 @@ import '../../hub/voice_protocol.dart';
 import '../../hub/voice_output.dart';
 import '../../program/application/program_providers.dart';
 import '../domain/muscle_activation.dart';
+import '../domain/preset_exercises.dart';
 import '../domain/set_draft.dart';
 import 'session_driver.dart';
 import 'session_voice_intent.dart';
@@ -90,7 +91,10 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
       final planned = await _loadPlan();
       if (planned.isNotEmpty) {
         for (final name in planned) {
-          _driver.addExercise(name);
+          // Resolve the catalogue's group: a plan supplies bare names, and an
+          // exercise stored with a null group drops out of per-muscle volume,
+          // so a hands-free session would be invisible to the balance charts.
+          _driver.addExercise(name, group: presetGroupFor(name));
         }
         _driver.selectExercise(0);
         await _say('Plan loaded — ${planned.length} exercises. First up: '

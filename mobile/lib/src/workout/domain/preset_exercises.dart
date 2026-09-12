@@ -1,7 +1,15 @@
-import '../domain/muscle_group.dart';
+import 'muscle_group.dart';
 
-/// A preset lift: a display name plus a suggested muscle group. **Presentation
-/// only** — a UI convenience that pre-fills the same validated free-text path.
+/// A preset lift: a display name plus its muscle group.
+///
+/// **Invents no schema** — every preset name passes the same validator a typed
+/// name passes, and the group is one of the six the backend already defines.
+/// That guarantee (R-0009, architect finding 5) is what "presentation only"
+/// originally protected; it holds here unchanged.
+///
+/// Lives in `domain/` because a lift's muscle group is reference data, not a
+/// widget concern: the picker, a program's planned exercises and a voice
+/// transcript all need the same answer, and only the first is presentation.
 /// Catalog ported from the-goose-factor routine data.
 class PresetExercise {
   const PresetExercise(this.name, this.group);
@@ -91,3 +99,22 @@ const List<PresetExercise> presetExercises = <PresetExercise>[
   PresetExercise('Russian twist', MuscleGroup.core),
   PresetExercise('Side plank', MuscleGroup.core),
 ];
+
+/// The catalogue's suggested muscle group for [name], or `null` when the lift
+/// is not a preset.
+///
+/// Exists because a name arriving from somewhere other than the picker — a
+/// program's `highlightExercises`, a voice transcript — still deserves the
+/// group the catalogue already knows. Without it those exercises are stored
+/// with a null group and vanish from per-muscle volume, so a session logged
+/// hands-free is invisible to the balance graphics. Matching is
+/// case-insensitive and trims, because those sources are not the picker and
+/// do not guarantee the catalogue's exact casing.
+MuscleGroup? presetGroupFor(String name) {
+  final needle = name.trim().toLowerCase();
+  if (needle.isEmpty) return null;
+  for (final preset in presetExercises) {
+    if (preset.name.toLowerCase() == needle) return preset.group;
+  }
+  return null;
+}

@@ -242,8 +242,45 @@ fn extract_exercise_name(t: &str) -> Option<String> {
     }
 }
 
+/// Whole-word keyword match.
+///
+/// Substring matching silently mis-routed a whole class of ordinary gym
+/// speech, because every keyword also occurs inside longer words:
+/// `"start workout"` contains `"out"` (stop), `"repeat last set"` contains
+/// `"eat"` (meal), `"lateral raise"` contains `"ate"` (meal), `"plank"`
+/// contains `"plan"`, and `"stopwatch"` contains `"stop"`. The first of those
+/// broke the single most common command in the product.
+///
+/// A keyword matches only when bounded by non-alphanumeric characters on both
+/// sides, so multi-word keys like `"never mind"` keep working.
 fn matches_any(t: &str, keywords: &[&str]) -> bool {
-    keywords.iter().any(|k| t.contains(k))
+    keywords.iter().any(|k| contains_word(t, k))
+}
+
+/// `needle` occurs in `haystack` delimited by non-alphanumeric boundaries.
+fn contains_word(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return false;
+    }
+    let mut from = 0;
+    while let Some(offset) = haystack[from..].find(needle) {
+        let start = from + offset;
+        let end = start + needle.len();
+        let open = haystack[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !c.is_alphanumeric());
+        let close = haystack[end..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_alphanumeric());
+        if open && close {
+            return true;
+        }
+        // `end` is always a char boundary: the needle matched exactly there.
+        from = end;
+    }
+    false
 }
 
 fn grams(t: &str, macro_name: &str) -> Option<f64> {
@@ -459,6 +496,74 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every route below was reachable only by accident: `matches_any` tested
+    /// `contains`, so a keyword buried inside a longer word matched. These are
+    /// the collisions that actually bit, in the order a user hits them.
+    #[test]
+    fn start_workout_is_not_a_stop_command() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        // "start workout" contains "out", which is in the stop list — so the
+        // single most common command in the product answered "Standing by."
+        match parse_transcript("start workout", today) {
+            ParsedAction::Response(r) => {
+                assert_eq!(r.route.as_deref(), Some("/session"));
+                assert_eq!(r.status, IntentStatus::Navigate);
+            }
+            _ => panic!("expected a session navigation"),
+        }
+    }
+
+    #[test]
+    fn gym_phrases_containing_eat_or_ate_are_not_meals() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        // "repeat" contains "eat"; "lateral" contains "ate". Both routed to the
+        // nutrition branch and asked the lifter for protein, carbs and fat.
+        for phrase in ["repeat last set", "lateral raise", "log a great set"] {
+            match parse_transcript(phrase, today) {
+                ParsedAction::Nutrition(_) => panic!("{phrase:?} logged as a meal"),
+                ParsedAction::Response(r) => assert!(
+                    !r.prompt.unwrap_or_default().contains("protein"),
+                    "{phrase:?} asked for macros"
+                ),
+                ParsedAction::Workout(_) => {}
+            }
+        }
+    }
+
+    #[test]
+    fn plank_is_not_a_plan_and_stopwatch_is_not_stop() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        for phrase in ["plank", "stopwatch"] {
+            if let ParsedAction::Response(r) = parse_transcript(phrase, today) {
+                assert_ne!(r.route.as_deref(), Some("/programs/current"), "{phrase:?}");
+                assert_ne!(r.message.as_deref(), Some("Standing by."), "{phrase:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn real_stop_commands_still_stop() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        // The fix must not cost the feature its actual job.
+        for phrase in ["stop", "cancel that", "never mind", "pause"] {
+            match parse_transcript(phrase, today) {
+                ParsedAction::Response(r) => {
+                    assert_eq!(r.message.as_deref(), Some("Standing by."), "{phrase:?}");
+                }
+                _ => panic!("expected stop for {phrase:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn a_real_meal_still_logs() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        match parse_transcript("I ate 40 protein, 60 carbs, 20 fat", today) {
+            ParsedAction::Nutrition(_) => {}
+            _ => panic!("expected nutrition"),
+        }
+    }
 
     #[test]
     fn parses_bench_set_from_natural_language() {
