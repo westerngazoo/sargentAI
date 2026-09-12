@@ -1,12 +1,14 @@
 # R-0045 — Lift Biomechanics Model (joint torque & variant comparison)
 
-- **Status:** Accepted (owner, 2026-09-11)
+- **Status:** Accepted (owner, 2026-09-11); **amended 2026-09-12** for the
+  parametric source (see changelog)
 - **Milestone:** M6 (pose pipeline) / M-Platform (the coach-facing half)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
-- **Depends on:** R-0044 (the keypoint series this consumes), R-0013 (pose
-  estimation), R-0004 (the logged set supplying the external load), R-0002
-  (profile — height and weight scale the segment model)
+- **Depends on:** R-0003 (profile — height and weight scale the segment
+  model), R-0004 (the external load). **R-0044 only for the measured source**,
+  which is a later slice; v1's parametric source needs no keypoints.
+  *(Amended 2026-09-12.)*
 - **Realized by:** SPEC-0045 (to be written)
 - **QA:** `qa` agent run scoped to this requirement
 
@@ -41,20 +43,24 @@ trainer-platform direction (R-0040/R-0041).
 
 - **AC1. Inverse dynamics, not a physics engine.** The lift is modelled as a
   linked rigid-segment chain in the sagittal plane; joint moments are solved
-  from static equilibrium at each sampled frame. This is linear algebra over
-  the R-0044 series — no forward simulation, no collision solver, no game
-  physics dependency.
+  from static equilibrium at each sampled frame. This is linear algebra over a `Posture` in metres — produced by the v1
+  parametric solver or, later, by the R-0044 series — no forward simulation,
+  no collision solver, no game physics dependency. *(Amended 2026-09-12:
+  was "over the R-0044 series".)*
 - **AC2. Anthropometric scaling from published tables.** Segment masses,
   lengths and centre-of-mass positions come from a standard anthropometric
   table (Dempster/Winter or equivalent), scaled by the user's height and
   weight. The table and its source are cited in the spec — no invented
   constants.
-- **AC3. Real external load.** The bar load comes from the logged set the clip
-  is attached to. Where no load is known, the model reports bodyweight-only
-  mechanics and says so — it never assumes a weight.
-- **AC4. Joint torque is the output.** Hip, knee, ankle, and lumbar moments
-  through the movement, with the peak and the position at which it occurs, in
-  N·m, per rep.
+- **AC3. Real external load.** The bar load is an explicit `LoadKg` in v1, and
+  comes from the attached logged set once the measured source exists. Where
+  no load is known, the model reports bodyweight-only mechanics and says so —
+  it never assumes a weight. *(Amended 2026-09-12.)*
+- **AC4. Joint torque is the output.** Hip, knee, ankle, and lumbar moments in
+  N·m. In v1, at the solved posture — a single position, stated on the result;
+  through the movement and per rep once the measured source exists.
+  *(Amended 2026-09-12: was "through the movement … per rep", which a single
+  solved posture cannot honestly claim.)*
 - **AC5. Muscle groups, never individual muscles.** Torque is attributed to the
   muscle **group** that produces it (hip extensors, knee extensors, spinal
   erectors). Per-muscle force is **explicitly out of scope**: multiple muscles
@@ -65,14 +71,17 @@ trainer-platform direction (R-0040/R-0041).
 
 ### Variant comparison
 
-- **AC6. Grounded in the client's own lift.** A variant starts from a real
-  analyzed set — that person's limb lengths, posture, and load — and adjusts one
-  or more variables. The comparison is always *against what they actually did*,
+- **AC6. Grounded in the client's own lift.** A variant starts from that
+  person's limb lengths and load, at a **stated baseline posture** in v1 — their
+  measured posture once the measured source exists — and adjusts one or more
+  variables. *(Amended 2026-09-12.)* The comparison is always *against what they actually did*,
   never against a generic figure. (Owner decision.)
-- **AC7. Adjustable variables.** At minimum: stance width, foot rotation, bar
-  position (high/low bar; grip width for bench), and torso angle. Each has a
-  stated plausible range; values outside it are rejected rather than
-  extrapolated.
+- **AC7. Adjustable variables.** Stance width, bar position (high/low bar),
+  and torso angle. Each has a stated plausible range; values outside it are
+  rejected rather than extrapolated. *(Amended 2026-09-12: **foot rotation**
+  removed — frontal/transverse-plane; a sagittal number for it would be
+  fabricated, deferred to a 3D model. **Grip width for bench** removed — the
+  bench is struck from this requirement, see decision log.)*
 - **AC8. Deltas, not absolutes, are the headline.** The output is the *change*
   from the lifter's actual mechanics (`hip −18%`, `knee +22%`), because the
   absolute torque carries the model's error while the delta largely cancels it.
@@ -96,14 +105,17 @@ trainer-platform direction (R-0040/R-0041).
   quasi-static, rigid segments, table-derived masses. These are real
   limitations and a coach relaying numbers to a client needs them visible, not
   buried in a help page.
-- **AC13. Inherit R-0044's refusal.** If the underlying clip was refused, or the
-  camera view cannot support sagittal analysis, the model refuses too. Mechanics
-  computed from bad keypoints are confident nonsense.
+- **AC13. Inherit R-0044's refusal.** Parametric source: a typed `Rejection` for
+  any posture that does not balance or is anatomically implausible. Measured
+  source: if the underlying clip was refused, or the camera view cannot
+  support sagittal analysis, the model refuses too — mechanics computed from
+  bad keypoints are confident nonsense. *(Amended 2026-09-12.)*
 - **AC14. No injury or safety claims.** Higher torque is not "dangerous" and
   lower is not "safe" — the output describes load distribution, not risk.
   (Consistent with R-0044 AC14.)
 - **AC15. Pure core.** All mechanics live in `fitai-core` as deterministic
-  functions over the keypoint series plus profile and load. Unit-testable
+  functions over a `Posture` plus profile and load. *(Amended 2026-09-12: was
+  "over the keypoint series".)* Unit-testable
   against hand-computed textbook cases with no video, no database, and no
   model.
 
@@ -146,6 +158,9 @@ trainer-platform direction (R-0040/R-0041).
 | 2026-08-25 | Inverse dynamics in `core`, not a physics engine | The task is solving forces from a known posture, not simulating bodies forward. Rapier-class engines solve the opposite problem and would add a large dependency for none of the need. |
 | 2026-08-25 | Joint torque + muscle **groups**; no per-muscle force | Owner decision. Muscle redundancy makes per-muscle force indeterminate without a musculoskeletal model; a number a coach would repeat as fact must not be invented. |
 | 2026-08-25 | Variants compare against the client's own analyzed lift | Owner decision. Grounding in real limb lengths and real load is the whole advantage over a textbook diagram, and deltas cancel much of the model's absolute error. |
+| 2026-09-12 | v1 source is parametric; R-0044 feeds a later slice | Owner decision, following the 2026-09-06 direction. The posture needs no camera (physics-lab RFC-002 §9); v1 ships with no video, ML, upload or retention. Seven criteria re-worded; none loosened. |
+| 2026-09-12 | The physics lives in `fitai-core` only | Owner decision. Vendoring physics-lab's crate would ship reel models with no requirement; the `Lift` collision was false. physics-lab keeps a bar-only *teaching* model; the reel correction is the bridge. |
+| 2026-09-12 | The bench is struck from R-0045 | Owner decision. Needs elbow/shoulder joints and a two-arm load split the four-joint model cannot express; grip width is frontal-plane. Its own requirement when a frontal model exists. |
 | 2026-08-25 | Deltas are the headline, not absolutes | The absolute torque carries every modelling assumption; the difference between two postures of the same body carries far fewer. |
 
 ## Changelog
@@ -154,3 +169,7 @@ trainer-platform direction (R-0040/R-0041).
 - _2026-09-11 — **Accepted** by the owner. The file had read `Draft` while
   implementation was already under review, which under CLAUDE.md §1.1 it
   should not have been; this closes that gap rather than excusing it._
+- _2026-09-12 — amended for the parametric source (owner decision, SPEC-0045
+  §5.1): dependency line, AC1, AC3, AC4, AC6, AC7, AC13, AC15. Foot rotation
+  and the bench removed as not honestly representable in a sagittal model —
+  the treatment R-0044 gave its impossible criteria on 2026-08-25._
