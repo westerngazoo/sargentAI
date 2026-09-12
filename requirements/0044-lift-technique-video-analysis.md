@@ -1,6 +1,6 @@
 # R-0044 — Lift Technique Video Analysis
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-09-11) — amended twice by the owner (2026-08-25, 2026-08-27)
 - **Milestone:** M6 (photo/pose pipeline) — the movement half
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
@@ -213,3 +213,6 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
   rewritten to measurements that COCO-17 can actually produce; AC10b (state
   what is unmeasurable) and AC10c (uncertainty) added; AC0 (async) added.
   Three of the original criteria described physically impossible measurements._
+- _2026-09-11 — **Accepted** by the owner. The file had read `Draft` while
+  implementation was already under review, which under CLAUDE.md §1.1 it
+  should not have been; this closes that gap rather than excusing it._

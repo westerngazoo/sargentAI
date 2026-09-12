@@ -1,6 +1,6 @@
 # R-0045 — Lift Biomechanics Model (joint torque & variant comparison)
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-09-11)
 - **Milestone:** M6 (pose pipeline) / M-Platform (the coach-facing half)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
@@ -151,3 +151,6 @@ trainer-platform direction (R-0040/R-0041).
 ## Changelog
 
 - _2026-08-25 — created (Draft)._
+- _2026-09-11 — **Accepted** by the owner. The file had read `Draft` while
+  implementation was already under review, which under CLAUDE.md §1.1 it
+  should not have been; this closes that gap rather than excusing it._
