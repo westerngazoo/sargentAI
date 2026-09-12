@@ -32,3 +32,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # The silent loop that holds the earbud foreground service open (R-0035).
+    # The file was on disk but undeclared, so it was never bundled;
+    # AudioServiceHandler._initAudio swallows the load failure by design, which
+    # made a missing asset look identical to a working one at runtime.
+    - assets/audio/silence.mp3

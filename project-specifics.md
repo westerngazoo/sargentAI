@@ -9,8 +9,8 @@ change.
 
 ## Identity
 
-- **Project name:** fitAI
-- **One-line description:** Personalized fitness optimization using ML-driven adaptive programming based on individual physiological response.
+- **Project name:** Goose Physics
+- **One-line description:** Lift mechanics you can check — joint torque and leverage computed from your own limb lengths and load, with training and logging built around it.
 - **Owner / final decision authority:** Gustavo Delgadillo <gustavo.delgadillo@gmail.com>
 - **Repository URL:** https://github.com/westerngazoo/sargentAI
 - **Source of requirements:** [`docs/fitness_ai_project.md`](docs/fitness_ai_project.md) — the canonical brief from which `R-NNNN` files are derived.

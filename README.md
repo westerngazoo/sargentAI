@@ -1,4 +1,4 @@
-# fitAI
+# Goose Physics
 
 Personalized fitness optimization using ML-driven adaptive programming.
 
