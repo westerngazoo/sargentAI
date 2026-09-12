@@ -55,9 +55,14 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+      # Probe the custom domain rather than a `vars.`-interpolated workers.dev
+      # host. `vars.CF_WORKERS_SUBDOMAIN` is not set on this repository
+      # (actions/variables reports zero), so the old URL collapsed to
+      # "fitai-api..workers.dev" and this check failed all twenty attempts even
+      # when the deploy had succeeded — reporting a broken deploy that was fine.
       - name: smoke check
         run: |
-          url="https://fitai-api.${{ vars.CF_WORKERS_SUBDOMAIN }}.workers.dev/health"
+          url="https://sargent-api.goosethropic.systems/health"
           echo "probing $url"
           for i in $(seq 1 20); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
