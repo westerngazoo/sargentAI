@@ -35,7 +35,7 @@ import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
-import 'package:fitai/src/workout/presentation/preset_exercises.dart';
+import 'package:fitai/src/workout/domain/preset_exercises.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

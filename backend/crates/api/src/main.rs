@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&db_url)
         .await?;
 
-    sqlx::migrate!("../../migrations").run(&pool).await?;
+    fitai_api::run_migrations(&pool).await?;
     tracing::info!("migrations up to date");
 
     let store_root =

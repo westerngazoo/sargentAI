@@ -43,10 +43,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # See ci.yml: a bare `.flutter-version` is not honoured by
+      # `flutter-version-file`; `channel` wins and the pin is silently ignored.
+      - id: flutter-pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: mobile/.flutter-version
-          channel: stable
+          flutter-version: ${{ steps.flutter-pin.outputs.version }}
 
       - run: flutter pub get --enforce-lockfile
 

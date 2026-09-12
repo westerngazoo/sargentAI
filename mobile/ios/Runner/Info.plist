@@ -9,11 +9,11 @@
 		<string>audio</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Sargent AI uses the microphone so you can dictate sets and commands hands-free.</string>
+	<string>Goose Physics uses the microphone so you can dictate sets and commands hands-free.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Sargent AI transcribes your voice to log workouts and meals hands-free.</string>
+	<string>Goose Physics transcribes your voice to log workouts and meals hands-free.</string>
 	<key>CFBundleDisplayName</key>
-	<string>Sargent AI</string>
+	<string>Goose Physics</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -23,7 +23,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Sargent AI</string>
+	<string>Goose Physics</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
