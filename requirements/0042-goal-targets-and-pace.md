@@ -1,6 +1,6 @@
 # R-0042 — Goal Targets & Pace Tracking
 
-- **Status:** Draft
+- **Status:** Met — merged via PR #93 (`599df21`)
 - **Milestone:** M5 (adaptive intelligence) — the measurement half
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-04
@@ -132,3 +132,5 @@ sensibly auto-adjust toward a goal that was never stated.
 - _2026-08-08 — amended with SPEC-0042's architect review: AC10 unknown-lift
   rejection replaced by the enforceable proxy; AC11 (delete) added; the
   dangling R-0034 dependency reference corrected (id never existed — #91)._
+- _2026-09-10 — register correction: the Status line still read `Draft`
+  while ROADMAP recorded the merge. No acceptance criterion changed._

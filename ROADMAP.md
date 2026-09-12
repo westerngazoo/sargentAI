@@ -76,7 +76,7 @@ screen on top of it.
 | R-0007 | Flutter app architecture & auth shell: register/login, JWT in secure storage, Riverpod state, configurable HTTP client, router auth-gate (no feature UI) | SPEC-0007 | Done |
 | R-0008 | Onboarding flow: dismissible home prompt + multi-step wizard (body stats, goals, optional details) over `PUT /profile/me`; training history deferred (no backend field) | SPEC-0008 | Done |
 | R-0009 | Live workout logger: program-aware in-gym session driver (start → add exercise via preset picker + free text → log sets → finish → `POST /workouts`); sessions list + delete; full edit deferred. The substrate R-0027 drives by voice | SPEC-0009 | Done |
-| R-0010 | Nutrition logger UI (manual entry first) — deferred until after the fast-track chain | SPEC-0010 | Backlog |
+| ~~R-0010~~ | ~~Nutrition logger UI (manual entry first)~~ — **superseded** by the R-0010 requirement file (M5 row below), which absorbed this scope and added energy balance. This row never had a requirement file. | — | Superseded 2026-08-25 |
 | R-0011 | Dashboard: trends, current program, weekly plan — deferred until after the fast-track chain | SPEC-0011 | Backlog |
 | R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | **Regressed** (transport reverted by `6b5bb7e`; rebuilt as R-0035 — R-0057) |
 | R-0035 | Earbud-guided hands-free training (**rebuild** of R-0027's reverted media-button + background-audio transport; coexists with R-0032 voice dictation). Depends on R-0009 + R-0014 | SPEC-0035 | Done — merged via PR #71 (`35318cb`) |
@@ -113,7 +113,8 @@ Move from heuristic adjustment to learned adjustment from real logs.
 | R-0016 | Response-inference model (linfa regression / trees): which inputs correlate with positive outcomes | SPEC-0016 | Backlog |
 | R-0017 | Program adjustment engine: tweak volume / frequency / intensity / rest / macros; summary/adjustments endpoints + Coach card | SPEC-0017 | Done — merged via PR #73 (`9d1bea6`) |
 | R-0031 | Nutrition LLM substitution (lightweight LLM feature) | SPEC-0031 (to be written) | Backlog (requirement Accepted) |
-| R-0042 | Goal targets & pace tracking — the measurement half of adaptive intelligence | SPEC-0042 (to be written) | Draft — requirement recorded via PR #88 |
+| R-0010 | Nutrition logging & energy balance — per-entry meals, measured expenditure | SPEC-0010 (to be written) | Draft — on PR #101. **Blocked:** `UNIQUE (user_id, performed_on)` (migration 00004, mandated by R-0005 AC1/AC2) caps the app at one meal per day on every path; OQ-6 is an open owner decision |
+| R-0042 | Goal targets & pace tracking — the measurement half of adaptive intelligence | SPEC-0042 | Done — merged via PR #93 (`599df21`) |
 
 ### M6 — Photo pipeline & compliance
 
@@ -166,7 +167,9 @@ conversational intent later.
 |-----|------------|------|--------|
 | R-0032 | Voice logging assistant: STT → LLM intent → auto-log; voice hub (speak button, radial action ring, preset library, anatomy chart, USDA) | SPEC-0032 | Done — shipped in slices via PRs #39, #49, #50; accepted as-built in the R-0057 pass (PR #66) |
 | R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
-| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | Parked — draft recorded via PR #74; see issue #89 |
+| R-0044 | Lift technique video analysis — pure geometry over a keypoint series, refusal as a first-class output | SPEC-0044 | In review — slice A (core) on PR #104; requirement + spec live on that branch |
+| R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (to be written) | Draft — on PR #104. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
+| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 16 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10). Do not implement: `docs/AGENT-PR-GUIDE.md` |
 
 ### M-Platform — Trainer marketplace
 
@@ -309,3 +312,96 @@ and **R-0037** (parked — issue #89); **R-0040** (roles) exists only as issue
 #77. The web app + API run on Cloudflare with Neon Postgres (see the M8 note).
 Next work is chosen by the owner from the open Draft / Accepted / Backlog rows
 above.
+
+---
+
+## Current state — 2026-09-10
+
+### Direction (owner decision, 2026-09-06)
+
+**Physics is the funnel; the app is the destination; logging comes after.** The
+owner's distribution is [@fisicobuenfisico](https://instagram.com/fisicobuenfisico)
+— 7k followers on Spanish-language physics-of-lifting content. That audience
+arrived for lift mechanics, not for a logger, so the training/physics surface
+leads and nutrition + workout logging follow it.
+
+Consequence for the register: **R-0044/R-0045 are promoted** and **R-0010 is
+parked** pending two owner decisions (below). The `mecanica` crate in the
+sibling `physics-lab` repo already implements the physics half with 29 passing
+claims and needs no video, no ML and no login — see that repo's
+`docs/RFC-002-mecanica.md`.
+
+**Product renamed to Goose Physics** (PR #113) — display strings only. Bundle
+ids, package/crate names and state keys are deliberately unchanged; the PR
+records why for each.
+
+### Open PRs
+
+| PR | Branch → base | What |
+|----|---------------|------|
+| #113 | `fix/earbud-silent-asset` → main | R-0035 silent-audio asset never bundled + rename |
+| #111 | `fix/migrator-rollback` → main | image rollback made the API refuse to boot |
+| #110 | `R-0032-voice-defects` → main | keyword routing matched inside words |
+| #114 | `ci/deploy-web` → main | web deploy + a smoke check that failed on success |
+| #101 | `fix/meal-log-discoverable` → main | reachable meal logging + the R-0010 requirement |
+| #104 | `R-0044-core-technique` → **#101's branch** | R-0044 slice A (core) |
+| #95 | — | EarbudCoach/VoiceOutput refactor (not owner-authored) |
+
+**Merge order:** #113 → #111 → #110 → #114 → #101 → #104.
+#104 is **stacked**: retarget it to `main` while it is open, or it auto-closes
+when #101's branch is deleted (this is how PR #72 was lost).
+
+### Blocked on owner action
+
+1. **`CLOUDFLARE_API_TOKEN`** repository secret. The repo has **zero** Actions
+   secrets, which is why `deploy-api.yml` has never executed and the web build
+   is still deployed by hand. Both deploy workflows need it.
+2. **Attach `physics.goosethropic.systems`** to the `goosethropic-physics`
+   worker — live on `workers.dev`, but the custom domain resolves to nothing.
+3. **R-0010 OQ-6** — the fate of the day-level `POST /nutrition` and
+   `DELETE /nutrition/:id`. R-0010 §5 routes it to SPEC-0010; every migration
+   strategy reviewed so far answered it by shipping SQL instead, which §1.2
+   forbids.
+4. **Art direction.** The logo is a military chevron and the palette is
+   olive-drab "military issue" — both match the sergeant persona the rename
+   retires. Two source comments still read "Sargent AI" because they describe
+   that art accurately.
+5. **iOS.** CI builds an Android APK only, signed with the **debug** keystore —
+   which is regenerated per runner, so two CI builds produce APKs signed by
+   different keys and Android refuses to upgrade between them. iOS has no
+   signing, no CI, and no Apple Developer account in evidence.
+
+### Defects found and fixed this pass
+
+Each was live in a requirement already marked Done:
+
+- **R-0035** — `assets/audio/silence.mp3` was on disk but undeclared in
+  `pubspec.yaml`, so it was never bundled. `setAsset` threw into a deliberate
+  `catch (_)`, the foreground service was never held open, and earbud
+  hands-free training has been **inert since it shipped**. (#113)
+- **R-0032** — `matches_any` used substring matching, so `"start workout"`
+  contains `"out"` (stop) and answered *"Standing by."*; `"repeat last set"`
+  contains `"eat"` and asked for macros. The keyword parser is the shipped path
+  because no LLM key is configured. (#110)
+- **R-0032** — voice-seeded exercises carried no muscle group, so hands-free
+  sessions were invisible to per-muscle volume. (#110)
+- **infra** — sqlx defaults to `ignore_missing: false`, so rolling the API
+  image back made the migrator refuse to boot, permanently. (#111)
+- **CI** — `flutter-version-file` was silently ignored (`channel` won), so CI
+  installed current stable instead of the pin. Every PR was red for nine days
+  with an error naming the lockfile. (#113/#114, cherry-picked)
+- **CI** — `deploy-api.yml`'s smoke check probed a `vars.`-interpolated host
+  that is unset, so it reported failure on a successful deploy. (#114)
+
+### Register corrections (2026-09-10)
+
+R-0015, R-0017, R-0038, R-0039, R-0041 and R-0042 shipped but their requirement
+files still read `Status: Draft`. Status lines corrected and noted in each
+changelog; **no acceptance criterion was altered**.
+
+### A standing problem: agent PRs against parked requirements
+
+**16 PRs** have re-implemented **R-0037**, which is Parked (#97–#109 closed
+2026-09-05; #112, #115–#119 closed 2026-09-10). The code was not the problem —
+the requirement has no accepted spec. See [`docs/AGENT-PR-GUIDE.md`](docs/AGENT-PR-GUIDE.md)
+and issue #89.

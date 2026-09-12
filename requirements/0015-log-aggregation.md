@@ -1,6 +1,6 @@
 # R-0015 — Training-Log Aggregation (per user, per time window)
 
-- **Status:** Draft
+- **Status:** Met — merged via PR #70 (`d70649d`)
 - **Milestone:** M5 (ML inference — Phase 1)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-09
@@ -92,3 +92,5 @@ already collect.
 ## Changelog
 
 - _2026-07-09 — created (Draft), pending owner sign-off of acceptance criteria._
+- _2026-09-10 — register correction: the Status line still read `Draft`
+  while ROADMAP recorded the merge. No acceptance criterion changed._

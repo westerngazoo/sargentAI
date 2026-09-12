@@ -1,6 +1,6 @@
 # R-0039 — Program Authoring Model (trainer/self-authored programs)
 
-- **Status:** Draft — authoring model confirmed by owner 2026-07-22
+- **Status:** Met — merged via PR #76 (`39997af`); authoring model confirmed by owner 2026-07-22
 - **Milestone:** M-Platform (trainer marketplace) — layer A (authoring)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-22
@@ -104,3 +104,5 @@ roles/payments yet.
 ## Changelog
 
 - _2026-07-22 — created (Draft); pending owner confirmation of §3 before spec._
+- _2026-09-10 — register correction: Status read `Draft` while ROADMAP
+  recorded the merge. No acceptance criterion changed._

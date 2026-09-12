@@ -1,6 +1,6 @@
 # R-0038 — Periodization Engines (structured, math-driven programs)
 
-- **Status:** Draft
+- **Status:** Met — merged via PR #75 (`b6961de`)
 - **Milestone:** M4+ / training methodology
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-22
@@ -112,3 +112,5 @@ R-0015/R-0017 — no ML, fully testable.
 
 - _2026-07-22 — created (Draft); acceptance criteria reflect the owner's two
   scope decisions (all three engines, %1RM model)._
+- _2026-09-10 — register correction: the Status line still read `Draft`
+  while ROADMAP recorded the merge. No acceptance criterion changed._

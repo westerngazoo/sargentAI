@@ -1,6 +1,6 @@
 # R-0041 — Authored Program Persistence & Serving
 
-- **Status:** Draft
+- **Status:** Met — merged via PR #85 (`e4dc736`)
 - **Milestone:** M-Platform (trainer marketplace) — layer A (authoring), part 2
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-07-29
@@ -111,3 +111,5 @@ subscriptions) needs programs to exist in the database first.
 ## Changelog
 
 - _2026-07-29 — created (Draft)._
+- _2026-09-10 — register correction: the Status line still read `Draft`
+  while ROADMAP recorded the merge. No acceptance criterion changed._
