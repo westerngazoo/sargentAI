@@ -1,10 +1,9 @@
 # SPEC-0045 — Lift biomechanics model (`core::biomech`)
 
-- **Status:** Draft — architect review ACCEPT WITH CHANGES (2026-09-12), all
-  required changes applied (§10); **three owner decisions open** (§5)
-- **Realizes:** R-0045 (Accepted 2026-09-11) — **pending the amendment
-  requested in §5.1**, without which v1 cannot honestly claim six of its
-  criteria
+- **Status:** **Accepted** (owner, 2026-09-12) — architect ACCEPT WITH
+  CHANGES applied (§10); all three §5 decisions taken as recommended
+- **Realizes:** R-0045 as amended 2026-09-12 (§5.1 applied to the
+  requirement file)
 - **Author:** Claude (main session)
 - **Created:** 2026-09-12
 - **Depends on:** SPEC-0003 (`HeightCm`, `WeightKg`, `BodyFatPercentage`),
@@ -452,9 +451,9 @@ change that honestly. Neither is in scope.
 
 ```rust
 pub struct Mechanics {
-    /// Fixed order for the squat and the pull; a per-lift shape once the
-    /// owner rules on the bench (§5.3). Not committed as `[_; 4]` until then.
-    pub joints: Vec<JointMoment>,
+    /// hip, knee, ankle, lumbar — fixed order. The bench, which would have
+    /// needed a per-lift shape, is out of R-0045 (§5.3).
+    pub joints: [JointMoment; 4],
     pub load: LoadBasis,
     pub assumptions: Vec<Assumption>,       // varies per result (finding 21)
     pub uncertainty: Uncertainty,
@@ -523,7 +522,7 @@ specified when both are clearer. Nothing in slices A/B writes to a database.
 |---|---|---|
 | **A** | `anthro` (table + sum claims + verification record); `Posture`, `Load`, `Point`/`Metres`; `above()` + `moment_about` with the sign rule; the lumbar row; the **baseline** squat solve with the system-COM constraint; `Rejection` variants reachable without knobs (`DoesNotBalance`, `AnatomicallyImplausible`) | nothing |
 | **B** | the three knobs, `OutOfRange`, the which-unknown rule, deltas, `Borderline`, the pull | A; §5.1 amendment |
-| **B′** | the bench — *only if* the owner rules it in (§5.3); own chain, own joints | B |
+
 | **C** | `api::biomech`, persistence, coach export | B, R-0041 read, R-0040 |
 
 Slice A's standalone value is the corrected, tested, cited model and the reel
@@ -582,13 +581,13 @@ invites.
 - Full inverse dynamics with acceleration terms (OQ-2: quasi-static).
 - Any φ axis, peak, or "per rep" in v1 (single posture; §2.1).
 - The measured (keypoint) source and the scale bridge (§2.1.1). Seam only.
-- The front squat (a different lift, not a knob). The bench, pending §5.3.
+- The front squat (a different lift, not a knob). The bench (struck, §5.3).
 - Vendoring `mecanica` or any reel model (§2.2).
 - Coach→client sharing (needs R-0040). Slice C stores the author's own only.
 - Any injury, safety or risk output (AC14). Not a field, not a word.
 - Body-fat-dependent segment parameters (§2.3): no source, so no adjustment.
 
-## 5. Owner decisions — the spec cannot be Accepted without them
+## 5. Owner decisions — all taken 2026-09-12
 
 ### 5.1 R-0045 amendment request (architect finding 1)
 
@@ -609,8 +608,8 @@ call". The draft asked to amend AC7 only; the parametric source touches
 | **AC13** | "If the underlying clip was refused…" | "Parametric source: a typed `Rejection` for any posture that does not balance or is anatomically implausible. Measured source: inherits R-0044's refusal unchanged" |
 | **AC15** | "over the keypoint series plus profile and load" | "over a `Posture` plus profile and load" |
 
-**Decision needed:** accept the amendment as proposed, edit it, or reject
-(in which case v1 cannot ship parametric-first and this spec is withdrawn).
+**Decided: accepted as proposed.** Applied to `requirements/0045-*.md` with
+a changelog entry and decision-log rows.
 
 ### 5.2 Home of the physics (architect finding 5)
 
@@ -620,9 +619,8 @@ vendoring, physics-lab keeps its own teaching crate.
 **Alternative:** a zero-dependency workspace crate with *only* R-0045's model,
 consumed by physics-lab via pinned git dependency. One implementation, but:
 needs an AC15 amendment, a cross-repo build dependency on a private repo, and
-has no `Movement` implementor until slice B. **Decision needed only if** you
-want physics-lab and the product to share one model now rather than when a φ
-axis exists.
+has no `Movement` implementor until slice B. **Decided: `fitai_core::biomech` only.** Revisit if slice B introduces a
+φ axis worth sharing.
 
 ### 5.3 Is the bench in R-0045? (architect finding 14)
 
@@ -630,10 +628,9 @@ AC4 names hip/knee/ankle/lumbar; AC7 mentions "grip width for bench". A bench
 has elbow and shoulder joints, a two-arm load split, and a **frontal-plane**
 grip-width effect. Neither `Posture` nor a four-joint result can express it,
 and grip width cannot be modelled sagittally any more than foot rotation can.
-**Decision needed:** (a) strike the bench from R-0045 and the "grip width"
-clause from AC7, or (b) keep it as slice B′ with its own chain and joints and a
-stated frontal-plane exclusion for grip width. `Mechanics.joints` is a `Vec`
-rather than `[_; 4]` until this is answered.
+**Decided: struck.** AC7's grip-width clause removed; the bench gets its own
+requirement when a frontal-plane model exists. `Mechanics.joints` is therefore
+`[JointMoment; 4]` — hip, knee, ankle, lumbar, fixed order.
 
 ### 5.4 The published correction
 
@@ -761,6 +758,8 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 - _2026-09-12 — created (Draft)._
 - _2026-09-12 — reworked in full after architect review (§10). Every required
   finding applied; three owner decisions isolated in §5._
+- _2026-09-12 — **Accepted.** All three §5 decisions taken as recommended;
+  requirement amended; bench struck; `joints` fixed at four._
 
 ## 10. Architect review — ACCEPT WITH CHANGES (2026-09-12), all required changes applied
 
