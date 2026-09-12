@@ -8,6 +8,7 @@ pub mod adjust;
 pub mod aggregate;
 pub mod archetype;
 pub mod authoring;
+pub mod biomech;
 pub mod goals;
 pub mod matching;
 pub mod nutrition;
@@ -64,6 +65,10 @@ pub use program::{instantiate, GeneratedDiet, GeneratedProgram, ProgramProposal}
 // nothing about *what* it analyses, and `Side`/`Unit`/`Metric` are generic
 // enough to collide. Callers reach it as `fitai_core::technique::…`, where the
 // module name carries the meaning (the `authoring`/`goals` precedent).
+// `biomech` is likewise NOT re-exported: `Joint`, `Load`, `Point` and `Metres`
+// are generic enough to collide, and `fitai_core::baseline` says nothing about
+// what it is a baseline of. Callers reach it as `fitai_core::biomech::…`
+// (SPEC-0045 §3).
 pub use user::{Email, EmailParseError, User, UserId};
 pub use workout::{
     ExerciseName, LoadKg, MuscleGroup, NewExercise, NewSet, NewWorkoutSession, Reps, Rpe,
