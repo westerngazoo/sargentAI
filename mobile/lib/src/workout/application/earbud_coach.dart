@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:async';
 import 'session_driver.dart';
 import '../../audio/tts_scripts.dart';
+import '../../hub/voice_output.dart';
 import 'audio_service_handler.dart';
 import 'voice_coach.dart';
 
@@ -18,7 +18,7 @@ final earbudCoachProvider = Provider<EarbudCoach>((ref) {
 
 class EarbudCoach {
   final Ref _ref;
-  final FlutterTts _tts = FlutterTts();
+  late final VoiceOutput _voiceOut;
   AudioServiceHandler? _audioHandler;
   ProviderSubscription? _driverSubscription;
   StreamSubscription<AudioDevicesChangedEvent>? _deviceChangeSubscription;
@@ -28,6 +28,7 @@ class EarbudCoach {
   bool _isActive = false;
 
   EarbudCoach(this._ref) {
+    _voiceOut = _ref.read(voiceOutputProvider);
     _initTts();
     _ref.listen<bool>(earbudModeProvider, (previous, current) {
       if (current && !_isActive) {
@@ -39,14 +40,7 @@ class EarbudCoach {
   }
 
   Future<void> _initTts() async {
-    try {
-      await _tts.setSharedInstance(true);
-      await _tts.setIosAudioCategory(IosTextToSpeechAudioCategory.playback, [
-        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-        IosTextToSpeechAudioCategoryOptions.mixWithOthers
-      ]);
-    } catch (_) {}
+    await _voiceOut.initialize();
   }
 
   Future<void> _activate() async {
@@ -113,7 +107,7 @@ class EarbudCoach {
     _deviceChangeSubscription?.cancel();
     _deviceChangeSubscription = null;
     try {
-      await _tts.stop();
+      await _voiceOut.stop();
       await _audioHandler?.stop();
     } catch (_) {}
     _audioHandler = null;
@@ -173,7 +167,6 @@ class EarbudCoach {
 
       // Use null for sets/reps targets for now (free-form logic)
       await _speak(TtsScripts.exerciseStart(exercise.name, null, null, null));
-      await _tts.awaitSpeakCompletion(true);
       if (_isActive) {
         await _speak(TtsScripts.setStart(1, null, null, null));
       }
@@ -181,7 +174,6 @@ class EarbudCoach {
       // A set was logged
       _lastSetCount = currentSetCount;
       await _speak(TtsScripts.rest);
-      await _tts.awaitSpeakCompletion(true);
       if (_isActive && currentSetCount < 3) {
         await _speak(
             TtsScripts.setStart(currentSetCount + 1, null, null, null));
@@ -191,8 +183,10 @@ class EarbudCoach {
 
   Future<void> _speak(String text) async {
     try {
-      await _tts.stop(); // Interrupt any ongoing speech
-      await _tts.speak(text);
+      // For PluginVoiceOutput, speak awaits completion inherently if awaited.
+      // But we must not interrupt with .stop() here because _onSessionStateChanged
+      // issues back-to-back speak calls (e.g., exercise start followed by set start).
+      await _voiceOut.speak(text);
     } catch (e) {
       // Silently continue on TTS failure as per spec
     }
