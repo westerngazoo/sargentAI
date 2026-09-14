@@ -391,11 +391,12 @@ pub(super) async fn parse_with_llm(
     today: NaiveDate,
     history: &[super::handlers::Turn],
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
     let mut turns = String::new();
     if !history.is_empty() {
         turns.push_str("Past turns:\n");
         for turn in history {
-            turns.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            let _ = writeln!(turns, "{}: {}", turn.role, turn.content);
         }
     }
 
