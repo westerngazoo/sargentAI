@@ -36,16 +36,25 @@ class VoiceIntentResult {
   bool get isNavigate => status == 'navigate';
 }
 
+/// One bubble in the hub's chat thread.
+typedef ChatTurn = ({bool fromUser, String text});
+
 class VoiceIntentService {
   const VoiceIntentService(this._dio);
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript) async {
+  Future<VoiceIntentResult> parse(String transcript, {List<ChatTurn> history = const []}) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/voice/intent',
-        data: {'transcript': transcript},
+        data: {
+          'transcript': transcript,
+          'history': history.map((e) => {
+            'role': e.fromUser ? 'user' : 'assistant',
+            'content': e.text,
+          }).toList(),
+        },
       );
       return VoiceIntentResult.fromJson(res.data!);
     } on DioException catch (e) {

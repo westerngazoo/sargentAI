@@ -389,9 +389,20 @@ pub(super) async fn parse_with_llm(
     cfg: &LlmConfig,
     transcript: &str,
     today: NaiveDate,
+    history: &[super::handlers::Turn],
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
+    let mut turns = String::new();
+    if !history.is_empty() {
+        turns.push_str("Past turns:\n");
+        for turn in history {
+            let _ = writeln!(turns, "{}: {}", turn.role, turn.content);
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
+         {turns}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
