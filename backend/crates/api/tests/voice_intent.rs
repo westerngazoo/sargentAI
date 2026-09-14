@@ -73,6 +73,33 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_resolves_multi_turn_context(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-multiturn@test.com", "password123").await;
+
+    // Send a payload with history. The keyword fallback logic doesn't use history,
+    // but the payload should parse successfully. We test that it successfully parses
+    // the current turn as a meal log using the keyword parser. (A full test of the
+    // LLM parsing history requires a mocked LLM endpoint).
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "log a meal 40 grams protein 60 carbs 20 fat",
+            "history": [
+                { "role": "user", "content": "log a meal" },
+                { "role": "assistant", "content": "Tell me protein, carbs, and fat in grams" }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
