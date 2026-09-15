@@ -334,13 +334,50 @@ and load* under a **stated baseline**, and the result says so
 | thigh angle at the bottom | parallel (femur horizontal) | convention: the depth standard R-0044 AC8 also uses |
 | ankle joint height | `0.039 H` | Winter Fig 4.1 |
 | ankle x (behind the mid-foot line) | `−0.26 × foot length` = `−0.040 H` | derived: mid-foot at half foot length, ankle at the heel-side quarter — **convention**, replaces `muneco.py`'s `−0.04 m` literal |
-| shank angle from vertical | **the unknown** (§2.6.3) — *not* the reel's fixed 22° | — |
+| shank angle from vertical | **the lifter's weight-bearing ankle dorsiflexion** (§2.6.1.1) | measured, or a cited population default |
 | bar attachment on the trunk line | `0.95 × trunk` (high-bar) | convention; the low-bar value is a knob (§2.6.2) |
 | hands | on the bar | convention |
 
 The reel's `22°` shank and `(−0.04, 0.09)` ankle were literals from
 `muneco.py` with no source; they are replaced, and where a literal survives it
 is labelled a convention rather than a fact.
+
+#### 2.6.1.1 The shank angle is the ankle (owner decision, 2026-09-15)
+
+With the foot flat on the floor, **the shank's angle from vertical is the
+ankle's dorsiflexion angle** — the same angle from the same neutral. So the
+baseline shank angle is not a convention to be picked: it is a property of the
+lifter, and one that is routinely measured (the weight-bearing lunge /
+knee-to-wall test).
+
+This replaces the draft's unstated "the unknown", which left the baseline
+undefined — and the omission was not cosmetic. Solved against the §2.6.3
+system-COM constraint for a 1.75 m / 80 kg lifter at parallel:
+
+| dorsiflexion | trunk lean | hip flexion | |
+|---|---|---|---|
+| 25° | 88° | 178° | fold — a good morning out of the hole |
+| 30° | 75° | 165° | fold |
+| 35° | 56° | 146° | deep lean |
+| 40° | 44° | 134° | normal squat |
+| 45° | 35° | 125° | normal squat |
+| 50° | 28° | 118° | normal squat |
+
+**The model reproduces a known coaching fact**: restricted ankles force forward
+lean, and that is *why* a stiff-ankled lifter squats like a good morning. That
+is an output worth showing, not an artefact.
+
+**Source (pending, AC2).** The default for an unmeasured lifter needs a cited
+normative value for weight-bearing dorsiflexion — the candidate is the
+weight-bearing lunge test literature (Bennell et al. 1998 for the protocol,
+plus a normative-range paper). Until cited and recorded, the constant is not
+committed, exactly as §2.3's table is not.
+
+Dorsiflexion is an **input**, not a segment length: it joins `MeasuredLengths`
+as a per-person measurement with a population fallback, and the result carries
+`Assumption::TableDerivedLengths` when the fallback was used. It becomes a knob
+in slice B — heel elevation is precisely a dorsiflexion knob, which is why
+lifting shoes exist.
 
 #### 2.6.2 The knobs (AC7) — slice B, none in slice A
 
@@ -383,11 +420,17 @@ is proportional to it), so it stays closed-form, and bar-over-mid-foot is
 recovered as the limit where bar mass dominates. Mid-foot itself is a coaching
 convention within the base of support; stated.
 
-**Which unknown** (finding 12): if a torso angle is specified, the **shank
-angle** is solved (hence knee travel, hence the knee moment); otherwise the
-**trunk angle** θ is. Bar-position and stance knobs solve θ. This rule
-determines which rejection fires and is what makes the solver's behaviour
-fully specified rather than implementation-defined.
+**Which unknown** (finding 12, resolved 2026-09-15): the **shank angle is an
+input** (§2.6.1.1), so the baseline's unknown is always the **trunk angle θ**.
+The draft's §2.6.1 and §2.6.3 contradicted each other on this; the ankle
+decision settles it.
+
+In slice B a torso-angle knob overrides θ, and the **shank angle** becomes the
+unknown — but only within the lifter's dorsiflexion: a solve needing more ankle
+than they have is `DepthNotReachable`, not a posture. Bar-position and stance
+knobs leave θ as the unknown. This rule determines which rejection fires and is
+what makes the solver's behaviour fully specified rather than
+implementation-defined.
 
 #### 2.6.4 Rejection (AC9) — a closed set, every variant reachable
 
@@ -401,17 +444,42 @@ pub enum Rejection {
     /// lifter would have to lean past horizontal (θ), or the knee would
     /// have to travel past the foot's reach (shank angle).
     DoesNotBalance { unknown: Unknown },
-    /// A solved joint angle is outside physiological range.
+        /// A solved joint angle is outside the range observed in lifting.
+    /// **Unreachable in slice A**: no limit constant is committed until one is
+    /// cited (§2.6.4). Present so the closed set does not change shape later.
     AnatomicallyImplausible { joint: Joint, angle_deg: f64 },
+    /// The requested depth needs more range than the lifter has — at the
+    /// baseline, more ankle dorsiflexion than they possess. Names the limiting
+    /// joint, because "your ankle is what stops you" is the useful sentence,
+    /// not a number for a posture they cannot hold.
+    DepthNotReachable { limiting: Joint, needed_deg: f64, available_deg: f64 },
 }
 ```
 
 The draft's `StanceExceedsFemur` is folded into `OutOfRange` — with the range
 at 2.2× and the solve domain at 3.6×, it could never fire (finding 6).
-Joint limits (knee flexion > 160°, hip flexion > 130°, ankle dorsiflexion >
-45°) are **stated conventions** pending a goniometric source — the draft cited
-"Winter Table A.1", which is gait data, not norms (finding 16); Norkin & White
-or the AAOS tables are the candidates.
+**Joint limits come from observed lifting postures, not goniometric norms**
+(owner decision, 2026-09-15). The draft's placeholder — hip flexion > 130° —
+**rejected the model's own baseline**: a realistic parallel squat reaches
+125–146° of hip flexion (§2.6.1.1), so the check fired on the primary output.
+A passive-ROM norm is the wrong instrument, because a loaded deep squat exceeds
+passive norms by design.
+
+The limits must be cited from measured squat kinematics. Candidates to verify
+before any constant is committed: Escamilla et al. (2001), *A three-dimensional
+biomechanical analysis of the squat during varying stance widths*, and
+Escamilla (2001), *Knee biomechanics of the dynamic squat exercise*, both Med
+Sci Sports Exerc. **Until one is recorded, no limit constant is committed and
+`AnatomicallyImplausible` is unreachable** — slice A ships with
+`DoesNotBalance` and `DepthNotReachable` only. A threshold nobody has sourced
+is not a threshold.
+
+**A restricted lifter's baseline may legitimately fail, and that is a finding.**
+At 30° of dorsiflexion parallel needs 165° of hip flexion. The correct output is
+not a number for an impossible posture but `DepthNotReachable { limiting:
+Joint::Ankle }` — *your ankle is what stops you*, which is the most useful
+sentence the model can produce for that person. Depth becomes a knob in slice B
+so they can be analysed at a depth they actually reach.
 
 Exhaustive `match` in the token mapper, no `_` arm — the R-0042 precedent.
 
@@ -639,6 +707,15 @@ model has surfaced. Whether and how to correct it publicly is yours. The spec's
 only stake is that slice A **derives** the number so a correction is computed
 rather than asserted.
 
+### 5.5 Taken 2026-09-15
+
+- **Baseline shank angle** → the lifter's weight-bearing ankle dorsiflexion
+  (§2.6.1.1). Resolves the §2.6.1/§2.6.3 contradiction, which had left the
+  baseline posture undefined.
+- **Joint limits** → cited from observed lifting postures, not passive
+  goniometric norms (§2.6.4). No limit constant is committed until a source is
+  recorded, so slice A ships without `AnatomicallyImplausible`.
+
 ### Resolved here (owner may veto)
 
 - **OQ-1** → Winter Table 4.1 / Fig 4.1, with a recorded verification and
@@ -704,8 +781,15 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   the hip, not the knee).
 
 **Balance (AC3, finding 4):**
-- `B5` `BodyweightOnly` solves: a posture exists, its system COM is over the
-  mid-foot within 1 mm, and `load` says bodyweight-only.
+- `B5` `BodyweightOnly` solves **at a dorsiflexion that reaches parallel**
+  (≥ 40°, §2.6.1.1): a posture exists, its system COM is over the mid-foot
+  within 1 mm, and `load` says bodyweight-only.
+- `B5c` the dorsiflexion→lean relation of §2.6.1.1 is monotone and reproduces
+  that table within 1°: more ankle, less forward lean. This makes the
+  restricted-ankle finding testable rather than anecdotal.
+- `B5d` at 30° of dorsiflexion, parallel is `DepthNotReachable` with
+  `limiting: Joint::Ankle` — **not** a posture, and **not**
+  `AnatomicallyImplausible`.
 - `B5b` with a bar of mass → ∞ (numerically: 10⁴ kg) the solved θ converges to
   the bar-over-mid-foot solution — the limit claim of §2.6.3.
 
@@ -720,8 +804,11 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   `KneesTrackFeet`.
 
 **Rejection (AC9):**
-- `B9`–`B11` one per variant, each reached through the public solve, with the
-  which-unknown rule determining which fires.
+- `B9` `DoesNotBalance` through the public solve.
+- `B11` `DepthNotReachable` through the public solve (see `B5d`).
+- `B10` (`AnatomicallyImplausible`) is **deferred until a limit is cited**
+  (§2.6.4): with no committed constant it is unreachable by construction, and a
+  test for it would assert an invented number.
 
 **Stability (AC16, finding 13):**
 - `B12` every table-derived length ±5%: every delta keeps its sign or is
@@ -751,6 +838,9 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-09-12 | Body fat ignored in v1 | The cited table does not vary by it; inventing an adjustment violates AC2. |
 | 2026-09-12 | Kinematic solve, never interpolation | Interpolated postures are ones the lifter never held. |
 | 2026-09-12 | Foot rotation and grip width: amend, don't fabricate | Frontal-plane; the SPEC-0044 precedent. |
+| 2026-09-15 | Baseline shank angle = the lifter's ankle dorsiflexion | Owner decision. They are the same angle for a flat foot, it is measurable, and it makes the model reproduce why stiff ankles force forward lean. The draft left this undefined and the posture swung 175°→125° across plausible values. |
+| 2026-09-15 | Limits cited from lifting kinematics; none committed until sourced | Owner decision. The placeholder 130° hip limit rejected the model's own baseline — a real parallel squat reaches 125–146°. A passive-ROM norm is the wrong instrument, and an uncited threshold is not a threshold. |
+| 2026-09-15 | `DepthNotReachable` names the limiting joint | A restricted lifter failing to reach parallel is a true finding, not a model failure, and "your ankle stops you" beats a number for a posture they cannot hold. |
 | 2026-09-12 | Every range is a labelled convention until cited | The draft called two of them physics; one was false and one unreachable (finding 6). |
 
 ## 9. Changelog
@@ -760,6 +850,10 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   finding applied; three owner decisions isolated in §5._
 - _2026-09-12 — **Accepted.** All three §5 decisions taken as recommended;
   requirement amended; bench struck; `joints` fixed at four._
+- _2026-09-15 — amended after the qa red suite found two blocking defects the
+  design had not resolved: the baseline shank angle was undefined (§2.6.1 and
+  §2.6.3 contradicted each other) and the placeholder hip limit rejected the
+  baseline itself. Both settled by owner decision; `DepthNotReachable` added._
 
 ## 10. Architect review — ACCEPT WITH CHANGES (2026-09-12), all required changes applied
 
