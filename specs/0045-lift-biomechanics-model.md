@@ -81,7 +81,7 @@ pub struct Load { pub kg: f64, pub at: Point }
 position only — `mecanica::sentadilla` refuses to implement a φ-axis trait
 precisely because no published model validates a descent kinematic. So there
 is no "through the movement", no peak, no "per rep" in v1. Every result carries
-`Assumption::SinglePosture { at: Position::Bottom }`, and AC4's "through the
+`Assumption::SinglePosture { at: Position::Parallel }`, and AC4's "through the
 movement / per rep" is routed to the measured source in §5.1. Claiming a peak on
 a single posture would be a fabricated axis (architect finding 2).
 
@@ -152,7 +152,14 @@ claim tests that must hold whatever the values are:
 HAT + 2·(thigh + shank + foot)                          = 1.000
 trunk + head&neck + 2·(upper arm + forearm + hand)      = HAT
 thorax&abdomen + pelvis                                 = trunk
+Σ mᵢ·kᵢ / Σ mᵢ   over the §2.4.2 split                  = HAT's own COM, 0.626
 ```
+
+The fourth is the one that constrains **placement** rather than mass, and it
+was missing. The first three catch a mistyped mass; none of them catches a
+segment put in the wrong place, and the split and the lump are the table's two
+descriptions of the same 0.678 M on the same line. It is what fixes L5/S1
+(§2.5) — and its absence had left every hip moment 16% low.
 
 > **Verification record:** *pending.* The values below are the canonical ones
 > and pass the sums above, but a recollection is not the control.
@@ -273,41 +280,95 @@ so the two are placed by convention from the four joints it does have —
   COM directly below the shoulder at `0.436 × upper-arm length`. Convention;
   error carried.
 
-Winter's lumped HAT (COM 0.626) assumes **arms at the sides**. With hands on
-the bar the arm mass sits higher and further forward, so the split
-underestimates less than the lump does — the true hip correction is *larger*
-than a HAT-only figure. This is why v1 uses the split, not the lump.
+Winter's lumped HAT (COM 0.626) assumes **arms at the sides**. Hands on the
+bar move the arm mass to the shoulder → bar midpoint, which on the trunk line
+is 0.975 — *below* the shoulder's 1.000, because the bar is at 0.95. So the
+split's hip term is slightly **smaller** than the lump's, not larger. (The
+draft asserted the reverse and used it to justify the split. It was wrong on
+both counts: the reason to use the split is that the lumbar row needs the
+trunk divided at L5/S1, and the lump cannot be divided.)
+
+**The split and the lump must agree, and that is a testable claim** — same
+mass, same line, the table's own two descriptions of one thing. Solving it for
+the one placement the table does not give is what fixes L5/S1 (§2.5), and the
+check is the fourth sum claim in §2.3.
 
 #### 2.4.3 What this does to the reel's numbers
 
 MECÁNICA 01 publishes **274 N·m** at the hip for a 100 kg bar and a 0.40 m
 femur. That is the **bar-only** component. With an 80 kg lifter and the reel's
 own segment lengths as overrides (finding 16 — table proportions at 1.75 m
-give a 0.429 m femur, so height must scale only the *unmeasured* segments),
-the trunk solves to 31.75° and the HAT term is `0.678 M · g · 0.626 · d_hip`
-exactly: **92.9 N·m** (finding 18). The honest hip moment is **≈ 366 N·m**,
-and higher still once the arms are placed on the bar.
+give a 0.429 m femur, so height must scale only the *unmeasured* segments) and
+the bar at 0.95 of the trunk line, the trunk solves to **33.64°** and the
+honest hip moment is **370.6 N·m**. The published figure understates it by
+**35%**.
 
-The reel is a bar-only model and says so nowhere. Test B3 recovers 274 as the
-bar component and *derives* 366 from it, so the published correction is a
-computed result, not an assertion. Whether to publish it is the owner's (§5.4).
+Two cross-checks, both in the suite. The bar-only term comes back as
+**273.62 N·m**, which is the reel's own number recovered as a component — so
+the correction is *derived*, not asserted. And the same posture through the
+lumped HAT row gives **371.4 N·m**: the split and the lump agree to 0.2%, which
+is the form the §2.3 identity takes on a real posture.
+
+*(Both numbers moved during implementation. The draft said 31.75°, which was
+the bar-at-1.00 geometry, and ≈366 from the lump; the split then landed at 357
+and the ±5% band in B3 hid the disagreement. The cause was `L5S1_UP_THE_TRUNK`
+— see §2.5. B3's band is now ±1 N·m.)*
+
+The reel is a bar-only model and says so nowhere. Whether to publish the
+correction is the owner's (§5.4).
 
 ### 2.5 The lumbar row (OQ-3) — and what it cannot see
 
 **Placement.** A single joint at **L5/S1**, on the trunk line above the hip
-joint centre. The draft attributed a `0.10 × trunk` offset to "Winter's
-convention"; it is not in Table 4.1 (finding 7). It is declared here as a
-**convention**, with candidate sources to verify against before the constant
-is committed — de Leva (1996), *Adjustments to Zatsiorsky-Seluyanov's segment
+joint centre, at **0.2674 of hip → shoulder** — *derived from the table, not
+chosen*.
+
+The draft attributed a `0.10 × trunk` offset to "Winter's convention"; it is
+not in Table 4.1 (finding 7), and taken as a bare convention it was simply
+wrong. Table 4.1 describes this mass twice — once split into pelvis, thorax &
+abdomen, head and arms, and once lumped as **HAT**, same 0.678 M on the same
+trochanter → glenohumeral line, with its own centre of mass at 0.626. The
+split must reproduce the lump. Every placement in the split comes from the
+table except L5/S1, so the identity determines it:
+
+```text
+Σ mᵢ·kᵢ / Σ mᵢ  =  0.626        ⟹   L5/S1 at 0.2674 of the trunk line
+```
+
+At `0.10` the split's centre of mass sat at **0.539**, so every hip moment the
+model produced was 16% low, with nothing in the suite to say so — and L5/S1
+landed 5 cm above the greater trochanter, which is anatomically wrong on its
+face. At the derived value it lands **13.5 cm** above it for a 1.75 m lifter,
+which is where the lumbosacral junction belongs.
+
+**What the derivation assumes, stated.** The identity is one equation and the
+split has three conventions the table does not supply — L5/S1, the head COM
+beyond the shoulder, and the arms' placement. Attributing the whole residual
+to L5/S1 is a choice: it is the only one of the three with no Winter value of
+any kind, the only one the draft had already flagged as pending citation, and
+the only one whose draft value was independently implausible. The candidate
+sources — de Leva (1996), *Adjustments to Zatsiorsky-Seluyanov's segment
 inertia parameters*, and Chaffin, Andersson & Martin, *Occupational
-Biomechanics*, 2D static model — and an error term: the true joint varies by
-several centimetres between people, shifting the lumbar moment by that fraction
-of the load-side lever. Carried on the lumbar row's uncertainty only.
+Biomechanics*, 2D static model — are still worth opening: a cited L5/S1 that
+disagrees with 0.2674 would mean the residual belongs partly elsewhere, and the
+sum claim would fail and say so. That is the difference between a derived
+constant and a convention.
+
+The error term stands: the true joint varies by several centimetres between
+people. It is carried as the ±3 cm `l5s1_placement` spread on **every** row,
+not the lumbar row alone (§2.8).
 
 **Load side.** Everything above L5/S1: thorax & abdomen (0.355 M), head (0.081
-M), arms (0.100 M), and the load — **≈ 0.536 M**, not the 0.678 HAT lump
+M), arms (0.100 M), and the load — **0.536 M**, not the 0.678 HAT lump
 (finding 7). The L4-L5 / L5-S1 boundary mismatch is absorbed into the stated
 error.
+
+**The lumbar row is where the L5/S1 spread costs most, and it is the bar that
+makes it so.** Moving the joint centre moves the row's own lever against its
+whole load side — including the bar, the largest mass there. For the fixture
+lifter under 100 kg the lumbar half-width is 20.8 N·m against 5.8 at the other
+three joints. A placement this model derives rather than cites is exactly the
+one a heavy bar amplifies, which is the argument for opening de Leva.
 
 **What it is.** The **net extensor moment at L5/S1, attributed to the erector
 group** (finding 19) — passive tissue and intra-abdominal pressure share it,
@@ -358,13 +419,13 @@ the conditions matter, see the bar row below):
 
 | dorsiflexion | trunk lean | hip flexion | |
 |---|---|---|---|
-| ≤ 33.6° | — | — | parallel is not reachable: `DepthNotReachable` |
-| 34° | 82° | 172° | a fold, barely balanced |
-| 35° | 73° | 163° | fold — a good morning out of the hole |
-| 40° | 54° | 144° | deep lean |
-| 45° | 42° | 132° | normal squat |
-| 50° | 33° | 123° | normal squat |
-| 55° | 25° | 115° | upright |
+| ≤ 28.7° | — | — | parallel is not reachable: `DepthNotReachable` |
+| 30° | 74.5° | 164.5° | fold — a good morning out of the hole |
+| 35° | 55.7° | 145.7° | deep lean |
+| 40° | 44.1° | 134.1° | normal squat |
+| 45° | 35.1° | 125.1° | normal squat |
+| 50° | 27.7° | 117.7° | upright |
+| 55° | 21.5° | 111.5° | upright |
 
 At parallel the femur is horizontal, so **hip flexion is exactly `90° + lean`**
 — the column is derived, not separately claimed.
@@ -374,15 +435,19 @@ lean, and that is *why* a stiff-ankled lifter squats like a good morning. That
 is an output worth showing, not an artefact.
 
 **And a second one, which the table above would hide.** Put a 100 kg bar on the
-same lifter and the threshold moves from 33.6° of dorsiflexion to **15.3°**,
-with 40° of ankle giving a 33° lean rather than 54°. The bar sits at 0.95 of
-the trunk line — a far longer lever than the body's own load side, whose mass
-is centred near 0.54 of it — so a small lean carries it over the mid-foot. The
-load is a counterweight: **a loaded squat reaches depth at less ankle, and more
-upright, than a bodyweight one.** Any table of this relation must therefore
-state its load, which the corrected one above now does. *(The first version of
-this table stated no load and matched neither case; the numbers here are the
-ones B5c checks.)*
+same lifter and the threshold moves from 28.7° of dorsiflexion to **13.4°**,
+with 40° of ankle giving a 31.6° lean rather than 44.1°. The bar sits at 0.95
+of the trunk line — a longer lever than the body's own load side, whose mass is
+centred at 0.626 of it — so a smaller lean carries the system over the
+mid-foot. The load is a counterweight: **a loaded squat reaches depth at less
+ankle, and more upright, than a bodyweight one.** Any table of this relation
+must therefore state its load, which this one does.
+
+*(This table has been wrong twice. The first version stated no load. The second
+stated one but was computed with `L5S1_UP_THE_TRUNK = 0.10`, which put the
+body's load side at 0.539 of the trunk line instead of 0.626 and moved the
+whole relation ~5° — see §2.5. These are the values B5c checks, and the §2.3
+identity is now what stops a third.)*
 
 **Source (pending, AC2).** A default for an **unmeasured** lifter would need a
 cited normative value for weight-bearing dorsiflexion — the candidate is the
@@ -548,11 +613,16 @@ honest question and the one the lifter can act on. And `90°` as the search
 bound is the geometric domain of a shank angle from vertical, not a claim about
 any ankle.
 
-Worked, for the §2.6.1.1 lifter: bodyweight-only, `u_min = 0.554` → **33.6°**,
-so 30° of dorsiflexion is `DepthNotReachable` with `needed_deg ≈ 33.7`. Under a
-100 kg bar the same lifter's `u_min` falls to 0.263 → **15.3°**, and 30° is a
+Worked, for the §2.6.1.1 lifter: bodyweight-only, `u_min = 0.4806` → **28.7°**,
+so 25° of dorsiflexion is `DepthNotReachable` with `needed_deg ≈ 28.7`. Under a
+100 kg bar the same lifter's `u_min` falls to 0.2319 → **13.4°**, and 25° is a
 posture. Same person, same depth, different load: the rejection is a property
 of the *lift*, not a label on the lifter.
+
+All four rows are reachable and all four are claimed: `B9` and the
+`u_min > 1` branch; `B5d` and `B11`; `u > u_max` via a long shank and a short
+femur; and the undetermined case — a body with no mass on the trunk line and no
+bar, for which the equation is `0 = 0` and any lean would be invented.
 
 Exhaustive `match` in the token mapper, no `_` arm — the R-0042 precedent.
 
@@ -594,15 +664,18 @@ change that honestly. Neither is in scope.
 builds one, so AC3, AC4, AC5 and AC12 had nothing to be tested against:
 
 ```rust
-/// The v1 model entry point: a posture from the parametric solve in, the four
-/// joint moments and everything the result must admit to out. Total — a
-/// posture that exists has moments (SPEC-0045 §2.4).
-pub fn analyse_baseline(body: &Body, p: &Posture) -> Mechanics;
+/// A posture the v1 solve produced, and the evidence that it did. Only
+/// `squat::baseline` can build one.
+pub struct Baseline(Posture);
+
+/// The v1 model entry point: the four joint moments and everything the result
+/// must admit to. Total — a posture that exists has moments (§2.4).
+pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Mechanics;
 
 /// Source + model in one call: solve this lifter's baseline and analyse it.
 pub fn baseline_mechanics(
     body: &Body,
-    bar_kg: Option<f64>,
+    bar_kg: Option<LoadKg>,
     ankle: Dorsiflexion,
 ) -> Result<Mechanics, Rejection>;
 ```
@@ -616,6 +689,20 @@ lands. So the model's core is private and each source names its own door:
 alternative — a `Provenance` argument — was rejected twice over: it would let a
 caller mislabel a posture, and `Provenance` is already taken at the crate root
 by `archetype::Provenance` (the finding-10 collision, again).
+
+**And the door is locked, not merely labelled.** `analyse_baseline` takes a
+`Baseline`, not a `Posture`. Naming a function for its source only documents
+the requirement; taking a type only that source can build *enforces* it, so a
+measured or hand-built posture cannot be handed to it and come back carrying
+`SolvedBaseline`. The wrapper costs one field and is the difference between a
+comment and a guarantee.
+
+**The load is `LoadKg`, the crate's validated load** — finite and within
+`(0, 1000]` (`workout.rs`). With a bare `f64` a negative bar solved to a
+plausible-looking posture, and `NaN` fell through to `DoesNotBalance`: a
+physics rejection standing in by accident for what is a type error. The cap has
+one consequence worth recording — `B5b`'s limit claim cannot be probed at 10⁴
+kg, so it is stated as the convergence it is, over `100 → 250 → 500 → 1000`.
 
 ```rust
 pub struct Mechanics {
@@ -653,9 +740,12 @@ pub enum Assumption {
 **`Uncertainty` is a design, not a name** (finding 13). Each joint's
 `uncertainty` is the half-width from propagating the **placement conventions**
 through the same `moment_about` — the L5/S1 placement along the trunk line
-(±3 cm, convention; it moves the lumbar row's own joint centre and so only that
-row) and the head & neck and arm COM placements (±2 cm each, convention) — by
-evaluating the moment at the corner cases and taking the largest deviation. No
+(±3 cm, convention) and the head & neck and arm COM placements (±2 cm each,
+convention) — by evaluating the moment at the corner cases and taking the
+largest deviation. All three reach all four joints: the L5/S1 point is the
+lumbar row's own joint centre, but it is *also* the proximal end of the pelvis
+segment, whose centre of mass sits on every load side — so it is not the
+lumbar-only spread the draft called it. No
 distribution is assumed; the number is a bound from stated inputs, and each
 input is a labelled convention until cited. The top-level `Uncertainty` names
 those spreads, so the ± can be audited instead of trusted:
@@ -730,16 +820,26 @@ backend/crates/core/src/biomech/
                 Joint::extension_sign() — the ONLY place a sign is applied
   analysis.rs   Mechanics, JointMoment, ResistingGroup, LoadBasis, Assumption,
                 Position, Uncertainty; analyse_baseline()               [A]
-  squat.rs      baseline(body, bar, ankle) -> Result<Posture, Rejection>,
+  squat.rs      pose() — the ONE home for the baseline geometry;
+                baseline(body, bar, ankle) -> Result<Baseline, Rejection>,
                 baseline_mechanics()                                    [A]
   knobs.rs      Knobs, apply(), which_unknown()                         [B]
   delta.rs      Delta, Borderline, perturb()                            [B]
 ```
 
-`lumbar.rs` is folded away: the L5/S1 point is one `along(hip, shoulder, 0.10)`
-on `Posture::at`, and its load side is one of `above()`'s four lists. A module
-for two lines would have been structure for its own sake — the §2.5 convention
-still has exactly one home, which was the point of naming it.
+`lumbar.rs` is folded away: the L5/S1 point is one
+`along(hip, shoulder, L5S1_UP_THE_TRUNK)` on `Posture::at`, and its load side is
+one of `above()`'s four lists. A module for two lines would have been structure
+for its own sake — the §2.5 convention still has exactly one home, which was the
+point of naming it.
+
+**The same rule applies to the balance coefficients.** `P`, `Q` and `B` could
+be written out from the §2.4.2 `k`-fractions, and the draft's implementation
+did — giving those conventions a second home free to drift from
+`ChainSegment::com`. They are instead **measured off the model**: `Σ m·x` is
+affine in `(sin δ, sin θ)` with no cross term, so three probe postures through
+the real `com` determine all three exactly. Same conventions, one definition,
+four extra evaluations per solve.
 
 Representative — `chain.rs` is the whole model's spine:
 
@@ -844,6 +944,31 @@ rather than asserted.
   goniometric norms (§2.6.4). No limit constant is committed until a source is
   recorded, so slice A ships without `AnatomicallyImplausible`.
 
+### 5.6 Raised 2026-09-17 — two things the owner should see
+
+**(a) L5/S1 was wrong, and the published correction moves with it.** §2.5's
+`0.10` was a convention nobody had checked. The table's own HAT row says it is
+`0.2674`, and at `0.10` every hip moment the model produced was 16% low. The
+reel correction is therefore **274 → 370.6 N·m**, not the ≈366 this spec
+carried and not the 357 the first implementation produced. Nothing about §5.4
+changes — whether to publish is still yours — but the number to publish is
+370.6, and it now has two independent cross-checks (the bar-only component
+comes back as the reel's own 273.6, and the lumped HAT row agrees to 0.2%).
+
+The derivation attributes the whole split-versus-lump residual to L5/S1. That
+is the defensible attribution and §2.5 says why, but it is an attribution: a
+cited L5/S1 that disagrees would mean part of the residual belongs to the head
+or arm placement instead. The §2.3 identity is now a test, so that disagreement
+would surface rather than hide.
+
+**(b) The Winter verification is the one thing blocking a clean merge.** AC2
+says the record is filled in before any constant is committed. The constants
+are committed and `WINTER_VERIFICATION` is still `Pending`; the test that says
+so is `#[ignore]`d, which keeps CI honest about what it can check but means
+nothing will raise it again on its own. It needs somebody with the printed 4th
+edition and twenty minutes. Until then AC2 stays unticked, and every published
+number rests on values that are canonical but unverified.
+
 ### Resolved here (owner may veto)
 
 - **OQ-1** → Winter Table 4.1 / Fig 4.1, with a recorded verification and
@@ -894,8 +1019,10 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 ## 7. Test plan
 
 **The table (AC2):**
-- `B0` the three sum claims of §2.3 hold; every `WINTER` constant has a
-  non-empty citation string.
+- `B0` the **four** claims of §2.3 hold; every `WINTER` constant has a
+  non-empty citation string. The fourth — the split reproduces `WINTER.hat`'s
+  own centre of mass — is what fixes L5/S1 (§2.5), and is the only one of the
+  four that constrains placement rather than mass.
 
 **Hand-computed statics (AC16):**
 - `B1` trunk vertical over the hip, no bar → hip moment ≈ 0. Sign bench.
@@ -918,14 +1045,20 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 - `B5c` the dorsiflexion→lean relation of §2.6.1.1 is strictly monotone and
   reproduces that table within 1°: more ankle, less forward lean. This makes
   the restricted-ankle finding testable rather than anecdotal.
-- `B5d` at 30° of dorsiflexion, bodyweight-only, parallel is
-  `DepthNotReachable` with `limiting: Joint::Ankle` and `needed_deg ≈ 33.7`
-  (§2.6.4) — **not** a posture, and **not** `AnatomicallyImplausible`.
-- `B5e` the same lifter at the same 30°, under a 100 kg bar, **solves**: the
+- `B5d` at 25° of dorsiflexion, bodyweight-only, parallel is
+  `DepthNotReachable` with `limiting: Joint::Ankle` and `needed_deg ≈ 28.7`
+  (§2.6.4) — **not** a posture, and **not** `AnatomicallyImplausible`. And
+  `needed_deg` is the *least* ankle that works: a tenth of a degree more
+  solves.
+- `B5e` the same lifter at the same 25°, under a 100 kg bar, **solves**, and at
+  a **matched** ankle the loaded squat is the more upright of the two: the
   counterweight claim of §2.6.1.1, and the proof that the rejection is a
   property of the lift rather than a label on the lifter.
-- `B5b` with a bar of mass → ∞ (numerically: 10⁴ kg) the solved θ converges to
-  the bar-over-mid-foot solution — the limit claim of §2.6.3.
+- `B5b` as the bar grows the solved θ converges to the bar-over-mid-foot
+  solution — the limit claim of §2.6.3. Stated over `100 → 250 → 500 → 1000`
+  kg, strictly shrinking and inside 6 mm at the top: `LoadKg` caps at 1000, and
+  a limit tested outside the type's domain is a claim about a lift nobody can
+  log.
 
 **Symmetry (AC16):**
 - `B6` a mirrored posture gives mirrored moments (sign rule applied
@@ -938,11 +1071,22 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   `KneesTrackFeet`.
 
 **Rejection (AC9):**
-- `B9` `DoesNotBalance` through the public solve.
+- `B9` `DoesNotBalance` through the public solve — and **no** dorsiflexion in
+  the domain rescues that body, or it should have been `DepthNotReachable`.
 - `B11` `DepthNotReachable` through the public solve (see `B5d`).
+- The other two rows of §2.6.4's table: `u > u_max` (a long shank and a short
+  femur — the trunk would have to lean backwards) and the undetermined lean (a
+  body with no mass on the trunk line and no bar).
 - `B10` (`AnatomicallyImplausible`) is **deferred until a limit is cited**
   (§2.6.4): with no committed constant it is unreachable by construction, and a
   test for it would assert an invented number.
+
+**Uncertainty (§2.8):**
+- `B17` each joint's half-width is the sum of its three placement
+  sensitivities, derived from the table rather than read off the result; the
+  three non-lumbar rows are identical (the nudged segments are on all three
+  load sides and none of those joints moves); the lumbar row is ~3.5× larger,
+  because the joint centre moves against a load side that includes the bar.
 
 **Stability (AC16, finding 13):**
 - `B12` every table-derived length ±5%: every delta keeps its sign or is
@@ -950,9 +1094,13 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 
 **Honesty:**
 - `B13` every `analyse_baseline` result carries `SagittalPlane`,
-  `QuasiStatic`, `SinglePosture`, `SolvedBaseline`, `TableDerivedMasses`;
-  carries `TableDerivedLengths` iff any length was unmeasured, and **not** when
-  every length was measured (both halves, or the `iff` is untested).
+  `QuasiStatic`, `SinglePosture`, `SolvedBaseline`, `TableDerivedMasses` and
+  `TableDerivedLengths`. In v1 that last one holds whatever the user has had
+  measured — the foot, head & neck and upper arm have **no** measurement path,
+  so measuring the three that do cannot remove it, and §2.8's `iff` reduces to
+  *always*. Tested with all three measured as well as none, so that it stops
+  reducing to *always* the day a fourth length becomes measurable rather than
+  quietly continuing to.
 - `B14` lumbar row present ⇒ `RigidTrunkLumbar` present.
 - `B16` no field name or enum variant in the output namespace matches
   `/risk|danger|safe|injur/i` (AC14), and `ResistingGroup` has exactly the four
@@ -984,6 +1132,11 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-09-17 | Dorsiflexion is a **required** solve input in slice A; no population default | Follows the 2026-09-15 owner decision applied consistently: an uncited default is an invented constant, and unlike the Winter table no sum claim could catch it. The caller that lacks a measurement must decide what to say, and now cannot do so by accident. |
 | 2026-09-17 | `DepthNotReachable` vs `DoesNotBalance` decided by §2.6.3's `[u_min, u_max]` window | Closed-form in the lifter's own lengths, so *"would more ankle fix this?"* is answered with no constant anyone must cite — which is what made the variant implementable while `AnatomicallyImplausible` is not. |
 | 2026-09-17 | The ±5% segment-length spread leaves `Uncertainty` for §2.6.5 | At a fixed posture a different femur length changes nothing; its real effect needs a re-solve. The draft had given two quantities one name. |
+| 2026-09-17 | `L5S1_UP_THE_TRUNK` is **derived** from the HAT identity (0.2674), not chosen | Table 4.1 describes the same 0.678 M twice, split and lumped; the split must reproduce the lump, and L5/S1 is the only placement in it the table does not supply. The draft's `0.10` left every hip moment 16% low and put the joint 5 cm above the trochanter. Raised to the owner in §5.6 — it moves the published reel correction. |
+| 2026-09-17 | A fourth §2.3 sum claim, on placement rather than mass | The first three catch a mistyped mass and none catches a segment in the wrong place. Its absence is why the above went unnoticed through a spec, a red suite and a green implementation. |
+| 2026-09-17 | `analyse_baseline` takes a `Baseline`, not a `Posture` | Naming a function for its source documents the requirement; taking a type only that source can build enforces it. One field, and `SolvedBaseline` becomes unforgeable. |
+| 2026-09-17 | The load is `LoadKg`; `P`/`Q`/`B` are probed, not re-derived | A bare `f64` let a negative bar solve, with physics rejections standing in for a type error. Writing the `k`-fractions out a second time gave §2.4.2 two homes — the thing folding `lumbar.rs` away was meant to prevent. |
+| 2026-09-17 | AC2 stays unticked; the verification test is `#[ignore]`d, not deleted | CI should assert what it can check and say plainly what it cannot. Tracked in §5.6(b) as the one item blocking a clean merge. |
 
 ## 9. Changelog
 
@@ -996,6 +1149,18 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   design had not resolved: the baseline shank angle was undefined (§2.6.1 and
   §2.6.3 contradicted each other) and the placeholder hip limit rejected the
   baseline itself. Both settled by owner decision; `DepthNotReachable` added._
+- _2026-09-17 — amended again after architect review of the implementation,
+  which found that the model contradicted its own table: the §2.4.2 split's
+  centre of mass sat at 0.539 of the trunk line against `WINTER.hat`'s 0.626,
+  unchecked, because every §2.3 sum claim was about mass and none about
+  placement. `L5S1_UP_THE_TRUNK` is now derived from that identity (0.2674 for
+  0.10), a fourth sum claim guards it, and every number in §2.4.3, §2.6.1.1 and
+  §2.6.4 moved with it — the reel correction to **370.6 N·m**. Also: the
+  §2.4.2 sentence justifying the split had the direction backwards; the load is
+  `LoadKg`; `analyse_baseline` takes a `Baseline` so `SolvedBaseline` cannot be
+  asserted about a posture nobody solved; and the balance coefficients are
+  probed off `ChainSegment::com` rather than re-derived. Raised to the owner in
+  §5.6._
 - _2026-09-17 — amended to close the `Mechanics` gap (§2.8, §3, §2.10: the
   result type had no producer) and three defects the implementation surfaced:
   §2.6.1.1's table stated no load and reproduced neither case — corrected, with
