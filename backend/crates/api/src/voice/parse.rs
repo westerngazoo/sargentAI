@@ -393,7 +393,11 @@ pub(super) async fn parse_with_llm(
     use std::fmt::Write;
     let mut history_text = String::new();
     for turn in turns {
-        let role_name = if turn.role == "user" { "User" } else { "Assistant" };
+        let role_name = if turn.role == "user" {
+            "User"
+        } else {
+            "Assistant"
+        };
         let _ = writeln!(history_text, "{role_name}: {}", turn.content);
     }
     let prompt = format!(

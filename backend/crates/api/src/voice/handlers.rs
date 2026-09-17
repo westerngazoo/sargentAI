@@ -57,13 +57,13 @@ pub(crate) async fn intent(
         parse::parse_with_llm(&state.voice.http, cfg, &req.turns, today)
             .await
             .unwrap_or_else(|_| {
-                let last_turn = req.turns.iter().filter(|t| t.role == "user").last();
-                let transcript = last_turn.map(|t| t.content.as_str()).unwrap_or("");
+                let last_turn = req.turns.iter().rfind(|t| t.role == "user");
+                let transcript = last_turn.map_or("", |t| t.content.as_str());
                 parse::parse_transcript(transcript, today)
             })
     } else {
-        let last_turn = req.turns.iter().filter(|t| t.role == "user").last();
-        let transcript = last_turn.map(|t| t.content.as_str()).unwrap_or("");
+        let last_turn = req.turns.iter().rfind(|t| t.role == "user");
+        let transcript = last_turn.map_or("", |t| t.content.as_str());
         parse::parse_transcript(transcript, today)
     };
 
