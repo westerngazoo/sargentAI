@@ -41,11 +41,11 @@ class VoiceIntentService {
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript) async {
+  Future<VoiceIntentResult> parse(List<Map<String, dynamic>> turns) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/voice/intent',
-        data: {'transcript': transcript},
+        data: {'turns': turns},
       );
       return VoiceIntentResult.fromJson(res.data!);
     } on DioException catch (e) {
