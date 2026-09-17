@@ -203,6 +203,10 @@ pub const WINTER_VERIFICATION: Verification = Verification::Pending;
 /// Lengths a user has had measured, in metres. `None` means table-derived
 /// from height (SPEC-0045 §2.1.1, §2.3). Height scales only the unmeasured
 /// segments (architect finding 16).
+///
+/// Ankle dorsiflexion is *not* here: it is an angle, not a length, and unlike
+/// a length it has no table fallback to be measured *instead of*
+/// (SPEC-0045 §2.6.1.1). It is a required argument to the solve.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct MeasuredLengths {
     /// Hip → knee (femur).
@@ -215,22 +219,132 @@ pub struct MeasuredLengths {
 
 /// One person: the table scaled by height and mass, with any measured length
 /// overriding its table value. Built by [`scale`] only.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Body {}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Body {
+    mass_kg: f64,
+    thigh: Metres,
+    shank: Metres,
+    trunk: Metres,
+    foot: Metres,
+    head_neck: Metres,
+    upper_arm: Metres,
+    ankle_height: Metres,
+    any_length_table_derived: bool,
+}
 
 impl Body {
     /// Mass in kilograms of one lumped chain segment — both legs for `Shank`
     /// and `Thigh`, both arms for `Arms` (the sagittal model superimposes the
     /// pairs). Always table-derived: masses have no measurement path.
     #[must_use]
-    pub fn mass_kg(&self, _segment: ChainSegment) -> f64 {
-        todo!("R-0045 slice A")
+    pub fn mass_kg(&self, segment: ChainSegment) -> f64 {
+        let fraction = match segment {
+            ChainSegment::Shank => 2.0 * WINTER.shank.mass_fraction,
+            ChainSegment::Thigh => 2.0 * WINTER.thigh.mass_fraction,
+            ChainSegment::Pelvis => WINTER.pelvis.mass_fraction,
+            ChainSegment::ThoraxAbdomen => WINTER.thorax_abdomen.mass_fraction,
+            ChainSegment::HeadNeck => WINTER.head_neck.mass_fraction,
+            ChainSegment::Arms => {
+                2.0 * (WINTER.upper_arm.mass_fraction
+                    + WINTER.forearm.mass_fraction
+                    + WINTER.hand.mass_fraction)
+            }
+        };
+        fraction * self.mass_kg
+    }
+
+    /// Hip → knee.
+    pub(super) fn thigh(&self) -> f64 {
+        self.thigh.0
+    }
+
+    /// Knee → ankle.
+    pub(super) fn shank(&self) -> f64 {
+        self.shank.0
+    }
+
+    /// Hip → shoulder.
+    pub(super) fn trunk(&self) -> f64 {
+        self.trunk.0
+    }
+
+    /// Heel → toe.
+    pub(super) fn foot(&self) -> f64 {
+        self.foot.0
+    }
+
+    /// C7-T1 → vertex; the head & neck COM is placed by half of it
+    /// (SPEC-0045 §2.4.2).
+    pub(super) fn head_neck(&self) -> f64 {
+        self.head_neck.0
+    }
+
+    /// Shoulder → elbow; how far hanging arms sit below the shoulder.
+    pub(super) fn upper_arm(&self) -> f64 {
+        self.upper_arm.0
+    }
+
+    /// Floor → ankle joint (SPEC-0045 §2.6.1).
+    pub(super) fn ankle_height(&self) -> f64 {
+        self.ankle_height.0
+    }
+
+    /// Whether any length came from the table rather than a measurement — the
+    /// condition `Assumption::TableDerivedLengths` is reported under.
+    pub(super) fn any_length_table_derived(&self) -> bool {
+        self.any_length_table_derived
     }
 }
 
+/// A row's length at `height`. Total: a row Figure 4.1 gives no length gets
+/// zero rather than a panic in library code (constitution §6). No row scaled
+/// by [`scale`] is one of those, which is what
+/// `every_scaled_row_has_a_table_length` exists to keep true.
+fn table_length(row: &Segment, height: Metres) -> Metres {
+    Metres(row.length_fraction_of_height.unwrap_or(0.0) * height.0)
+}
+
+/// The three lengths the model needs that [`MeasuredLengths`] has no field
+/// for, and so can never override. They are why `TableDerivedLengths` is on
+/// every v1 result whatever the lifter has had measured — named rather than
+/// folded into a `true`, so that the day one of them becomes measurable the
+/// condition changes with it (SPEC-0045 §2.8).
+const FOOT_HAS_NO_MEASUREMENT_PATH: bool = true;
+const HEAD_NECK_HAS_NO_MEASUREMENT_PATH: bool = true;
+const UPPER_ARM_HAS_NO_MEASUREMENT_PATH: bool = true;
+
 /// Scale the table to a person. `measured` overrides any **length** the user
 /// has had measured; masses are always table-derived (SPEC-0045 §2.3).
+///
+/// Height scales only the *unmeasured* segments (architect finding 16): a
+/// lifter with a measured femur and a table-derived shank gets exactly that,
+/// not a femur quietly re-derived from their height.
 #[must_use]
-pub fn scale(_height: Metres, _mass_kg: f64, _measured: &MeasuredLengths) -> Body {
-    todo!("R-0045 slice A")
+pub fn scale(height: Metres, mass_kg: f64, measured: &MeasuredLengths) -> Body {
+    Body {
+        mass_kg,
+        thigh: measured
+            .thigh
+            .unwrap_or_else(|| table_length(&WINTER.thigh, height)),
+        shank: measured
+            .shank
+            .unwrap_or_else(|| table_length(&WINTER.shank, height)),
+        trunk: measured
+            .trunk
+            .unwrap_or_else(|| table_length(&WINTER.trunk, height)),
+        foot: table_length(&WINTER.foot, height),
+        head_neck: table_length(&WINTER.head_neck, height),
+        upper_arm: table_length(&WINTER.upper_arm, height),
+        ankle_height: Metres(WINTER.ankle_height.fraction_of_height * height.0),
+        any_length_table_derived: [
+            measured.thigh.is_none(),
+            measured.shank.is_none(),
+            measured.trunk.is_none(),
+            FOOT_HAS_NO_MEASUREMENT_PATH,
+            HEAD_NECK_HAS_NO_MEASUREMENT_PATH,
+            UPPER_ARM_HAS_NO_MEASUREMENT_PATH,
+        ]
+        .iter()
+        .any(|&from_the_table| from_the_table),
+    }
 }
