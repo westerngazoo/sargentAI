@@ -387,12 +387,20 @@ const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
-    transcript: &str,
+    turns: &[crate::voice::handlers::Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
+    let mut history_text = String::new();
+    for turn in turns {
+        let role_name = if turn.role == "user" { "User" } else { "Assistant" };
+        let _ = writeln!(history_text, "{role_name}: {}", turn.content);
+    }
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+         Resolve the user's intent against this conversation history:\n\
+         {history_text}\n\
+         If you need more information to log a workout or meal, ask a targeted follow-up question using the \"clarify\" action.\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
