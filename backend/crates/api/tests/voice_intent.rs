@@ -73,6 +73,28 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_accepts_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // Simulate the user passing missing info after a clarify, with the prior history
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "chicken breast 200 grams",
+            "history": [
+                {"role": "user", "content": "log a meal"},
+                {"role": "assistant", "content": "How many grams of protein, carbs, and fat?"}
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(

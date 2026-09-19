@@ -156,8 +156,13 @@ class Sergeant extends Notifier<SergeantState> {
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
+      final historyJson = state.history.map((turn) => {
+        'role': turn.fromUser ? 'user' : 'assistant',
+        'content': turn.text,
+      }).toList();
+
       final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+          await ref.read(voiceIntentServiceProvider).parse(transcript, history: historyJson);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
@@ -169,6 +174,7 @@ class Sergeant extends Notifier<SergeantState> {
   Future<bool> _handleBackendResult(VoiceIntentResult result) async {
     _idleRounds = 0;
     if (result.isLoggedNutrition || result.isLoggedWorkout) {
+      state = state.copyWith(history: const []);
       await _say(result.message ?? 'Logged.');
       return true;
     }
@@ -178,6 +184,7 @@ class Sergeant extends Notifier<SergeantState> {
       return true;
     }
     if (result.isNavigate && result.route != null) {
+      state = state.copyWith(history: const []);
       await _say(result.message ?? 'Roger.');
       state = state.copyWith(conversing: false, navigateTo: result.route);
       if (result.route == '/session') {
