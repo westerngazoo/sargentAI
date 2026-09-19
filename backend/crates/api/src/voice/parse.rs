@@ -399,6 +399,7 @@ pub(super) async fn parse_with_llm(
 ) -> ApiResult<ParsedAction> {
     let mut history_text = String::new();
     if !history.is_empty() {
+        use std::fmt::Write;
         history_text.push_str("\n\nConversation history:\n");
         for msg in history {
             let role = if msg.role == "user" {
@@ -406,7 +407,7 @@ pub(super) async fn parse_with_llm(
             } else {
                 "Assistant"
             };
-            history_text.push_str(&format!("{role}: {}\n", msg.content));
+            let _ = writeln!(history_text, "{role}: {}", msg.content);
         }
     }
 
