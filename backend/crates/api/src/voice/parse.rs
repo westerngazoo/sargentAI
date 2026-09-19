@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ApiError, ApiResult};
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub(super) struct Message {
+    pub role: String,
+    pub content: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum IntentStatus {
@@ -388,10 +394,25 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[Message],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if !history.is_empty() {
+        use std::fmt::Write;
+        history_text.push_str("\n\nConversation history:\n");
+        for msg in history {
+            let role = if msg.role == "user" {
+                "User"
+            } else {
+                "Assistant"
+            };
+            let _ = writeln!(history_text, "{role}: {}", msg.content);
+        }
+    }
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
+        "{LLM_PROMPT_HEAD} Today is {today}.{history_text} \
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
