@@ -401,7 +401,11 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         history_text.push_str("\n\nConversation history:\n");
         for msg in history {
-            let role = if msg.role == "user" { "User" } else { "Assistant" };
+            let role = if msg.role == "user" {
+                "User"
+            } else {
+                "Assistant"
+            };
             history_text.push_str(&format!("{role}: {}\n", msg.content));
         }
     }
