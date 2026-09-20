@@ -825,7 +825,20 @@ backend/crates/core/src/biomech/
                 baseline_mechanics()                                    [A]
   knobs.rs      Knobs, apply(), which_unknown()                         [B]
   delta.rs      Delta, Borderline, perturb()                            [B]
+
+backend/crates/core/examples/
+  squat.rs      a developer driver: solve a lifter, sweep the
+                dorsiflexion relation, check the reel               [A]
 ```
+
+`examples/squat.rs` is **tooling, not product code** — it ships with
+`cargo run --example` and never with the API image. It exists because slice C
+is what gives the model an API (§2.9), and without it slice A can only be
+exercised through its own test suite, which is a poor way to find out whether
+the numbers are believable. It adds no model: every figure it prints comes
+from `biomech`, and its `--reel` mode goes through `moment_about` rather than
+`analyse_baseline`, because the reel's posture is built rather than solved and
+stamping `SolvedBaseline` on it would be a lie (§2.1).
 
 `lumbar.rs` is folded away: the L5/S1 point is one
 `along(hip, shoulder, L5S1_UP_THE_TRUNK)` on `Posture::at`, and its load side is
