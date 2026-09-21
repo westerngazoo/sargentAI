@@ -36,8 +36,16 @@ impl VoiceIntentSettings {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct ChatTurn {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub(crate) struct IntentRequest {
     transcript: String,
+    #[serde(default)]
+    history: Option<Vec<ChatTurn>>,
 }
 
 pub(crate) async fn intent(
@@ -47,12 +55,14 @@ pub(crate) async fn intent(
 ) -> ApiResult<Json<IntentResponse>> {
     let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
     let today = Utc::now().date_naive();
+    let history = req.history.unwrap_or_default();
+
     let action = if let Some(cfg) = state.voice.llm.as_deref() {
-        parse::parse_with_llm(&state.voice.http, cfg, &req.transcript, today)
+        parse::parse_with_llm(&state.voice.http, cfg, &req.transcript, &history, today)
             .await
-            .unwrap_or_else(|_| parse::parse_transcript(&req.transcript, today))
+            .unwrap_or_else(|_| parse::parse_transcript(&req.transcript, &history, today))
     } else {
-        parse::parse_transcript(&req.transcript, today)
+        parse::parse_transcript(&req.transcript, &history, today)
     };
 
     let response = match action {
