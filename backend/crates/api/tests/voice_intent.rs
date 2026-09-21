@@ -18,7 +18,7 @@ async fn voice_intent_logs_workout_from_natural_language(pool: PgPool) {
         &app,
         "/voice/intent",
         Some(&format!("Bearer {token}")),
-        json!({ "transcript": "I did 10 reps of 100 kg bench press" }),
+        json!({ "transcript": "I did 10 reps of 100 kg bench press", "history": [] }),
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -46,7 +46,7 @@ async fn voice_intent_logs_meal_when_macros_present(pool: PgPool) {
         &app,
         "/voice/intent",
         Some(&format!("Bearer {token}")),
-        json!({ "transcript": "log a meal 40 grams protein 60 carbs 20 fat" }),
+        json!({ "transcript": "log a meal 40 grams protein 60 carbs 20 fat", "history": [] }),
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -63,7 +63,7 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
         &app,
         "/voice/intent",
         Some(&format!("Bearer {token}")),
-        json!({ "transcript": "log a meal" }),
+        json!({ "transcript": "log a meal", "history": [] }),
     )
     .await;
     assert_eq!(resp.status(), StatusCode::OK);
@@ -79,8 +79,33 @@ async fn voice_intent_requires_auth(pool: PgPool) {
         &app,
         "/voice/intent",
         Some("Bearer bad.token.here"),
-        json!({ "transcript": "log a meal" }),
+        json!({ "transcript": "log a meal", "history": [] }),
     )
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_logs_meal_with_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-meal-history@test.com", "password123").await;
+
+    // A turn where the user provided macros following a prompt from the assistant.
+    // Fallback parser parses "40 protein, 60 carbs, 20 fat", but we also check it doesn't crash on history.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein, 60 carbs, 20 fat",
+            "history": [
+                {"role": "user", "content": "log a meal"},
+                {"role": "assistant", "content": "How many grams of protein, carbs, and fat?"}
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
 }

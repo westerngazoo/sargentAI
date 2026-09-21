@@ -90,7 +90,7 @@ pub(super) enum ParsedAction {
     Response(IntentResponse),
 }
 
-pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
+pub(super) fn parse_transcript(transcript: &str, _history: &[crate::voice::handlers::ChatTurn], today: NaiveDate) -> ParsedAction {
     let text = transcript.to_lowercase();
     let text = text.trim();
     if text.is_empty() {
@@ -388,11 +388,24 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    for turn in history {
+        if turn.role == "user" {
+            use std::fmt::Write;
+            let _ = writeln!(history_text, "User: {}", turn.content);
+        } else {
+            use std::fmt::Write;
+            let _ = writeln!(history_text, "Assistant: {}", turn.content);
+        }
+    }
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+        "{LLM_PROMPT_HEAD} Today is {today}.\n\
+         {history_text}\
+         User: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
@@ -505,7 +518,7 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
         // "start workout" contains "out", which is in the stop list — so the
         // single most common command in the product answered "Standing by."
-        match parse_transcript("start workout", today) {
+        match parse_transcript("start workout", &[], today) {
             ParsedAction::Response(r) => {
                 assert_eq!(r.route.as_deref(), Some("/session"));
                 assert_eq!(r.status, IntentStatus::Navigate);
@@ -520,7 +533,7 @@ mod tests {
         // "repeat" contains "eat"; "lateral" contains "ate". Both routed to the
         // nutrition branch and asked the lifter for protein, carbs and fat.
         for phrase in ["repeat last set", "lateral raise", "log a great set"] {
-            match parse_transcript(phrase, today) {
+            match parse_transcript(phrase, &[], today) {
                 ParsedAction::Nutrition(_) => panic!("{phrase:?} logged as a meal"),
                 ParsedAction::Response(r) => assert!(
                     !r.prompt.unwrap_or_default().contains("protein"),
@@ -535,7 +548,7 @@ mod tests {
     fn plank_is_not_a_plan_and_stopwatch_is_not_stop() {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
         for phrase in ["plank", "stopwatch"] {
-            if let ParsedAction::Response(r) = parse_transcript(phrase, today) {
+            if let ParsedAction::Response(r) = parse_transcript(phrase, &[], today) {
                 assert_ne!(r.route.as_deref(), Some("/programs/current"), "{phrase:?}");
                 assert_ne!(r.message.as_deref(), Some("Standing by."), "{phrase:?}");
             }
@@ -547,7 +560,7 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
         // The fix must not cost the feature its actual job.
         for phrase in ["stop", "cancel that", "never mind", "pause"] {
-            match parse_transcript(phrase, today) {
+            match parse_transcript(phrase, &[], today) {
                 ParsedAction::Response(r) => {
                     assert_eq!(r.message.as_deref(), Some("Standing by."), "{phrase:?}");
                 }
@@ -559,7 +572,7 @@ mod tests {
     #[test]
     fn a_real_meal_still_logs() {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
-        match parse_transcript("I ate 40 protein, 60 carbs, 20 fat", today) {
+        match parse_transcript("I ate 40 protein, 60 carbs, 20 fat", &[], today) {
             ParsedAction::Nutrition(_) => {}
             _ => panic!("expected nutrition"),
         }
@@ -568,7 +581,7 @@ mod tests {
     #[test]
     fn parses_bench_set_from_natural_language() {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
-        let action = parse_transcript("I did 10 reps of 100 kg bench press", today);
+        let action = parse_transcript("I did 10 reps of 100 kg bench press", &[], today);
         match action {
             ParsedAction::Workout(session) => {
                 assert_eq!(session.exercises.len(), 1);
@@ -582,7 +595,7 @@ mod tests {
     #[test]
     fn meal_without_macros_clarifies() {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
-        match parse_transcript("log a meal", today) {
+        match parse_transcript("log a meal", &[], today) {
             ParsedAction::Response(r) => assert_eq!(r.status, IntentStatus::Clarify),
             _ => panic!("expected clarify"),
         }
