@@ -90,7 +90,11 @@ pub(super) enum ParsedAction {
     Response(IntentResponse),
 }
 
-pub(super) fn parse_transcript(transcript: &str, _history: &[crate::voice::handlers::ChatTurn], today: NaiveDate) -> ParsedAction {
+pub(super) fn parse_transcript(
+    transcript: &str,
+    _history: &[crate::voice::handlers::ChatTurn],
+    today: NaiveDate,
+) -> ParsedAction {
     let text = transcript.to_lowercase();
     let text = text.trim();
     if text.is_empty() {
