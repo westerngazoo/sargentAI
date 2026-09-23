@@ -397,6 +397,7 @@ pub(super) async fn parse_with_llm(
     history: &[ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
     let mut prompt = format!("{LLM_PROMPT_HEAD} Today is {today}. ");
 
     if !history.is_empty() {
@@ -407,11 +408,11 @@ pub(super) async fn parse_with_llm(
             } else {
                 "Assistant"
             };
-            prompt.push_str(&format!("{prefix}: {}\n", turn.content));
+            let _ = writeln!(prompt, "{prefix}: {}", turn.content);
         }
     }
 
-    prompt.push_str(&format!(
+    let _ = write!(prompt,
         "Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
@@ -419,7 +420,7 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
          {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
-    ));
+    );
 
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
