@@ -388,10 +388,20 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    turns: &[crate::voice::handlers::Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if !turns.is_empty() {
+        history_text.push_str("Conversation history:\n");
+        for turn in turns {
+            history_text.push_str(&format!("{}: {}\n", turn.role, turn.content));
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
+         {history_text}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
