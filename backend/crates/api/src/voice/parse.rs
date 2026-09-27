@@ -391,11 +391,13 @@ pub(super) async fn parse_with_llm(
     today: NaiveDate,
     history: &[crate::voice::handlers::ChatTurn],
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
+
     let mut history_context = String::new();
     if !history.is_empty() {
         history_context.push_str("Conversation history:\n");
         for turn in history {
-            history_context.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            let _ = writeln!(history_context, "{}: {}", turn.role, turn.content);
         }
     }
 
