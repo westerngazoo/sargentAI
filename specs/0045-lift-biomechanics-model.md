@@ -276,9 +276,13 @@ so the two are placed by convention from the four joints it does have —
 - **head & neck COM**: on the trunk line extended beyond the shoulder by
   `0.5 × 0.130 H`. Convention; error carried.
 - **arms**: hands are on the bar in a back squat, so each arm's COM is placed
-  at the midpoint of shoulder → load point. When there is no load, arms hang:
-  COM directly below the shoulder at `0.436 × upper-arm length`. Convention;
-  error carried.
+  at the midpoint of shoulder → load point. When there is no load, arms hang
+  straight down: COM directly below the shoulder at the **whole arm's** centre
+  of mass — the mass-weighted mean of upper arm, forearm and hand at their own
+  Table 4.1 centres, `0.171 H` (0.300 m at 1.75 m). Convention; error carried.
+  *(The draft used `0.436 × upper-arm length`, the upper arm's centre alone —
+  half the depth. Corrected 2026-09-27. No slice-A moment moved: a vertically
+  hanging arm has the shoulder's `x` at any depth.)*
 
 Winter's lumped HAT (COM 0.626) assumes **arms at the sides**. Hands on the
 bar move the arm mass to the shoulder → bar midpoint, which on the trunk line
@@ -959,7 +963,14 @@ rather than asserted.
 
 ### 5.6 Raised 2026-09-17 — two things the owner should see
 
-**(a) L5/S1 was wrong, and the published correction moves with it.** §2.5's
+**(a) — Decided 2026-09-27: keep the derived value, and fix the arm (A + C).**
+`L5S1_UP_THE_TRUNK = 0.2674` ships as derived from the HAT identity, guarded by
+the fourth sum claim. A direct citation (de Leva, Chaffin) is a later upgrade,
+not a blocker — de Leva divides the trunk at the omphalion and xiphion, not at
+L5/S1, so citing him is a mapping exercise rather than a lookup. The hanging
+arm's centre of mass is corrected to the whole arm's (§2.4.2).
+
+*As raised:* **L5/S1 was wrong, and the published correction moves with it.** §2.5's
 `0.10` was a convention nobody had checked. The table's own HAT row says it is
 `0.2674`, and at `0.10` every hip moment the model produced was 16% low. The
 reel correction is therefore **274 → 370.6 N·m**, not the ≈366 this spec
@@ -1149,6 +1160,8 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-09-17 | A fourth §2.3 sum claim, on placement rather than mass | The first three catch a mistyped mass and none catches a segment in the wrong place. Its absence is why the above went unnoticed through a spec, a red suite and a green implementation. |
 | 2026-09-17 | `analyse_baseline` takes a `Baseline`, not a `Posture` | Naming a function for its source documents the requirement; taking a type only that source can build enforces it. One field, and `SolvedBaseline` becomes unforgeable. |
 | 2026-09-17 | The load is `LoadKg`; `P`/`Q`/`B` are probed, not re-derived | A bare `f64` let a negative bar solve, with physics rejections standing in for a type error. Writing the `k`-fractions out a second time gave §2.4.2 two homes — the thing folding `lumbar.rs` away was meant to prevent. |
+| 2026-09-27 | **Owner decision:** L5/S1 stays derived (0.2674); citation is an upgrade, not a blocker | The HAT identity is self-checking and the fourth sum claim fails if anything upstream moves. The head convention cannot absorb the residual (it would need the head's centre 26 cm above C7-T1), so attributing it to L5/S1 is close to forced, not merely chosen. |
+| 2026-09-27 | **Owner decision:** the hanging arm hangs at the whole arm's centre of mass | The draft used the upper arm's centre alone — 14 cm below the shoulder against the arm's 30. Invisible in slice A's x-moments, wrong everywhere the arms move. Test-first: B15 went red on the new expectation before the fix. |
 | 2026-09-17 | AC2 stays unticked; the verification test is `#[ignore]`d, not deleted | CI should assert what it can check and say plainly what it cannot. Tracked in §5.6(b) as the one item blocking a clean merge. |
 
 ## 9. Changelog
@@ -1162,6 +1175,9 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   design had not resolved: the baseline shank angle was undefined (§2.6.1 and
   §2.6.3 contradicted each other) and the placeholder hip limit rejected the
   baseline itself. Both settled by owner decision; `DepthNotReachable` added._
+- _2026-09-27 — owner decisions on §5.6(a): L5/S1 stays derived, and the
+  hanging arm is placed at the whole arm's centre of mass rather than the upper
+  arm's. §2.4.2 corrected; no slice-A moment changes._
 - _2026-09-17 — amended again after architect review of the implementation,
   which found that the model contradicted its own table: the §2.4.2 split's
   centre of mass sat at 0.539 of the trunk line against `WINTER.hat`'s 0.626,
