@@ -94,15 +94,23 @@ jobs:
       # variable silently produces a malformed URL that fails every attempt
       # while the deploy itself succeeded (the bug this repo already has in
       # deploy-api.yml).
+      # A 200 only proves that *something* answers at the domain — and
+      # something already did before this workflow first ran: a laptop upload
+      # from August, still serving the pre-rename build. So check that what is
+      # served is what this run built, byte for byte. The query string steps
+      # around the edge cache, which serves this site's HTML as a HIT; and a
+      # missing file cannot pass by accident, because single-page-application
+      # routing would answer it with index.html, whose hash differs.
       - name: smoke check
         run: |
           url="https://sargent.goosethropic.systems"
-          echo "probing $url"
+          want=$(sha256sum mobile/build/web/main.dart.js | cut -d' ' -f1)
+          echo "this run built main.dart.js $want"
           for i in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
-            echo "  attempt $i -> $code"
-            [ "$code" = "200" ] && exit 0
+            got=$(curl -sf --max-time 30 "$url/main.dart.js?run=${{ github.run_id }}-$i" | sha256sum | cut -d' ' -f1)
+            echo "  attempt $i -> $got"
+            [ "$got" = "$want" ] && exit 0
             sleep 6
           done
-          echo "deployed site did not return 200" >&2
+          echo "the domain is not serving this run's build" >&2
           exit 1
