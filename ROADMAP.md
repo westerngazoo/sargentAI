@@ -145,7 +145,7 @@ Everything needed to ship to the public.
 
 | Req | Capability | Spec | Status |
 |-----|------------|------|--------|
-| R-0024 | Privacy policy + health-data compliance (LATAM + GDPR-adjacent rules) | SPEC-0024 | Backlog |
+| R-0024 | Privacy policy + health-data compliance (LATAM + GDPR-adjacent rules) | SPEC-0024 | **Draft** — requirement written 2026-09-20 against the as-built data inventory; awaiting owner acceptance. **Blocks R-0025** |
 | R-0025 | App Store + Play Store accounts, metadata, screenshots | SPEC-0025 | Backlog |
 | R-0026 | Production deployment: AWS *or* Azure, managed Postgres, S3/Blob, CI promotion | SPEC-0026 | Backlog |
 
