@@ -247,6 +247,37 @@ fn hand_mass(seg: ChainSegment) -> f64 {
     fraction * MASS_KG
 }
 
+/// How far below the shoulder a straight, hanging arm's centre of mass sits:
+/// the mass-weighted mean of the upper arm, forearm and hand, each at its own
+/// Table 4.1 centre along the arm.
+///
+/// By hand at 1.75 m: segment centres 0.1419, 0.4354 and 0.6766 m below the
+/// shoulder, masses 0.028, 0.016 and 0.006 M, so **0.300 m** — more than twice
+/// the upper arm's own 0.142, which is what the draft placed the whole arm at.
+fn whole_arm_hang() -> f64 {
+    let (upper, fore, hand) = (
+        table_length(WINTER.upper_arm),
+        table_length(WINTER.forearm),
+        table_length(WINTER.hand),
+    );
+    let rows = [
+        (
+            WINTER.upper_arm.mass_fraction,
+            WINTER.upper_arm.com_from_proximal * upper,
+        ),
+        (
+            WINTER.forearm.mass_fraction,
+            upper + WINTER.forearm.com_from_proximal * fore,
+        ),
+        (
+            WINTER.hand.mass_fraction,
+            upper + fore + WINTER.hand.com_from_proximal * hand,
+        ),
+    ];
+    let mass: f64 = rows.iter().map(|&(m, _)| m).sum();
+    rows.iter().map(|&(m, depth)| m * depth).sum::<f64>() / mass
+}
+
 /// Where a lumped segment's COM sits, by the §2.4.2 conventions.
 fn hand_com(seg: ChainSegment, p: &Posture) -> Point {
     let l4l5 = along(p.hip, p.shoulder, L5S1_UP_THE_TRUNK);
@@ -262,11 +293,7 @@ fn hand_com(seg: ChainSegment, p: &Posture) -> Point {
         }
         Arms => match p.load {
             Some(load) => along(p.shoulder, load.at, 0.5),
-            None => pt(
-                p.shoulder.x.0,
-                p.shoulder.y.0
-                    - WINTER.upper_arm.com_from_proximal * table_length(WINTER.upper_arm),
-            ),
+            None => pt(p.shoulder.x.0, p.shoulder.y.0 - whole_arm_hang()),
         },
     }
 }
@@ -473,6 +500,8 @@ fn scaling_never_takes_the_missing_length_fallback() {
         ("foot", body.foot()),
         ("head & neck", body.head_neck()),
         ("upper arm", body.upper_arm()),
+        ("forearm", body.forearm()),
+        ("hand", body.hand()),
         ("ankle height", body.ankle_height()),
     ];
     for (name, metres) in lengths {
@@ -1294,8 +1323,9 @@ fn placement_uncertainty_is_the_sum_of_its_three_stated_spreads() {
 // ===========================================================================
 
 /// B15 — with a bar the arm COMs sit at the shoulder → bar midpoint (hands on
-/// the bar); without one they hang, directly below the shoulder at 0.436 of
-/// the upper-arm length (AC12; SPEC-0045 §2.4.2).
+/// the bar); without one they hang straight down from the shoulder, at the
+/// **whole arm's** centre of mass — 0.300 m below it at 1.75 m, not the upper
+/// arm's 0.142 the draft used (AC12; SPEC-0045 §2.4.2).
 #[test]
 fn b15_arms_are_on_the_bar_when_there_is_one_and_hang_when_there_is_not() {
     let body = lifter();
@@ -1311,7 +1341,8 @@ fn b15_arms_are_on_the_bar_when_there_is_one_and_hang_when_there_is_not() {
         load: None,
         ..loaded
     };
-    let hang = WINTER.upper_arm.com_from_proximal * table_length(WINTER.upper_arm);
+    let hang = whole_arm_hang();
+    assert_close(hang, 0.300, 5e-4, "the hand arithmetic in whole_arm_hang");
     assert_point_close(
         Arms.com(&body, &unloaded),
         pt(unloaded.shoulder.x.0, unloaded.shoulder.y.0 - hang),

@@ -36,8 +36,8 @@ impl ChainSegment {
     /// Where this segment's centre of mass sits in `p`, by the §2.3 COM
     /// fractions and the §2.4.2 placement conventions: the head & neck on the
     /// trunk line beyond the shoulder; the arms at the shoulder → load
-    /// midpoint when there is a load, and hanging directly below the shoulder
-    /// when there is not.
+    /// midpoint when there is a load, and hanging straight down from the
+    /// shoulder, at the whole arm's centre of mass, when there is not.
     #[must_use]
     pub fn com(self, body: &Body, p: &Posture) -> Point {
         self.com_with(body, p, Placement::STATED)
@@ -61,12 +61,44 @@ impl ChainSegment {
                     let midpoint = along(p.shoulder, load.at, 0.5);
                     offset(midpoint, unit(p.shoulder, load.at), placement.arms)
                 } else {
-                    let hang = WINTER.upper_arm.com_from_proximal * body.upper_arm();
-                    offset(p.shoulder, (0.0, -1.0), hang + placement.arms)
+                    offset(
+                        p.shoulder,
+                        (0.0, -1.0),
+                        whole_arm_hang(body) + placement.arms,
+                    )
                 }
             }
         }
     }
+}
+
+/// How far below the shoulder a straight, hanging arm's centre of mass sits:
+/// the mass-weighted mean of the upper arm, forearm and hand, each at its own
+/// Table 4.1 centre along the arm (SPEC-0045 §2.4.2).
+///
+/// The draft placed the whole arm at the *upper arm's* centre — 0.436 of the
+/// upper-arm length, 14 cm below the shoulder at 1.75 m — when the arm's is
+/// 30 cm. No moment in slice A moved when this was corrected, because a
+/// vertically hanging arm has the shoulder's `x` at any depth; the depth only
+/// starts to matter the moment the arms do anything but hang.
+fn whole_arm_hang(body: &Body) -> f64 {
+    let (upper, fore, hand) = (body.upper_arm(), body.forearm(), body.hand());
+    let rows = [
+        (
+            WINTER.upper_arm.mass_fraction,
+            WINTER.upper_arm.com_from_proximal * upper,
+        ),
+        (
+            WINTER.forearm.mass_fraction,
+            upper + WINTER.forearm.com_from_proximal * fore,
+        ),
+        (
+            WINTER.hand.mass_fraction,
+            upper + fore + WINTER.hand.com_from_proximal * hand,
+        ),
+    ];
+    let mass: f64 = rows.iter().map(|&(m, _)| m).sum();
+    rows.iter().map(|&(m, depth)| m * depth).sum::<f64>() / mass
 }
 
 /// The §2.4.2 and §2.5 placement conventions, as metres a caller can nudge

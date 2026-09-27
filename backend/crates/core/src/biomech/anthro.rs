@@ -228,6 +228,8 @@ pub struct Body {
     foot: Metres,
     head_neck: Metres,
     upper_arm: Metres,
+    forearm: Metres,
+    hand: Metres,
     ankle_height: Metres,
     any_length_table_derived: bool,
 }
@@ -279,9 +281,19 @@ impl Body {
         self.head_neck.0
     }
 
-    /// Shoulder → elbow; how far hanging arms sit below the shoulder.
+    /// Shoulder → elbow.
     pub(super) fn upper_arm(&self) -> f64 {
         self.upper_arm.0
+    }
+
+    /// Elbow → wrist.
+    pub(super) fn forearm(&self) -> f64 {
+        self.forearm.0
+    }
+
+    /// Wrist → knuckle.
+    pub(super) fn hand(&self) -> f64 {
+        self.hand.0
     }
 
     /// Floor → ankle joint (SPEC-0045 §2.6.1).
@@ -304,14 +316,14 @@ fn table_length(row: &Segment, height: Metres) -> Metres {
     Metres(row.length_fraction_of_height.unwrap_or(0.0) * height.0)
 }
 
-/// The three lengths the model needs that [`MeasuredLengths`] has no field
-/// for, and so can never override. They are why `TableDerivedLengths` is on
+/// The lengths the model needs that [`MeasuredLengths`] has no field for,
+/// and so can never override — the arm's three segments counted as one. They are why `TableDerivedLengths` is on
 /// every v1 result whatever the lifter has had measured — named rather than
 /// folded into a `true`, so that the day one of them becomes measurable the
 /// condition changes with it (SPEC-0045 §2.8).
 const FOOT_HAS_NO_MEASUREMENT_PATH: bool = true;
 const HEAD_NECK_HAS_NO_MEASUREMENT_PATH: bool = true;
-const UPPER_ARM_HAS_NO_MEASUREMENT_PATH: bool = true;
+const ARM_HAS_NO_MEASUREMENT_PATH: bool = true;
 
 /// Scale the table to a person. `measured` overrides any **length** the user
 /// has had measured; masses are always table-derived (SPEC-0045 §2.3).
@@ -335,6 +347,8 @@ pub fn scale(height: Metres, mass_kg: f64, measured: &MeasuredLengths) -> Body {
         foot: table_length(&WINTER.foot, height),
         head_neck: table_length(&WINTER.head_neck, height),
         upper_arm: table_length(&WINTER.upper_arm, height),
+        forearm: table_length(&WINTER.forearm, height),
+        hand: table_length(&WINTER.hand, height),
         ankle_height: Metres(WINTER.ankle_height.fraction_of_height * height.0),
         any_length_table_derived: [
             measured.thigh.is_none(),
@@ -342,7 +356,7 @@ pub fn scale(height: Metres, mass_kg: f64, measured: &MeasuredLengths) -> Body {
             measured.trunk.is_none(),
             FOOT_HAS_NO_MEASUREMENT_PATH,
             HEAD_NECK_HAS_NO_MEASUREMENT_PATH,
-            UPPER_ARM_HAS_NO_MEASUREMENT_PATH,
+            ARM_HAS_NO_MEASUREMENT_PATH,
         ]
         .iter()
         .any(|&from_the_table| from_the_table),
