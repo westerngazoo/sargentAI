@@ -1,6 +1,7 @@
 //! Keyword + regex voice intent parser — CI-safe fallback when no LLM key is set.
 //! Mirrors the mobile keyword parser and adds workout set extraction.
 
+use crate::voice::handlers::IntentTurn;
 use chrono::NaiveDate;
 use fitai_core::{NewExercise, NewNutritionLog, NewSet, NewWorkoutSession};
 use regex::Regex;
@@ -388,10 +389,20 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[IntentTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut dialogue = String::new();
+    if !history.is_empty() {
+        dialogue.push_str("Conversation history:\n");
+        for turn in history {
+            dialogue.push_str(&format!("{}: {}\n", turn.role, turn.content));
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
+         {dialogue}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
