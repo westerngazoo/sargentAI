@@ -393,11 +393,12 @@ pub(super) async fn parse_with_llm(
     history: &[ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
     let mut history_text = String::new();
     if !history.is_empty() {
         history_text.push_str("Conversation history:\n");
         for turn in history {
-            history_text.push_str(&format!("{}: {}\n", turn.role, turn.content));
+            let _ = writeln!(history_text, "{}: {}", turn.role, turn.content);
         }
     }
 
