@@ -73,6 +73,36 @@ async fn voice_intent_clarifies_incomplete_meal(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_with_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "10 reps at 100 kg",
+            "history": [
+                {
+                    "role": "user",
+                    "content": "log bench press"
+                },
+                {
+                    "role": "assistant",
+                    "content": "How many reps and weight?"
+                }
+            ]
+        }),
+    )
+    .await;
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "unknown");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn voice_intent_requires_auth(pool: PgPool) {
     let app = build_app(pool);
     let resp = post_json_with_auth(
