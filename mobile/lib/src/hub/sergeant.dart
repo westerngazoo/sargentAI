@@ -152,23 +152,33 @@ class Sergeant extends Notifier<SergeantState> {
       state = state.copyWith(conversing: false);
       return false;
     }
-    if (state.awaitingMacros) return _handleMacros(transcript);
 
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
+    // Try the backend first, even if awaiting macros, to let the LLM handle context.
     try {
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+      final history = state.history
+          .map((turn) => {
+                'role': turn.fromUser ? 'user' : 'assistant',
+                'content': turn.text,
+              })
+          .toList();
+
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, history: history);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
     }
 
+    if (state.awaitingMacros) return _handleMacros(transcript);
     return _handleLocal(transcript);
   }
 
   Future<bool> _handleBackendResult(VoiceIntentResult result) async {
     _idleRounds = 0;
     if (result.isLoggedNutrition || result.isLoggedWorkout) {
+      state = state.copyWith(awaitingMacros: false);
       await _say(result.message ?? 'Logged.');
       return true;
     }
