@@ -382,17 +382,28 @@ fn extract_llm_text(provider: LlmProvider, json: &serde_json::Value) -> Option<S
     field.as_str().map(str::to_string)
 }
 
-const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
+const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only. \
+    If a workout is missing required fields like reps, return action: clarify. \
+    If a meal is named, estimate its macros instead of clarifying if possible, \
+    otherwise if a meal is generic or missing macros, return action: clarify.";
 
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::IntentTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    for turn in history {
+        history_text.push_str(&format!("{}: {}\n", turn.role, turn.content));
+    }
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+        "{LLM_PROMPT_HEAD} Today is {today}.\n\
+         Conversation history:\n\
+         {history_text}\n\
+         Latest transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
