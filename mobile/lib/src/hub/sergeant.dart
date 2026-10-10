@@ -147,6 +147,9 @@ class Sergeant extends Notifier<SergeantState> {
   }
 
   Future<bool> _handle(String transcript) async {
+    final currentHistory = state.history;
+    state = state.copyWith(history: _appended(fromUser: true, text: transcript));
+
     if (isOut(transcript)) {
       await _say('Roger. Out.');
       state = state.copyWith(conversing: false);
@@ -157,7 +160,7 @@ class Sergeant extends Notifier<SergeantState> {
     // Backend LLM/keyword parser (R-0032 slice 2) — falls back to local on error.
     try {
       final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript);
+          await ref.read(voiceIntentServiceProvider).parse(transcript, history: currentHistory);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
