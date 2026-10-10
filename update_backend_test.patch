@@ -1,0 +1,26 @@
+--- backend/crates/api/tests/voice_intent.rs
++++ backend/crates/api/tests/voice_intent.rs
+@@ -83,3 +83,23 @@
+     .await;
+     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+ }
++
++#[sqlx::test(migrations = "../../migrations")]
++async fn voice_intent_accepts_history_and_responds(pool: PgPool) {
++    let app = build_app(pool.clone());
++    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
++
++    let resp = post_json_with_auth(
++        &app,
++        "/voice/intent",
++        Some(&format!("Bearer {token}")),
++        json!({
++            "transcript": "log a meal 40 grams protein 60 carbs 20 fat",
++            "history": [{"role": "user", "content": "hello"}]
++        }),
++    )
++    .await;
++    assert_eq!(resp.status(), StatusCode::OK);
++    let body: Value = body_json(resp).await;
++    assert_eq!(body["status"], "logged_nutrition");
++}
