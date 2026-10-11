@@ -662,6 +662,11 @@ pub async fn insert_nutrition_log(
     let result = sqlx::query_as::<_, NutritionRow>(
         "INSERT INTO nutrition_logs (id, user_id, performed_on, protein_g, carbs_g, fat_g) \
          VALUES ($1, $2, $3, $4, $5, $6) \
+         ON CONFLICT (user_id, performed_on) DO UPDATE SET \
+           protein_g = nutrition_logs.protein_g + EXCLUDED.protein_g, \
+           carbs_g = nutrition_logs.carbs_g + EXCLUDED.carbs_g, \
+           fat_g = nutrition_logs.fat_g + EXCLUDED.fat_g, \
+           updated_at = NOW() \
          RETURNING id, user_id, performed_on, protein_g, carbs_g, fat_g, created_at, updated_at",
     )
     .bind(id)
@@ -675,9 +680,6 @@ pub async fn insert_nutrition_log(
 
     match result {
         Ok(row) => row.into_nutrition_log(),
-        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
-            Err(ApiError::AlreadyExists)
-        }
         Err(e) => Err(ApiError::Database(e)),
     }
 }
