@@ -388,15 +388,29 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[crate::voice::handlers::ChatTurn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
+    let mut history_text = String::new();
+    if !history.is_empty() {
+        history_text.push_str("\n\nPrevious conversation:");
+        for turn in history {
+            let role = if turn.from_user { "User" } else { "Assistant" };
+            let _ = write!(&mut history_text, "\n{}: {}", role, turn.text);
+        }
+    }
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+        "{LLM_PROMPT_HEAD} Today is {today}.{history_text}\n\
+         \n\
+         Current Transcript: \"{transcript}\"\n\
+         \n\
+         Use the previous conversation (if any) along with the current transcript to resolve missing arguments.\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
-         {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
+         {{\"action\":\"clarify\",\"prompt\":\"question\"}} (if required arguments are still missing)\n\
          {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
