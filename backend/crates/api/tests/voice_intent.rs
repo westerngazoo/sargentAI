@@ -84,3 +84,29 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_logs_meal_with_multi_turn_history(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    // This tests the keyword fallback parser handling of multi-turn history.
+    // The fallback parser (parse_transcript) itself doesn't deeply merge history right now,
+    // but we can ensure the endpoint accepts the history payload without error.
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 protein 60 carbs 20 fat",
+            "history": [
+                { "from_user": true, "text": "log a meal" },
+                { "from_user": false, "text": "Tell me the macros." }
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "logged_nutrition");
+}
