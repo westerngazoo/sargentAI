@@ -158,15 +158,17 @@ class Sergeant extends Notifier<SergeantState> {
     try {
       // Convert history to role/content pairs, excluding the current turn
       // which is passed as transcript, as per backend expectation.
-      final history = state.history.where((turn) => turn.text != transcript).map((turn) {
+      final history =
+          state.history.where((turn) => turn.text != transcript).map((turn) {
         return {
           'role': turn.fromUser ? 'user' : 'assistant',
           'content': turn.text,
         };
       }).toList();
 
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript, history: history);
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, history: history);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.

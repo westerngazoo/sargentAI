@@ -401,7 +401,11 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         history_text.push_str("Prior conversation:\n");
         for turn in history {
-            let prefix = if turn.role == "user" { "User" } else { "Assistant" };
+            let prefix = if turn.role == "user" {
+                "User"
+            } else {
+                "Assistant"
+            };
             history_text.push_str(&format!("{}: {}\n", prefix, turn.content));
         }
         history_text.push('\n');

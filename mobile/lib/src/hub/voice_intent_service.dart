@@ -41,7 +41,8 @@ class VoiceIntentService {
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript, {List<Map<String, String>>? history}) async {
+  Future<VoiceIntentResult> parse(String transcript,
+      {List<Map<String, String>>? history}) async {
     try {
       final data = <String, dynamic>{'transcript': transcript};
       if (history != null && history.isNotEmpty) {
