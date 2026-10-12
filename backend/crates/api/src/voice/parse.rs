@@ -397,6 +397,7 @@ pub(super) async fn parse_with_llm(
     transcript: &str,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
     let mut history_text = String::new();
     if !history.is_empty() {
         history_text.push_str("Prior conversation:\n");
@@ -406,7 +407,7 @@ pub(super) async fn parse_with_llm(
             } else {
                 "Assistant"
             };
-            history_text.push_str(&format!("{}: {}\n", prefix, turn.content));
+            let _ = writeln!(history_text, "{}: {}", prefix, turn.content);
         }
         history_text.push('\n');
     }
