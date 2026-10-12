@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{ApiError, ApiResult};
 
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ChatTurn {
+    pub role: String,
+    pub content: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum IntentStatus {
@@ -387,11 +393,23 @@ const LLM_PROMPT_HEAD: &str = "You parse gym voice commands into JSON only.";
 pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
+    history: &[ChatTurn],
     transcript: &str,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if !history.is_empty() {
+        history_text.push_str("Prior conversation:\n");
+        for turn in history {
+            let prefix = if turn.role == "user" { "User" } else { "Assistant" };
+            history_text.push_str(&format!("{}: {}\n", prefix, turn.content));
+        }
+        history_text.push('\n');
+    }
+
     let prompt = format!(
-        "{LLM_PROMPT_HEAD} Today is {today}. \
+        "{LLM_PROMPT_HEAD} Today is {today}. \n\
+         {history_text}\
          Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
