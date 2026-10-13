@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ApiError, ApiResult};
+use super::handlers::Turn;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -388,6 +389,7 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: &[Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
     let prompt = format!(
@@ -401,12 +403,21 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
+    let mut full_prompt = prompt;
+    if !history.is_empty() {
+        full_prompt.push_str("\n\nPrior conversation context:");
+        for turn in history {
+            full_prompt.push_str(&format!("\n{}: {}", turn.role, turn.content));
+        }
+    }
+    full_prompt.push_str(&format!("\n\nuser: {}", transcript));
+
     let (body, req) = match cfg.provider {
         LlmProvider::Anthropic => {
             let body = serde_json::json!({
                 "model": cfg.model,
                 "max_tokens": 256,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": full_prompt}]
             });
             let req = client
                 .post(format!("{}/v1/messages", cfg.base_url))
@@ -420,7 +431,7 @@ pub(super) async fn parse_with_llm(
                 "max_tokens": 256,
                 "stream": false,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": full_prompt}]
             });
             let mut req = client.post(format!("{}/chat/completions", cfg.base_url));
             if !cfg.api_key.is_empty() {
