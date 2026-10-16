@@ -391,9 +391,10 @@ pub(super) async fn parse_with_llm(
     turns: &[crate::voice::handlers::Turn],
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    use std::fmt::Write;
     let mut history = String::new();
     for turn in turns {
-        history.push_str(&format!("{}: {}\n", turn.role, turn.content));
+        let _ = writeln!(history, "{}: {}", turn.role, turn.content);
     }
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \

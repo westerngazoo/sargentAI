@@ -49,7 +49,8 @@ class VoiceIntentService {
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript, {List<VoiceTurn> turns = const []}) async {
+  Future<VoiceIntentResult> parse(String transcript,
+      {List<VoiceTurn> turns = const []}) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/voice/intent',

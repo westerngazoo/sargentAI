@@ -162,8 +162,9 @@ class Sergeant extends Notifier<SergeantState> {
                 content: t.text,
               ))
           .toList();
-      final result =
-          await ref.read(voiceIntentServiceProvider).parse(transcript, turns: turns);
+      final result = await ref
+          .read(voiceIntentServiceProvider)
+          .parse(transcript, turns: turns);
       return _handleBackendResult(result);
     } catch (_) {
       // Offline / upstream failure — local keyword parser keeps the hub usable.
