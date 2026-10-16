@@ -36,16 +36,28 @@ class VoiceIntentResult {
   bool get isNavigate => status == 'navigate';
 }
 
+class VoiceTurn {
+  const VoiceTurn({required this.role, required this.content});
+  final String role;
+  final String content;
+
+  Map<String, dynamic> toJson() => {'role': role, 'content': content};
+}
+
 class VoiceIntentService {
   const VoiceIntentService(this._dio);
 
   final Dio _dio;
 
-  Future<VoiceIntentResult> parse(String transcript) async {
+  Future<VoiceIntentResult> parse(String transcript,
+      {List<VoiceTurn> turns = const []}) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/voice/intent',
-        data: {'transcript': transcript},
+        data: {
+          'transcript': transcript,
+          'turns': turns.map((t) => t.toJson()).toList(),
+        },
       );
       return VoiceIntentResult.fromJson(res.data!);
     } on DioException catch (e) {

@@ -84,3 +84,27 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_with_history(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_id, token) = register_and_token(&app, "voice-history@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({
+            "transcript": "40 grams protein 60 carbs 20 fat",
+            "turns": [
+                {"role": "user", "content": "log a meal"},
+                {"role": "assistant", "content": "Tell me the macros"}
+            ]
+        }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    // Without LLM, keyword parser still processes the transcript and logs nutrition.
+    assert_eq!(body["status"], "logged_nutrition");
+}
