@@ -90,6 +90,12 @@ pub(super) enum ParsedAction {
     Response(IntentResponse),
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct Turn {
+    pub role: String,
+    pub content: String,
+}
+
 pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedAction {
     let text = transcript.to_lowercase();
     let text = text.trim();
@@ -388,11 +394,24 @@ pub(super) async fn parse_with_llm(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     transcript: &str,
+    history: Option<&[Turn]>,
     today: NaiveDate,
 ) -> ApiResult<ParsedAction> {
+    let mut history_text = String::new();
+    if let Some(history) = history {
+        if !history.is_empty() {
+            use std::fmt::Write;
+            history_text.push_str("Prior conversation:\n");
+            for turn in history {
+                let _ = writeln!(history_text, "{}: {}", turn.role, turn.content);
+            }
+            history_text.push('\n');
+        }
+    }
+
     let prompt = format!(
         "{LLM_PROMPT_HEAD} Today is {today}. \
-         Transcript: \"{transcript}\"\n\
+         {history_text}Transcript: \"{transcript}\"\n\
          Return ONE of:\n\
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
