@@ -400,9 +400,10 @@ pub(super) async fn parse_with_llm(
     let mut history_text = String::new();
     if let Some(history) = history {
         if !history.is_empty() {
+            use std::fmt::Write;
             history_text.push_str("Prior conversation:\n");
             for turn in history {
-                history_text.push_str(&format!("{}: {}\n", turn.role, turn.content));
+                let _ = writeln!(history_text, "{}: {}", turn.role, turn.content);
             }
             history_text.push('\n');
         }
