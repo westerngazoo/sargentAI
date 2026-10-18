@@ -57,8 +57,12 @@ trainer-platform direction (R-0040/R-0041).
   no load is known, the model reports bodyweight-only mechanics and says so —
   it never assumes a weight. *(Amended 2026-09-12.)*
 - **AC4. Joint torque is the output.** Hip, knee, ankle, and lumbar moments in
-  N·m. In v1, at the solved posture — a single position, stated on the result;
-  through the movement and per rep once the measured source exists.
+  N·m. In v1, at the solved posture — a single position, stated on the result
+  — and at a family of solved postures from upright to the bottom under a
+  stated joint-progress convention, each one a single balanced position and
+  never a measured or predicted movement; through the movement and per rep
+  once the measured source exists.
+  *(Amended 2026-10-17: the range of solved postures, SPEC-0045 §2.6.6.)*
   *(Amended 2026-09-12: was "through the movement … per rep", which a single
   solved posture cannot honestly claim.)*
 - **AC5. Muscle groups, never individual muscles.** Torque is attributed to the

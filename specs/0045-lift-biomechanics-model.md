@@ -643,6 +643,111 @@ convention for population spread pending a cited value), and every delta must
 keep its sign or be reported `Borderline`. The keypoint version (±2 cm, SPEC-
 0044's σ) belongs to the measured slice.
 
+#### 2.6.6 The range: from standing to the bottom (slice B1; owner decision 2026-10-17)
+
+Slice A analyses one posture. The owner wants the squat over its whole range,
+meaning the curve of where each joint is loaded most. It is the base for the
+reel-style technique video, and later for comparing a lifter's own video frame
+by frame.
+
+**The problem is one equation short.** Between standing and the bottom three
+angles move (shank, femur, trunk) and balance supplies one equation. Slice A
+closed it at the bottom by fixing the femur (parallel) and the shank (the
+lifter's dorsiflexion). Everywhere else something has to say how the shank and
+the femur move together. Nothing measured does yet; that is the measured
+source (§2.1.1). So the range takes one **stated convention** and solves
+everything physics can:
+
+- **One progress scalar `s ∈ [0, 1]`**, the construction the reels already use
+  (RFC-002): the shank and femur angles advance together, linearly in `s`,
+  from upright (`s = 0`) to the §2.6 bottom (`s = 1`).
+- **The trunk is solved, never interpolated.** At every `s` the trunk angle
+  comes from the §2.6.3 balance equation, which is still linear in `sin θ` and
+  still closed-form, so every frame is a posture that balances over the
+  mid-foot. The reels do not do this, and it is what separates a drawing from
+  a model.
+- **Upright is solved as well:** the straight body, knee and hip extended,
+  leaning forward from the ankle until the system centre of mass is over the
+  mid-foot. This is the ankle strategy of quiet standing (Winter 1995,
+  candidate citation). The lean is linear in its own sine and closed-form:
+  **4.0°** for the fixture bodyweight-only, **3.4°** under 100 kg. "Everything
+  vertical" is not a starting posture, because with the ankle behind the
+  mid-foot it does not balance.
+
+Worked for the fixture (1.75 m, 80 kg, 40° of dorsiflexion, 100 kg high-bar),
+moments in N·m resisting extension:
+
+| `s` | knee flex | hip flex | trunk | hip | knee | ankle | L5/S1 |
+|---|---|---|---|---|---|---|---|
+| 0.0 | 0° | 0° | 3.4° | 37.2 | −77.4 | 120.5 | 25.4 |
+| 0.2 | 26° | 30° | 15.1° | 165.4 | 16.0 | 120.5 | 112.8 |
+| 0.4 | 52° | 60° | 25.8° | 276.7 | 107.3 | 120.5 | 188.7 |
+| 0.6 | 78° | 86° | 33.5° | 351.3 | 194.8 | 120.5 | 239.6 |
+| 0.8 | 104° | 107° | 35.9° | **373.6** | 277.2 | 120.5 | **254.8** |
+| 1.0 | 130° | 122° | 31.6° | 333.9 | **353.0** | 120.5 | 227.7 |
+
+What the table says:
+
+- **The last frame is slice A's baseline, exactly.** The range extends the
+  model and replaces nothing.
+- **The hip and the lumbar row peak above parallel**, near `s = 0.8` with the
+  knee at about 104°: 374 N·m at the hip against 334 at the bottom. The knee
+  keeps rising to the bottom. A coach reading "the bottom is the hardest part
+  for the hips" would be wrong for this lifter, and the curve shows it.
+- **The ankle moment is the same in every frame.** Under the balance
+  constraint the moment about the ankle is the whole weight above it times the
+  fixed ankle-to-mid-foot distance: 177.7 kg × g × 0.069 m = 120.5 N·m. It is
+  a theorem rather than a coincidence, so it is a test.
+- **Under this convention the trunk lean is not monotone**: 35.9° at
+  `s = 0.8`, then 31.6° at the bottom, because the knee's late forward travel
+  lets the trunk rise. That is a consequence of the linear coupling, stated
+  here, and one of the first things measured kinematics should correct.
+
+**A lifter who cannot reach the bottom gets the part of the range they can.**
+When the bottom is `DepthNotReachable`, the range still runs from upright and
+stops at the deepest frame that balances, reporting how far it got next to the
+bottom's rejection. The fixture at 25° of dorsiflexion, bodyweight-only,
+reaches **56%** of the way, with the knee at 64° and the trunk at 84°. Only a
+body that cannot even stand balanced is a `DoesNotBalance` for the whole
+range.
+
+**What the result admits to.** Upright is `Position::Upright` and the bottom
+is `Position::Parallel`, carrying exactly slice A's assumptions. Every frame
+strictly between them is `Position::Partial` and also carries the new
+`Assumption::JointsAdvanceTogether`. The range is a family of balanced
+postures under a convention. It is not a measured or predicted movement: no
+velocities, no "how you descend", no per-rep claim, and §4 still holds.
+
+**Sampling is a presentation choice.** The caller asks for a frame count, and
+frame `i` is at `s = i/(n−1)`. A frame at a given `s` is the same whatever
+`n` is. The count is a validated `FrameCount` of 2 to 241; 241 is eight seconds
+at the reels' 30 fps.
+
+```rust
+pub struct RangeFrame {
+    pub progress: f64,            // s ∈ [0, 1]
+    pub dorsiflexion_deg: f64,
+    pub knee_flexion_deg: f64,
+    pub hip_flexion_deg: f64,
+    pub trunk_lean_deg: f64,
+    pub mechanics: Mechanics,
+}
+
+pub struct SquatRange {
+    /// Upright to the deepest frame that balances, in order.
+    pub frames: Vec<RangeFrame>,
+    /// The §2.6.4 outcome at s = 1; `Err` when the range stops short.
+    pub bottom: Result<(), Rejection>,
+}
+
+pub fn squat_range(
+    body: &Body,
+    bar_kg: Option<LoadKg>,
+    ankle: Dorsiflexion,
+    frames: FrameCount,
+) -> Result<SquatRange, Rejection>;
+```
+
 ### 2.7 Resisting groups, never muscles (AC5)
 
 Each joint moment is attributed to the **group** that resists it, and nothing
@@ -804,6 +909,8 @@ specified when both are clearer. Nothing in slices A/B writes to a database.
 | slice | contents | depends on |
 |---|---|---|
 | **A** | `anthro` (table + sum claims + verification record); `Posture`, `Load`, `Point`/`Metres`; `above()` + `moment_about` with the sign rule; the lumbar row; the **baseline** squat solve with the system-COM constraint; **`analyse_baseline` → `Mechanics`** with its assumptions, `LoadBasis`, `ResistingGroup` and placement uncertainty; the `Rejection` variants reachable without knobs (`DoesNotBalance`, `DepthNotReachable`) | nothing |
+| **B1** | the range (§2.6.6): `squat_range` from the solved upright to the §2.6 bottom, the trunk solved for balance in every frame under the one-progress-scalar convention, and the reached fraction for a lifter who stops short; `Position::{Upright, Partial}`, `Assumption::JointsAdvanceTogether`, `FrameCount` | A; §5.7(a) |
+| **E** | one engine (§5.7(b)): the model moves to its own crate with no I/O dependencies, `fitai-core` re-exports it, and the reels' squat consumes it | B1; AC15 amendment |
 | **B** | the three knobs, `OutOfRange`, the which-unknown rule, deltas, `Borderline`, the pull | A; §5.1 amendment |
 
 | **C** | `api::biomech`, persistence, coach export | B, R-0041 read, R-0040 |
@@ -824,6 +931,7 @@ backend/crates/core/src/biomech/
                 Joint::extension_sign() — the ONLY place a sign is applied
   analysis.rs   Mechanics, JointMoment, ResistingGroup, LoadBasis, Assumption,
                 Position, Uncertainty; analyse_baseline()               [A]
+  range.rs      squat_range(), FrameCount, the upright solve           [B1]
   squat.rs      pose() — the ONE home for the baseline geometry;
                 baseline(body, bar, ankle) -> Result<Baseline, Rejection>,
                 baseline_mechanics()                                    [A]
@@ -993,6 +1101,27 @@ nothing will raise it again on its own. It needs somebody with the printed 4th
 edition and twenty minutes. Until then AC2 stays unticked, and every published
 number rests on values that are canonical but unverified.
 
+### 5.7 Taken 2026-10-17
+
+**(a) The squat over its whole range — slice B1, §2.6.6.** The owner asked
+for the squat from standing to the bottom as the base for a reel-style
+technique video and, later, a frame-by-frame comparison with the lifter's own
+video. Taken with the one-progress-scalar convention stated as such, the trunk
+solved in every frame, and AC4 amended to say a family of solved postures is
+not a movement.
+
+**(b) One engine — §5.2 revisited, as §5.2 said to do "if slice B introduces
+a φ axis worth sharing".** `guion-video-creator`'s README already says the
+reels and Goose Physics share one engine, which this spec had decided against.
+The two did not agree: the reel published 274 N·m, and this model gives
+370.6. Taken: the model moves to a small crate of its own in this repository,
+with no I/O dependencies. `fitai-core` re-exports it, and the reels' squat
+(`physics-lab/mecanica`, `guion-fisica`) depends on it by path, the way they
+already depend on `garust`. One implementation means the reels inherit the
+corrected numbers instead of being corrected by hand. This is its own slice,
+E, after B1, and needs AC15 amended from "`core::biomech` is the single home"
+to "the biomech crate is the single home; `fitai-core` re-exports it".
+
 ### Resolved here (owner may veto)
 
 - **OQ-1** → Winter Table 4.1 / Fig 4.1, with a recorded verification and
@@ -1112,6 +1241,26 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   load sides and none of those joints moves); the lumbar row is ~3.5× larger,
   because the joint centre moves against a load side that includes the bar.
 
+**The range (§2.6.6, slice B1):**
+- `R1` the last frame is slice A's baseline exactly: same posture, same four
+  moments, same assumptions, `Position::Parallel`.
+- `R2` the first frame is the solved upright: knee and hip flexion 0, trunk
+  lean equal to shank lean, system centre of mass over the mid-foot within
+  1 mm, and the lean worked by hand (4.0° bodyweight, 3.4° under 100 kg).
+- `R3` every frame balances, within 1 mm.
+- `R4` the ankle moment is identical in every frame and equals the weight
+  above the ankle times the ankle-to-mid-foot distance, by hand.
+- `R5` knee and hip flexion rise strictly with `s`.
+- `R6` the fixture under 100 kg peaks at the hip above parallel, in the
+  frame nearest `s = 0.8`, at the §2.6.6 table's 373.6 N·m.
+- `R7` a restricted ankle (25°, bodyweight-only) stops at the deepest frame
+  that balances, about 56% of the way, with `bottom` carrying slice A's
+  `DepthNotReachable` and its `needed_deg`.
+- `R8` frames strictly between upright and the bottom carry
+  `Position::Partial` and `JointsAdvanceTogether`; the two ends do not.
+- `R9` a frame at a given `s` is identical whatever the frame count, and
+  `FrameCount` refuses fewer than 2 and more than 241.
+
 **Stability (AC16, finding 13):**
 - `B12` every table-derived length ±5%: every delta keeps its sign or is
   `Borderline`.
@@ -1162,6 +1311,9 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-09-17 | The load is `LoadKg`; `P`/`Q`/`B` are probed, not re-derived | A bare `f64` let a negative bar solve, with physics rejections standing in for a type error. Writing the `k`-fractions out a second time gave §2.4.2 two homes — the thing folding `lumbar.rs` away was meant to prevent. |
 | 2026-09-27 | **Owner decision:** L5/S1 stays derived (0.2674); citation is an upgrade, not a blocker | The HAT identity is self-checking and the fourth sum claim fails if anything upstream moves. The head convention cannot absorb the residual (it would need the head's centre 26 cm above C7-T1), so attributing it to L5/S1 is close to forced, not merely chosen. |
 | 2026-09-27 | **Owner decision:** the hanging arm hangs at the whole arm's centre of mass | The draft used the upper arm's centre alone — 14 cm below the shoulder against the arm's 30. Invisible in slice A's x-moments, wrong everywhere the arms move. Test-first: B15 went red on the new expectation before the fix. |
+| 2026-10-17 | **Owner decision:** the squat over its whole range, slice B1 (§2.6.6) | Base for the technique video and the video comparison. One progress scalar is the reels' own construction, stated as a convention. The trunk is solved by balance in every frame, so no frame is a posture that would fall over. |
+| 2026-10-17 | Upright is the solved ankle-strategy lean, not "everything vertical" | With the ankle behind the mid-foot an all-vertical body does not balance. The straight body leaning 3–4° from the ankle is quiet standing (Winter 1995). |
+| 2026-10-17 | **Owner decision:** one engine for the app and the reels (§5.7(b)) | The reel and the model disagreed by 35% on the same lift. Two implementations of one claim is how that happens; one crate both depend on is how it stops. |
 | 2026-09-17 | AC2 stays unticked; the verification test is `#[ignore]`d, not deleted | CI should assert what it can check and say plainly what it cannot. Tracked in §5.6(b) as the one item blocking a clean merge. |
 
 ## 9. Changelog
@@ -1175,6 +1327,10 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   design had not resolved: the baseline shank angle was undefined (§2.6.1 and
   §2.6.3 contradicted each other) and the placeholder hip limit rejected the
   baseline itself. Both settled by owner decision; `DepthNotReachable` added._
+- _2026-10-17 — owner decisions §5.7: the squat over its whole range (slice
+  B1, §2.6.6), with one stated convention and the trunk solved per frame; and
+  one engine for the app and the reels (slice E), revisiting §5.2. AC4
+  amended._
 - _2026-09-27 — owner decisions on §5.6(a): L5/S1 stays derived, and the
   hanging arm is placed at the whole arm's centre of mass rather than the upper
   arm's. §2.4.2 corrected; no slice-A moment changes._
