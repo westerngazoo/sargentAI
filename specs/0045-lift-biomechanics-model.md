@@ -705,12 +705,12 @@ at six frames, moments in N·m resisting extension, **under this convention**:
 
 | `s` | knee flex | hip flex | trunk | hip | knee | ankle | L5/S1 |
 |---|---|---|---|---|---|---|---|
-| 0.0 | 0° | 0° | 3.4° | 37.2 | −77.4 | 120.5 | 25.4 |
-| 0.2 | 26° | 30° | 15.1° | 165.4 | 16.0 | 120.5 | 112.8 |
-| 0.4 | 52° | 60° | 25.8° | 276.7 | 107.3 | 120.5 | 188.7 |
-| 0.6 | 78° | 86° | 33.5° | 351.3 | 194.8 | 120.5 | 239.6 |
-| 0.8 | 104° | 107° | 35.9° | 373.6 | 277.2 | 120.5 | 254.8 |
-| 1.0 | 130° | 122° | 31.6° | 333.9 | 353.0 | 120.5 | 227.7 |
+| 0.0 | 0° | 0.0° | 3.4° | 37.2 | −77.4 | 120.5 | 25.4 |
+| 0.2 | 26° | 30.4° | 15.1° | 165.4 | 16.0 | 120.5 | 112.8 |
+| 0.4 | 52° | 59.8° | 25.8° | 276.7 | 107.3 | 120.5 | 188.7 |
+| 0.6 | 78° | 86.2° | 33.5° | 351.3 | 194.8 | 120.5 | 239.6 |
+| 0.8 | 104° | 107.3° | 35.9° | 373.6 | 277.2 | 120.5 | 254.8 |
+| 1.0 | 130° | 121.6° | 31.6° | 333.9 | 353.0 | 120.5 | 227.7 |
 
 - **The last frame is slice A's baseline, exactly**, by construction.
 - **Under this convention** the hip and L5/S1 rows peak near `s = 0.8`, and
@@ -755,8 +755,9 @@ Both stops happen:
   convention the trunk passes horizontal for `s` between about 0.69 and 0.94.
   The range stops at `s* ≈ 0.69` with `bottom: None`, and the result
   attributes the stop to the convention, not the ankle. The window is narrow
-  (dorsiflexion between 28.7° and about 31.5° bodyweight-only, 13.4° to 13.9°
-  under 100 kg), and it is why the trunk's non-monotone path is a property of
+  (dorsiflexion between 28.7° and 31.26° bodyweight-only, 13.4° to 13.78°
+  under 100 kg; the upper edge is where the largest `sin θ(s)` reaches 1), and
+  it is why the trunk's non-monotone path is a property of
   the convention worth replacing with measured kinematics first.
 
 **Rejected outright**, with no frames:
