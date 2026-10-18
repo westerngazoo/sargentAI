@@ -17,8 +17,13 @@
 //! Dorsiflexion is a **required** solve input (SPEC-0045 §2.6.1.1), so every
 //! fixture below states an ankle. That is the point of the decision: a test
 //! cannot quietly inherit a number nobody sourced, and neither can a caller.
+//!
+//! Slice B1's range claims (R1–R12) live in [`range`] and reuse the hand model
+//! below.
 
 #![allow(clippy::doc_markdown)]
+
+mod range;
 
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};
 use crate::biomech::{
@@ -1159,12 +1164,20 @@ fn every_output_value_as_json() -> String {
         Assumption::SinglePosture {
             at: Position::Parallel,
         },
+        Assumption::SinglePosture {
+            at: Position::Upright,
+        },
+        Assumption::SinglePosture {
+            at: Position::Partial,
+        },
         Assumption::SolvedBaseline,
         Assumption::RigidTrunkLumbar,
         Assumption::TableDerivedMasses,
         Assumption::TableDerivedLengths,
         Assumption::KneesTrackFeet,
         Assumption::BodyFatIgnored,
+        Assumption::StraightBodyUpright,
+        Assumption::JointsAdvanceTogether,
     ]
     .map(|a| match a {
         Assumption::SagittalPlane
@@ -1176,7 +1189,9 @@ fn every_output_value_as_json() -> String {
         | Assumption::TableDerivedMasses
         | Assumption::TableDerivedLengths
         | Assumption::KneesTrackFeet
-        | Assumption::BodyFatIgnored => a,
+        | Assumption::BodyFatIgnored
+        | Assumption::StraightBodyUpright
+        | Assumption::JointsAdvanceTogether => a,
     });
     let rejections = [
         Rejection::DoesNotBalance {

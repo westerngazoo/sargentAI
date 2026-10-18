@@ -55,15 +55,24 @@ pub enum ResistingGroup {
     SpinalErectors,
 }
 
-/// Where in the lift the single analysed posture sits (SPEC-0045 §2.1, §2.6.1).
+/// Where in the lift the single analysed posture sits (SPEC-0045 §2.1, §2.6.1,
+/// §2.6.6).
 ///
-/// One variant because v1 analyses one posture: the baseline is at parallel,
-/// the depth standard R-0044 AC8 also uses. Depth becomes a knob in slice B.
+/// The baseline is at parallel, the depth standard R-0044 AC8 also uses; the
+/// range adds its upright and the frames between. A unit enum on purpose: the
+/// progress `s` is a coordinate of the range's convention and lives on the
+/// frame, so [`Assumption`] keeps `Eq` and `Hash`. Depth becomes a knob in
+/// slice B.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Position {
     /// Femur horizontal.
     Parallel,
+    /// The solved straight-body upright at the start of the range (`s = 0`).
+    Upright,
+    /// Strictly between the upright and the bottom, under the §2.6.6 leg
+    /// convention; the frame's own progress says where.
+    Partial,
 }
 
 /// What the external load was, and whether there was one (R-0045 AC3).
@@ -124,6 +133,16 @@ pub enum Assumption {
     /// Body fat is not in the model: the cited table does not vary by it, and
     /// inventing an adjustment would be a constant with no source (§2.3).
     BodyFatIgnored,
+    /// The range's upright is a straight body, knee and hip extended, leaning
+    /// forward from the ankle until the system centre of mass is over the
+    /// mid-foot: the ankle strategy of quiet standing (§2.6.6). Not observed.
+    StraightBodyUpright,
+    /// Between the upright and the bottom, the shank and the femur advance
+    /// together by the §2.6.6 convention: each angle interpolated in degrees
+    /// from the solved upright lean to the bottom (the lifter's dorsiflexion,
+    /// the femur horizontal). Where a moment peaks across the range, and how
+    /// far it reaches, hold under this convention only.
+    JointsAdvanceTogether,
 }
 
 /// What the `±` on each joint moment was propagated from — the stated
