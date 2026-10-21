@@ -41,6 +41,35 @@ class AuthApi {
     }
   }
 
+  /// `POST /auth/password/forgot` → 202 (R-0060). The response is the same
+  /// whether or not the address has an account.
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dio.post<dynamic>(
+        '/auth/password/forgot',
+        data: <String, String>{'email': email},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// `POST /auth/password/reset` → 204 (R-0060). 401 → the link is no longer
+  /// valid; 400 with `field: password` → the new password is too short.
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      await _dio.post<dynamic>(
+        '/auth/password/reset',
+        data: <String, String>{'token': token, 'password': password},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// `POST /auth/google` → 200 `{token,user_id,expires_at}`. 401 → [ApiException].
   Future<AuthToken> loginWithGoogle(String idToken) async {
     try {

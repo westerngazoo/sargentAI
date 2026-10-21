@@ -21,13 +21,19 @@ final dioProvider = Provider<Dio>((ref) {
 /// Attaches the Bearer token on the way out (AC4) and, on a `401` for any
 /// authed call, logs the user out (AC5). The `/auth/login` and `/auth/register`
 /// paths are EXEMPT — their 401 is "bad credentials" (a message), not session
-/// expiry, so they must not trigger a logout loop (SPEC-0007 §2.6).
+/// expiry, so they must not trigger a logout loop (SPEC-0007 §2.6). So is
+/// `/auth/password/reset`: its 401 means "this link is no longer valid", and a
+/// logged-in user opening a dead link must stay logged in (SPEC-0060 §2.7).
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._ref);
 
   final Ref _ref;
 
-  static const _exemptPaths = {'/auth/login', '/auth/register'};
+  static const _exemptPaths = {
+    '/auth/login',
+    '/auth/register',
+    '/auth/password/reset',
+  };
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {

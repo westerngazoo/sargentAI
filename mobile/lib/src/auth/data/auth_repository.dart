@@ -30,6 +30,14 @@ class AuthRepository {
 
   Future<String> me() => _api.me();
 
+  Future<void> forgotPassword(String email) => _api.forgotPassword(email);
+
+  Future<void> resetPassword({
+    required String token,
+    required String password,
+  }) =>
+      _api.resetPassword(token: token, password: password);
+
   Future<void> clear() => _store.clear();
 }
 
