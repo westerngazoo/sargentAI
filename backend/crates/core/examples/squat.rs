@@ -9,6 +9,7 @@
 //! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --ankle 38 --bar 140
 //! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --sweep
 //! cargo run -p fitai-core --example squat -- --reel
+//! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --ankle 38 --bar 140 --range
 //! ```
 //!
 //! Measured limb lengths override the table ones: `--thigh`, `--shank`,
@@ -17,8 +18,9 @@
 use std::process::ExitCode;
 
 use fitai_core::biomech::{
-    analyse_baseline, baseline, moment_about, scale, Baseline, Body, Dorsiflexion, Joint, Load,
-    MeasuredLengths, Mechanics, Metres, Point, Posture, Rejection, HIGH_BAR,
+    analyse_baseline, baseline, moment_about, scale, squat_range, Baseline, Body, Dorsiflexion,
+    FrameCount, Joint, Load, MeasuredLengths, Mechanics, Metres, Point, Posture, RangeEnd,
+    Rejection, HIGH_BAR,
 };
 use fitai_core::workout::LoadKg;
 
@@ -44,6 +46,8 @@ usage: cargo run -p fitai-core --example squat -- [options]
   --shank M       measured knee -> ankle            (default: from the table)
   --trunk M       measured hip -> shoulder          (default: from the table)
   --sweep         the dorsiflexion -> lean relation, bodyweight and loaded
+  --range         the squat from standing to the bottom, frame by frame
+  --frames N      frames for --range, 2..=241                 (default 11)
   --reel          MECANICA 01's published setup and its correction";
 
 /// The default lifter: table proportions at 1.75 m, 80 kg — the fixture
@@ -83,6 +87,14 @@ fn run(args: &[String]) -> Result<(), String> {
     let degrees = number(args, "--ankle")?.unwrap_or(DEFAULT_ANKLE_DEG);
     let ankle = Dorsiflexion::from_degrees(degrees)
         .ok_or_else(|| format!("--ankle {degrees} is outside 0..=90 degrees"))?;
+
+    if args.iter().any(|a| a == "--range") {
+        let requested = count(args, "--frames")?.unwrap_or(11);
+        let frames = FrameCount::new(requested)
+            .ok_or_else(|| format!("--frames {requested} is outside 2..=241"))?;
+        range(&body, height, mass_kg, bar, ankle, frames);
+        return Ok(());
+    }
 
     println!();
     println!("Goose Physics — squat baseline (R-0045 slice A)");
@@ -186,6 +198,79 @@ fn explain(body: &Body, rejection: &Rejection, bar: Option<LoadKg>) {
         Rejection::AnatomicallyImplausible { joint, angle_deg } => {
             println!("  REJECTED    {joint:?} at {angle_deg:.1}° — which should be unreachable");
             println!("              in slice A: a limit constant shipped without a citation.");
+        }
+    }
+    println!();
+}
+
+/// SPEC-0045 §2.6.6: the squat from the solved upright toward the bottom,
+/// every frame balanced, the legs moved by a stated convention.
+fn range(
+    body: &Body,
+    height: f64,
+    mass_kg: f64,
+    bar: Option<LoadKg>,
+    ankle: Dorsiflexion,
+    frames: FrameCount,
+) {
+    println!();
+    println!("Goose Physics — the squat over its range (R-0045 slice B1)");
+    println!();
+    println!(
+        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.0}° dorsiflexion",
+        ankle.degrees()
+    );
+    match bar {
+        Some(kg) => println!("  load        {:.0} kg, high-bar", kg.get()),
+        None => println!("  load        bodyweight only, arms hanging"),
+    }
+    println!();
+    match squat_range(body, bar, ankle, frames) {
+        Err(rejection) => explain(body, &rejection, bar),
+        Ok(range) => {
+            println!("     s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");
+            for f in &range.frames {
+                let m = |j: Joint| {
+                    f.mechanics
+                        .joints
+                        .iter()
+                        .find(|x| x.joint == j)
+                        .map_or(f64::NAN, |x| x.moment.0)
+                };
+                println!(
+                    "  {:4.2}  {:5.1}° {:5.1}° {:5.1}° | {:6.1} {:6.1} {:6.1} {:6.1}",
+                    f.progress,
+                    f.knee_flexion_deg,
+                    f.hip_flexion_deg,
+                    f.trunk_lean_deg,
+                    m(Joint::Hip),
+                    m(Joint::Knee),
+                    m(Joint::Ankle),
+                    m(Joint::Lumbar)
+                );
+            }
+            println!();
+            match range.end {
+                RangeEnd::Bottom => println!("  reached the bottom (the last row is the baseline)"),
+                RangeEnd::Stopped { reached, bottom } => {
+                    println!("  stopped at s = {reached:.3}");
+                    match bottom {
+                        Some(rejection) => {
+                            println!("  the bottom itself does not balance: {rejection:?}");
+                        }
+                        None => {
+                            println!(
+                                "  the bottom balances; this convention passes horizontal on the way"
+                            );
+                        }
+                    }
+                }
+            }
+            println!();
+            println!("  Each row is a balanced posture. The legs between standing and the");
+            println!("  bottom move by a stated convention, so where a moment peaks across");
+            println!("  the rows is the convention's, not yours (SPEC-0045 §2.6.6). Your own");
+            println!("  curve needs your own video.");
         }
     }
     println!();
@@ -351,6 +436,19 @@ fn label(joint: Joint) -> &'static str {
         Joint::Ankle => "ankle",
         Joint::Lumbar => "L5/S1",
     }
+}
+
+/// `--flag VALUE` as a whole count, or `None` if the flag is absent.
+fn count(args: &[String], name: &str) -> Result<Option<u16>, String> {
+    let Some(index) = args.iter().position(|a| a == name) else {
+        return Ok(None);
+    };
+    let raw = args
+        .get(index + 1)
+        .ok_or_else(|| format!("{name} needs a value"))?;
+    raw.parse::<u16>()
+        .map(Some)
+        .map_err(|_| format!("{name} {raw} is not a whole number"))
 }
 
 /// `--flag VALUE` as a number, or `None` if the flag is absent.

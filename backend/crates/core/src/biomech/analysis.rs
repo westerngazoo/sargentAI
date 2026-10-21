@@ -18,6 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::chain::{moment_about_with, Placement};
+use super::range::{RangeAt, RangePosture};
 use super::{Baseline, Body, Joint, Metres, NewtonMetres, Posture};
 
 /// SPEC-0045 §2.8 — the L5/S1 placement spread, metres. A **stated
@@ -109,8 +110,9 @@ pub enum Assumption {
         /// Which posture.
         at: Position,
     },
-    /// The posture was **solved** from this lifter's lengths under the
-    /// §2.6.1 stated baseline — not a posture they were observed in.
+    /// The posture was **solved** from this lifter's lengths under a stated
+    /// convention — the §2.6.1 baseline at the bottom, the §2.6.6 range
+    /// elsewhere — not a posture they were observed in.
     SolvedBaseline,
     /// The lumbar row treats the trunk as one rigid link through a single
     /// L5/S1 joint placed by convention (§2.5).
@@ -215,6 +217,32 @@ pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Mechanics {
             Assumption::SolvedBaseline,
         ],
     )
+}
+
+/// Analyse a posture the §2.6.6 range solved: the upright or a frame between
+/// it and the bottom. The bottom itself goes through [`analyse_baseline`].
+///
+/// Takes a [`RangePosture`], which only the range can build, for the same
+/// reason [`analyse_baseline`] takes a [`Baseline`]: the assumptions below are
+/// claims about where the posture came from.
+pub(super) fn analyse_range(body: &Body, solved: &RangePosture) -> Mechanics {
+    let from_source = match solved.at() {
+        RangeAt::Upright => [
+            Assumption::SinglePosture {
+                at: Position::Upright,
+            },
+            Assumption::SolvedBaseline,
+            Assumption::StraightBodyUpright,
+        ],
+        RangeAt::Partial => [
+            Assumption::SinglePosture {
+                at: Position::Partial,
+            },
+            Assumption::SolvedBaseline,
+            Assumption::JointsAdvanceTogether,
+        ],
+    };
+    mechanics(body, solved.posture(), &from_source)
 }
 
 /// The model, shared by every source. Private: `from_source` is the half a

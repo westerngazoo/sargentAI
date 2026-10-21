@@ -258,7 +258,8 @@ impl Joint {
 pub enum Unknown {
     /// Trunk angle from vertical, θ — the baseline's unknown.
     TrunkAngle,
-    /// Shank angle from vertical — the unknown when a torso angle is fixed.
+    /// Shank angle from vertical — the unknown when a torso angle is fixed,
+    /// and the range's upright lean (SPEC-0045 §2.6.6).
     ShankAngle,
 }
 
