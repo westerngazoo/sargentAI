@@ -29,7 +29,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       await ref.read(authControllerProvider.notifier).register(email, password);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      // A 409 here can only mean the email is taken. The shared copy for 409
+      // is deliberately generic ('that already exists', since every endpoint
+      // raises it), so the registration-specific sentence lives on this screen.
+      final message = e.statusCode == 409
+          ? 'That email already has an account. Log in instead.'
+          : e.message;
+      if (mounted) setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

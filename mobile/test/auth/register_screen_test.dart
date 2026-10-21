@@ -6,6 +6,7 @@
 // RED until package:fitai/src/auth/presentation/register_screen.dart defines
 // RegisterScreen and the controller/repository surface it consumes.
 
+import 'package:dio/dio.dart';
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/auth/domain/auth_state.dart';
@@ -86,17 +87,33 @@ void main() {
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
   });
 
-  testWidgets('SAC1 a 409 duplicate email renders a readable inline message',
+  testWidgets('SAC1 a 409 duplicate email says the email has an account',
       (tester) async {
+    // The exception exactly as the data layer builds it from the server's
+    // real 409 body, which carries no message of its own. This test used to
+    // fake the message ('that email is already registered'), so it kept
+    // passing after the shared copy became the generic 'that already exists'
+    // and the screen showed users a sentence that read as a rejection.
+    final request = RequestOptions(path: '/auth/register');
     when(() => repo.register(any(), any())).thenThrow(
-      const ApiException('that email is already registered',
-          statusCode: 409, field: 'email'),
+      ApiException.fromDio(
+        DioException(
+          requestOptions: request,
+          response: Response(
+            requestOptions: request,
+            statusCode: 409,
+            data: <String, dynamic>{'error': 'already_exists'},
+          ),
+        ),
+      ),
     );
     final container = await pumpRegister(tester);
 
     await submit(tester);
 
-    expect(find.textContaining('already registered'), findsOneWidget);
+    expect(find.text('That email already has an account. Log in instead.'),
+        findsOneWidget);
+    expect(find.textContaining('that already exists'), findsNothing);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
     verifyNever(() => repo.login(any(), any()));
   });
