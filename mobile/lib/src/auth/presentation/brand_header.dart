@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/brand.dart';
 import '../../core/theme/app_theme.dart';
 
-/// The gradient chevron roundel — the Sargent AI logo, reusable at any size
-/// (brand header, splash, app bars). Sergeant rank chevrons on the brand
-/// gradient.
+/// The gradient goose roundel — the Goose Fitness Physics logo, reusable at
+/// any size (brand header, splash, app bars). A goose on the brand gradient.
 class BrandBadge extends StatelessWidget {
   const BrandBadge({super.key, required this.size, this.shadow = true});
 
@@ -30,7 +29,7 @@ class BrandBadge extends StatelessWidget {
               ]
             : null,
       ),
-      child: const CustomPaint(painter: _ChevronsPainter(color: Colors.white)),
+      child: const CustomPaint(painter: _GoosePainter(color: Colors.white)),
     );
   }
 }
@@ -93,31 +92,60 @@ class BrandHeader extends StatelessWidget {
   }
 }
 
-/// Three upward sergeant chevrons — the rank insignia as the logo.
-class _ChevronsPainter extends CustomPainter {
-  const _ChevronsPainter({required this.color});
+/// A swimming goose facing right: one filled silhouette, with the eye and the
+/// wing line cut out so the badge gradient shows through.
+///
+/// Drawn on a 100×100 grid scaled to the canvas. `tool/brand/goose-badge.svg`
+/// is the same shape, used to render the web and launcher icons; change both
+/// together.
+class _GoosePainter extends CustomPainter {
+  const _GoosePainter({required this.color});
 
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.height * 0.11
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    for (var i = 0; i < 3; i++) {
-      final baseY = size.height * (0.40 + 0.20 * i);
-      final path = Path()
-        ..moveTo(size.width * 0.24, baseY)
-        ..lineTo(size.width * 0.50, baseY - size.height * 0.17)
-        ..lineTo(size.width * 0.76, baseY);
-      canvas.drawPath(path, paint);
-    }
+    final unit = size.shortestSide / 100;
+    canvas
+      ..save()
+      ..scale(unit);
+    final bounds = Offset.zero & const Size(100, 100);
+    canvas.saveLayer(bounds, Paint());
+    canvas.drawPath(_silhouette, Paint()..color = color);
+    final cut = Paint()..blendMode = BlendMode.clear;
+    canvas
+      ..drawCircle(const Offset(66.5, 20.5), 2.6, cut)
+      ..drawPath(
+        _wing,
+        cut
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.2
+          ..strokeCap = StrokeCap.round,
+      )
+      ..restore()
+      ..restore();
   }
 
+  static final Path _silhouette = Path()
+    ..moveTo(14, 54)
+    ..cubicTo(26, 52, 38, 55, 47, 59)
+    ..cubicTo(54, 62, 58, 57, 57, 48)
+    ..cubicTo(56, 39, 51, 31, 55, 23)
+    ..cubicTo(58, 15, 69, 12, 74, 19)
+    ..lineTo(87, 23)
+    ..lineTo(86, 26)
+    ..lineTo(74, 28)
+    ..cubicTo(69, 31, 66, 37, 67, 46)
+    ..cubicTo(68, 56, 74, 62, 75, 70)
+    ..cubicTo(76, 82, 62, 89, 45, 88)
+    ..cubicTo(30, 87, 20, 79, 18, 68)
+    ..cubicTo(17, 63, 15, 59, 14, 54)
+    ..close();
+
+  static final Path _wing = Path()
+    ..moveTo(29, 66)
+    ..cubicTo(41, 63, 53, 68, 60, 77);
+
   @override
-  bool shouldRepaint(_ChevronsPainter oldDelegate) =>
-      color != oldDelegate.color;
+  bool shouldRepaint(_GoosePainter oldDelegate) => color != oldDelegate.color;
 }
