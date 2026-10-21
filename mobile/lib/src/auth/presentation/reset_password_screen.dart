@@ -8,9 +8,10 @@ import 'brand_header.dart';
 
 /// Where the emailed link lands: `/reset-password?token=<token>` (R-0060 AC7).
 ///
-/// The token is read once, then the route is replaced without it so it leaves
-/// the address bar and the browser history. `replace` keeps the page key, so
-/// this state, and the token it captured, survives (SPEC-0060 §2.7).
+/// The token is read once, then the route is replaced without it, as a
+/// history *replace*, so it leaves the address bar and the tab's Back stack.
+/// `replace` keeps the page key, so this state, and the token it captured,
+/// survives (SPEC-0060 §2.7).
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.token});
 
@@ -24,17 +25,25 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
-  late final String? _token = widget.token;
-  late bool _linkInvalid = _token?.isEmpty ?? true;
+  late final String? _token;
+  late bool _linkInvalid;
   bool _busy = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    // Captured here, once: after the replace below, `widget.token` is null.
+    _token = widget.token;
+    _linkInvalid = _token?.isEmpty ?? true;
     if (!_linkInvalid) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.replace('/reset-password');
+        // `neglect` makes the browser replace the history entry instead of
+        // pushing a new one, so Back does not lead to the token
+        // (architect review of #153, finding 2).
+        if (mounted) {
+          Router.neglect(context, () => context.replace('/reset-password'));
+        }
       });
     }
   }

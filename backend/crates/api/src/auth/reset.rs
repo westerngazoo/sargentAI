@@ -118,13 +118,6 @@ mod tests {
     const KNOWN_TOKEN_SHA256: &str =
         "a8ae6e6ee929abea3afcfc5258c8ccd6f85273e0d4626d26c7279f3250f77c8e";
 
-    fn hex(bytes: &[u8]) -> String {
-        bytes.iter().fold(String::new(), |mut out, b| {
-            let _ = write!(out, "{b:02x}");
-            out
-        })
-    }
-
     /// U1 → AC2: `generate()` yields 64 lowercase hex characters, and two
     /// calls differ.
     #[test]

@@ -39,10 +39,10 @@ use std::{
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use common::{
-    body_bytes, body_json, build_app, build_app_with_mailer, get_with_auth, post_json,
-    register_user, TEST_PUBLIC_WEB_URL, TEST_SECRET,
+    body_bytes, body_json, build_app, build_app_with_any_mailer, build_app_with_mailer,
+    get_with_auth, post_json, register_user, TEST_PUBLIC_WEB_URL, TEST_SECRET,
 };
-use fitai_api::mail::{Message, RecordingMailer};
+use fitai_api::mail::{MailError, Mailer, Message, RecordingMailer};
 use serde_json::json;
 use sqlx::{PgPool, Row};
 use tracing_test::traced_test;
@@ -741,6 +741,21 @@ async fn eleventh_request_from_one_client_address_is_not_emailed(pool: PgPool) {
 // AC1 + AC9 — adversarial: enumeration by timing.
 // ---------------------------------------------------------------------------
 
+/// Records like [`RecordingMailer`], after a delay well above
+/// [`TIMING_TOLERANCE`]. Gives T11 a send slow enough to show up in the
+/// response time if it were ever awaited inside the request.
+struct SlowMailer {
+    inner: Arc<RecordingMailer>,
+}
+
+#[async_trait::async_trait]
+impl Mailer for SlowMailer {
+    async fn send(&self, message: Message) -> Result<(), MailError> {
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        self.inner.send(message).await
+    }
+}
+
 /// T11 → AC1, AC9 (adversarial): 20 distinct registered addresses and 20
 /// distinct unknown ones, one request each, alternating, so no request takes
 /// the rate-limited early return. The medians differ by less than
@@ -749,8 +764,14 @@ async fn eleventh_request_from_one_client_address_is_not_emailed(pool: PgPool) {
 async fn t11_known_and_unknown_addresses_answer_in_the_same_time(pool: PgPool) {
     const SAMPLES: usize = 20;
 
+    // A send that takes far longer than TIMING_TOLERANCE: if the handler ever
+    // awaited it inside the request, every known-address request would carry
+    // it and this test would fail (architect review of #153, finding 1).
     let mailer = Arc::new(RecordingMailer::default());
-    let app = build_app_with_mailer(pool, mailer.clone());
+    let slow = Arc::new(SlowMailer {
+        inner: mailer.clone(),
+    });
+    let app = build_app_with_any_mailer(pool, slow);
     for i in 0..SAMPLES {
         register_user(&app, &format!("known{i}@b.com"), PASSWORD).await;
     }

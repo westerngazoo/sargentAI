@@ -124,10 +124,14 @@ pub async fn find_or_create_google_user(pool: &PgPool, email: &str) -> ApiResult
 /// [`UserRow`] so `find_user_by_id` and `core::User` stay unchanged.
 #[derive(Debug, FromRow)]
 pub struct AuthRow {
+    /// The user's id.
     pub id: Uuid,
+    /// When the password last changed; `None` if it never has.
     pub password_changed_at: Option<DateTime<Utc>>,
 }
 
+/// The user's [`AuthRow`], or `None` when no such user exists.
+///
 /// # Errors
 /// Returns [`ApiError::Database`] on a query failure.
 pub async fn find_auth_row_by_id(pool: &PgPool, id: UserId) -> ApiResult<Option<AuthRow>> {

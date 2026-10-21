@@ -29,7 +29,7 @@ use tower::ServiceExt;
 use fitai_api::{
     app,
     auth::GoogleAuthSettings,
-    mail::{MailSettings, RecordingMailer},
+    mail::{MailSettings, Mailer, RecordingMailer},
     pose::FakePoseEstimator,
     storage::{LocalObjectStore, ObjectStore},
     voice::VoiceIntentSettings,
@@ -180,6 +180,13 @@ pub const TEST_PUBLIC_WEB_URL: &str = "http://test.local:9500";
 /// `fitai_api::mail` module does not exist — step 5 adds both. Until then this
 /// whole harness is RED-by-absence, exactly as it was for `pose` in R-0013.
 pub fn build_app_with_mailer(pool: PgPool, mailer: Arc<RecordingMailer>) -> Router {
+    build_app_with_any_mailer(pool, mailer)
+}
+
+/// Like [`build_app_with_mailer`], for a test-local [`Mailer`] (e.g. one that
+/// is deliberately slow, so a send awaited inside the request would show up
+/// in its timing — R-0060 T11).
+pub fn build_app_with_any_mailer(pool: PgPool, mailer: Arc<dyn Mailer>) -> Router {
     let (mut state, _store, dir) = state_with_ttl(pool, TTL_24H, FakePoseEstimator::default());
     let _ = dir.keep();
     state.mail = MailSettings {

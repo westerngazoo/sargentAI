@@ -243,7 +243,9 @@ async fn over_reset_limit(state: &AppState, email: &str, client: Option<&str>) -
     Ok(by_email > RESET_LIMIT_PER_EMAIL || by_client > RESET_LIMIT_PER_CLIENT)
 }
 
-#[derive(Debug, Deserialize, Validate)]
+// No `Debug`: it holds the plaintext token and password, and nothing should
+// be able to format them (R-0060 AC2).
+#[derive(Deserialize, Validate)]
 pub(crate) struct ResetRequest {
     token: String,
     #[validate(length(min = 8))]

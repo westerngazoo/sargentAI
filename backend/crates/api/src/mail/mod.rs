@@ -19,9 +19,13 @@ use tokio::sync::Notify;
 /// One message, already rendered.
 #[derive(Debug, Clone)]
 pub struct Message {
+    /// Recipient address.
     pub to: String,
+    /// Subject line.
     pub subject: String,
+    /// Plain-text body.
     pub text: String,
+    /// HTML body; the same content as `text`.
     pub html: String,
 }
 
@@ -53,7 +57,9 @@ pub trait Mailer: Send + Sync {
 /// (SPEC-0060 architect finding 9).
 #[derive(Clone)]
 pub struct MailSettings {
+    /// Where messages go.
     pub mailer: Arc<dyn Mailer>,
+    /// Origin of the web app the emailed links open, without a trailing `/`.
     pub public_web_url: Arc<str>,
 }
 
@@ -108,6 +114,8 @@ pub struct CloudflareMailer {
 const SEND_TIMEOUT: Duration = Duration::from_secs(10);
 
 impl CloudflareMailer {
+    /// `from` is the full sender, display name included, e.g.
+    /// [`DEFAULT_FROM`]. Builds no connection until the first send.
     #[must_use]
     pub fn new(account_id: &str, token: &str, from: &str) -> Self {
         Self {
