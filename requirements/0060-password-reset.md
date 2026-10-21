@@ -1,12 +1,12 @@
 # R-0060 — Forgotten password: reset by email
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-10-21 — all three open questions answered)
 - **Milestone:** M1 (auth). Pulled forward by the beta (owner, 2026-10-21).
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-10-21
 - **Depends on:** R-0002 (email/password auth, Done), which deferred this
   flow to its own requirement (R-0002 §4)
-- **Realized by:** SPEC-0060 (to be written)
+- **Realized by:** SPEC-0060
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
@@ -97,8 +97,8 @@ Cloudflare Email Service.
 - **No SMS and no security questions.**
 - **No account recovery when the email is lost.** That is manual support
   for the beta.
-- **Accounts made with Google sign-in** are out of scope until OQ-2 is
-  answered.
+- **Accounts made with Google sign-in** get no email and no token (OQ-2).
+  Setting a password on such an account is a separate flow.
 - **Privacy:** reset tokens and send logs join R-0024's data inventory
   before launch.
 
@@ -109,9 +109,9 @@ Cloudflare Email Service.
   (AC8).* The rejected alternative was the Worker's `EMAIL` binding, called
   through the fronting Worker: no credential, but a new internal hop between
   the container and the Worker.
-- **OQ-2. A Google-only account asks for a reset.** It has no password.
-  Should it get a "sign in with Google" email or nothing at all? Either way
-  the response to the requester stays identical (AC1).
+- **OQ-2. A Google-only account asks for a reset.** *Resolved 2026-10-21
+  (owner): nothing is sent.* The account has no password to reset; the user
+  signs in with Google. The response to the requester stays identical (AC1).
 - **OQ-3. Sender address.** *Resolved 2026-10-21 (owner):* **Goose
   Fitness Physics** `<no-reply@goosethropic.systems>`. Verifying the domain
   is an owner step in the Cloudflare dashboard.
@@ -124,3 +124,4 @@ Cloudflare Email Service.
 | 2026-10-21 | Cloudflare Email Service sends the mail | Owner. Infra already on Cloudflare; covered by the Workers Paid plan the API needs; reachable by REST with no new crate. |
 | 2026-10-21 | The sender's display name is "Goose Fitness Physics" | Owner: the app's official name going forward. |
 | 2026-10-21 | Email Service is reached by REST; the sender is `no-reply@goosethropic.systems` | Owner. REST keeps the container independent of the Worker; the token is a secret set out of band (AC8). |
+| 2026-10-21 | A Google-only account gets nothing | Owner. There is no password to reset; the user signs in with Google. |
