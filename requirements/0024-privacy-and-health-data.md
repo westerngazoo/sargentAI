@@ -43,18 +43,24 @@ this table; if the table is wrong the policy is wrong.
 |------|--------------------|---------------|-------------|
 | Email, password hash (argon2id) | R-0002 register/login | Neon Postgres | Neon |
 | Google account identity | R-0033 sign-in | Neon Postgres | Google |
-| Age, height, weight, body stats, goals | R-0003 profile | Neon Postgres | Neon |
+| **Date of birth** (age derived; minimum accepted age 13 today), height, weight, body stats, goals | R-0003 profile | Neon Postgres | Neon |
 | Workout logs (exercise, load, reps, RPE) | R-0004, R-0009 | Neon Postgres | Neon |
 | Nutrition logs (macros, calories) | R-0005, R-0010 | Neon Postgres | Neon |
-| **Body photographs** | R-0006 upload | `ObjectStore` seam — local-fs today, S3 at R-0026 | depends on R-0026 |
+| **Body photographs** | R-0006 upload | `ObjectStore` seam — the API container's own disk today (not durable across restarts), S3 at R-0026 | Cloudflare (host); later R-0026's store |
 | **Pose keypoints / frame features** derived from those photographs | R-0013 server-side estimation | Neon Postgres | Neon |
-| **Voice transcripts** | R-0032. Speech→text runs **on device**; audio is never stored or transmitted | `POST /voice/intent`, then to an LLM for intent parsing | **Anthropic** (`claude-haiku-4-5`) |
+| **Voice audio** | R-0032. Recognised by the platform speech service (`speech_to_text`, `onDevice` not set), which may send audio to **Apple** (iOS) or **Google** (Android); the app itself never stores or uploads audio | the OS recognizer | Apple / Google (OS speech service) |
+| **Voice transcripts** | the recognizer's text | `POST /voice/intent`, then to an LLM for intent parsing | **Anthropic** (`claude-haiku-4-5`) |
+| **All API traffic** (auth, profile, logs, transcripts, photo uploads) | every request | the API, hosted on Cloudflare Workers + Containers | **Cloudflare** |
 | Derived program and diet proposals | R-0014, R-0017 | Neon Postgres | Neon |
 
-Two entries in that table are the ones that will draw questions, and both
-are answerable: audio never leaves the phone, and the photograph never
-reaches the regression model — only features derived from it do
+Three entries in that table will draw questions. The photograph never
+reaches the regression model; only features derived from it do
 (`project-specifics.md`, "Photo pipeline feeds the structured model").
+Audio is **not** guaranteed to stay on the phone today, because the OS
+recognizer may send it to Apple or Google (OQ-5). And the profile stores a
+date of birth and accepts users from 13 (OQ-6). *(These three rows were
+corrected on 2026-10-20 against the code; the draft had said audio never
+leaves the phone, that no birth date is asked, and had omitted Cloudflare.)*
 
 ## 4. Acceptance criteria
 
@@ -64,8 +70,8 @@ reaches the regression model — only features derived from it do
 - **AC2. It names the processors.** Neon, Cloudflare, Google and Anthropic
   are named, with what each receives and why.
 - **AC3. Apple App Privacy.** The declaration is completed and matches §3,
-  including the *Health & Fitness*, *Photos*, *Audio Data* (none collected)
-  and *Identifiers* categories, and whether any of it is linked to identity.
+  including the *Health & Fitness*, *Photos*, *Audio Data* (per OQ-5) and
+  *Identifiers* categories, and whether any of it is linked to identity.
 - **AC4. Google Data Safety.** The form is completed and matches §3,
   including the sensitive-data and third-party-sharing answers.
 - **AC5. Deletion is real.** A user can delete their account and every
@@ -96,9 +102,10 @@ reaches the regression model — only features derived from it do
 - No change to what the app collects. If the policy is uncomfortable to
   write, that is a signal to change the product under its own requirement,
   not to soften the wording.
-- Minors are out of scope for v1: the policy states the service is not
-  directed to under-18s, and onboarding does not ask for a birth date that
-  would make us aware of one.
+- Minors: today onboarding **does** ask for a date of birth and admits ages
+  13 and up (`MIN_AGE = 13` in `profile.rs`, "pending the M8 legal review").
+  Whether v1 serves 13–17 is OQ-6; either answer is a product change under
+  its own requirement, not a softer sentence here.
 
 ## 6. Open questions
 
@@ -109,6 +116,12 @@ reaches the regression model — only features derived from it do
   closed? The answer is a number and it goes in the policy.
 - **OQ-3.** Does the Anthropic call need its own consent, or is disclosure
   in the policy sufficient? Counsel's call, and it depends on OQ-1.
+- **OQ-5.** Voice audio: force on-device recognition (`onDevice: true`,
+  with a fallback for devices without it), or disclose the OS recognizer
+  and declare *Audio Data* accordingly? Counsel weighs in on whether OS-
+  service recognition is the app's collection.
+- **OQ-6.** Minors: raise the floor to 18, or serve 13–17 with the minors'
+  provisions (consent, retention, store age ratings)?
 - **OQ-4.** Who is the data controller of record — a person or an entity?
   This also decides the Apple account type in R-0025, so it is worth
   settling once, here.
@@ -118,3 +131,4 @@ reaches the regression model — only features derived from it do
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-09-20 | Requirement drafted against the as-built inventory rather than the source brief | The brief predates R-0032 and R-0033; a policy written from it would omit both Anthropic and Google |
+| 2026-10-20 | Three inventory rows corrected against the code before merge | The draft said audio never leaves the phone (the OS recognizer may send it out), that no birth date is asked (one is, from age 13), and omitted Cloudflare (it hosts the API). The decisions these raise are OQ-5 and OQ-6. |
