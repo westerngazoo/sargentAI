@@ -66,7 +66,8 @@
   "vars": {
     "CF_ACCOUNT_ID": "b29359bde5d3c868c259e1171c2fff5c",
     "PUBLIC_WEB_URL": "https://sargent.goosethropic.systems",
-    "MAIL_FROM": "Goose Fitness Physics <no-reply@goosethropic.systems>"
+    "MAIL_FROM": "no-reply@goosethropic.systems",
+    "MAIL_FROM_NAME": "Goose Fitness Physics"
   },
 
   "observability": { "enabled": true }

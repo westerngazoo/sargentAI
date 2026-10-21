@@ -152,7 +152,8 @@ Configuration, in `MailSettings::from_env()` following
 |---|---|---|---|
 | `CF_ACCOUNT_ID` | Cloudflare account | var | none |
 | `CF_EMAIL_API_TOKEN` | Email Service send token | **secret** | none |
-| `MAIL_FROM` | sender | var | `Goose Fitness Physics <no-reply@goosethropic.systems>` |
+| `MAIL_FROM` | sender address | var | `no-reply@goosethropic.systems` |
+| `MAIL_FROM_NAME` | sender display name | var | `Goose Fitness Physics` |
 | `PUBLIC_WEB_URL` | origin the reset link points at | var | none |
 
 With `CF_ACCOUNT_ID`, `CF_EMAIL_API_TOKEN` and `PUBLIC_WEB_URL` all set,
@@ -560,10 +561,13 @@ recording mailer and `#[sqlx::test]`'s Postgres, as today.
 | 2026-10-21 | Ledger: insert, then count, as two statements | Implementation finding, confirmed by the architect on Postgres: a single `WITH … INSERT … SELECT count(*)` shares one snapshot and undercounts by one. Two autocommitted statements also make the "can only over-block" race argument true. |
 | 2026-10-21 | Token leaves the URL with `Router.neglect` + `replace` | Architect review of #153: a plain `replace` reports a new history entry after the first, so Back led to the token. Global browser history is out of any page's reach; accepted. |
 
+| 2026-10-21 | The sender goes to the REST API as `{"address", "name"}`, configured as `MAIL_FROM` + `MAIL_FROM_NAME` | Found on the first live send: no reset email arrived. The `"Name <address>"` string is the SMTP header form; the REST API takes named addresses as objects (Email Service docs, *Specify recipients*). Regression test in `mail/mod.rs`. |
+
 ## 9. Changelog
 
 - 2026-10-21 — Draft for architect review.
 - 2026-10-21 — Architect review applied (§10); status Accepted.
+- 2026-10-21 — Named sender as an object; `MAIL_FROM_NAME` added (fix after the first live send).
 - 2026-10-21 — Amended during implementation (#153): §2.4 ledger as two statements; §2.7 history replace via `Router.neglect`.
 
 ## 10. Architect review — ACCEPT WITH CHANGES (2026-10-21)
