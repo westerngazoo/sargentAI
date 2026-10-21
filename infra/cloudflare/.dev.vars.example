@@ -5,3 +5,5 @@ JWT_SECRET=change-me-in-real-deploys
 ANTHROPIC_API_KEY=
 FDC_API_KEY=
 GOOGLE_OAUTH_AUDIENCE=
+# Password-reset email (R-0060). Leave the token empty to run with reset email off.
+CF_EMAIL_API_TOKEN=

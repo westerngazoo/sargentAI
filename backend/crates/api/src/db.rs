@@ -119,6 +119,126 @@ pub async fn find_or_create_google_user(pool: &PgPool, email: &str) -> ApiResult
     Ok(UserId(id))
 }
 
+/// What the auth extractor needs per request: the user exists, and when the
+/// password last changed (R-0060 AC4, SPEC-0060 §2.5). Kept apart from
+/// [`UserRow`] so `find_user_by_id` and `core::User` stay unchanged.
+#[derive(Debug, FromRow)]
+pub struct AuthRow {
+    pub id: Uuid,
+    pub password_changed_at: Option<DateTime<Utc>>,
+}
+
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn find_auth_row_by_id(pool: &PgPool, id: UserId) -> ApiResult<Option<AuthRow>> {
+    let row =
+        sqlx::query_as::<_, AuthRow>("SELECT id, password_changed_at FROM users WHERE id = $1")
+            .bind(id.0)
+            .fetch_optional(pool)
+            .await?;
+    Ok(row)
+}
+
+/// The rate-limit window (R-0060 AC5).
+const RESET_REQUEST_WINDOW: &str = "1 hour";
+
+/// Record one forgot-password request under `key_hash` and return how many
+/// the key has in the window, this one included (SPEC-0060 §2.4 step 2).
+///
+/// Two statements on purpose: the insert commits before the count, so
+/// concurrent requests see each other and can only over-block, never
+/// under-block. (In a single statement, a data-modifying CTE's insert is not
+/// visible to the outer `SELECT`.) Rows older than the window are purged for
+/// every key, so keys that never recur do not accumulate.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn record_reset_request(pool: &PgPool, key_hash: &[u8]) -> ApiResult<i64> {
+    sqlx::query(&format!(
+        "WITH purged AS (DELETE FROM password_reset_requests \
+                         WHERE requested_at < now() - interval '{RESET_REQUEST_WINDOW}') \
+         INSERT INTO password_reset_requests (key_hash) VALUES ($1)"
+    ))
+    .bind(key_hash)
+    .execute(pool)
+    .await?;
+    let count: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM password_reset_requests \
+         WHERE key_hash = $1 AND requested_at >= now() - interval '{RESET_REQUEST_WINDOW}'"
+    ))
+    .bind(key_hash)
+    .fetch_one(pool)
+    .await?;
+    Ok(count)
+}
+
+/// Store a new reset token for `user_id`, superseding any unused one
+/// (R-0060 AC2): the user's unused tokens are deleted in the same
+/// transaction.
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn replace_reset_token(
+    pool: &PgPool,
+    user_id: UserId,
+    token_hash: &[u8],
+    expires_at: DateTime<Utc>,
+) -> ApiResult<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL")
+        .bind(user_id.0)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+    )
+    .bind(user_id.0)
+    .bind(token_hash)
+    .bind(expires_at)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Consume a reset token and set the new password, atomically
+/// (SPEC-0060 §2.4). Returns `false`, changing nothing, when the token is
+/// unknown, used, expired or superseded.
+///
+/// `changed_at` comes from the app clock, the same clock that stamps JWT
+/// `iat`, so the session cut-off in the extractor compares like with like
+/// (SPEC-0060 §2.5).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn consume_reset_token(
+    pool: &PgPool,
+    token_hash: &[u8],
+    password_hash: &str,
+    changed_at: DateTime<Utc>,
+) -> ApiResult<bool> {
+    let mut tx = pool.begin().await?;
+    let user_id: Option<Uuid> = sqlx::query_scalar(
+        "UPDATE password_reset_tokens SET used_at = now() \
+         WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now() \
+         RETURNING user_id",
+    )
+    .bind(token_hash)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(user_id) = user_id else {
+        return Ok(false); // dropping `tx` rolls back
+    };
+    sqlx::query("UPDATE users SET password_hash = $1, password_changed_at = $2 WHERE id = $3")
+        .bind(password_hash)
+        .bind(changed_at)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(true)
+}
+
 #[derive(Debug, FromRow)]
 pub struct ProfileRow {
     pub user_id: Uuid,

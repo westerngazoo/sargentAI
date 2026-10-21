@@ -23,6 +23,8 @@ fitai-core = { path = "crates/core" }
 # rustls keeps the image OpenSSL-free (same choice as reqwest above).
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "chrono", "tls-rustls-ring"] }
 argon2 = "0.5"
+# R-0060 / SPEC-0060 §2.2 — the reset token is stored as its SHA-256.
+sha2 = "0.10"
 jsonwebtoken = "9"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }

@@ -47,6 +47,7 @@ wrangler secret put JWT_SECRET
 wrangler secret put ANTHROPIC_API_KEY      # optional (voice-intent LLM)
 wrangler secret put FDC_API_KEY            # optional (USDA lookup)
 wrangler secret put GOOGLE_OAUTH_AUDIENCE  # optional (Google sign-in)
+wrangler secret put CF_EMAIL_API_TOKEN     # optional (password-reset email, R-0060)
 npm run deploy
 ```
 

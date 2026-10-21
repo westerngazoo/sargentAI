@@ -1,4 +1,4 @@
-//! Auth surface: register, login, /auth/me.
+//! Auth surface: register, login, /auth/me, and password reset (R-0060).
 
 mod extractor;
 pub mod google;
@@ -23,4 +23,6 @@ pub fn routes() -> Router<AppState> {
         .route("/auth/login", post(handlers::login))
         .route("/auth/google", post(handlers::login_google))
         .route("/auth/me", get(handlers::me))
+        .route("/auth/password/forgot", post(handlers::forgot_password))
+        .route("/auth/password/reset", post(handlers::reset_password))
 }

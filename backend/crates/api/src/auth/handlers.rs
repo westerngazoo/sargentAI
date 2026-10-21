@@ -2,11 +2,12 @@
 
 use axum::{
     extract::{rejection::JsonRejection, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tracing::Instrument;
 use validator::Validate;
 
 use fitai_core::{Email, UserId};
@@ -14,7 +15,9 @@ use fitai_core::{Email, UserId};
 use crate::{
     auth::{
         google::{GoogleClaims, GoogleLoginRequest},
-        password, token, AuthenticatedUser,
+        password,
+        reset::{self, ResetToken, RESET_TOKEN_TTL},
+        token, AuthenticatedUser,
     },
     db,
     error::{ApiError, ApiResult},
@@ -37,7 +40,10 @@ pub(crate) struct AuthRequest {
 /// malformed JSON, wrong content-type) to a 400 `Validation` error. Without
 /// this, a body that omits `password` would be rejected by axum's own `Json`
 /// extractor before the handler runs, yielding the wrong status (SAC2).
-fn body(req: Result<Json<AuthRequest>, JsonRejection>) -> ApiResult<AuthRequest> {
+///
+/// Every request type it serves validates only `password`, so a validation
+/// failure names that field.
+fn body<T: DeserializeOwned + Validate>(req: Result<Json<T>, JsonRejection>) -> ApiResult<T> {
     let Json(req) = req.map_err(|_| ApiError::Validation { field: "body" })?;
     req.validate()
         .map_err(|_| ApiError::Validation { field: "password" })?;
@@ -150,4 +156,121 @@ pub(crate) async fn login_google(
         user_id,
         expires_at,
     }))
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub(crate) struct ForgotRequest {
+    // Normalized and validated by `core::Email::parse`, as in `AuthRequest`.
+    email: String,
+}
+
+/// Requests for one email address per window (R-0060 AC5).
+const RESET_LIMIT_PER_EMAIL: i64 = 3;
+/// Requests from one client address per window (R-0060 AC5).
+const RESET_LIMIT_PER_CLIENT: i64 = 10;
+
+/// `POST /auth/password/forgot` — always `202`, empty body (R-0060 AC1).
+///
+/// No account, a Google-only account, a rate-limited request and a real
+/// account all answer the same. Only the last stores a token and sends an
+/// email, and the email goes out after the response so the slow network call
+/// does not separate the cases by timing (SPEC-0060 §2.4).
+///
+/// # Errors
+/// 400 on a malformed body or email (before any lookup, so it reveals
+/// nothing), 500 on a database failure.
+pub(crate) async fn forgot_password(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    req: Result<Json<ForgotRequest>, JsonRejection>,
+) -> ApiResult<StatusCode> {
+    let req = body(req)?;
+    let email = Email::parse(&req.email).map_err(|_| ApiError::Validation { field: "email" })?;
+
+    // Cloudflare's edge sets this on every request that reaches the container;
+    // absent in tests and local runs, where only the email key applies.
+    let client = headers
+        .get("cf-connecting-ip")
+        .and_then(|v| v.to_str().ok());
+    if over_reset_limit(&state, email.as_str(), client).await? {
+        return Ok(StatusCode::ACCEPTED);
+    }
+
+    let Some(row) = db::find_row_by_email(&state.pool, email.as_str()).await? else {
+        return Ok(StatusCode::ACCEPTED);
+    };
+    if row.password_hash.is_none() {
+        return Ok(StatusCode::ACCEPTED); // Google-only: nothing to reset (R-0060 OQ-2)
+    }
+
+    let token = ResetToken::generate();
+    let expires_at = Utc::now()
+        + chrono::Duration::from_std(RESET_TOKEN_TTL).map_err(|e| ApiError::Internal(e.into()))?;
+    db::replace_reset_token(
+        &state.pool,
+        UserId(row.id),
+        token.hash().as_bytes(),
+        expires_at,
+    )
+    .await?;
+
+    let message = reset::message(&state.mail.public_web_url, &row.email, &token);
+    let mailer = state.mail.mailer.clone();
+    // Detached on purpose (SPEC-0060 §2.4): a shutdown inside the send loses
+    // that one email, and the stored token stays valid for a retry.
+    tokio::spawn(
+        async move {
+            if let Err(e) = mailer.send(message).await {
+                tracing::error!(error = %e, "password reset email not sent");
+            }
+        }
+        .instrument(tracing::Span::current()),
+    );
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Record this request under its email key and, when known, its client
+/// key; `true` if either is over its limit. Both keys are always recorded,
+/// so the ledger counts unknown addresses too and the limit itself reveals
+/// nothing.
+async fn over_reset_limit(state: &AppState, email: &str, client: Option<&str>) -> ApiResult<bool> {
+    let by_email =
+        db::record_reset_request(&state.pool, &reset::ledger_key("email", email)).await?;
+    let by_client = match client {
+        Some(ip) => db::record_reset_request(&state.pool, &reset::ledger_key("ip", ip)).await?,
+        None => 0,
+    };
+    Ok(by_email > RESET_LIMIT_PER_EMAIL || by_client > RESET_LIMIT_PER_CLIENT)
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub(crate) struct ResetRequest {
+    token: String,
+    #[validate(length(min = 8))]
+    password: String,
+}
+
+/// `POST /auth/password/reset` — `204` on success (R-0060 AC3).
+///
+/// Unknown, malformed, used, expired and superseded tokens all get the same
+/// `401 unauthorized`, so the response never says which.
+///
+/// # Errors
+/// 400 on a malformed body or a password shorter than registration allows
+/// (checked before the token, so a short password does not burn the link),
+/// 401 on any bad token, 500 on a hashing or database failure.
+pub(crate) async fn reset_password(
+    State(state): State<AppState>,
+    req: Result<Json<ResetRequest>, JsonRejection>,
+) -> ApiResult<StatusCode> {
+    let req = body(req)?;
+    let token = ResetToken::parse(&req.token).ok_or(ApiError::Unauthorized)?;
+    let hash = password::hash(&req.password).map_err(ApiError::Internal)?;
+    let consumed =
+        db::consume_reset_token(&state.pool, token.hash().as_bytes(), &hash, Utc::now()).await?;
+    if consumed {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(ApiError::Unauthorized)
+    }
 }

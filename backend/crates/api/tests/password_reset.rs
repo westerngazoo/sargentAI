@@ -17,6 +17,7 @@
 //!   - `async fn wait_for(&self, n: usize, timeout: Duration) -> bool` resolves
 //!     `true` once at least `n` messages are recorded, `false` on timeout;
 //!   - `fn sent(&self) -> Vec<Message>` is a snapshot of what was recorded.
+//!
 //! Every assertion on `sent()` is preceded by `wait_for`, so nothing races
 //! the spawned send (§2.4 step 4).
 //!
