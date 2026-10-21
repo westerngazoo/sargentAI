@@ -169,6 +169,7 @@ conversational intent later.
 | R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
 | R-0044 | Lift technique video analysis — pure geometry over a keypoint series, refusal as a first-class output | SPEC-0044 | In review — slice A (core) on PR #104; requirement + spec live on that branch |
 | R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (to be written) | Draft — on PR #104. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
+| R-0059 | The squat, animated in the app — server-computed range of postures with joint moments, drawn as a side-view figure with playback and the model's caveats | SPEC-0059 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
 | R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 16 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10). Do not implement: `docs/AGENT-PR-GUIDE.md` |
 
 ### M-Platform — Trainer marketplace
