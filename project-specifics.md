@@ -9,7 +9,7 @@ change.
 
 ## Identity
 
-- **Project name:** Goose Physics
+- **Project name:** Goose Fitness Physics
 - **One-line description:** Lift mechanics you can check — joint torque and leverage computed from your own limb lengths and load, with training and logging built around it.
 - **Owner / final decision authority:** Gustavo Delgadillo <gustavo.delgadillo@gmail.com>
 - **Repository URL:** https://github.com/westerngazoo/sargentAI
