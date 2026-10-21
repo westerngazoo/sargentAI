@@ -57,8 +57,8 @@ Cloudflare Email Service.
   client address. Going over the limit is answered like an ordinary request,
   so the limit does not reveal that an account exists.
 - **AC6. The email.**
-  - Sent as **Goose Fitness Physics** from a verified address on
-    `goosethropic.systems`.
+  - Sent as **Goose Fitness Physics** `<no-reply@goosethropic.systems>`,
+    a verified sender.
   - Contains the link, the expiry, and a line saying the message can be
     ignored if the reader did not ask for it.
   - Contains no other account data.
@@ -104,21 +104,17 @@ Cloudflare Email Service.
 
 ## 5. Open questions
 
-- **OQ-1. How the backend reaches Email Service.** Two options:
-  - The REST API with a scoped API token held as a container secret. This
-    is simple, but it is one more credential.
-  - The `EMAIL` binding on the Worker that fronts the container, called by
-    the container through the Worker. There is no credential, but the
-    container and the Worker get a new internal hop.
-
-  Recommended: REST for v1. SPEC-0060 decides.
+- **OQ-1. How the backend reaches Email Service.** *Resolved 2026-10-21
+  (owner): the REST API, with a scoped API token held as a container secret
+  (AC8).* The rejected alternative was the Worker's `EMAIL` binding, called
+  through the fronting Worker: no credential, but a new internal hop between
+  the container and the Worker.
 - **OQ-2. A Google-only account asks for a reset.** It has no password.
   Should it get a "sign in with Google" email or nothing at all? Either way
   the response to the requester stays identical (AC1).
-- **OQ-3. Sender address.** The display name is decided: **Goose Fitness
-  Physics** (owner, 2026-10-21). Still open is the address on
-  `goosethropic.systems`; `no-reply@goosethropic.systems` is recommended.
-  Verifying the domain is an owner step in the Cloudflare dashboard.
+- **OQ-3. Sender address.** *Resolved 2026-10-21 (owner):* **Goose
+  Fitness Physics** `<no-reply@goosethropic.systems>`. Verifying the domain
+  is an owner step in the Cloudflare dashboard.
 
 ## 6. Decision log
 
@@ -127,3 +123,4 @@ Cloudflare Email Service.
 | 2026-10-21 | Reset by emailed single-use link, following OWASP's Forgot Password Cheat Sheet | A known pattern for a security boundary, not an invented one. |
 | 2026-10-21 | Cloudflare Email Service sends the mail | Owner. Infra already on Cloudflare; covered by the Workers Paid plan the API needs; reachable by REST with no new crate. |
 | 2026-10-21 | The sender's display name is "Goose Fitness Physics" | Owner: the app's official name going forward. |
+| 2026-10-21 | Email Service is reached by REST; the sender is `no-reply@goosethropic.systems` | Owner. REST keeps the container independent of the Worker; the token is a secret set out of band (AC8). |
