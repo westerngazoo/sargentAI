@@ -1,0 +1,11 @@
+{
+  "name": "goose-physics-web-deploy",
+  "private": true,
+  "description": "Deploy the Flutter web build to Cloudflare Workers static assets. See README.md.",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.107.0"
+  }
+}
