@@ -57,7 +57,8 @@ Cloudflare Email Service.
   client address. Going over the limit is answered like an ordinary request,
   so the limit does not reveal that an account exists.
 - **AC6. The email.**
-  - Sent from a verified address on `goosethropic.systems`.
+  - Sent as **Goose Fitness Physics** from a verified address on
+    `goosethropic.systems`.
   - Contains the link, the expiry, and a line saying the message can be
     ignored if the reader did not ask for it.
   - Contains no other account data.
@@ -114,9 +115,10 @@ Cloudflare Email Service.
 - **OQ-2. A Google-only account asks for a reset.** It has no password.
   Should it get a "sign in with Google" email or nothing at all? Either way
   the response to the requester stays identical (AC1).
-- **OQ-3. Sender identity.** Which address on `goosethropic.systems`, and
-  whether the brand says "Goose Physics". Domain verification is an owner
-  step in the Cloudflare dashboard.
+- **OQ-3. Sender address.** The display name is decided: **Goose Fitness
+  Physics** (owner, 2026-10-21). Still open is the address on
+  `goosethropic.systems`; `no-reply@goosethropic.systems` is recommended.
+  Verifying the domain is an owner step in the Cloudflare dashboard.
 
 ## 6. Decision log
 
@@ -124,3 +126,4 @@ Cloudflare Email Service.
 |------|----------|-----------|
 | 2026-10-21 | Reset by emailed single-use link, following OWASP's Forgot Password Cheat Sheet | A known pattern for a security boundary, not an invented one. |
 | 2026-10-21 | Cloudflare Email Service sends the mail | Owner. Infra already on Cloudflare; covered by the Workers Paid plan the API needs; reachable by REST with no new crate. |
+| 2026-10-21 | The sender's display name is "Goose Fitness Physics" | Owner: the app's official name going forward. |
