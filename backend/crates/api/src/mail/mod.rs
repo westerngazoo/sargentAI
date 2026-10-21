@@ -63,8 +63,10 @@ pub struct MailSettings {
     pub public_web_url: Arc<str>,
 }
 
-/// Sender used when `MAIL_FROM` is unset (R-0060 OQ-3).
-pub const DEFAULT_FROM: &str = "Goose Fitness Physics <no-reply@goosethropic.systems>";
+/// Sender address used when `MAIL_FROM` is unset (R-0060 OQ-3).
+pub const DEFAULT_FROM_ADDRESS: &str = "no-reply@goosethropic.systems";
+/// Sender display name used when `MAIL_FROM_NAME` is unset (R-0060 OQ-3).
+pub const DEFAULT_FROM_NAME: &str = "Goose Fitness Physics";
 
 /// The local Flutter web dev server — only ever the origin of links an
 /// unconfigured mailer never sends.
@@ -80,18 +82,22 @@ impl Default for MailSettings {
 }
 
 impl MailSettings {
-    /// Reads `CF_ACCOUNT_ID`, `CF_EMAIL_API_TOKEN`, `PUBLIC_WEB_URL` and
-    /// `MAIL_FROM`. Returns `None` unless the first three are all set and
-    /// non-empty; the caller then falls back to [`MailSettings::default`].
+    /// Reads `CF_ACCOUNT_ID`, `CF_EMAIL_API_TOKEN`, `PUBLIC_WEB_URL`,
+    /// `MAIL_FROM` (the sender address) and `MAIL_FROM_NAME`. Returns `None`
+    /// unless the first three are all set and non-empty; the caller then falls
+    /// back to [`MailSettings::default`].
     #[must_use]
     pub fn from_env() -> Option<Self> {
         let var = |name: &str| std::env::var(name).ok().filter(|v| !v.trim().is_empty());
         let account_id = var("CF_ACCOUNT_ID")?;
         let token = var("CF_EMAIL_API_TOKEN")?;
         let public_web_url = var("PUBLIC_WEB_URL")?;
-        let from = var("MAIL_FROM").unwrap_or_else(|| DEFAULT_FROM.to_string());
+        let from = Sender {
+            address: var("MAIL_FROM").unwrap_or_else(|| DEFAULT_FROM_ADDRESS.to_string()),
+            name: var("MAIL_FROM_NAME").unwrap_or_else(|| DEFAULT_FROM_NAME.to_string()),
+        };
         Some(Self {
-            mailer: Arc::new(CloudflareMailer::new(&account_id, &token, &from)),
+            mailer: Arc::new(CloudflareMailer::new(&account_id, &token, from)),
             public_web_url: Arc::from(public_web_url.trim_end_matches('/')),
         })
     }
@@ -106,7 +112,19 @@ pub struct CloudflareMailer {
     client: reqwest::Client,
     account_id: Arc<str>,
     token: Arc<str>,
-    from: Arc<str>,
+    from: Sender,
+}
+
+/// A sender with a display name. The REST API takes it as
+/// `{"address", "name"}`; the `"Name <address>"` string is the SMTP header
+/// form, which the REST API rejects
+/// (developers.cloudflare.com/email-service/examples/email-sending/recipients/).
+#[derive(Debug, Clone)]
+pub struct Sender {
+    /// The verified address on the sending domain.
+    pub address: String,
+    /// What the recipient's mail client shows.
+    pub name: String,
 }
 
 /// An unresponsive provider must not pin the send task forever (SPEC-0060
@@ -114,17 +132,27 @@ pub struct CloudflareMailer {
 const SEND_TIMEOUT: Duration = Duration::from_secs(10);
 
 impl CloudflareMailer {
-    /// `from` is the full sender, display name included, e.g.
-    /// [`DEFAULT_FROM`]. Builds no connection until the first send.
+    /// Builds no connection until the first send.
     #[must_use]
-    pub fn new(account_id: &str, token: &str, from: &str) -> Self {
+    pub fn new(account_id: &str, token: &str, from: Sender) -> Self {
         Self {
             client: reqwest::Client::new(),
             account_id: Arc::from(account_id),
             token: Arc::from(token),
-            from: Arc::from(from),
+            from,
         }
     }
+}
+
+/// The JSON body Cloudflare's send endpoint takes for one message.
+fn request_body(from: &Sender, message: &Message) -> serde_json::Value {
+    json!({
+        "from": { "address": from.address, "name": from.name },
+        "to": message.to,
+        "subject": message.subject,
+        "text": message.text,
+        "html": message.html,
+    })
 }
 
 /// Prints the account only: the token never reaches a log line.
@@ -143,13 +171,7 @@ impl Mailer for CloudflareMailer {
             "https://api.cloudflare.com/client/v4/accounts/{}/email/sending/send",
             self.account_id
         );
-        let body = json!({
-            "from": &*self.from,
-            "to": message.to,
-            "subject": message.subject,
-            "text": message.text,
-            "html": message.html,
-        });
+        let body = request_body(&self.from, &message);
         let response = self
             .client
             .post(url)
@@ -285,9 +307,33 @@ mod tests {
         assert!(matches!(result, Err(MailError::NotConfigured)));
     }
 
+    fn sender() -> Sender {
+        Sender {
+            address: DEFAULT_FROM_ADDRESS.into(),
+            name: DEFAULT_FROM_NAME.into(),
+        }
+    }
+
+    /// Regression: the first live send used the SMTP `"Name <address>"`
+    /// string for `from`, which the REST API does not take, so no reset
+    /// email was delivered. The named sender is an object.
+    #[test]
+    fn request_body_sends_the_named_sender_as_an_object() {
+        let body = request_body(&sender(), &message());
+
+        assert_eq!(
+            body["from"],
+            json!({ "address": "no-reply@goosethropic.systems", "name": "Goose Fitness Physics" })
+        );
+        assert_eq!(body["to"], "a@b.com");
+        assert_eq!(body["subject"], "s");
+        assert_eq!(body["text"], "t");
+        assert_eq!(body["html"], "h");
+    }
+
     #[test]
     fn cloudflare_mailer_debug_never_prints_the_token() {
-        let mailer = CloudflareMailer::new("acct-1", "secret-token-xyz", DEFAULT_FROM);
+        let mailer = CloudflareMailer::new("acct-1", "secret-token-xyz", sender());
         let debug = format!("{mailer:?}");
         assert!(debug.contains("acct-1"));
         assert!(!debug.contains("secret-token-xyz"));
