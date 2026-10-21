@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/application/auth_controller.dart';
 import '../auth/domain/auth_state.dart';
+import '../auth/presentation/forgot_password_screen.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
+import '../auth/presentation/reset_password_screen.dart';
 import '../hub/voice_hub_screen.dart';
 import '../measurements/presentation/progress_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
@@ -36,20 +38,38 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final loc = state.matchedLocation;
+      // The reset link from an email is always a cold start (AuthUnknown).
+      // Sending it to /splash would discard its token, so the two
+      // password-recovery screens pass through every arm that can open them
+      // (SPEC-0060 §2.7).
+      final recovering = loc == '/forgot-password' || loc == '/reset-password';
       return switch (ref.read(authControllerProvider)) {
-        AuthUnknown() => loc == '/splash' ? null : '/splash',
+        AuthUnknown() => (loc == '/splash' || recovering) ? null : '/splash',
         AuthUnauthenticated() =>
-          (loc == '/login' || loc == '/register') ? null : '/login',
-        AuthAuthenticated() =>
-          (loc == '/login' || loc == '/register' || loc == '/splash')
-              ? '/home'
-              : null,
+          (loc == '/login' || loc == '/register' || recovering)
+              ? null
+              : '/login',
+        AuthAuthenticated() => (loc == '/login' ||
+                loc == '/register' ||
+                loc == '/splash' ||
+                loc == '/forgot-password')
+            ? '/home'
+            : null,
       };
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, state) =>
+            ResetPasswordScreen(token: state.uri.queryParameters['token']),
+      ),
       GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
       GoRoute(
         path: '/onboarding',

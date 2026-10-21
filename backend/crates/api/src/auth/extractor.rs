@@ -39,11 +39,23 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
         let user_id = UserId(uuid);
 
         // AC5: confirm the user still exists.
-        let user = db::find_user_by_id(&state.pool, user_id)
+        let user = db::find_auth_row_by_id(&state.pool, user_id)
             .await
             .map_err(|_| ApiError::Unauthorized)?
             .ok_or(ApiError::Unauthorized)?;
 
-        Ok(AuthenticatedUser { user_id: user.id })
+        // R-0060 AC4: a token issued at or before the last password change is
+        // dead. `<=` fails closed on the same second, the second an attacker
+        // holding the old password would use (SPEC-0060 §2.5).
+        if user
+            .password_changed_at
+            .is_some_and(|changed| claims.iat <= changed.timestamp())
+        {
+            return Err(ApiError::Unauthorized);
+        }
+
+        Ok(AuthenticatedUser {
+            user_id: UserId(user.id),
+        })
     }
 }

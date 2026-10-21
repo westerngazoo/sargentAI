@@ -17,7 +17,9 @@ workspace = true
 
 [dependencies]
 axum = { workspace = true, features = ["multipart"] }
-tokio.workspace = true
+# `sync` + `time`: the mail seam's RecordingMailer waits on a Notify with a
+# timeout (SPEC-0060 §2.3).
+tokio = { workspace = true, features = ["sync", "time"] }
 bytes.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
@@ -25,6 +27,7 @@ tracing-subscriber.workspace = true
 fitai-core.workspace = true
 sqlx.workspace = true
 argon2.workspace = true
+sha2.workspace = true
 jsonwebtoken.workspace = true
 uuid.workspace = true
 chrono.workspace = true
@@ -44,7 +47,11 @@ image.workspace = true
 tower = { workspace = true, features = ["util"] }
 http-body-util.workspace = true
 reqwest.workspace = true
-tracing-test.workspace = true
+# `no-env-filter`: by default tracing-test captures only the test crate's own
+# logs, so assertions about what *fitai_api* logs (no plaintext password, no
+# reset token, the send-failure line — R-0002 AC6, R-0060 AC2/AC6) would
+# pass vacuously. With it, the capture sees every crate.
+tracing-test = { workspace = true, features = ["no-env-filter"] }
 # R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam test root.
 # (`bytes` is now a production dependency, available to tests too.)
 tempfile = "3"

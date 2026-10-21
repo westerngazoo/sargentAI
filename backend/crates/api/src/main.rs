@@ -47,6 +47,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Google Sign-In enabled");
     }
 
+    let mail = fitai_api::mail::MailSettings::from_env().unwrap_or_else(|| {
+        tracing::warn!(
+            "password reset email disabled: set CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN and PUBLIC_WEB_URL"
+        );
+        fitai_api::mail::MailSettings::default()
+    });
+
     let state = AppState {
         pool,
         jwt_secret: Arc::from(jwt_secret.into_bytes().into_boxed_slice()),
@@ -55,6 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pose,
         google,
         voice: fitai_api::voice::VoiceIntentSettings::from_env(),
+        mail,
     };
 
     let port: u16 = std::env::var("PORT")

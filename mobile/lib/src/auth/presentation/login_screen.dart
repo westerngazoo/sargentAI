@@ -80,6 +80,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: const Text('Create an account'),
                     ),
                   ),
+                  TextButton(
+                    onPressed:
+                        _busy ? null : () => context.go('/forgot-password'),
+                    child: const Text('Forgot password?'),
+                  ),
                   if (GoogleSignInConfig.enabled) ...[
                     const SizedBox(height: 12),
                     OutlinedButton.icon(

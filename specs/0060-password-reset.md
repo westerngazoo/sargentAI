@@ -189,15 +189,21 @@ Both are unauthenticated and live in `auth::handlers`, routed from
 
 1. Parse; `Email::parse` normalizes. A malformed body or email is
    `400 validation`. This reveals nothing about accounts.
-2. **Rate limit (AC5).** One statement per key, a CTE that purges rows older
-   than one hour, inserts this request's row, and returns the key's count
-   within the hour:
+2. **Rate limit (AC5).** Two autocommitted statements per key: a CTE that
+   purges rows older than one hour and inserts this request's row, then a
+   count of the key's rows within the hour:
 
    ```sql
-   WITH purged AS (DELETE FROM password_reset_requests WHERE requested_at < now() - interval '1 hour'),
-        added  AS (INSERT INTO password_reset_requests (key_hash) VALUES ($1))
-   SELECT count(*) FROM password_reset_requests WHERE key_hash = $1 AND requested_at >= now() - interval '1 hour'
+   WITH purged AS (DELETE FROM password_reset_requests WHERE requested_at < now() - interval '1 hour')
+   INSERT INTO password_reset_requests (key_hash) VALUES ($1);
+
+   SELECT count(*) FROM password_reset_requests WHERE key_hash = $1 AND requested_at >= now() - interval '1 hour';
    ```
+
+   Two statements, not one: every sub-statement of a single `WITH` shares
+   one snapshot, so a CTE's `INSERT` is not visible to the outer `SELECT`
+   and the count would miss this request's own row (amended 2026-10-21,
+   §8).
 
    Keys: `email:<normalized>` always, and `ip:<address>` when the
    `CF-Connecting-IP` header is present (Cloudflare's edge sets it and the
@@ -326,8 +332,11 @@ otherwise die:
   it; `/forgot-password` redirects home like `/login` does.
 
 `ResetPasswordScreen` reads the token once in `initState` and then calls
-`context.replace('/reset-password')`, so the token leaves the browser's
-history and the address bar.
+`context.replace('/reset-password')` inside `Router.neglect`, which makes the
+browser *replace* the history entry rather than push one. The token leaves
+the address bar and the tab's Back stack. The browser's global history still
+records the visit; no page can remove that, and the token there is
+single-use and expires in 30 minutes (amended 2026-10-21, §8).
 
 `AuthInterceptor._exemptPaths` gains `/auth/password/reset`: its 401 means
 "bad link", not "session expired", and must not log anyone out. The
@@ -548,10 +557,14 @@ recording mailer and `#[sqlx::test]`'s Postgres, as today.
 | 2026-10-21 | Consume the token with one conditional `UPDATE … RETURNING` | Atomic without `FOR UPDATE`; one mechanism for single-use and superseded (architect finding 8). |
 | 2026-10-21 | `MailSettings` bundles mailer and URL | A configured mailer never exists without its link origin (architect finding 9). |
 
+| 2026-10-21 | Ledger: insert, then count, as two statements | Implementation finding, confirmed by the architect on Postgres: a single `WITH … INSERT … SELECT count(*)` shares one snapshot and undercounts by one. Two autocommitted statements also make the "can only over-block" race argument true. |
+| 2026-10-21 | Token leaves the URL with `Router.neglect` + `replace` | Architect review of #153: a plain `replace` reports a new history entry after the first, so Back led to the token. Global browser history is out of any page's reach; accepted. |
+
 ## 9. Changelog
 
 - 2026-10-21 — Draft for architect review.
 - 2026-10-21 — Architect review applied (§10); status Accepted.
+- 2026-10-21 — Amended during implementation (#153): §2.4 ledger as two statements; §2.7 history replace via `Router.neglect`.
 
 ## 10. Architect review — ACCEPT WITH CHANGES (2026-10-21)
 

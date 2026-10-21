@@ -16,6 +16,7 @@ pub mod error;
 pub mod goals;
 mod health;
 pub(crate) mod http;
+pub mod mail;
 pub mod matching;
 pub mod measurements;
 pub mod nutrition;
@@ -36,7 +37,8 @@ use sqlx::PgPool;
 use tower_http::cors::CorsLayer;
 
 use crate::{
-    auth::GoogleAuthSettings, pose::PoseEstimator, storage::ObjectStore, voice::VoiceIntentSettings,
+    auth::GoogleAuthSettings, mail::MailSettings, pose::PoseEstimator, storage::ObjectStore,
+    voice::VoiceIntentSettings,
 };
 
 /// Application state shared across handlers via `Router::with_state`.
@@ -52,6 +54,7 @@ pub struct AppState {
     pub pose: Arc<dyn PoseEstimator>,
     pub google: GoogleAuthSettings,
     pub voice: VoiceIntentSettings,
+    pub mail: MailSettings,
 }
 
 /// Apply pending migrations, tolerating versions the binary does not know.

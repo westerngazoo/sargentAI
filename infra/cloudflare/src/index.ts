@@ -15,6 +15,13 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   FDC_API_KEY?: string;
   GOOGLE_OAUTH_AUDIENCE?: string;
+  // Password-reset email (R-0060, SPEC-0060 §2.3). The token is a secret; the
+  // other three are plain `vars` in wrangler.jsonc. With any of the first
+  // three missing the API runs with reset email disabled and says so at boot.
+  CF_EMAIL_API_TOKEN?: string;
+  CF_ACCOUNT_ID?: string;
+  PUBLIC_WEB_URL?: string;
+  MAIL_FROM?: string;
 }
 
 export class FitaiApi extends Container<Env> {
@@ -36,6 +43,12 @@ export class FitaiApi extends Container<Env> {
     ANTHROPIC_API_KEY: this.env.ANTHROPIC_API_KEY ?? "",
     FDC_API_KEY: this.env.FDC_API_KEY ?? "",
     GOOGLE_OAUTH_AUDIENCE: this.env.GOOGLE_OAUTH_AUDIENCE ?? "",
+    // The container only sees what is listed here — a secret set with
+    // `wrangler secret put` alone never reaches the Rust process.
+    CF_EMAIL_API_TOKEN: this.env.CF_EMAIL_API_TOKEN ?? "",
+    CF_ACCOUNT_ID: this.env.CF_ACCOUNT_ID ?? "",
+    PUBLIC_WEB_URL: this.env.PUBLIC_WEB_URL ?? "",
+    MAIL_FROM: this.env.MAIL_FROM ?? "",
   };
 }
 

@@ -60,5 +60,14 @@
     { "pattern": "sargent-api.goosethropic.systems", "custom_domain": true }
   ],
 
+  // Password-reset email (R-0060). Not secrets: a Cloudflare account id is
+  // an identifier, not a credential, and the other two are public. The Email
+  // Service token is a secret: `wrangler secret put CF_EMAIL_API_TOKEN`.
+  "vars": {
+    "CF_ACCOUNT_ID": "b29359bde5d3c868c259e1171c2fff5c",
+    "PUBLIC_WEB_URL": "https://sargent.goosethropic.systems",
+    "MAIL_FROM": "Goose Fitness Physics <no-reply@goosethropic.systems>"
+  },
+
   "observability": { "enabled": true }
 }

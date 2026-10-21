@@ -56,13 +56,22 @@ async fn migration_creates_users_table_with_expected_columns(pool: PgPool) {
     let names: Vec<&str> = columns.iter().map(|(n, _, _)| n.as_str()).collect();
     assert_eq!(
         names,
-        vec!["created_at", "email", "id", "password_hash"],
-        "users must have exactly id, email, password_hash, created_at"
+        vec![
+            "created_at",
+            "email",
+            "id",
+            "password_changed_at",
+            "password_hash"
+        ],
+        "users must have exactly id, email, password_hash, created_at, \
+         and password_changed_at (R-0060)"
     );
 
     for (name, nullable, _) in &columns {
         if *name == "password_hash" {
             assert_eq!(nullable, "YES", "password_hash must be nullable (R-0033)");
+        } else if *name == "password_changed_at" {
+            assert_eq!(nullable, "YES", "NULL means never changed (R-0060 AC4)");
         } else {
             assert_eq!(nullable, "NO", "column `{name}` must be NOT NULL");
         }
