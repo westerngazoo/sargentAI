@@ -157,6 +157,14 @@ fn offset(point: Point, direction: (f64, f64), distance: f64) -> Point {
     }
 }
 
+/// **What the solves rely on.** `Σ m·x` is affine in the sine of each angle
+/// the solves vary, because every placement here reads only `x`s that are
+/// themselves affine in those sines, and the trunk's per-unit coefficient does
+/// not depend on the legs. `squat::Balance::of`, `range::upright_lean` and the
+/// smoothness behind `range::SCAN_STEPS` all assume it. A placement that reads
+/// a `y`, or a knob that makes the trunk's coefficient depend on the legs (an
+/// arm angle, say), breaks it quietly; check them before adding one.
+///
 /// The load side of `j`: four fixed lists, a serial chain summed from the top,
 /// not a graph walk (SPEC-0045 §2.4.2). The pelvis sits on the hip's side in
 /// full — a stated convention whose error the L5/S1 spread carries.

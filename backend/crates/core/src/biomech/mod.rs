@@ -39,6 +39,7 @@ mod tests;
 mod analysis;
 mod anthro;
 mod chain;
+mod range;
 mod squat;
 
 use serde::{Deserialize, Serialize};
@@ -53,6 +54,7 @@ pub use anthro::{
     scale, Body, Length, MeasuredLengths, Segment, Table, Verification, WINTER, WINTER_VERIFICATION,
 };
 pub use chain::{above, moment_about, ChainSegment};
+pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
 pub use squat::{baseline, baseline_mechanics, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR};
 
 /// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2);
@@ -130,7 +132,10 @@ impl Dorsiflexion {
 
 /// A point in the sagittal plane, metres. `+x` toward the toes, `+y` up,
 /// origin on the mid-foot line at floor level (SPEC-0045 §2.1).
-#[derive(Clone, Copy, Debug, PartialEq)]
+///
+/// `Serialize` so the points reach a reel or a client without anyone
+/// recomputing where the knee is (SPEC-0045 §2.6.6).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Point {
     /// Horizontal, toward the toes.
     pub x: Metres,
@@ -144,7 +149,7 @@ pub struct Point {
 /// and within `(0, 1000]`. Without it a negative bar solved to a plausible
 /// posture, with the physics rejections standing in by accident for what is a
 /// type error.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Load {
     /// Mass on the bar.
     pub kg: LoadKg,
@@ -155,7 +160,7 @@ pub struct Load {
 /// A posture the model can load: the four joint centres it needs, in metres,
 /// and where the load acts. Produced by the v1 [`baseline`] solve or, later,
 /// by a measurement; the model does not care which (SPEC-0045 §2.1).
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct Posture {
     /// Ankle joint centre.
     pub ankle: Point,
@@ -253,7 +258,8 @@ impl Joint {
 pub enum Unknown {
     /// Trunk angle from vertical, θ — the baseline's unknown.
     TrunkAngle,
-    /// Shank angle from vertical — the unknown when a torso angle is fixed.
+    /// Shank angle from vertical — the unknown when a torso angle is fixed,
+    /// and the range's upright lean (SPEC-0045 §2.6.6).
     ShankAngle,
 }
 

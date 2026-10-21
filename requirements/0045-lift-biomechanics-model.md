@@ -1,7 +1,8 @@
 # R-0045 — Lift Biomechanics Model (joint torque & variant comparison)
 
 - **Status:** Accepted (owner, 2026-09-11); **amended 2026-09-12** for the
-  parametric source (see changelog)
+  parametric source and **2026-10-17** for the range of solved postures (see
+  changelog)
 - **Milestone:** M6 (pose pipeline) / M-Platform (the coach-facing half)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
@@ -57,8 +58,14 @@ trainer-platform direction (R-0040/R-0041).
   no load is known, the model reports bodyweight-only mechanics and says so —
   it never assumes a weight. *(Amended 2026-09-12.)*
 - **AC4. Joint torque is the output.** Hip, knee, ankle, and lumbar moments in
-  N·m. In v1, at the solved posture — a single position, stated on the result;
-  through the movement and per rep once the measured source exists.
+  N·m. In v1, at the solved posture — a single position, stated on the result
+  — and at a family of solved postures from upright toward the solved bottom
+  under a stated joint-progress convention: each one a single balanced
+  position, stated on the result; the family, and anything read across it
+  (where a moment is largest, how far it reaches), holds under that convention
+  only and is never a measured or predicted movement. Through the movement and
+  per rep once the measured source exists.
+  *(Amended 2026-10-17: the range of solved postures, SPEC-0045 §2.6.6.)*
   *(Amended 2026-09-12: was "through the movement … per rep", which a single
   solved posture cannot honestly claim.)*
 - **AC5. Muscle groups, never individual muscles.** Torque is attributed to the
@@ -161,6 +168,8 @@ trainer-platform direction (R-0040/R-0041).
 | 2026-09-12 | v1 source is parametric; R-0044 feeds a later slice | Owner decision, following the 2026-09-06 direction. The posture needs no camera (physics-lab RFC-002 §9); v1 ships with no video, ML, upload or retention. Seven criteria re-worded; none loosened. |
 | 2026-09-12 | The physics lives in `fitai-core` only | Owner decision. Vendoring physics-lab's crate would ship reel models with no requirement; the `Lift` collision was false. physics-lab keeps a bar-only *teaching* model; the reel correction is the bridge. |
 | 2026-09-12 | The bench is struck from R-0045 | Owner decision. Needs elbow/shoulder joints and a two-arm load split the four-joint model cannot express; grip width is frontal-plane. Its own requirement when a frontal model exists. |
+| 2026-10-17 | The range of solved postures from upright toward the bottom (AC4) | Owner decision. Base for the technique video and the video comparison. One declared convention moves the legs; the trunk is solved in every frame. What is read across the range (a peak, a reach) is the convention's, and the result says so. |
+| 2026-10-17 | One engine for the app and the reels (SPEC-0045 §5.7(b), slice E) | Owner decision. The reel and the model disagreed by 35% on the same lift. Supersedes the 2026-09-12 "physics lives in `fitai-core` only" once slice E's design is accepted; until then that row stands. |
 | 2026-08-25 | Deltas are the headline, not absolutes | The absolute torque carries every modelling assumption; the difference between two postures of the same body carries far fewer. |
 
 ## Changelog
@@ -173,3 +182,6 @@ trainer-platform direction (R-0040/R-0041).
   §5.1): dependency line, AC1, AC3, AC4, AC6, AC7, AC13, AC15. Foot rotation
   and the bench removed as not honestly representable in a sagittal model —
   the treatment R-0044 gave its impossible criteria on 2026-08-25._
+- _2026-10-17 — AC4 amended for the range of solved postures (owner decision,
+  SPEC-0045 §2.6.6, §5.7(a)); the one-engine decision recorded (§5.7(b)),
+  with AC15's amendment deferred to slice E's design._

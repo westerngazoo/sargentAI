@@ -9,6 +9,7 @@
 //! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --ankle 38 --bar 140
 //! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --sweep
 //! cargo run -p fitai-core --example squat -- --reel
+//! cargo run -p fitai-core --example squat -- --height 1.80 --mass 92 --ankle 38 --bar 140 --range
 //! ```
 //!
 //! Measured limb lengths override the table ones: `--thigh`, `--shank`,
@@ -17,8 +18,9 @@
 use std::process::ExitCode;
 
 use fitai_core::biomech::{
-    analyse_baseline, baseline, moment_about, scale, Baseline, Body, Dorsiflexion, Joint, Load,
-    MeasuredLengths, Mechanics, Metres, Point, Posture, Rejection, HIGH_BAR,
+    analyse_baseline, baseline, moment_about, scale, squat_range, Baseline, Body, Dorsiflexion,
+    FrameCount, Joint, Load, MeasuredLengths, Mechanics, Metres, Point, Posture, RangeEnd,
+    Rejection, HIGH_BAR,
 };
 use fitai_core::workout::LoadKg;
 
@@ -44,6 +46,8 @@ usage: cargo run -p fitai-core --example squat -- [options]
   --shank M       measured knee -> ankle            (default: from the table)
   --trunk M       measured hip -> shoulder          (default: from the table)
   --sweep         the dorsiflexion -> lean relation, bodyweight and loaded
+  --range         the squat from standing to the bottom, frame by frame
+  --frames N      frames for --range, 2..=241                 (default 11)
   --reel          MECANICA 01's published setup and its correction";
 
 /// The default lifter: table proportions at 1.75 m, 80 kg — the fixture
@@ -52,7 +56,22 @@ const DEFAULT_HEIGHT_M: f64 = 1.75;
 const DEFAULT_MASS_KG: f64 = 80.0;
 const DEFAULT_ANKLE_DEG: f64 = 40.0;
 
+/// Flags that take a value, and flags that stand alone. Anything else is a
+/// typo, and a typo silently printing the default lifter reads as a result.
+const VALUED: [&str; 8] = [
+    "--height", "--mass", "--ankle", "--bar", "--thigh", "--shank", "--trunk", "--frames",
+];
+const SWITCHES: [&str; 5] = ["--sweep", "--range", "--reel", "--help", "-h"];
+
 fn run(args: &[String]) -> Result<(), String> {
+    let mut rest = args.iter();
+    while let Some(arg) = rest.next() {
+        if VALUED.contains(&arg.as_str()) {
+            rest.next();
+        } else if !SWITCHES.contains(&arg.as_str()) {
+            return Err(format!("unknown argument {arg}"));
+        }
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{USAGE}");
         return Ok(());
@@ -84,11 +103,19 @@ fn run(args: &[String]) -> Result<(), String> {
     let ankle = Dorsiflexion::from_degrees(degrees)
         .ok_or_else(|| format!("--ankle {degrees} is outside 0..=90 degrees"))?;
 
+    if args.iter().any(|a| a == "--range") {
+        let requested = count(args, "--frames")?.unwrap_or(11);
+        let frames = FrameCount::new(requested)
+            .ok_or_else(|| format!("--frames {requested} is outside 2..=241"))?;
+        range(&body, height, mass_kg, bar, ankle, frames);
+        return Ok(());
+    }
+
     println!();
     println!("Goose Physics — squat baseline (R-0045 slice A)");
     println!();
     println!(
-        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.0}° dorsiflexion",
+        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.1}° dorsiflexion",
         ankle.degrees()
     );
     match bar {
@@ -186,6 +213,94 @@ fn explain(body: &Body, rejection: &Rejection, bar: Option<LoadKg>) {
         Rejection::AnatomicallyImplausible { joint, angle_deg } => {
             println!("  REJECTED    {joint:?} at {angle_deg:.1}° — which should be unreachable");
             println!("              in slice A: a limit constant shipped without a citation.");
+        }
+    }
+    println!();
+}
+
+/// SPEC-0045 §2.6.6: the squat from the solved upright toward the bottom,
+/// every frame balanced, the legs moved by a stated convention.
+fn range(
+    body: &Body,
+    height: f64,
+    mass_kg: f64,
+    bar: Option<LoadKg>,
+    ankle: Dorsiflexion,
+    frames: FrameCount,
+) {
+    println!();
+    println!("Goose Physics — the squat over its range (R-0045 slice B1)");
+    println!();
+    println!(
+        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.1}° dorsiflexion",
+        ankle.degrees()
+    );
+    match bar {
+        Some(kg) => println!("  load        {:.0} kg, high-bar", kg.get()),
+        None => println!("  load        bodyweight only, arms hanging"),
+    }
+    println!();
+    match squat_range(body, bar, ankle, frames) {
+        Err(Rejection::DepthNotReachable {
+            needed_deg,
+            available_deg,
+            ..
+        }) => {
+            println!("  REJECTED    standing upright balanced already needs {needed_deg:.1}° of");
+            println!(
+                "              ankle in this model; you have {available_deg:.1}°, so the range"
+            );
+            println!("              cannot start (SPEC-0045 §2.6.6).");
+        }
+        Err(Rejection::DoesNotBalance { .. }) => {
+            println!("  REJECTED    this body cannot stand balanced in the model: with no mass");
+            println!("              on the trunk line and no bar, no lean is determined.");
+        }
+        Err(rejection) => explain(body, &rejection, bar),
+        Ok(range) => {
+            println!("      s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");
+            for f in &range.frames {
+                let m = |j: Joint| {
+                    f.mechanics
+                        .joints
+                        .iter()
+                        .find(|x| x.joint == j)
+                        .map_or(f64::NAN, |x| x.moment.0)
+                };
+                println!(
+                    "  {:5.3}  {:5.1}° {:5.1}° {:5.1}° | {:6.1} {:6.1} {:6.1} {:6.1}",
+                    f.progress,
+                    f.knee_flexion_deg,
+                    f.hip_flexion_deg,
+                    f.trunk_lean_deg,
+                    m(Joint::Hip),
+                    m(Joint::Knee),
+                    m(Joint::Ankle),
+                    m(Joint::Lumbar)
+                );
+            }
+            println!();
+            match range.end {
+                RangeEnd::Bottom => println!("  reached the bottom (the last row is the baseline)"),
+                RangeEnd::Stopped { reached, bottom } => {
+                    println!("  stopped at s = {reached:.3}");
+                    match bottom {
+                        Some(rejection) => {
+                            println!("  the bottom itself does not balance: {rejection:?}");
+                        }
+                        None => {
+                            println!(
+                                "  the bottom balances; this convention passes horizontal on the way"
+                            );
+                        }
+                    }
+                }
+            }
+            println!();
+            println!("  Each row is a balanced posture. The legs between standing and the");
+            println!("  bottom move by a stated convention, so where a moment peaks across");
+            println!("  the rows is the convention's, not yours (SPEC-0045 §2.6.6). Your own");
+            println!("  curve needs your own video.");
         }
     }
     println!();
@@ -351,6 +466,19 @@ fn label(joint: Joint) -> &'static str {
         Joint::Ankle => "ankle",
         Joint::Lumbar => "L5/S1",
     }
+}
+
+/// `--flag VALUE` as a whole count, or `None` if the flag is absent.
+fn count(args: &[String], name: &str) -> Result<Option<u16>, String> {
+    let Some(index) = args.iter().position(|a| a == name) else {
+        return Ok(None);
+    };
+    let raw = args
+        .get(index + 1)
+        .ok_or_else(|| format!("{name} needs a value"))?;
+    raw.parse::<u16>()
+        .map(Some)
+        .map_err(|_| format!("{name} {raw} is not a whole number"))
 }
 
 /// `--flag VALUE` as a number, or `None` if the flag is absent.

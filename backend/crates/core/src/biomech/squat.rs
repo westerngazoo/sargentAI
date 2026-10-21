@@ -127,7 +127,7 @@ pub fn baseline(
     Ok(Baseline(pose(
         body,
         bar_kg,
-        u,
+        &Legs::parallel(u),
         balance.sin_theta(u).clamp(0.0, 1.0),
     )))
 }
@@ -157,30 +157,63 @@ fn ankle_point(body: &Body) -> Point {
     }
 }
 
-/// The §2.6.1 geometry at a given shank and trunk angle, both as sines: the
-/// ankle placed, the knee out along the shank, the thigh parallel with the hip
-/// a femur behind the knee, the trunk leaning, and the bar — if there is one —
-/// at [`HIGH_BAR`] along the trunk line.
+/// The two leg angles a posture is built from, each as the `(sin, cos)` of
+/// its angle from vertical: the shank with the knee ahead of the ankle
+/// positive, the femur with the hip behind the knee positive (SPEC-0045 §3).
 ///
-/// The one home for the baseline's shape. The solve uses it to probe, and then
-/// again to build what it returns, so a probe can never describe a posture the
-/// solve would not produce.
-fn pose(body: &Body, bar_kg: Option<LoadKg>, sin_shank: f64, sin_trunk: f64) -> Posture {
-    let cos = |sin: f64| sin.mul_add(-sin, 1.0).max(0.0).sqrt();
+/// Sine and cosine rather than an angle, so slice A's horizontal femur is
+/// exactly `(1, 0)`: its hip sits at knee height with no `cos(π/2)` rounding,
+/// and the baseline does the same arithmetic it did before the range existed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Legs {
+    shank: (f64, f64),
+    femur: (f64, f64),
+}
+
+impl Legs {
+    /// Slice A's legs: the shank at `sin_shank`, the femur horizontal.
+    fn parallel(sin_shank: f64) -> Self {
+        Self {
+            shank: (sin_shank, cos_of(sin_shank)),
+            femur: (1.0, 0.0),
+        }
+    }
+
+    /// Legs at two angles from vertical, in radians.
+    pub(super) fn at_angles(shank_rad: f64, femur_rad: f64) -> Self {
+        Self {
+            shank: shank_rad.sin_cos(),
+            femur: femur_rad.sin_cos(),
+        }
+    }
+}
+
+/// The cosine of an angle in `[0°, 90°]` from its sine.
+fn cos_of(sin: f64) -> f64 {
+    sin.mul_add(-sin, 1.0).max(0.0).sqrt()
+}
+
+/// The posture with these legs and this trunk lean (as a sine): the ankle
+/// placed, the knee out along the shank, the hip out along the femur, the
+/// trunk leaning, and the bar — if there is one — at [`HIGH_BAR`] along the
+/// trunk line.
+///
+/// The one home of the squat's shape. The baseline and the range both probe
+/// it and then build what they return with it, so a probe can never describe
+/// a posture the solve would not produce.
+fn pose(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs, sin_trunk: f64) -> Posture {
     let ankle = ankle_point(body);
     let knee = Point {
-        x: Metres(ankle.x.0 + body.shank() * sin_shank),
-        y: Metres(ankle.y.0 + body.shank() * cos(sin_shank)),
+        x: Metres(ankle.x.0 + body.shank() * legs.shank.0),
+        y: Metres(ankle.y.0 + body.shank() * legs.shank.1),
     };
-    // Parallel: the femur is horizontal, so the hip is at knee height, behind
-    // it by a femur.
     let hip = Point {
-        x: Metres(knee.x.0 - body.thigh()),
-        y: knee.y,
+        x: Metres(knee.x.0 - body.thigh() * legs.femur.0),
+        y: Metres(knee.y.0 + body.thigh() * legs.femur.1),
     };
     let shoulder = Point {
         x: Metres(hip.x.0 + body.trunk() * sin_trunk),
-        y: Metres(hip.y.0 + body.trunk() * cos(sin_trunk)),
+        y: Metres(hip.y.0 + body.trunk() * cos_of(sin_trunk)),
     };
     Posture {
         ankle,
@@ -203,6 +236,39 @@ fn first_moment(body: &Body, p: &Posture) -> f64 {
         .map(|&seg: &ChainSegment| body.mass_kg(seg) * seg.com(body, p).x.0)
         .sum();
     segments + p.load.map_or(0.0, |l| l.kg.get() * l.at.x.0)
+}
+
+/// `Σ m·x` about the mid-foot line with these legs and this trunk lean.
+pub(super) fn first_moment_at(
+    body: &Body,
+    bar_kg: Option<LoadKg>,
+    legs: &Legs,
+    sin_trunk: f64,
+) -> f64 {
+    first_moment(body, &pose(body, bar_kg, legs, sin_trunk))
+}
+
+/// The `sin θ` that balances these legs, unclamped, or `None` when the trunk
+/// does not move the system at all (no mass on the trunk line and no bar).
+/// `Σ m·x` is affine in `sin θ` for fixed legs, so two probes determine it.
+pub(super) fn balancing_trunk(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs) -> Option<f64> {
+    let upright = first_moment_at(body, bar_kg, legs, 0.0);
+    let per_unit = first_moment_at(body, bar_kg, legs, 1.0) - upright;
+    (per_unit > 0.0).then(|| -upright / per_unit)
+}
+
+/// The trunk's domain, as a sine: between vertical and horizontal
+/// (SPEC-0045 §2.6.3). One definition, because the range promises that every
+/// `s` its search accepts is a frame `balanced` will build.
+pub(super) fn in_domain(sin_trunk: f64) -> bool {
+    (0.0..=1.0).contains(&sin_trunk)
+}
+
+/// The posture with these legs and the trunk that balances them, when that
+/// trunk lies in [`in_domain`].
+pub(super) fn balanced(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs) -> Option<Posture> {
+    let sin_trunk = balancing_trunk(body, bar_kg, legs)?;
+    in_domain(sin_trunk).then(|| pose(body, bar_kg, legs, sin_trunk))
 }
 
 /// `Σ m·x = p + q·sin δ + b·sin θ` about the mid-foot line, for this lifter
@@ -231,8 +297,9 @@ impl Balance {
     /// `(sin δ, sin θ)` with no cross term, so its value at the origin and at
     /// each unit vector determines it everywhere — exactly, not numerically.
     fn of(body: &Body, bar_kg: Option<LoadKg>) -> Self {
-        let at =
-            |sin_shank, sin_trunk| first_moment(body, &pose(body, bar_kg, sin_shank, sin_trunk));
+        let at = |sin_shank, sin_trunk| {
+            first_moment_at(body, bar_kg, &Legs::parallel(sin_shank), sin_trunk)
+        };
         let p = at(0.0, 0.0);
         Self {
             p,

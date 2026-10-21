@@ -18,6 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::chain::{moment_about_with, Placement};
+use super::range::{RangeAt, RangePosture};
 use super::{Baseline, Body, Joint, Metres, NewtonMetres, Posture};
 
 /// SPEC-0045 §2.8 — the L5/S1 placement spread, metres. A **stated
@@ -55,15 +56,24 @@ pub enum ResistingGroup {
     SpinalErectors,
 }
 
-/// Where in the lift the single analysed posture sits (SPEC-0045 §2.1, §2.6.1).
+/// Where in the lift the single analysed posture sits (SPEC-0045 §2.1, §2.6.1,
+/// §2.6.6).
 ///
-/// One variant because v1 analyses one posture: the baseline is at parallel,
-/// the depth standard R-0044 AC8 also uses. Depth becomes a knob in slice B.
+/// The baseline is at parallel, the depth standard R-0044 AC8 also uses; the
+/// range adds its upright and the frames between. A unit enum on purpose: the
+/// progress `s` is a coordinate of the range's convention and lives on the
+/// frame, so [`Assumption`] keeps `Eq` and `Hash`. Depth becomes a knob in
+/// slice B.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Position {
     /// Femur horizontal.
     Parallel,
+    /// The solved straight-body upright at the start of the range (`s = 0`).
+    Upright,
+    /// Strictly between the upright and the bottom, under the §2.6.6 leg
+    /// convention; the frame's own progress says where.
+    Partial,
 }
 
 /// What the external load was, and whether there was one (R-0045 AC3).
@@ -94,14 +104,16 @@ pub enum Assumption {
     QuasiStatic,
     /// Segments are rigid. The trunk cannot be seen to round.
     RigidSegments,
-    /// One posture, not a rep. There is no φ axis, no peak and no "per rep"
-    /// in v1 — a descent kinematic nobody has validated would be fabricated.
+    /// One posture, not a rep: no measured or predicted descent, no velocity,
+    /// no "per rep". The §2.6.6 range is a family of these, one per frame,
+    /// and anything read across it belongs to its convention.
     SinglePosture {
         /// Which posture.
         at: Position,
     },
-    /// The posture was **solved** from this lifter's lengths under the
-    /// §2.6.1 stated baseline — not a posture they were observed in.
+    /// The posture was **solved** from this lifter's lengths under a stated
+    /// convention — the §2.6.1 baseline at the bottom, the §2.6.6 range
+    /// elsewhere — not a posture they were observed in.
     SolvedBaseline,
     /// The lumbar row treats the trunk as one rigid link through a single
     /// L5/S1 joint placed by convention (§2.5).
@@ -124,6 +136,16 @@ pub enum Assumption {
     /// Body fat is not in the model: the cited table does not vary by it, and
     /// inventing an adjustment would be a constant with no source (§2.3).
     BodyFatIgnored,
+    /// The range's upright is a straight body, knee and hip extended, leaning
+    /// forward from the ankle until the system centre of mass is over the
+    /// mid-foot: the ankle strategy of quiet standing (§2.6.6). Not observed.
+    StraightBodyUpright,
+    /// Between the upright and the bottom, the shank and the femur advance
+    /// together by the §2.6.6 convention: each angle interpolated in degrees
+    /// from the solved upright lean to the bottom (the lifter's dorsiflexion,
+    /// the femur horizontal). Where a moment peaks across the range, and how
+    /// far it reaches, hold under this convention only.
+    JointsAdvanceTogether,
 }
 
 /// What the `±` on each joint moment was propagated from — the stated
@@ -196,6 +218,32 @@ pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Mechanics {
             Assumption::SolvedBaseline,
         ],
     )
+}
+
+/// Analyse a posture the §2.6.6 range solved: the upright or a frame between
+/// it and the bottom. The bottom itself goes through [`analyse_baseline`].
+///
+/// Takes a [`RangePosture`], which only the range can build, for the same
+/// reason [`analyse_baseline`] takes a [`Baseline`]: the assumptions below are
+/// claims about where the posture came from.
+pub(super) fn analyse_range(body: &Body, solved: &RangePosture) -> Mechanics {
+    let from_source = match solved.at() {
+        RangeAt::Upright => [
+            Assumption::SinglePosture {
+                at: Position::Upright,
+            },
+            Assumption::SolvedBaseline,
+            Assumption::StraightBodyUpright,
+        ],
+        RangeAt::Partial => [
+            Assumption::SinglePosture {
+                at: Position::Partial,
+            },
+            Assumption::SolvedBaseline,
+            Assumption::JointsAdvanceTogether,
+        ],
+    };
+    mechanics(body, solved.posture(), &from_source)
 }
 
 /// The model, shared by every source. Private: `from_source` is the half a
