@@ -4,6 +4,7 @@ mod extractor;
 pub mod google;
 mod handlers;
 mod password;
+mod reset;
 mod token;
 
 pub use extractor::AuthenticatedUser;

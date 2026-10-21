@@ -167,5 +167,29 @@ void main() {
 
       verifyNever(() => repo.clear());
     });
+
+    // R-0060 M5 -> AC7 (SPEC-0060 §2.7): a 401 from /auth/password/reset
+    // means "bad link", not "session expired" — a logged-in user opening a
+    // dead link from another device's email must not be logged out.
+    test('R-0060 M5 a 401 on /auth/password/reset is EXEMPT (no logout)',
+        () async {
+      final container = makeContainer();
+      final controller = container.read(authControllerProvider.notifier);
+      when(() => repo.login(any(), any()))
+          .thenAnswer((_) async => sampleToken());
+      await controller.login('a@b.com', 'pw');
+
+      await expectLater(
+        dioThrough(container, 401).post<void>('/auth/password/reset'),
+        throwsA(isA<DioException>()),
+      );
+      await pumpEventQueue();
+
+      verifyNever(() => repo.clear());
+      expect(
+        container.read(authControllerProvider),
+        isA<AuthAuthenticated>(),
+      );
+    });
   });
 }

@@ -12,10 +12,12 @@ import 'dart:async';
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/auth/domain/auth_state.dart';
+import 'package:fitai/src/auth/presentation/forgot_password_screen.dart';
 import 'package:fitai/src/auth/presentation/login_screen.dart';
 import 'package:fitai/src/core/dev_login.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
+import 'package:fitai/src/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,5 +156,37 @@ void main() {
       (tester) async {
     await pumpLogin(tester);
     expect(find.text('Continue with Google'), findsNothing);
+  });
+
+  // R-0060 M1 -> AC7: the login screen offers "Forgot password?" and it
+  // navigates to /forgot-password through the production router (so the
+  // route exists and the unauthenticated redirect lets it through).
+  testWidgets('R-0060 M1 "Forgot password?" navigates to /forgot-password',
+      (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokenStore),
+        authRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+    final router = container.read(routerProvider);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(router.routerDelegate.currentConfiguration.uri.path, '/login');
+
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      '/forgot-password',
+    );
+    expect(find.byType(ForgotPasswordScreen), findsOneWidget);
   });
 }

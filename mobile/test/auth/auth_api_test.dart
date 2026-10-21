@@ -110,4 +110,82 @@ void main() {
       expect(await api.me(), 'me-1');
     });
   });
+
+  // R-0060 -> AC7 (data layer, SPEC-0060 §2.7):
+  //   forgotPassword: POST /auth/password/forgot {email}          -> 202
+  //   resetPassword:  POST /auth/password/reset  {token,password} -> 204;
+  //                   401 -> ApiException(401) (link no longer valid);
+  //                   400 -> ApiException(400, field: password).
+  group('R-0060 forgotPassword', () {
+    test('posts {email} to /auth/password/forgot and completes on 202',
+        () async {
+      when(() => dio.post<dynamic>('/auth/password/forgot',
+              data: any(named: 'data')))
+          .thenAnswer((_) async => _ok('/auth/password/forgot', 202, null));
+
+      await expectLater(api.forgotPassword('a@b.com'), completes);
+
+      verify(() => dio.post<dynamic>('/auth/password/forgot',
+          data: <String, String>{'email': 'a@b.com'})).called(1);
+    });
+
+    test('timeout -> ApiException with null statusCode (retryable)', () async {
+      when(() => dio.post<dynamic>('/auth/password/forgot',
+              data: any(named: 'data')))
+          .thenThrow(dioTimeout(path: '/auth/password/forgot'));
+      await expectLater(
+        api.forgotPassword('a@b.com'),
+        throwsA(isApiExceptionWithStatus(null)),
+      );
+    });
+  });
+
+  group('R-0060 resetPassword', () {
+    test('posts {token,password} to /auth/password/reset and completes on 204',
+        () async {
+      when(() => dio.post<dynamic>('/auth/password/reset',
+              data: any(named: 'data')))
+          .thenAnswer((_) async => _ok('/auth/password/reset', 204, null));
+
+      await expectLater(
+        api.resetPassword(token: 'abc', password: 'newpassword1'),
+        completes,
+      );
+
+      verify(() =>
+          dio.post<dynamic>('/auth/password/reset', data: <String, String>{
+            'token': 'abc',
+            'password': 'newpassword1',
+          })).called(1);
+    });
+
+    test('401 -> ApiException(401): the link is no longer valid', () async {
+      when(() => dio.post<dynamic>('/auth/password/reset',
+          data: any(named: 'data'))).thenThrow(dioError(
+        401,
+        path: '/auth/password/reset',
+        body: {'error': 'unauthorized'},
+      ));
+      await expectLater(
+        api.resetPassword(token: 'dead', password: 'newpassword1'),
+        throwsA(isApiExceptionWithStatus(401)),
+      );
+    });
+
+    test('400 short password -> field-aware ApiException(400, password)',
+        () async {
+      when(() => dio.post<dynamic>('/auth/password/reset',
+          data: any(named: 'data'))).thenThrow(dioError(
+        400,
+        path: '/auth/password/reset',
+        body: {'error': 'validation', 'field': 'password'},
+      ));
+      await expectLater(
+        api.resetPassword(token: 'abc', password: 'short'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 400)
+            .having((e) => e.field, 'field', 'password')),
+      );
+    });
+  });
 }

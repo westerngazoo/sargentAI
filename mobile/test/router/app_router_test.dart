@@ -9,6 +9,7 @@
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
+import 'package:fitai/src/auth/presentation/reset_password_screen.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/router/app_router.dart';
 import 'package:flutter/material.dart';
@@ -88,5 +89,77 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(currentLocation(router), '/login');
+  });
+
+  // R-0060 M6 -> AC7 (SPEC-0060 §2.7, architect finding 1): an emailed link
+  // is always a cold start, so the AuthUnknown arm must pass /reset-password
+  // through with its query intact instead of sending it to /splash.
+  group('R-0060 M6 cold start on the reset link', () {
+    /// Mirrors the browser opening the app at [location]: the router sees the
+    /// link while auth is still AuthUnknown (restore is a pending microtask),
+    /// then auth resolves from the token store.
+    Future<GoRouter> coldStartAt(WidgetTester tester, String location) async {
+      final container = ProviderContainer(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(tokenStore),
+          authRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = container.read(routerProvider);
+      router.go(location);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return router;
+    }
+
+    void expectResetScreenWithToken(GoRouter router) {
+      expect(currentLocation(router), '/reset-password');
+      expect(find.byType(ResetPasswordScreen), findsOneWidget);
+      // The token was captured: the form is shown, not the invalid-link
+      // message the screen shows when it has no token.
+      expect(find.textContaining('no longer valid'), findsNothing);
+      expect(find.byType(TextField), findsNWidgets(2));
+      // ...and then dropped from the URL (SPEC-0060 §2.7, finding 12).
+      expect(
+        router.routerDelegate.currentConfiguration.uri.queryParameters
+            .containsKey('token'),
+        isFalse,
+      );
+    }
+
+    testWidgets('unauthenticated: lands on the reset screen with the token',
+        (tester) async {
+      when(() => tokenStore.read()).thenAnswer((_) async => null);
+      final router = await coldStartAt(tester, '/reset-password?token=abc');
+      expectResetScreenWithToken(router);
+    });
+
+    testWidgets('authenticated: lands on the reset screen with the token',
+        (tester) async {
+      when(() => tokenStore.read())
+          .thenAnswer((_) async => sampleToken(userId: 'u-1'));
+      final router = await coldStartAt(tester, '/reset-password?token=abc');
+      expectResetScreenWithToken(router);
+    });
+
+    testWidgets('unauthenticated: /forgot-password is allowed', (tester) async {
+      when(() => tokenStore.read()).thenAnswer((_) async => null);
+      final router = await coldStartAt(tester, '/forgot-password');
+      expect(currentLocation(router), '/forgot-password');
+    });
+
+    testWidgets('authenticated: /forgot-password redirects home like /login',
+        (tester) async {
+      when(() => tokenStore.read())
+          .thenAnswer((_) async => sampleToken(userId: 'u-1'));
+      final router = await coldStartAt(tester, '/forgot-password');
+      expect(currentLocation(router), '/home');
+    });
   });
 }
