@@ -395,7 +395,11 @@ pub(super) async fn parse_with_llm(
     if !history.is_empty() {
         history_str.push_str("Previous conversation:\n");
         for turn in history {
-            let role = if turn.role == "user" { "User" } else { "Assistant" };
+            let role = if turn.role == "user" {
+                "User"
+            } else {
+                "Assistant"
+            };
             history_str.push_str(&format!("{}: {}\n", role, turn.content));
         }
         history_str.push('\n');
