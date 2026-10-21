@@ -45,8 +45,9 @@ Cloudflare Email Service.
     same account.
 - **AC3. Set the new password.**
   - An unauthenticated endpoint takes the token and a new password.
-  - The password follows R-0002's rules and is hashed with argon2id like
-    every other password.
+  - The password passes the same validation as registration (today a
+    minimum of 8 characters, `auth/handlers.rs`) and is hashed with argon2id
+    like every other password.
   - A token that is unknown, expired, already used or superseded is refused
     with one generic error. The response does not say which case it was.
 - **AC4. Existing sessions end.** After a reset, JWTs issued before it are
