@@ -38,6 +38,7 @@ authenticated against a real backend.
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
 | R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Done |
+| R-0060 | Forgotten password: reset by emailed single-use link (OWASP pattern), sessions end on reset, Cloudflare Email Service | SPEC-0060 (to be written) | **Draft** — 2026-10-21, pulled forward by the beta |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Done |
 
 ### M2 — Logging core
