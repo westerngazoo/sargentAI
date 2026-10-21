@@ -1135,7 +1135,7 @@ fn the_range_serializes_its_points_and_never_says_risk() {
 /// Near the window's upper edge the stretch where the balancing trunk would
 /// pass horizontal shrinks to nothing. At 31.258786790912° of dorsiflexion,
 /// bodyweight-only, the trunk's sine peaks at 1.000000001 at `s ≈ 0.809865`,
-/// and the first crossing is at `s* = 0.809839`: a hole about 5e-5 of the
+/// and the first crossing is at `s* = 0.809838746`: a hole about 5e-5 of the
 /// range wide, a fifth of a 1/4096 scan step. Derived independently of the
 /// crate (the §2.6.6 formulas in a separate script, fine scan and
 /// bisection). Found by the qa sign-off: the first implementation's scan
@@ -1148,7 +1148,10 @@ fn r13_a_hole_narrower_than_the_scan_step_still_stops_the_range() {
         squat_range(&lifter(), None, dorsi(AT_THE_EDGE), frames(143)).expect("the upright stands");
     match range.end {
         RangeEnd::Stopped { reached, bottom } => {
-            assert_close(reached, 0.809_839, 1e-4, "s* at the hole");
+            // 1e-6, well inside the hole (5e-5 wide), so a search that
+            // returned the peak (0.809864) or the far crossing (0.809888)
+            // instead of the first crossing fails here.
+            assert_close(reached, 0.809_838_746, 1e-6, "s* at the hole");
             assert_eq!(bottom, None, "the bottom balances; the convention stops it");
             let last = range.frames.last().expect("frames up to s*");
             assert!(last.progress <= reached, "no frame past s*");

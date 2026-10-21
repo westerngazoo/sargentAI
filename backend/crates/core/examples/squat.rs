@@ -258,7 +258,7 @@ fn range(
         }
         Err(rejection) => explain(body, &rejection, bar),
         Ok(range) => {
-            println!("     s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");
+            println!("      s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");
             for f in &range.frames {
                 let m = |j: Joint| {
                     f.mechanics
@@ -268,7 +268,7 @@ fn range(
                         .map_or(f64::NAN, |x| x.moment.0)
                 };
                 println!(
-                    "  {:4.2}  {:5.1}° {:5.1}° {:5.1}° | {:6.1} {:6.1} {:6.1} {:6.1}",
+                    "  {:5.3}  {:5.1}° {:5.1}° {:5.1}° | {:6.1} {:6.1} {:6.1} {:6.1}",
                     f.progress,
                     f.knee_flexion_deg,
                     f.hip_flexion_deg,
