@@ -1110,6 +1110,11 @@ fn the_range_serializes_its_points_and_never_says_risk() {
 
     let json = serde_json::to_value((&reached, &stopped, ends, positions))
         .expect("the range namespace serializes");
+    // The wire format slice E and the reels will read: the end is tagged
+    // `kind`, so a range reads `"end": {"kind": "bottom"}`, not `end.end`.
+    assert_eq!(json[0]["end"]["kind"], "bottom");
+    assert_eq!(json[1]["end"]["kind"], "stopped");
+    assert_eq!(json[1]["end"]["bottom"]["reason"], "depth_not_reachable");
     let knee = &json[0]["frames"][0]["posture"]["knee"];
     let upright = reached.frames.first().expect("the upright").posture;
     for (axis, metres) in [("x", upright.knee.x.0), ("y", upright.knee.y.0)] {

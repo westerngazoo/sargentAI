@@ -257,13 +257,18 @@ pub(super) fn balancing_trunk(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs) 
     (per_unit > 0.0).then(|| -upright / per_unit)
 }
 
+/// The trunk's domain, as a sine: between vertical and horizontal
+/// (SPEC-0045 §2.6.3). One definition, because the range promises that every
+/// `s` its search accepts is a frame `balanced` will build.
+pub(super) fn in_domain(sin_trunk: f64) -> bool {
+    (0.0..=1.0).contains(&sin_trunk)
+}
+
 /// The posture with these legs and the trunk that balances them, when that
-/// trunk lies between vertical and horizontal (SPEC-0045 §2.6.3's domain).
+/// trunk lies in [`in_domain`].
 pub(super) fn balanced(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs) -> Option<Posture> {
     let sin_trunk = balancing_trunk(body, bar_kg, legs)?;
-    (0.0..=1.0)
-        .contains(&sin_trunk)
-        .then(|| pose(body, bar_kg, legs, sin_trunk))
+    in_domain(sin_trunk).then(|| pose(body, bar_kg, legs, sin_trunk))
 }
 
 /// `Σ m·x = p + q·sin δ + b·sin θ` about the mid-foot line, for this lifter

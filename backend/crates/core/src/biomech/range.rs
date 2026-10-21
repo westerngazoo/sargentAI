@@ -28,7 +28,7 @@ use serde::Serialize;
 use crate::workout::LoadKg;
 
 use super::analysis::analyse_range;
-use super::squat::{balanced, balancing_trunk, first_moment_at, Legs};
+use super::squat::{balanced, balancing_trunk, first_moment_at, in_domain, Legs};
 use super::{
     analyse_baseline, baseline, Body, Dorsiflexion, Joint, Mechanics, Posture, Rejection, Unknown,
 };
@@ -41,7 +41,7 @@ use super::{
 /// leaning back, a local minimum), and near the window's edge that stretch
 /// shrinks to nothing, far below any step. What the scan must see is the
 /// extremum, and every sampled local extremum is refined (see
-/// [`Convention::first_failure`]). The stated assumption is that `sin θ(s)` is
+/// [`Convention::prefix_end`]). The stated assumption is that `sin θ(s)` is
 /// smooth with no two extrema closer than one step, which the §2.6.6 legs, a
 /// few trigonometric terms in `s`, satisfy by orders of magnitude.
 const SCAN_STEPS: u32 = 4096;
@@ -111,7 +111,10 @@ pub enum RangeEnd {
     Bottom,
     /// Stopped at `reached` = `s*`.
     Stopped {
-        /// `s*`, independent of the frame count.
+        /// `s*`, independent of the frame count under the `SCAN_STEPS`
+        /// smoothness assumption (§2.6.6). Were that assumption to fail, the
+        /// end would still be `Stopped`, at a real crossing, but one found
+        /// from a sampled frame.
         reached: f64,
         /// Slice A's outcome at `s = 1`: `Some(rejection)` when the bottom
         /// itself does not balance, `None` when it does but this convention
@@ -129,7 +132,9 @@ pub enum RangeEnd {
 /// [`Rejection::DepthNotReachable`] when the lifter's dorsiflexion is below
 /// the solved upright lean, which would drive the shank backwards along the
 /// range; [`Rejection::DoesNotBalance`] with [`Unknown::ShankAngle`] when the
-/// upright's lean is undetermined (no mass on the trunk line and no bar).
+/// upright's lean is undetermined, which happens only with no mass above the
+/// ankle and no bar. (A forward lean always exists otherwise: upright and
+/// vertical, every centre of mass sits at the ankle, behind the mid-foot.)
 ///
 /// [`Unknown::ShankAngle`]: super::Unknown::ShankAngle
 pub fn squat_range(
@@ -157,7 +162,7 @@ pub fn squat_range(
     };
 
     let bottom = baseline(body, bar_kg, ankle);
-    let mut end = match convention.first_failure(bottom.is_ok()) {
+    let mut end = match convention.prefix_end(bottom.is_ok()) {
         None => RangeEnd::Bottom,
         Some(reached) => RangeEnd::Stopped {
             reached,
@@ -210,8 +215,9 @@ pub fn squat_range(
         // that assumption ever fails, the end still has to say so: `Bottom`
         // with frames missing would break the type's promise silently.
         let Some(frame) = frame else {
+            let balanced_s = out.last().map_or(0.0, |f: &RangeFrame| f.progress);
             end = RangeEnd::Stopped {
-                reached: out.last().map_or(0.0, |f: &RangeFrame| f.progress),
+                reached: convention.bisect(balanced_s, s),
                 bottom: bottom.as_ref().err().copied(),
             };
             break;
@@ -315,7 +321,7 @@ impl Convention<'_> {
     /// between two samples and be found only through its peak. The first of
     /// either is bisected to [`S_TOLERANCE`], and its balanced side returned,
     /// so every `s ≤ s*` balances. The bottom (`s = 1`) is slice A's verdict.
-    fn first_failure(&self, bottom_balances: bool) -> Option<f64> {
+    fn prefix_end(&self, bottom_balances: bool) -> Option<f64> {
         let grid = |k: u32| f64::from(k) / f64::from(SCAN_STEPS);
         let samples: Vec<Option<f64>> =
             (0..=SCAN_STEPS).map(|k| self.trunk_sine(grid(k))).collect();
@@ -401,11 +407,6 @@ impl Convention<'_> {
         }
         balanced_s
     }
-}
-
-/// The trunk's domain: between vertical and horizontal (SPEC-0045 §2.6.3).
-fn in_domain(sin_trunk: f64) -> bool {
-    (0.0..=1.0).contains(&sin_trunk)
 }
 
 /// A frame, with the angles a reader needs read off its own points.
