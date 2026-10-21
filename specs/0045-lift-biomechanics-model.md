@@ -795,6 +795,13 @@ Both stops happen:
 | upright (`s = 0`) | `SinglePosture { at: Upright }`, `SolvedBaseline`, the new `StraightBodyUpright` |
 | between | `SinglePosture { at: Partial }`, `SolvedBaseline`, the new `JointsAdvanceTogether` (its doc names both ends) |
 
+**What the range admits to, as a whole** (owner decision 2026-10-20).
+Readings across frames — a peak, a trend, `reached` — are no single frame's
+claim, and a two-frame range that stops returns only the upright, whose own
+assumptions say nothing about the leg coupling. So `SquatRange` carries
+`assumptions` of its own: always `JointsAdvanceTogether` and
+`StraightBodyUpright`, whatever the frame count or ending.
+
 `SolvedBaseline`'s doc is generalised to "solved from this lifter's lengths
 under a stated convention: the §2.6.1 baseline at the bottom, the §2.6.6
 range elsewhere". `JointsAdvanceTogether` is not on the upright, where no
@@ -823,6 +830,7 @@ pub struct RangeFrame {
 pub struct SquatRange {
     pub frames: Vec<RangeFrame>, // upright to s*, in order
     pub end: RangeEnd,
+    pub assumptions: Vec<Assumption>, // what readings across the frames hold under
 }
 
 pub fn squat_range(
@@ -1284,7 +1292,7 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
       says so and whose moments contain no bar term; a bar with no position is
       unrepresentable.
 - [ ] **AC4** (amended) — `joints` has hip, knee, ankle, lumbar; every v1
-      result carries `SinglePosture`; the range (B1) by R1–R14.
+      result carries `SinglePosture`; the range (B1) by R1–R15.
 - [ ] **AC5** — `ResistingGroup` has four variants; no `Muscle` type exists.
 - [ ] **AC6** (amended) — every v1 result carries `SolvedBaseline`; deltas are
       computed from the lifter's own baseline.
@@ -1411,6 +1419,9 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 - `R13` a hole narrower than the scan step still stops the range: at
   31.258786790912°, bodyweight-only, n = 143, `end` is `Stopped { reached ≈
   0.80984, bottom: None }`, derived independently of the crate.
+- `R15` every range, stopped at two frames or complete at 241, carries
+  `JointsAdvanceTogether` and `StraightBodyUpright` in its own
+  `assumptions`.
 - `R14` `Bottom` always comes with all `n` frames, the last one slice A's
   baseline, and `Stopped` with exactly the sampled frames with `s ≤ s*`,
   swept across the window's edge and four frame counts.
@@ -1473,6 +1484,7 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-10-17 | Interpolate angles, not sines; the bottom frame is slice A's output | The two readings differ by 99 N·m at the fixture's hip and move its peak. Pinning one makes the frames reproducible; saying so on every cross-frame claim keeps them honest. |
 | 2026-10-17 | The range is the largest balanced prefix, with an explicit `RangeEnd` | A middle frame can fail where the bottom balances (fixture at 30°). A `Result<(), Rejection>` could not say that, and a reach that changed with the frame count was not a result. |
 | 2026-10-20 | `s*` refines every sampled local extremum of `sin θ(s)`, then bisects | The qa sign-off found a hole about 5e-5 wide near the window's edge that a fixed scan stepped over, reporting `Bottom` with frames cut short. Holes sit around extrema, which the grid does see. `Bottom` can no longer come with frames missing. |
+| 2026-10-20 | **Owner decision:** the range carries the conventions its cross-frame readings depend on | A "you reach 56%" or "your peak is here" shown anywhere carries its caveat with it, including a two-frame stopped range whose only frame is the upright. |
 
 ## 9. Changelog
 
@@ -1555,3 +1567,5 @@ all have "matched the spec".
 - _2026-10-20 — after the qa sign-off of B1's implementation: `s*` found by
   refining local extrema of `sin θ(s)` (a narrow hole near the window's edge
   had been stepped over), the `Bottom` invariant guarded, R13 and R14 added._
+- _2026-10-20 — owner decision: `SquatRange.assumptions`, the range-level
+  conventions (R15)._

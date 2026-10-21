@@ -1206,3 +1206,32 @@ fn range_count_up_to(reached: f64, n: u16) -> usize {
         .filter(|&i| f64::from(i) / f64::from(n - 1) <= reached)
         .count()
 }
+
+/// R15 — the range itself carries the conventions every reading across its
+/// frames depends on (owner decision 2026-10-20). A two-frame range that
+/// stops returns only the upright, whose own assumptions say nothing about
+/// the leg coupling, yet `reached` is that coupling's answer; and a peak read
+/// across frames is never any one frame's claim. So the result says it once,
+/// for the whole range, whatever its frame count or ending.
+#[test]
+fn r15_the_range_states_the_conventions_its_readings_depend_on() {
+    let restricted = squat_range(&lifter(), None, dorsi(RESTRICTED), frames(2)).expect("stands");
+    let full = fixture(241);
+    for (what, range) in [("stopped, n = 2", &restricted), ("bottom, n = 241", &full)] {
+        for convention in [
+            Assumption::JointsAdvanceTogether,
+            Assumption::StraightBodyUpright,
+        ] {
+            assert!(
+                range.assumptions.contains(&convention),
+                "{what}: the range must state {convention:?}, got {:?}",
+                range.assumptions
+            );
+        }
+    }
+    assert_eq!(
+        restricted.frames.len(),
+        1,
+        "the case that needs it: only the upright comes back"
+    );
+}

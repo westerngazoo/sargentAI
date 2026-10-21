@@ -30,7 +30,8 @@ use crate::workout::LoadKg;
 use super::analysis::analyse_range;
 use super::squat::{balanced, balancing_trunk, first_moment_at, in_domain, Legs};
 use super::{
-    analyse_baseline, baseline, Body, Dorsiflexion, Joint, Mechanics, Posture, Rejection, Unknown,
+    analyse_baseline, baseline, Assumption, Body, Dorsiflexion, Joint, Mechanics, Posture,
+    Rejection, Unknown,
 };
 
 /// How finely `sin θ(s)` is sampled before it is refined. Fixed, so `s*` does
@@ -99,6 +100,12 @@ pub struct SquatRange {
     pub frames: Vec<RangeFrame>,
     /// Whether the range reached the bottom, and if not, why it stopped.
     pub end: RangeEnd,
+    /// What every reading **across** the frames holds under: where a moment
+    /// peaks, whether the trunk is monotone, and `reached`. Always the leg
+    /// coupling and the straight-body upright, whatever the frame count or
+    /// ending. Each frame's own assumptions stay on its `mechanics`; these are
+    /// the range's (owner decision 2026-10-20).
+    pub assumptions: Vec<Assumption>,
 }
 
 /// How the range ended (SPEC-0045 §2.6.6). The frames are the convention's
@@ -224,7 +231,14 @@ pub fn squat_range(
         };
         out.push(frame);
     }
-    Ok(SquatRange { frames: out, end })
+    Ok(SquatRange {
+        frames: out,
+        end,
+        assumptions: vec![
+            Assumption::JointsAdvanceTogether,
+            Assumption::StraightBodyUpright,
+        ],
+    })
 }
 
 /// Where a range posture sits, which decides what it admits to.
