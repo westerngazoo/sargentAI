@@ -33,10 +33,17 @@ use super::{
     analyse_baseline, baseline, Body, Dorsiflexion, Joint, Mechanics, Posture, Rejection, Unknown,
 };
 
-/// How finely the range is scanned for its end before bisecting. Fixed, so
-/// `s*` does not depend on how many frames the caller asks for. A hole
-/// narrower than one step between two balanced scan points would be missed;
-/// the narrowest §2.6.6 found is about 0.25 of the range, three orders wider.
+/// How finely `sin θ(s)` is sampled before it is refined. Fixed, so `s*` does
+/// not depend on how many frames the caller asks for.
+///
+/// The scan does not have to see a hole to find it. A stretch where the trunk
+/// would pass horizontal sits around a local maximum of `sin θ(s)` (or, for
+/// leaning back, a local minimum), and near the window's edge that stretch
+/// shrinks to nothing, far below any step. What the scan must see is the
+/// extremum, and every sampled local extremum is refined (see
+/// [`Convention::first_failure`]). The stated assumption is that `sin θ(s)` is
+/// smooth with no two extrema closer than one step, which the §2.6.6 legs, a
+/// few trigonometric terms in `s`, satisfy by orders of magnitude.
 const SCAN_STEPS: u32 = 4096;
 
 /// How closely `s*` is bisected.
@@ -150,7 +157,7 @@ pub fn squat_range(
     };
 
     let bottom = baseline(body, bar_kg, ankle);
-    let end = match convention.first_failure(bottom.is_ok()) {
+    let mut end = match convention.first_failure(bottom.is_ok()) {
         None => RangeEnd::Bottom,
         Some(reached) => RangeEnd::Stopped {
             reached,
@@ -199,9 +206,16 @@ pub fn squat_range(
                 )
             })
         };
-        // Every sampled `s ≤ s*` balances by construction of `s*`; a `None`
-        // here would be a frame on the boundary itself, and the range ends.
-        let Some(frame) = frame else { break };
+        // Every sampled `s ≤ s*` balances under the `SCAN_STEPS` assumption. If
+        // that assumption ever fails, the end still has to say so: `Bottom`
+        // with frames missing would break the type's promise silently.
+        let Some(frame) = frame else {
+            end = RangeEnd::Stopped {
+                reached: out.last().map_or(0.0, |f: &RangeFrame| f.progress),
+                bottom: bottom.as_ref().err().copied(),
+            };
+            break;
+        };
         out.push(frame);
     }
     Ok(SquatRange { frames: out, end })
@@ -279,34 +293,103 @@ struct Convention<'a> {
 }
 
 impl Convention<'_> {
+    /// The `sin θ` that balances the legs at `s`, unclamped; `None` only when
+    /// the trunk does not move the system, which cannot happen once the
+    /// upright stood.
+    fn trunk_sine(&self, s: f64) -> Option<f64> {
+        balancing_trunk(self.body, self.bar_kg, &legs_at(s, self.lean, self.dorsi))
+    }
+
     /// Whether the trunk that balances the legs at `s < 1` lies between
     /// vertical and horizontal.
     fn balances_at(&self, s: f64) -> bool {
-        balancing_trunk(self.body, self.bar_kg, &legs_at(s, self.lean, self.dorsi))
-            .is_some_and(|sin_trunk| (0.0..=1.0).contains(&sin_trunk))
+        self.trunk_sine(s).is_some_and(in_domain)
     }
 
-    /// `s*`, the end of the largest balanced prefix, or `None` when every
-    /// `s < 1` balances and so does the bottom. A fixed scan finds the first
-    /// failing step; bisection then narrows the boundary to [`S_TOLERANCE`]
-    /// and returns its balanced side, so every `s ≤ s*` balances.
+    /// `s*`, the end of the largest balanced prefix, or `None` when the range
+    /// balances all the way and so does the bottom.
+    ///
+    /// Walks the fixed grid in order. A sample outside the domain puts the
+    /// crossing in the step before it. A sample that is a local extremum is
+    /// refined by golden-section search, because a hole can sit entirely
+    /// between two samples and be found only through its peak. The first of
+    /// either is bisected to [`S_TOLERANCE`], and its balanced side returned,
+    /// so every `s ≤ s*` balances. The bottom (`s = 1`) is slice A's verdict.
     fn first_failure(&self, bottom_balances: bool) -> Option<f64> {
-        let mut balanced_s = 0.0;
+        let grid = |k: u32| f64::from(k) / f64::from(SCAN_STEPS);
+        let samples: Vec<Option<f64>> =
+            (0..=SCAN_STEPS).map(|k| self.trunk_sine(grid(k))).collect();
         for k in 1..=SCAN_STEPS {
-            let s = f64::from(k) / f64::from(SCAN_STEPS);
-            let ok = if k == SCAN_STEPS {
-                bottom_balances
+            let index = k as usize;
+            let left_domain = if k == SCAN_STEPS {
+                !bottom_balances
             } else {
-                self.balances_at(s)
+                !samples[index].is_some_and(in_domain)
             };
-            if !ok {
-                return Some(self.bisect(balanced_s, s));
+            if left_domain {
+                return Some(self.bisect(grid(k - 1), grid(k)));
             }
-            balanced_s = s;
+            if k < SCAN_STEPS {
+                let neighbours = (samples[index - 1], samples[index], samples[index + 1]);
+                if let Some(peak) = self.excursion(grid(k - 1), grid(k + 1), neighbours) {
+                    return Some(self.bisect(grid(k - 1), peak));
+                }
+            }
         }
         None
     }
 
+    /// If the middle sample is a local extremum of `sin θ(s)`, refine it on
+    /// `[lo, hi]` and return where it leaves the domain, if it does.
+    fn excursion(
+        &self,
+        lo: f64,
+        hi: f64,
+        (before, at, after): (Option<f64>, Option<f64>, Option<f64>),
+    ) -> Option<f64> {
+        let (before, at, after) = (before?, at?, after?);
+        let leaves = if at >= before && at >= after {
+            self.extreme(lo, hi, true).filter(|&(_, sine)| sine > 1.0)
+        } else if at <= before && at <= after {
+            self.extreme(lo, hi, false).filter(|&(_, sine)| sine < 0.0)
+        } else {
+            None
+        };
+        leaves.map(|(s, _)| s)
+    }
+
+    /// The largest (or smallest) `sin θ(s)` on `[lo, hi]` and where it is,
+    /// by golden-section search (Kiefer 1953), to [`S_TOLERANCE`] in `s`.
+    fn extreme(&self, lo: f64, hi: f64, largest: bool) -> Option<(f64, f64)> {
+        let sign = if largest { 1.0 } else { -1.0 };
+        let value = |s: f64| self.trunk_sine(s).map(|sine| sign * sine);
+        let ratio = (5.0_f64.sqrt() - 1.0) / 2.0;
+        let (mut left, mut right) = (lo, hi);
+        let mut inner_left = right - ratio * (right - left);
+        let mut inner_right = left + ratio * (right - left);
+        let mut at_left = value(inner_left)?;
+        let mut at_right = value(inner_right)?;
+        while right - left > S_TOLERANCE {
+            if at_left > at_right {
+                right = inner_right;
+                inner_right = inner_left;
+                at_right = at_left;
+                inner_left = right - ratio * (right - left);
+                at_left = value(inner_left)?;
+            } else {
+                left = inner_left;
+                inner_left = inner_right;
+                at_left = at_right;
+                inner_right = left + ratio * (right - left);
+                at_right = value(inner_right)?;
+            }
+        }
+        let s = f64::midpoint(left, right);
+        Some((s, self.trunk_sine(s)?))
+    }
+
+    /// The crossing between a balanced `s` and a failing one, to
+    /// [`S_TOLERANCE`]; returns the balanced side.
     fn bisect(&self, mut balanced_s: f64, mut failing_s: f64) -> f64 {
         while failing_s - balanced_s > S_TOLERANCE {
             let mid = f64::midpoint(balanced_s, failing_s);
@@ -318,6 +401,11 @@ impl Convention<'_> {
         }
         balanced_s
     }
+}
+
+/// The trunk's domain: between vertical and horizontal (SPEC-0045 §2.6.3).
+fn in_domain(sin_trunk: f64) -> bool {
+    (0.0..=1.0).contains(&sin_trunk)
 }
 
 /// A frame, with the angles a reader needs read off its own points.

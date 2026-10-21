@@ -104,8 +104,9 @@ pub enum Assumption {
     QuasiStatic,
     /// Segments are rigid. The trunk cannot be seen to round.
     RigidSegments,
-    /// One posture, not a rep. There is no φ axis, no peak and no "per rep"
-    /// in v1 — a descent kinematic nobody has validated would be fabricated.
+    /// One posture, not a rep: no measured or predicted descent, no velocity,
+    /// no "per rep". The §2.6.6 range is a family of these, one per frame,
+    /// and anything read across it belongs to its convention.
     SinglePosture {
         /// Which posture.
         at: Position,

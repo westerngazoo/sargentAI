@@ -56,7 +56,22 @@ const DEFAULT_HEIGHT_M: f64 = 1.75;
 const DEFAULT_MASS_KG: f64 = 80.0;
 const DEFAULT_ANKLE_DEG: f64 = 40.0;
 
+/// Flags that take a value, and flags that stand alone. Anything else is a
+/// typo, and a typo silently printing the default lifter reads as a result.
+const VALUED: [&str; 8] = [
+    "--height", "--mass", "--ankle", "--bar", "--thigh", "--shank", "--trunk", "--frames",
+];
+const SWITCHES: [&str; 5] = ["--sweep", "--range", "--reel", "--help", "-h"];
+
 fn run(args: &[String]) -> Result<(), String> {
+    let mut rest = args.iter();
+    while let Some(arg) = rest.next() {
+        if VALUED.contains(&arg.as_str()) {
+            rest.next();
+        } else if !SWITCHES.contains(&arg.as_str()) {
+            return Err(format!("unknown argument {arg}"));
+        }
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("{USAGE}");
         return Ok(());
@@ -100,7 +115,7 @@ fn run(args: &[String]) -> Result<(), String> {
     println!("Goose Physics — squat baseline (R-0045 slice A)");
     println!();
     println!(
-        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.0}° dorsiflexion",
+        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.1}° dorsiflexion",
         ankle.degrees()
     );
     match bar {
@@ -217,7 +232,7 @@ fn range(
     println!("Goose Physics — the squat over its range (R-0045 slice B1)");
     println!();
     println!(
-        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.0}° dorsiflexion",
+        "  lifter      {height:.2} m, {mass_kg:.0} kg, ankle {:.1}° dorsiflexion",
         ankle.degrees()
     );
     match bar {
@@ -226,6 +241,21 @@ fn range(
     }
     println!();
     match squat_range(body, bar, ankle, frames) {
+        Err(Rejection::DepthNotReachable {
+            needed_deg,
+            available_deg,
+            ..
+        }) => {
+            println!("  REJECTED    standing upright balanced already needs {needed_deg:.1}° of");
+            println!(
+                "              ankle in this model; you have {available_deg:.1}°, so the range"
+            );
+            println!("              cannot start (SPEC-0045 §2.6.6).");
+        }
+        Err(Rejection::DoesNotBalance { .. }) => {
+            println!("  REJECTED    this body cannot stand balanced in the model: with no mass");
+            println!("              on the trunk line and no bar, no lean is determined.");
+        }
         Err(rejection) => explain(body, &rejection, bar),
         Ok(range) => {
             println!("     s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");

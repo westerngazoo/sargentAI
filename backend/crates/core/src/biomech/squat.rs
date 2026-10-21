@@ -163,7 +163,7 @@ fn ankle_point(body: &Body) -> Point {
 ///
 /// Sine and cosine rather than an angle, so slice A's horizontal femur is
 /// exactly `(1, 0)`: its hip sits at knee height with no `cos(π/2)` rounding,
-/// and the baseline is bit-for-bit what it was before the range existed.
+/// and the baseline does the same arithmetic it did before the range existed.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Legs {
     shank: (f64, f64),

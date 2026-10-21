@@ -727,10 +727,28 @@ at six frames, moments in N·m resisting extension, **under this convention**:
   flexors.
 
 **Where the range ends.** The frames are the **largest balanced prefix** of
-the convention. Its end `s*` is the first `s` where `sin θ(s)` leaves `[0, 1]`.
-It is found by a fixed internal scan plus bisection to 1e-9, so it does not
-depend on how many frames the caller asks for. The returned frames are the
-sampled ones with `s ≤ s*`. The result says how the range ended:
+the convention. Its end `s*` is the first `s` where `sin θ(s)` leaves `[0, 1]`,
+and it does not depend on how many frames the caller asks for. The returned
+frames are the sampled ones with `s ≤ s*`.
+
+**How `s*` is found, and why a scan alone is not enough.** A stretch where
+the trunk would pass horizontal sits around a local maximum of `sin θ(s)` (or,
+for leaning back, a local minimum). Near the window's upper edge that stretch
+shrinks to nothing: at 31.258786790912° bodyweight-only, `sin θ` peaks at
+1.000000001 and the hole is about 5e-5 of the range wide, so any fixed scan
+can step over it. The first implementation did exactly that, reported
+`Bottom`, and returned frames cut short. So a fixed grid of 4096 steps samples
+`sin θ(s)`, and **every sampled local extremum is refined by golden-section
+search**. A hole is found through its peak, which the grid does see, rather
+than through a sample landing inside it. The first sample outside the domain,
+or the first refined extremum outside it, is then bisected to 1e-9, and its
+balanced side is returned. The stated assumption is that `sin θ(s)` is smooth
+with no two extrema closer than one step; the legs are a few trigonometric
+terms in `s`, which satisfies it by orders of magnitude. If that assumption
+ever failed, `RangeEnd::Bottom` still cannot come with frames missing: the
+end is downgraded to `Stopped` at the last frame that balanced.
+
+The result says how the range ended:
 
 ```rust
 pub enum RangeEnd {
@@ -1266,7 +1284,7 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
       says so and whose moments contain no bar term; a bar with no position is
       unrepresentable.
 - [ ] **AC4** (amended) — `joints` has hip, knee, ankle, lumbar; every v1
-      result carries `SinglePosture`; the range (B1) by R1–R12.
+      result carries `SinglePosture`; the range (B1) by R1–R14.
 - [ ] **AC5** — `ResistingGroup` has four variants; no `Muscle` type exists.
 - [ ] **AC6** (amended) — every v1 result carries `SolvedBaseline`; deltas are
       computed from the lifter's own baseline.
@@ -1390,6 +1408,12 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
   frames.
 - `R12` a body with no mass and no bar is `DoesNotBalance { unknown:
   ShankAngle }` for the whole range (AC9).
+- `R13` a hole narrower than the scan step still stops the range: at
+  31.258786790912°, bodyweight-only, n = 143, `end` is `Stopped { reached ≈
+  0.80984, bottom: None }`, derived independently of the crate.
+- `R14` `Bottom` always comes with all `n` frames, the last one slice A's
+  baseline, and `Stopped` with exactly the sampled frames with `s ≤ s*`,
+  swept across the window's edge and four frame counts.
 
 **Stability (AC16, finding 13):**
 - `B12` every table-derived length ±5%: every delta keeps its sign or is
@@ -1448,6 +1472,7 @@ Against R-0045 **as amended by §5.1**; the qa agent owns the tests.
 | 2026-10-17 | The leg coupling is interpolated between two solved ends and declared; the trunk is never interpolated | Qualifies "Kinematic solve, never interpolation" (2026-09-12) and replaces "a φ axis would be fabricated" for the range: what is interpolated is named on every frame, and what physics can solve still is. |
 | 2026-10-17 | Interpolate angles, not sines; the bottom frame is slice A's output | The two readings differ by 99 N·m at the fixture's hip and move its peak. Pinning one makes the frames reproducible; saying so on every cross-frame claim keeps them honest. |
 | 2026-10-17 | The range is the largest balanced prefix, with an explicit `RangeEnd` | A middle frame can fail where the bottom balances (fixture at 30°). A `Result<(), Rejection>` could not say that, and a reach that changed with the frame count was not a result. |
+| 2026-10-20 | `s*` refines every sampled local extremum of `sin θ(s)`, then bisects | The qa sign-off found a hole about 5e-5 wide near the window's edge that a fixed scan stepped over, reporting `Bottom` with frames cut short. Holes sit around extrema, which the grid does see. `Bottom` can no longer come with frames missing. |
 
 ## 9. Changelog
 
@@ -1527,3 +1552,6 @@ contradicts a reel; (b) with findings 3, 4, 6 and 12 applied, the solver's
 rejection ordering is fully determined by the text, which is the test of a
 finished design section. Before them, three different implementations would
 all have "matched the spec".
+- _2026-10-20 — after the qa sign-off of B1's implementation: `s*` found by
+  refining local extrema of `sin θ(s)` (a narrow hole near the window's edge
+  had been stepped over), the `Bottom` invariant guarded, R13 and R14 added._

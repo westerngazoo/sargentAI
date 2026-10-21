@@ -43,8 +43,8 @@ const FIXTURE_BAR_KG: f64 = 100.0;
 /// but the convention passes horizontal on the way (SPEC-0045 §2.6.6).
 const BOTTOM_BALANCES_RANGE_DOES_NOT: f64 = 30.0;
 
-/// The same, under the fixture bar: inside the loaded window, whichever of
-/// its stated upper ends (13.9° in §2.6.6, 13.78° re-derived) holds.
+/// The same, under the fixture bar: inside the loaded window, 13.41° to
+/// 13.78° (§2.6.6).
 const LOADED_BOTTOM_BALANCES_RANGE_DOES_NOT: f64 = 13.6;
 
 /// A dorsiflexion below the fixture's upright lean (4.04° bodyweight, 3.35°
@@ -594,18 +594,18 @@ fn r5_knee_flexion_is_the_progress_times_the_bottom_knee_angle() {
 ///
 /// The table is re-derived by hand first and must agree to the 0.1 it prints;
 /// then the model must match both — the table to 0.1, the hand model to 1e-6.
-/// The hip-flexion column is printed to the whole degree (30.38° at `s = 0.2`
-/// is printed 30°, 121.63° at the bottom 122°), so it is held to ±0.5°.
+/// Every column, hip flexion included, is printed to 0.1 and held to 0.1
+/// (the hip column was printed to the whole degree until `f3c9c42`).
 #[test]
 fn r6_the_fixture_reproduces_the_spec_table_under_this_convention() {
     // s, knee flex, hip flex, trunk, hip, knee, ankle, L5/S1 — SPEC-0045 §2.6.6
     const TABLE: [[f64; 8]; 6] = [
         [0.0, 0.0, 0.0, 3.4, 37.2, -77.4, 120.5, 25.4],
-        [0.2, 26.0, 30.0, 15.1, 165.4, 16.0, 120.5, 112.8],
-        [0.4, 52.0, 60.0, 25.8, 276.7, 107.3, 120.5, 188.7],
-        [0.6, 78.0, 86.0, 33.5, 351.3, 194.8, 120.5, 239.6],
-        [0.8, 104.0, 107.0, 35.9, 373.6, 277.2, 120.5, 254.8],
-        [1.0, 130.0, 122.0, 31.6, 333.9, 353.0, 120.5, 227.7],
+        [0.2, 26.0, 30.4, 15.1, 165.4, 16.0, 120.5, 112.8],
+        [0.4, 52.0, 59.8, 25.8, 276.7, 107.3, 120.5, 188.7],
+        [0.6, 78.0, 86.2, 33.5, 351.3, 194.8, 120.5, 239.6],
+        [0.8, 104.0, 107.3, 35.9, 373.6, 277.2, 120.5, 254.8],
+        [1.0, 130.0, 121.6, 31.6, 333.9, 353.0, 120.5, 227.7],
     ];
     const JOINT_COLUMNS: [Joint; 4] = [Joint::Hip, Joint::Knee, Joint::Ankle, Joint::Lumbar];
 
@@ -623,7 +623,7 @@ fn r6_the_fixture_reproduces_the_spec_table_under_this_convention() {
             0.1,
             &format!("{what}: knee flex"),
         );
-        assert_close(hip_flexion_of(p), row[2], 0.5, &format!("{what}: hip flex"));
+        assert_close(hip_flexion_of(p), row[2], 0.1, &format!("{what}: hip flex"));
         assert_close(lean_deg(p), row[3], 0.1, &format!("{what}: trunk"));
         for (j, printed) in JOINT_COLUMNS.into_iter().zip(&row[4..]) {
             assert_close(hand_moment(j, p), *printed, 0.1, &format!("{what}: {j:?}"));
@@ -646,7 +646,7 @@ fn r6_the_fixture_reproduces_the_spec_table_under_this_convention() {
         assert_close(
             frame.hip_flexion_deg,
             hip_flexion,
-            0.5,
+            0.1,
             &format!("{what}: hip flex"),
         );
         assert_close(frame.trunk_lean_deg, trunk, 0.1, &format!("{what}: trunk"));
@@ -1127,4 +1127,74 @@ fn the_range_serializes_its_points_and_never_says_risk() {
             "the range namespace must not say {forbidden:?}: {text}"
         );
     }
+}
+
+/// R13 — a hole narrower than any fixed scan step is still found (SPEC-0045
+/// §2.6.6).
+///
+/// Near the window's upper edge the stretch where the balancing trunk would
+/// pass horizontal shrinks to nothing. At 31.258786790912° of dorsiflexion,
+/// bodyweight-only, the trunk's sine peaks at 1.000000001 at `s ≈ 0.809865`,
+/// and the first crossing is at `s* = 0.809839`: a hole about 5e-5 of the
+/// range wide, a fifth of a 1/4096 scan step. Derived independently of the
+/// crate (the §2.6.6 formulas in a separate script, fine scan and
+/// bisection). Found by the qa sign-off: the first implementation's scan
+/// stepped over it, reported `Bottom`, and returned frames cut short at the
+/// first sample that fell inside.
+#[test]
+fn r13_a_hole_narrower_than_the_scan_step_still_stops_the_range() {
+    const AT_THE_EDGE: f64 = 31.258_786_790_912;
+    let range =
+        squat_range(&lifter(), None, dorsi(AT_THE_EDGE), frames(143)).expect("the upright stands");
+    match range.end {
+        RangeEnd::Stopped { reached, bottom } => {
+            assert_close(reached, 0.809_839, 1e-4, "s* at the hole");
+            assert_eq!(bottom, None, "the bottom balances; the convention stops it");
+            let last = range.frames.last().expect("frames up to s*");
+            assert!(last.progress <= reached, "no frame past s*");
+        }
+        RangeEnd::Bottom => panic!("the range cannot reach the bottom through the hole"),
+    }
+}
+
+/// R14 — `RangeEnd::Bottom` always means every requested frame, the last one
+/// slice A's baseline; `Stopped` always means exactly the sampled frames with
+/// `s ≤ s*`. Swept across the window's upper edge, where holes are
+/// narrowest, and across frame counts: a frame count must never cut a range
+/// short without the end saying so.
+#[test]
+fn r14_the_end_and_the_frames_never_disagree() {
+    let body = lifter();
+    let edge = 31.258_786_840_912;
+    let offsets = [-1e-2, -1e-3, -1e-5, -1e-7, 1e-7, 1e-5, 1e-3];
+    for offset in offsets {
+        let degrees = edge + offset;
+        let baseline_posture = baseline(&body, None, dorsi(degrees)).map(|b| *b.posture());
+        for n in [2_u16, 6, 143, 241] {
+            let what = format!("{degrees}°, n = {n}");
+            let range = squat_range(&body, None, dorsi(degrees), frames(n)).expect("stands");
+            match range.end {
+                RangeEnd::Bottom => {
+                    assert_eq!(range.frames.len(), usize::from(n), "{what}: all frames");
+                    let last = range.frames.last().expect("frames");
+                    assert_eq!(
+                        Ok(last.posture),
+                        baseline_posture,
+                        "{what}: the last frame is the baseline"
+                    );
+                }
+                RangeEnd::Stopped { reached, .. } => {
+                    let expected = range_count_up_to(reached, n);
+                    assert_eq!(range.frames.len(), expected, "{what}: frames with s ≤ s*");
+                }
+            }
+        }
+    }
+}
+
+/// How many of `n` evenly sampled `s` values are `≤ reached`.
+fn range_count_up_to(reached: f64, n: u16) -> usize {
+    (0..n)
+        .filter(|&i| f64::from(i) / f64::from(n - 1) <= reached)
+        .count()
 }
