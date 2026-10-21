@@ -167,9 +167,10 @@ conversational intent later.
 |-----|------------|------|--------|
 | R-0032 | Voice logging assistant: STT → LLM intent → auto-log; voice hub (speak button, radial action ring, preset library, anatomy chart, USDA) | SPEC-0032 | Done — shipped in slices via PRs #39, #49, #50; accepted as-built in the R-0057 pass (PR #66) |
 | R-0036 | Smart missing-log reminders (split from R-0032) | SPEC-0036 (to be written) | Backlog (requirement Accepted) |
-| R-0044 | Lift technique video analysis — pure geometry over a keypoint series, refusal as a first-class output | SPEC-0044 | In review — slice A (core) on PR #104; requirement + spec live on that branch |
-| R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (to be written) | Draft — on PR #104. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
+| R-0044 | Lift technique video analysis — pure geometry over a keypoint series, refusal as a first-class output | SPEC-0044 (Draft — reworked after the 2026-08-25 architect REJECT) | In progress — requirement Accepted (owner, 2026-09-11); slice A (pure core) merged in #104 |
+| R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (accepted, #122) | In progress — requirement Accepted (owner, 2026-09-11; amended 2026-09-12 and 2026-10-17). Slice A, the squat solve and its four moments (#142), and slice B1, the range of balanced postures (#145), merged. Slice C (API, persistence) deferred; R-0059 is the app-facing next step. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
 | R-0058 | Guided body measurement — landmark heights from the floor and dorsiflexion, checked for consistency, used by the lift model; a measuring guide linked from each exercise | SPEC-0058 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
+| R-0059 | The squat, animated in the app — server-computed range of postures with joint moments, drawn as a side-view figure with playback and the model's caveats | SPEC-0059 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
 | R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 16 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10). Do not implement: `docs/AGENT-PR-GUIDE.md` |
 
 ### M-Platform — Trainer marketplace
