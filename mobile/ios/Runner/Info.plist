@@ -9,11 +9,11 @@
 		<string>audio</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Goose Physics uses the microphone so you can dictate sets and commands hands-free.</string>
+	<string>Goose Fitness Physics uses the microphone so you can dictate sets and commands hands-free.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Goose Physics transcribes your voice to log workouts and meals hands-free.</string>
+	<string>Goose Fitness Physics transcribes your voice to log workouts and meals hands-free.</string>
 	<key>CFBundleDisplayName</key>
-	<string>Goose Physics</string>
+	<string>Goose Fitness Physics</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -23,7 +23,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Goose Physics</string>
+	<string>Goose Fitness Physics</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

@@ -10,6 +10,6 @@
 /// `earbud_coach.dart`. A rename must touch those too — this class is not
 /// "a one-line change", and describing it as one is how they got missed.
 abstract final class Brand {
-  static const appName = 'Goose Physics';
+  static const appName = 'Goose Fitness Physics';
   static const tagline = 'The physics of your lift — measured, not guessed.';
 }
