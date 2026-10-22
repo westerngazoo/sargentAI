@@ -173,4 +173,54 @@ void main() {
     await pending;
     await tester.pump();
   });
+
+  // Beta feedback 2026-10-22, on a desktop browser: the date-of-birth picker
+  // opened on a calendar month 25 years back, and "Next" sat alone in the
+  // bottom-right corner, greyed out with no reason given, so the owner looked
+  // for a Save button that seemed not to exist.
+  group('desktop layout and the date-of-birth picker', () {
+    void desktop(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('the form and its controls sit in one centered column',
+        (tester) async {
+      desktop(tester);
+      await pumpWizard(tester);
+
+      final next = tester.getRect(find.widgetWithText(FilledButton, 'Next'));
+      final weight =
+          tester.getRect(find.widgetWithText(TextField, 'Weight (kg)'));
+
+      expect(next.right, lessThanOrEqualTo(720 + 300),
+          reason: 'Next must not hug the right edge of a wide window');
+      expect(weight.width, lessThanOrEqualTo(600),
+          reason: 'fields must not stretch across a wide window');
+      expect(next.top - weight.bottom, lessThan(200),
+          reason: 'Next must sit right under the form, not at the bottom');
+    });
+
+    testWidgets('a disabled Next says what is missing', (tester) async {
+      final (container, _) = await pumpWizard(tester);
+      const hint = 'Add your date of birth, height and weight to continue.';
+
+      expect(find.text(hint), findsOneWidget);
+
+      fillValidDraft(container);
+      await tester.pump();
+      expect(find.text(hint), findsNothing);
+    });
+
+    testWidgets('the date-of-birth picker opens on the year grid',
+        (tester) async {
+      await pumpWizard(tester);
+
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(YearPicker), findsOneWidget);
+    });
+  });
 }
