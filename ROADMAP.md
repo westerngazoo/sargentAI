@@ -78,13 +78,13 @@ screen on top of it.
 | R-0008 | Onboarding flow: dismissible home prompt + multi-step wizard (body stats, goals, optional details) over `PUT /profile/me`; training history deferred (no backend field) | SPEC-0008 | Done |
 | R-0009 | Live workout logger: program-aware in-gym session driver (start → add exercise via preset picker + free text → log sets → finish → `POST /workouts`); sessions list + delete; full edit deferred. The substrate R-0027 drives by voice | SPEC-0009 | Done |
 | ~~R-0010~~ | ~~Nutrition logger UI (manual entry first)~~ — **superseded** by the R-0010 requirement file (M5 row below), which absorbed this scope and added energy balance. This row never had a requirement file. | — | Superseded 2026-08-25 |
-| R-0011 | Dashboard: trends, current program, weekly plan — deferred until after the fast-track chain | SPEC-0011 | Backlog |
+| ~~R-0011~~ | ~~Dashboard: trends, current program, weekly plan~~. **Superseded** by R-0061: its main screen covers the current program and the plan, and the Progress panel covers trends | — | Superseded 2026-10-22 |
 | R-0027 | Earbud-guided training: the app speaks the session (next exercise, sets, weight) via TTS; the earbud media button advances/confirms; background audio with the phone pocketed. v1 is voice-OUT only (no speech recognition). Depends on R-0009 + R-0014 | SPEC-0027 | **Regressed** (transport reverted by `6b5bb7e`; rebuilt as R-0035 — R-0057) |
 | R-0035 | Earbud-guided hands-free training (**rebuild** of R-0027's reverted media-button + background-audio transport; coexists with R-0032 voice dictation). Depends on R-0009 + R-0014 | SPEC-0035 | Done — merged via PR #71 (`35318cb`) |
 | R-0030 | Visual body-type picker: synthetic archetype match, no-photo onboarding path | SPEC-0030 | Done — merged on main (`4bb5053`, `ebd84c9`); accepted as-built in the R-0057 pass (PR #66) |
 | R-0033 | Google Sign-In (OAuth2 auth extension) | SPEC-0033 (to be written) | Done — merged via PR #49 (`a982c46`) |
 | R-0029 | Web frontend client | SPEC-0029 (to be written) | In progress — served today by the Flutter web build, deployed via PR #84 |
-| R-0061 | One screen built around a calendar: the day's session with one action, panels that always close back to it, the session in progress as a focus mode, Spanish-first, a physics style. Adds a planned-sessions-by-date endpoint | SPEC-0061 (to be written) | **Draft**: 2026-10-22, pulled forward by the beta, awaiting owner acceptance |
+| R-0061 | One screen built around a calendar: the day's session with one action, panels that always close back to it, the session in progress as a focus mode, Spanish-first, a physics style. Adds a plan projection: a sequence of training days that shifts when a day is not logged | SPEC-0061 (to be written) | **Accepted** (owner, 2026-10-22). Pulled forward by the beta. Supersedes R-0011 |
 
 > **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
 > **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
