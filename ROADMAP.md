@@ -84,6 +84,7 @@ screen on top of it.
 | R-0030 | Visual body-type picker: synthetic archetype match, no-photo onboarding path | SPEC-0030 | Done — merged on main (`4bb5053`, `ebd84c9`); accepted as-built in the R-0057 pass (PR #66) |
 | R-0033 | Google Sign-In (OAuth2 auth extension) | SPEC-0033 (to be written) | Done — merged via PR #49 (`a982c46`) |
 | R-0029 | Web frontend client | SPEC-0029 (to be written) | In progress — served today by the Flutter web build, deployed via PR #84 |
+| R-0061 | One screen built around a calendar: the day's session with one action, panels that always close back to it, the session in progress as a focus mode, Spanish-first, a physics style. Adds a planned-sessions-by-date endpoint | SPEC-0061 (to be written) | **Draft**: 2026-10-22, pulled forward by the beta, awaiting owner acceptance |
 
 > **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
 > **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
