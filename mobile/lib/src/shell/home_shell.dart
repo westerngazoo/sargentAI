@@ -6,6 +6,8 @@ import '../auth/application/auth_controller.dart';
 import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
+import '../hub/dictation_sheet.dart';
+import '../hub/sergeant.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
 import '../program/presentation/program_detail_screen.dart';
@@ -27,6 +29,11 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
     final dismissed = ref.watch(onboardingDismissedProvider);
+    ref.listen(sergeantProvider.select((s) => s.navigateTo), (_, route) {
+      if (route != null) {
+        context.go(route);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -53,12 +60,6 @@ class HomeShell extends ConsumerWidget {
             onPressed: () => showMealQuickLogSheet(context),
           ),
           const SizedBox(width: 4),
-          IconButton.filledTonal(
-            icon: const Icon(Icons.mic),
-            tooltip: 'Voice hub',
-            onPressed: () => context.go('/hub'),
-          ),
-          const SizedBox(width: 4),
           TextButton(
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
             child: const Text('Logout'),
@@ -66,13 +67,26 @@ class HomeShell extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ref.read(sessionDriverProvider.notifier).start();
-          context.go('/session');
-        },
-        icon: const Icon(Icons.fitness_center),
-        label: const Text('Start workout'),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'dictation',
+            onPressed: () => showDictationSheet(context),
+            child: const Icon(Icons.mic),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton.extended(
+            heroTag: 'start_workout',
+            onPressed: () {
+              ref.read(sessionDriverProvider.notifier).start();
+              context.go('/session');
+            },
+            icon: const Icon(Icons.fitness_center),
+            label: const Text('Start workout'),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
