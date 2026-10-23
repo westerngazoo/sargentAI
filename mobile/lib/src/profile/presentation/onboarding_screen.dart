@@ -35,31 +35,56 @@ class OnboardingScreen extends ConsumerWidget {
             LinearProgressIndicator(
               value: (state.step + 1) / onboardingStepCount,
             ),
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Text(
-                  state.error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
             Expanded(
+              // One centered column, controls right under the step: on a wide
+              // window the fields no longer stretch edge to edge and "Next" no
+              // longer sits alone in the far corner (beta, 2026-10-22).
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: switch (state.step) {
-                  0 => const BodyStatsStep(),
-                  1 => const GoalsStep(),
-                  _ => const OptionalDetailsStep(),
-                },
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _maxWidth),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (state.error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              state.error!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        switch (state.step) {
+                          0 => const BodyStatsStep(),
+                          1 => const GoalsStep(),
+                          _ => const OptionalDetailsStep(),
+                        },
+                        const SizedBox(height: 24),
+                        _Controls(state: state, ctrl: ctrl),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-            _Controls(state: state, ctrl: ctrl),
           ],
         ),
       ),
     );
   }
 }
+
+/// Width of the wizard column on wide screens; phones use their full width.
+const double _maxWidth = 560;
+
+/// What a disabled "Next" is waiting for, per step.
+const _missing = {
+  0: 'Add your date of birth, height and weight to continue.',
+  1: 'Pick at least one goal to continue.',
+};
 
 class _Controls extends StatelessWidget {
   const _Controls({required this.state, required this.ctrl});
@@ -76,34 +101,48 @@ class _Controls extends StatelessWidget {
       _ => true,
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          if (state.step > 0)
-            TextButton(
-              onPressed: state.submitting ? null : ctrl.back,
-              child: const Text('Back'),
-            ),
-          const Spacer(),
-          if (!isLast)
-            FilledButton(
-              onPressed: canAdvance ? ctrl.next : null,
-              child: const Text('Next'),
-            )
-          else
-            FilledButton(
-              onPressed: state.submitting ? null : ctrl.submit,
-              child: state.submitting
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Finish'),
-            ),
+    final hint = canAdvance || isLast ? null : _missing[state.step];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            if (state.step > 0)
+              TextButton(
+                onPressed: state.submitting ? null : ctrl.back,
+                child: const Text('Back'),
+              ),
+            const Spacer(),
+            if (!isLast)
+              FilledButton(
+                onPressed: canAdvance ? ctrl.next : null,
+                child: const Text('Next'),
+              )
+            else
+              FilledButton(
+                onPressed: state.submitting ? null : ctrl.submit,
+                child: state.submitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Finish'),
+              ),
+          ],
+        ),
+        if (hint != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            hint,
+            textAlign: TextAlign.end,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }

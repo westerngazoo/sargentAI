@@ -38,6 +38,9 @@ class BodyStatsStep extends ConsumerWidget {
                         DateTime(today.year - 25, today.month, today.day),
                     firstDate: DateTime(today.year - 120),
                     lastDate: today,
+                    // A birth date starts from the year, not from a month
+                    // grid 25 years back (beta, 2026-10-22).
+                    initialDatePickerMode: DatePickerMode.year,
                   );
                   if (picked != null) ctrl.setBodyStats(dob: picked);
                 },
