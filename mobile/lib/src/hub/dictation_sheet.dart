@@ -94,9 +94,7 @@ class _DictationSheetState extends ConsumerState<DictationSheet>
                     conversing: sergeant.conversing,
                     onTap: () {
                       final notifier = ref.read(sergeantProvider.notifier);
-                      sergeant.conversing
-                          ? notifier.stop()
-                          : notifier.start();
+                      sergeant.conversing ? notifier.stop() : notifier.start();
                     },
                   ),
                 ],

@@ -57,14 +57,14 @@ void main() {
     final router = GoRouter(
       initialLocation: initialRoute ?? '/',
       routes: [
-
         GoRoute(
           path: '/',
           builder: (context, __) => Scaffold(
             body: Center(
               child: Consumer(
                 builder: (context, ref, child) {
-                  ref.listen(sergeantProvider.select((s) => s.navigateTo), (_, route) {
+                  ref.listen(sergeantProvider.select((s) => s.navigateTo),
+                      (_, route) {
                     if (route != null) {
                       context.go(route);
                     }
@@ -79,7 +79,6 @@ void main() {
             ),
           ),
         ),
-
         GoRoute(
           path: '/home',
           builder: (_, __) => const Scaffold(body: Text('home-sentinel')),
@@ -123,10 +122,6 @@ void main() {
     await tester.tap(find.byKey(const Key('openSheet')));
     await tester.pumpAndSettle();
   }
-
-
-
-
 
   testWidgets('saying "show my program" speaks the summary and navigates',
       (tester) async {
