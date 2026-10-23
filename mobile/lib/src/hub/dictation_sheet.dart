@@ -1,38 +1,26 @@
-// R-0032 — the voice hub: a central speak button ringed by every primary
-// action. Tapping the mic opens a hands-free conversation with the
-// [Sergeant] (prompt → listen → act → re-listen); tapping an option does the
-// same thing by hand. Navigation requested by the sergeant is consumed here
-// (notifiers hold no BuildContext).
-
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../core/brand.dart';
 import '../core/theme/app_theme.dart';
-import '../nutrition/presentation/meal_quick_log_sheet.dart';
-import '../workout/application/session_driver.dart';
 import 'sergeant.dart';
 
-/// One ring option: an icon + label that fires [onTap].
-class _HubOption {
-  const _HubOption(this.icon, this.label, this.onTap);
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+/// Opens the voice dictation sheet.
+Future<void> showDictationSheet(BuildContext context) {
+  return showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => const DictationSheet(),
+  );
 }
 
-class VoiceHubScreen extends ConsumerStatefulWidget {
-  const VoiceHubScreen({super.key});
+class DictationSheet extends ConsumerStatefulWidget {
+  const DictationSheet({super.key});
 
   @override
-  ConsumerState<VoiceHubScreen> createState() => _VoiceHubScreenState();
+  ConsumerState<DictationSheet> createState() => _DictationSheetState();
 }
 
-class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
+class _DictationSheetState extends ConsumerState<DictationSheet>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
 
@@ -41,7 +29,7 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 2000),
     );
   }
 
@@ -51,78 +39,65 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
     super.dispose();
   }
 
-  void _startWorkout() {
-    ref.read(sessionDriverProvider.notifier).start();
-    context.go('/session');
-  }
-
   @override
   Widget build(BuildContext context) {
     final sergeant = ref.watch(sergeantProvider);
 
-    // Consume the sergeant's navigation effect.
-    ref.listen(sergeantProvider, (prev, next) {
-      if (next.navigateTo != null) {
-        final target = next.navigateTo!;
+    // The screen (HomeShell) handles navigation out of the hub via state observation.
+    ref.listen(sergeantProvider.select((s) => s.navigateTo), (_, route) {
+      if (route != null && mounted) {
         ref.read(sergeantProvider.notifier).consumeNavigation();
-        context.go(target);
-      }
-      if ((prev?.listening ?? false) != next.listening) {
-        next.listening ? _pulse.repeat() : _pulse.stop();
+        Navigator.of(context).pop();
+        // HomeShell or router handles the actual navigation.
       }
     });
 
-    final options = [
-      _HubOption(Icons.fitness_center, 'Workout', _startWorkout),
-      _HubOption(
-          Icons.restaurant, 'Meal', () => showMealQuickLogSheet(context)),
-      _HubOption(
-          Icons.assignment, 'Program', () => context.go('/programs/current')),
-      _HubOption(Icons.accessibility_new, 'Body match',
-          () => context.go('/programs/get')),
-      _HubOption(Icons.history, 'History', () => context.go('/home')),
-      _HubOption(Icons.person, 'Profile', () => context.go('/onboarding')),
-    ];
+    ref.listen(sergeantProvider.select((s) => s.conversing), (was, isNow) {
+      if (was == true && isNow == false && mounted) {
+        Navigator.of(context).pop();
+      }
+    });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(Brand.appName),
-        leading: BackButton(onPressed: () => context.go('/home')),
-      ),
-      body: SafeArea(
+    ref.listen(sergeantProvider.select((s) => s.listening), (_, isNow) {
+      if (isNow) {
+        _pulse.repeat();
+      } else {
+        _pulse.stop();
+      }
+    });
+
+    return SafeArea(
+      child: Container(
+        color: Theme.of(context).colorScheme.surface,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final size =
-                      math.min(constraints.maxWidth, constraints.maxHeight);
-                  final radius = size * 0.36;
-                  // SizedBox.expand keeps the Stack full-size: a loose Stack
-                  // shrinks to its largest child and then the translated ring
-                  // falls outside its hit-test bounds.
-                  return SizedBox.expand(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (sergeant.listening) _PulseRings(animation: _pulse),
-                        for (var i = 0; i < options.length; i++)
-                          _positioned(options[i], i, options.length, radius),
-                        _SpeakButton(
-                          listening: sergeant.listening,
-                          conversing: sergeant.conversing,
-                          onTap: () {
-                            final notifier =
-                                ref.read(sergeantProvider.notifier);
-                            sergeant.conversing
-                                ? notifier.stop()
-                                : notifier.start();
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Voice Dictation',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 250,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (sergeant.listening) _PulseRings(animation: _pulse),
+                  _SpeakButton(
+                    listening: sergeant.listening,
+                    conversing: sergeant.conversing,
+                    onTap: () {
+                      final notifier = ref.read(sergeantProvider.notifier);
+                      sergeant.conversing ? notifier.stop() : notifier.start();
+                    },
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -134,15 +109,6 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
           ],
         ),
       ),
-    );
-  }
-
-  /// Places option [i] of [n] on the ring, starting at 12 o'clock.
-  Widget _positioned(_HubOption option, int i, int n, double radius) {
-    final angle = -math.pi / 2 + 2 * math.pi * i / n;
-    return Transform.translate(
-      offset: Offset(radius * math.cos(angle), radius * math.sin(angle)),
-      child: _OptionButton(option: option),
     );
   }
 }
@@ -339,55 +305,6 @@ class _SpeakButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _OptionButton extends StatelessWidget {
-  const _OptionButton({required this.option});
-
-  final _HubOption option;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: option.onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: cs.shadow.withValues(alpha: 0.10),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Material(
-              shape: const CircleBorder(),
-              color: cs.secondaryContainer,
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: Icon(option.icon, color: cs.onSecondaryContainer),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            option.label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ],
       ),
     );
   }

@@ -8,7 +8,7 @@
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/sergeant.dart';
-import 'package:fitai/src/hub/voice_hub_screen.dart';
+import 'package:fitai/src/hub/dictation_sheet.dart';
 import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/nutrition/services/nutrition_service.dart';
 import 'package:fitai/src/program/services/program_service.dart';
@@ -38,7 +38,7 @@ void main() {
   late RecordingVoiceOutput voiceOut;
   late ProviderContainer container;
 
-  Widget app(SpeechInput speech) {
+  Widget app(SpeechInput speech, {String? initialRoute}) {
     programService = MockProgramService();
     nutritionService = MockNutritionService();
     workoutRepo = MockWorkoutRepository();
@@ -55,9 +55,30 @@ void main() {
         .thenAnswer((_) async => const []);
 
     final router = GoRouter(
-      initialLocation: '/hub',
+      initialLocation: initialRoute ?? '/',
       routes: [
-        GoRoute(path: '/hub', builder: (_, __) => const VoiceHubScreen()),
+        GoRoute(
+          path: '/',
+          builder: (context, __) => Scaffold(
+            body: Center(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  ref.listen(sergeantProvider.select((s) => s.navigateTo),
+                      (_, route) {
+                    if (route != null) {
+                      context.go(route);
+                    }
+                  });
+                  return ElevatedButton(
+                    key: const Key('openSheet'),
+                    onPressed: () => showDictationSheet(context),
+                    child: const Text('Open Sheet'),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
         GoRoute(
           path: '/home',
           builder: (_, __) => const Scaffold(body: Text('home-sentinel')),
@@ -97,58 +118,16 @@ void main() {
     );
   }
 
-  testWidgets('ring renders all six options and the mic', (tester) async {
-    await tester.pumpWidget(app(ScriptedSpeechInput([])));
+  Future<void> openSheetAndPump(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('openSheet')));
     await tester.pumpAndSettle();
-
-    for (final label in [
-      'Workout',
-      'Meal',
-      'Program',
-      'Body match',
-      'History',
-      'Profile',
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
-    expect(find.byIcon(Icons.mic), findsOneWidget);
-  });
-
-  testWidgets('tapping Program navigates to /programs/current', (tester) async {
-    await tester.pumpWidget(app(ScriptedSpeechInput([])));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Program'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('program-sentinel'), findsOneWidget);
-  });
-
-  testWidgets('tapping Body match navigates to /programs/get', (tester) async {
-    await tester.pumpWidget(app(ScriptedSpeechInput([])));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Body match'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('picker-sentinel'), findsOneWidget);
-  });
-
-  testWidgets('tapping Meal opens the quick-log sheet', (tester) async {
-    await tester.pumpWidget(app(ScriptedSpeechInput([])));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Meal'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Log a meal'), findsOneWidget);
-    expect(find.text('Save meal'), findsOneWidget);
-  });
+  }
 
   testWidgets('saying "show my program" speaks the summary and navigates',
       (tester) async {
     await tester.pumpWidget(app(ScriptedSpeechInput(['show my program'])));
     await tester.pumpAndSettle();
+    await openSheetAndPump(tester);
 
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
@@ -163,8 +142,9 @@ void main() {
         ['log a meal with 40 grams of protein 60 carbs and 20 fat'])));
     await tester.pumpAndSettle();
 
+    await openSheetAndPump(tester);
     await tester.tap(find.byIcon(Icons.mic));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     verify(() => nutritionService.create(
           performedOn: any(named: 'performedOn'),
@@ -182,6 +162,7 @@ void main() {
         app(ScriptedSpeechInput(['log a meal', '45 protein 70 carbs 25 fat'])));
     await tester.pumpAndSettle();
 
+    await openSheetAndPump(tester);
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
@@ -198,6 +179,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(app(ScriptedSpeechInput(['start workout'])));
     await tester.pumpAndSettle();
+    await openSheetAndPump(tester);
 
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
@@ -216,6 +198,7 @@ void main() {
   testWidgets('unavailable speech shows the fallback hint', (tester) async {
     await tester.pumpWidget(app(ScriptedSpeechInput([], available: false)));
     await tester.pumpAndSettle();
+    await openSheetAndPump(tester);
 
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
@@ -228,8 +211,9 @@ void main() {
         .pumpWidget(app(ScriptedSpeechInput(['purple monkey dishwasher'])));
     await tester.pumpAndSettle();
 
+    await openSheetAndPump(tester);
     await tester.tap(find.byIcon(Icons.mic));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Visible both as the user's bubble and in the sergeant's echo.
     expect(find.textContaining('purple monkey dishwasher'),
@@ -245,6 +229,7 @@ void main() {
     when(() => nutritionService.searchFoods('chicken breast'))
         .thenAnswer((_) async => [sampleFoodInfo()]);
 
+    await openSheetAndPump(tester);
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
@@ -261,6 +246,7 @@ void main() {
   testWidgets('"over and out" ends the conversation', (tester) async {
     await tester.pumpWidget(app(ScriptedSpeechInput(['over and out'])));
     await tester.pumpAndSettle();
+    await openSheetAndPump(tester);
 
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
@@ -275,8 +261,9 @@ void main() {
         .pumpWidget(app(ScriptedSpeechInput(['log a protein shake over'])));
     await tester.pumpAndSettle();
 
+    await openSheetAndPump(tester);
     await tester.tap(find.byIcon(Icons.mic));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     verify(() => nutritionService.create(
           performedOn: any(named: 'performedOn'),
