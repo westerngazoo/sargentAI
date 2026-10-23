@@ -38,7 +38,7 @@ authenticated against a real backend.
 |-----|------------|------|--------|
 | R-0001 | Monorepo scaffold: Rust workspace under `/backend`, Flutter app under `/mobile`, Docker base image, GitHub Actions CI green | SPEC-0001 | Done |
 | R-0002 | User authentication (JWT HS256, 24h, argon2id; OAuth2 deferred to its own R; Postgres + sqlx introduced) | SPEC-0002 | Done |
-| R-0060 | Forgotten password: reset by emailed single-use link (OWASP pattern), sessions end on reset, Cloudflare Email Service | SPEC-0060 (to be written) | **Draft** — 2026-10-21, pulled forward by the beta |
+| R-0060 | Forgotten password: reset by emailed single-use link (OWASP pattern), sessions end on reset, Cloudflare Email Service | SPEC-0060 (accepted, #152) | **In review**: implemented and merged via #153, with a named-sender fix in #154. QA sign-off is not yet recorded in the requirement file |
 | R-0003 | User profile CRUD (age, height, weight, goals, body stats) | SPEC-0003 | Done |
 
 ### M2 — Logging core
@@ -173,7 +173,7 @@ conversational intent later.
 | R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (accepted, #122) | In progress — requirement Accepted (owner, 2026-09-11; amended 2026-09-12 and 2026-10-17). Slice A, the squat solve and its four moments (#142), and slice B1, the range of balanced postures (#145), merged. Slice C (API, persistence) deferred; R-0059 is the app-facing next step. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
 | R-0058 | Guided body measurement — landmark heights from the floor and dorsiflexion, checked for consistency, used by the lift model; a measuring guide linked from each exercise | SPEC-0058 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
 | R-0059 | The squat, animated in the app — server-computed range of postures with joint moments, drawn as a side-view figure with playback and the model's caveats | SPEC-0059 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
-| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 16 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10). Do not implement: `docs/AGENT-PR-GUIDE.md` |
+| R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 35 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10, #121/#123–#129/#132–#141/#144 closed by 2026-10-21). Do not implement: `docs/AGENT-PR-GUIDE.md` |
 
 ### M-Platform — Trainer marketplace
 
@@ -216,6 +216,59 @@ R-files when their parent milestone is the focus.
 - Requirement and spec ids are 4-digit and shared in spirit: `R-0001` is
   realized by `SPEC-0001` unless a requirement needs several specs.
 - This file is updated by the orchestrator whenever a requirement changes state.
+
+## Current state — 2026-10-22
+
+The newest state comes first. The *Current focus* and *Current state —
+2026-09-10* sections below are kept as history and are not current.
+
+**A closed beta is running.** Its feedback now drives the order of the
+work. R-0060 was pulled forward on 2026-10-21 for this reason. The first
+desktop-browser report arrived on 2026-10-22: the onboarding wizard could
+not be used on a wide window (#155).
+
+### Merged since 2026-09-10
+
+| PR | What |
+|----|------|
+| #101, #104, #110, #111, #113, #114 | All six PRs in the 2026-09-10 merge order, merged on 2026-09-12 |
+| #120, #122 | Register synced with reality; SPEC-0045 accepted |
+| #130 | R-0024 privacy requirement (Draft) |
+| #131 | CI: both deploy workflows ship. The API deploy on `main` succeeded on 2026-10-21 |
+| #142, #145 | R-0045 slice A (squat solve, four joint moments) and slice B1 (range of balanced postures) |
+| #143 | `scripts/dev/test.sh`, which runs the test suites on a laptop |
+| #146 | Auth: registering with a taken email says the account exists |
+| #147, #148 | R-0058 and R-0059 requirements (Draft) |
+| #149, #152, #153, #154 | R-0060 forgotten password: requirement, spec, implementation and a fix for the named sender |
+| #150 | Rebrand to **Goose Fitness Physics**, with a goose logo replacing the sergeant chevrons |
+
+### Open PRs
+
+| PR | Branch → base | What |
+|----|---------------|------|
+| #155 | `fix/onboarding-desktop-layout` → main | Onboarding is usable on a desktop browser: a centered column, controls that follow the step, a Next button that says why it is disabled, and a birth-date picker that opens on the year grid. CI green |
+
+### Owner-action list from 2026-09-10, re-checked
+
+1. **`CLOUDFLARE_API_TOKEN`**: **resolved**. The secret was set on 2026-10-21 and `deploy api` ran green on `main`.
+2. **`physics.goosethropic.systems`**: **resolved**. The domain answers HTTP 200.
+3. **R-0010 OQ-6**: no change recorded. R-0010 is still parked.
+4. **Art direction**: the **logo is resolved** by #150. #150 kept the existing brand gradient, so whether the olive palette stays is still open.
+5. **iOS**: no change recorded.
+
+### Awaiting the owner now
+
+- Review and merge **#155**.
+- Accept or amend the drafts **R-0024** (privacy), **R-0058** (guided
+  measurement) and **R-0059** (the squat, animated in the app).
+- Record **R-0060** QA sign-off. The requirement file still reads
+  `Accepted`, even though the implementation is merged.
+
+### Agent PRs against R-0037, continued
+
+19 more agent PRs re-implemented the parked R-0037: #121, #123–#129,
+#132–#141 and #144. All were closed, the last on 2026-10-21. The running
+total is **35**. #95, an earlier refactor, was also closed on 2026-10-21.
 
 ## Current focus
 
