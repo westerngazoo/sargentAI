@@ -81,8 +81,9 @@ pub struct ProgramTemplate { /* existing fields */ pub cycle: Vec<PlanDay> }
     `default_exercises(MuscleGroup)` list in `core::archetype`.
   - Every cycle is therefore labelled **reconstructed** in the record's
     provenance. Even a documented split gets exercises we supplied.
-  - Claude drafts the six cycles and the default list. The owner approves
-    the table in slice 2's PR before it merges (OQ-A).
+  - The six cycles and the default list are drafted in
+    [Annex A](0061-cycles.md). The owner approves that table before slice 2
+    merges (OQ-A).
 - **`days_per_week` and `highlight_exercises` stay as they are.** Removing
   them is a separate change, and it is not needed here.
 
@@ -497,9 +498,9 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles and `default_exercises`.** Slice 2 delivers the
-  curated table for owner approval (§2.1). It does not block accepting
-  this spec.
+- **OQ-A. The six cycles and `default_exercises`.** Drafted in
+  [Annex A](0061-cycles.md) for owner approval (§2.1). It does not block
+  accepting this spec.
 - **OQ-B. Removing the radial ring** (§2.8). It is the one piece of today's
   UI that is deleted rather than moved. Each of its five items has a new
   home. Is that OK?
@@ -576,3 +577,5 @@ is folded in above.
 - 2026-10-23 — architect review (REQUEST CHANGES, 15 findings) applied in
   full. §2.2 algorithm reworked, a stored `plan_day_index` added, §2.8
   corrected, OQ-C added.
+- 2026-10-23 — Annex A drafted: the six day cycles and `default_exercises`,
+  for owner approval (OQ-A).
