@@ -63,6 +63,7 @@ the requirement(s) it satisfies. The mapping is maintained in
 | [R-0041](0041-authored-program-persistence.md) | Authored-program persistence + serving (API) | M-Platform | Draft (implementation shipped — PR #85) |
 | [R-0042](0042-goal-targets-and-pace.md) | Goal targets & pace tracking | M5 | Draft |
 | [R-0043](0043-generated-plan-endpoints.md) | Generated-plan endpoints | M-Platform / M5 | Draft |
+| [R-0061](0061-one-screen-calendar.md) | One screen, built around a calendar (Spanish, physics style) | M3 | Accepted |
 
 Ids without a file: R-0010, R-0011, R-0016, R-0018–R-0026 are roadmap rows not
 yet discussed; R-0028 (orphan-object sweep) is deferred in `ROADMAP.md`;
