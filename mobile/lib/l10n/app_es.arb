@@ -171,32 +171,6 @@
     }
   },
   "kcalPerDay": "kcal / día",
-  "yourProgramCaps": "TU PROGRAMA",
-  "@yourProgramCaps": {
-    "description": "Eyebrow label on the home program card, set in capitals."
-  },
-  "kcalShort": "{n} kcal",
-  "@kcalShort": {
-    "placeholders": {
-      "n": {
-        "type": "int"
-      }
-    }
-  },
-  "doneOfTarget": "{done}/{target}",
-  "@doneOfTarget": {
-    "description": "Centre of the progress ring: training days done over the weekly target.",
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "target": {
-        "type": "int"
-      }
-    }
-  },
-  "getYourProgram": "Consigue tu programa",
-  "takeAPhotoForPlan": "Tómate una foto y recibe un plan a tu medida",
   "targetPhysiqueCaps": "FÍSICO OBJETIVO",
   "@targetPhysiqueCaps": {
     "description": "Eyebrow label on the target-physique card, set in capitals."
@@ -790,14 +764,7 @@
   "hubProfile": "Perfil",
   "hubIdleHint": "Toca el micrófono y habla. Termina cada orden con \"cambio\".",
   "progress": "Progreso",
-  "logMeal": "Registrar comida",
-  "voiceHub": "Centro de voz",
   "logout": "Salir",
-  "recentActivity": "Actividad reciente",
-  "goodMorning": "Buenos días",
-  "goodAfternoon": "Buenas tardes",
-  "goodEvening": "Buenas noches",
-  "readyToTrain": "¿Listo para entrenar?",
   "logMeasurement": "Registrar medida",
   "bodyComposition": "Composición corporal",
   "strength": "Fuerza",

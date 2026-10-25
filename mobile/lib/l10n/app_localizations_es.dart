@@ -328,26 +328,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get kcalPerDay => 'kcal / día';
 
   @override
-  String get yourProgramCaps => 'TU PROGRAMA';
-
-  @override
-  String kcalShort(int n) {
-    return '$n kcal';
-  }
-
-  @override
-  String doneOfTarget(int done, int target) {
-    return '$done/$target';
-  }
-
-  @override
-  String get getYourProgram => 'Consigue tu programa';
-
-  @override
-  String get takeAPhotoForPlan =>
-      'Tómate una foto y recibe un plan a tu medida';
-
-  @override
   String get targetPhysiqueCaps => 'FÍSICO OBJETIVO';
 
   @override
@@ -1053,28 +1033,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get progress => 'Progreso';
 
   @override
-  String get logMeal => 'Registrar comida';
-
-  @override
-  String get voiceHub => 'Centro de voz';
-
-  @override
   String get logout => 'Salir';
-
-  @override
-  String get recentActivity => 'Actividad reciente';
-
-  @override
-  String get goodMorning => 'Buenos días';
-
-  @override
-  String get goodAfternoon => 'Buenas tardes';
-
-  @override
-  String get goodEvening => 'Buenas noches';
-
-  @override
-  String get readyToTrain => '¿Listo para entrenar?';
 
   @override
   String get logMeasurement => 'Registrar medida';

@@ -686,36 +686,6 @@ abstract class AppLocalizations {
   /// **'kcal / día'**
   String get kcalPerDay;
 
-  /// Eyebrow label on the home program card, set in capitals.
-  ///
-  /// In es, this message translates to:
-  /// **'TU PROGRAMA'**
-  String get yourProgramCaps;
-
-  /// No description provided for @kcalShort.
-  ///
-  /// In es, this message translates to:
-  /// **'{n} kcal'**
-  String kcalShort(int n);
-
-  /// Centre of the progress ring: training days done over the weekly target.
-  ///
-  /// In es, this message translates to:
-  /// **'{done}/{target}'**
-  String doneOfTarget(int done, int target);
-
-  /// No description provided for @getYourProgram.
-  ///
-  /// In es, this message translates to:
-  /// **'Consigue tu programa'**
-  String get getYourProgram;
-
-  /// No description provided for @takeAPhotoForPlan.
-  ///
-  /// In es, this message translates to:
-  /// **'Tómate una foto y recibe un plan a tu medida'**
-  String get takeAPhotoForPlan;
-
   /// Eyebrow label on the target-physique card, set in capitals.
   ///
   /// In es, this message translates to:
@@ -1893,53 +1863,11 @@ abstract class AppLocalizations {
   /// **'Progreso'**
   String get progress;
 
-  /// No description provided for @logMeal.
-  ///
-  /// In es, this message translates to:
-  /// **'Registrar comida'**
-  String get logMeal;
-
-  /// No description provided for @voiceHub.
-  ///
-  /// In es, this message translates to:
-  /// **'Centro de voz'**
-  String get voiceHub;
-
   /// No description provided for @logout.
   ///
   /// In es, this message translates to:
   /// **'Salir'**
   String get logout;
-
-  /// No description provided for @recentActivity.
-  ///
-  /// In es, this message translates to:
-  /// **'Actividad reciente'**
-  String get recentActivity;
-
-  /// No description provided for @goodMorning.
-  ///
-  /// In es, this message translates to:
-  /// **'Buenos días'**
-  String get goodMorning;
-
-  /// No description provided for @goodAfternoon.
-  ///
-  /// In es, this message translates to:
-  /// **'Buenas tardes'**
-  String get goodAfternoon;
-
-  /// No description provided for @goodEvening.
-  ///
-  /// In es, this message translates to:
-  /// **'Buenas noches'**
-  String get goodEvening;
-
-  /// No description provided for @readyToTrain.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Listo para entrenar?'**
-  String get readyToTrain;
 
   /// No description provided for @logMeasurement.
   ///
