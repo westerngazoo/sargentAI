@@ -1,6 +1,6 @@
 # SPEC-0061 — One screen, built around a calendar
 
-- **Status:** Draft (second architect review applied; awaiting owner acceptance)
+- **Status:** Accepted (owner, 2026-10-25) — two architect reviews applied; design v2 accepted
 - **Realizes:** R-0061 (Accepted, owner, 2026-10-22). Supersedes R-0011.
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-23
@@ -323,10 +323,19 @@ source-scan test fails on any `context.go(` outside a path allowlist:
 `lib/src/profile/presentation/onboarding_screen.dart`. Every other call
 site moves to `context.push`, `showPanel` or a pop.
 
-**`MainScreen`** is three regions:
-- **Calendar.** Week strip on a phone, month on a wide window.
-- **Selected day.** Its plan or log, with one primary action.
-- **Physics strip.** Absent until R-0059 is Met.
+**`MainScreen`** is four regions, laid out as design v2 shows:
+- **Calendar.** Week strip on a phone, month on a wide window. On a wide
+  window it lives in a left rail with the nutrition card.
+- **Selected day.** The hero: the day's name as a comic headline, its
+  setup line, one primary action, the shift line ("¿Hoy no puedes? Pierna
+  B pasa a mañana"), and the exercise list, each exercise with a **Física**
+  button.
+- **The physics check (AC9).** Opened by an exercise's Física button,
+  inside the day region: beside the exercise list from 1180 px, below the
+  exercise on narrower windows. For an exercise without a model the button
+  reads *Pronto* and opens nothing.
+- **Nutrition.** A protein ring with *+ Comida*, in the rail on a wide
+  window and docked at the bottom on a phone.
 
 Above them is the app bar, with the brand on the left and the profile menu
 on the right. Below them are **+ Comida**, and a floating microphone at
@@ -341,10 +350,13 @@ the bottom.
   (`onboardingDismissedProvider`). It belongs to the day region, so AC7's
   list of other controls is unchanged.
 
-The breakpoint is 720 logical px. Below it the layout is a column: the week
-strip, which opens the month on a tap, then the day, then the physics
-strip. From 720 up the calendar and day sit on the left and the physics
-strip on the right, all inside a 1200 px max width, centered as in #155.
+Two breakpoints, from design v2. Below 720 logical px the layout is a
+column: the week strip, which opens the month on a tap, then the day with
+its exercises and the open check below the exercise, and nutrition docked
+at the bottom. From 720 up a 316 px rail holds the calendar and nutrition,
+and the day takes the rest. From 1180 up the rail widens to 340 px and the
+day splits, exercises on the left and the open check on the right. The
+whole sits in a centered column, as #155 did.
 
 **State (Riverpod).**
 - `selectedDayProvider` (`StateProvider<DateTime>`, defaults to today). It
@@ -500,46 +512,48 @@ silently stop doing anything. The change:
   the localized group names: "Pierna", "Hombro y brazo".
 - **Exercise names stay data** in English (§4).
 
-### 2.10 The physics style (AC12)
+### 2.10 The @fisicobuenfisico look (AC12, OQ-D resolved)
 
 `app_theme.dart` is rewritten around tokens. Its "drill-sergeant green"
-header and palette go away.
-
-> **Pending (OQ-D).** On 2026-10-24 the owner asked for the app to look
-> like the @fisicobuenfisico reels (`~/projects/fisicobuenfisico`): moving
-> figures with force vectors to scale and heat-coloured by tension,
-> dashed lever arms, torque readout panels and live graphs. A design v2
-> on that brand is in progress. If the owner accepts it, R-0061 AC12 is
-> amended, and the token **values** below are replaced. The **mechanism**
-> stays: tokens, the contrast test, bundled fonts and the grid painter.
+header and palette go away. The values come from design v2, accepted by
+the owner on 2026-10-25: black, white and red, as in the channel's latest
+reels.
 
 | Token | Light | Dark | Allowed use |
 |-------|-------|------|-------------|
-| `paper` | `#F7F5EF` | `#11161D` | Background |
-| `grid` | `#E3E6EA` | `#1E2733` | 8 px grid lines (painted, decorative) |
-| `ink` | `#1F4E8C` | `#8DB4F0` | `ColorScheme.primary`: accents, the selected day, buttons |
-| `inkText` | `#1B2430` | `#E6EBF2` | `onSurface`: body text |
-| `force` | `#D9582B` | `#F08A5D` | Large text, icons and glyphs only: forces, today's marker |
+| `ground` | `#F4F3F1` | `#0B0B0B` | Background, with a faint halftone dot pattern |
+| `panel` | `#FFFFFF` | `#161616` | Cards and panels; a hard 2 px border in `line` and a hard offset shadow |
+| `text` | `#111111` | `#F2F2F2` | Body text, `onSurface` |
+| `muted` | `#505050` | `#ABABAB` | Secondary text (8.1:1 and 7.9:1 on `panel`) |
+| `line` | `#111111` | `#D9D9D9` | Borders, the figure's ink |
+| `red` | `#C8102E` | `#FF4D4D` | The only colour: force, torque, the hot end of the tension ramp, the primary action, the stamp. Passes as text: 5.9:1 and 5.5:1 on `panel` |
+| `on-red` | `#FFFFFF` | `#0B0B0B` | Text on the primary action (5.9:1 and 6.0:1) |
+| `heat0 → heat1 → heat2` | `#BDBDBD → #7A7A7A → red` | `#4D4D4D → #8F8F8F → red` | The tension ramp. Marks only, never text: its low end is low-contrast on purpose |
+| `bar` / `bar-text` / `bar-red` | `#0B0B0B` / `#F2F2F2` / `#FF4D4D` | same | The CONCEPTO footer and focus mode, which are dark in both themes |
 
-- **Values:** the hex values are the starting proposal, and the contrast
-  test decides the final ones.
-  - `force` on `paper` is about 3.6:1. That is why `force` is restricted to
-    large text and icons, and the theme never exposes it as a body-text
-    colour.
-- **Contrast test (finding 14).**
-  - It takes its pairs from the built `ColorScheme`: every `on*` against
-    its base, in both modes. That way it tests everything the theme
-    defines, not a hand-written list.
-  - It adds the custom tokens, each classified by its allowed use. Body
-    text needs 4.5:1, and large text and icons need 3:1.
-  - It fails naming the pair.
-- **Numerals:** **IBM Plex Mono** (SIL OFL 1.1), bundled as an asset for
-  numbers only. Its licence is registered with `LicenseRegistry`.
-  `google_fonts` was rejected because it fetches at run time.
-- **Grid background:** a `CustomPainter` behind `MainScreen` and the
-  panels.
-- **Before sign-in:** the brand gradient on the screens before sign-in
-  moves to `ink`.
+- **Semantics.** Heat means tension magnitude and nothing else. No colour
+  means good or bad, and no copy says safe or dangerous (R-0045 AC14).
+- **Contrast test (first review, finding 14).** It takes its pairs from the
+  built `ColorScheme`, every `on*` against its base in both modes, and
+  adds the custom tokens above, each classified by its allowed use. Body
+  text needs 4.5:1, large text and marks 3:1. It fails naming the pair.
+- **Type, bundled as assets** so nothing is fetched at run time
+  (`google_fonts` rejected, as before). Each licence is registered with
+  `LicenseRegistry`.
+  - **Bangers** (OFL): headlines, short and sparing.
+  - **Luckiest Guy** (OFL): the big numbers in readout panels. The reels
+    use it because Bangers draws 1 and 7 alike.
+  - **IBM Plex Mono** (OFL): data, setup lines, the formula bar.
+  - **Archivo** (OFL): UI text.
+- **Motifs, with restraint:** the halftone ground, hard borders and
+  shadows, the `panelito` readout (label on top, big number below), the
+  FÓRMULA bar, the CONCEPTO footer, the stamp worded **COMPROBABLE**
+  (checkable), never COMPROBADO (verified), and the signature "mecánica
+  fbf · @fisicobuenfisico". Left out of an app UI: splatter, tape, grain,
+  photo LUTs and issue numbers.
+- **Focus mode is dark in both themes** (AC12), on the `bar` tokens.
+- **Before sign-in:** the brand badge and buttons move to `red` on
+  `ground`.
 
 ### 2.11 Responsiveness (AC13)
 
@@ -561,14 +575,14 @@ in the beta when it lands.
 |-------|---------|-------|------------|
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist | mobile | 1a |
-| 1e | Theme tokens, the contrast test, the bundled numeral font and the grid painter (§2.10, values per OQ-D) | mobile | — |
+| 1e | Theme tokens, the contrast test, the four bundled faces and the halftone painter (§2.10) | mobile | — |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
 | 2c | Migration 00012, `GET /programs/me/schedule`, and the `POST`/`PUT /workouts` and choose changes (§2.3–§2.4) | backend | 2b |
 | 2d | Planned and rest states on the client, the primary and secondary actions, the Progreso target (§2.5, N6) | mobile | 1f, 2c |
 | 3 | Panels: Programa with its nested flow, Medidas, Progreso, Cuenta, Comida, Dictado with `VoiceEffect` and the server tokens (§2.6, §2.8) | both | 1f, 2c |
-| 4 | Physics strip (AC9), when R-0059 is Met | mobile | 1f |
+| 4 | The physics check per exercise (AC9): the Física buttons, the *Pronto* state, and the squat check from R-0059's endpoint, with vectors, lever, panels and the live graph | mobile | 1f, R-0059 |
 | 5 | Focus mode with `PlanSeed`, the `done` path and the cold-start redirect (§2.7) | mobile | 2d |
 
 ## 3. Code outline
@@ -635,22 +649,25 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 - **Authored programs (R-0039/R-0041) as the current program.** That is
   M-Platform work.
 - **Offline, notifications** (R-0036), **trainer views.**
-- **The physics strip's content** belongs to R-0059.
+- **The squat check's numbers** come from R-0059's endpoint. The deadlift
+  and bench checks come from R-0045's garust work; until then they read
+  *Pronto*.
 
 ## 5. Open questions
 
 - **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
-  approval (§2.1). It blocks slice 2b only, not this spec.
+  approval (§2.1). Days are named by focus only (owner, 2026-10-25). Two
+  questions stay open in the annex: Mentzer's spacing, and the exercises
+  themselves. It blocks slice 2b only, not this spec.
 - **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
   removed.* Each of its five items has a home on the new screen.
 - **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
   projection follows the next pending **day** of the sequence, rest
   included (§2.2). R-0061 AC6 is amended by one word, noted in its
   changelog.
-- **OQ-D. The visual identity of @fisicobuenfisico** (§2.10). The owner
-  asked on 2026-10-24 for the app to look like the channel's reels. A
-  design v2 is in progress. If accepted, R-0061 AC12 is amended and §2.10's
-  values change. It blocks slice 1e only.
+- **OQ-D. The visual identity of @fisicobuenfisico** (§2.10). *Resolved
+  2026-10-25 (owner): design v2 accepted.* R-0061 AC7, AC9 and AC12 are
+  amended, and §2.10 carries the tokens.
 
 ## 6. Acceptance criteria
 
@@ -662,12 +679,12 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | AC4 | `core::plan` unit tests, one per rule in §2.2 and per edge-case row: shift; rest consumed by time; **a free workout consuming a rest day**; days before `starts_on` leaving the cursor alone; a future `starts_on`; a range wholly before `starts_on`; a one-training-day cycle; a future-dated log shown as Done; the late-log case from finding 3; **a free workout on a training day leaves it pending** (`Done { pending: Some }`, N1); **an unlogged day before a later plan log offers no pending** (N2); `RangeTooFarAhead`. Also a `DayCell` golden test per state, and week and month widget tests. A seed test checks each cycle's per-muscle weekly frequency against `weekly_frequency_per_muscle` (§2.1, N7). |
 | AC5 | `primaryAction` unit tests over every (day vs today) × state pair, plus `ViewLogWithPending` and its secondary *Empezar sesión* on a today that holds only a free workout, with the server's index (N1). |
 | AC6 | API tests for `GET /programs/me/schedule`: happy path; no program; unknown `archetype_id`; inverted and over-long range; `today` at ±1 day accepted and ±2 rejected; the cross-user adversarial test; `from=9999-01-01` → 422 (N9). `POST /workouts`: both-or-neither; foreign id → 404, **even with an invalid index** (N10); own non-current program → 409; unknown `archetype_id` → 422 `plan_unavailable`; rest index or `performed_on < starts_on` → 422. `PUT` keeps the plan fields and re-checks. Choose and synthetic choose: the `starts_on` default, ±1 day accepted, ±2 rejected. The migration test checks the backfill and the default. |
-| AC7 | A widget test lists exactly the controls on `MainScreen`. |
+| AC7 | A widget test lists exactly the controls on `MainScreen`, with the day's Física buttons and an open check's play/pause, scrubber and *Tus medidas* counted inside the day region. |
 | AC8 | Widget tests: each panel opens and holds its body, and choosing a program completes inside the Programa panel. |
-| AC9 | A widget test: the strip is absent while R-0059 is not Met. |
+| AC9 | Widget tests: every exercise shows a Física button; an unmodelled exercise reads *Pronto* and opens nothing; the squat check opens beside the list at 1440 px and below the exercise at 390 px; the worked sum equals the hip panel's value for the current frame; no copy in the check matches a safe/dangerous word list. |
 | AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing by button, by voice and by the earbud's `finish()` returns to the day, shown as done (N12); a 409 or a `plan_unavailable` saves the session as free and shows a notice; a cold start at `/session` lands on `/home`. The R-0035 and R-0032 suites stay green. |
 | AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the empty untranslated-messages check, and locale resolution tests (`es`, `en`, `fr` → `es`). |
-| AC12 | The `ColorScheme`-derived contrast test, and theme golden tests in both modes. |
+| AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, theme golden tests in both modes, focus mode dark in both, and a licence-registry test for the four faces. |
 | AC13 | Widget tests at 390×844 and 1440×900 (§2.11). |
 
 ## 7. Decision log
@@ -687,6 +704,8 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | 2026-10-24 | Each training day lists its own exercises; the generic per-muscle list is dropped. A seed test checks per-muscle frequency against the record. | Second review N7: a coarse list put triceps work on a biceps day, and several cycles contradicted their record's frequency. |
 | 2026-10-24 | The weekly target comes from the projection, not from `days_per_week`. | Second review N6: `days_per_week` reads 4 for every seed. |
 | 2026-10-24 | The work ships in eleven slices (§2.12). | Second review N5: one first slice would have been thousands of lines. |
+| 2026-10-25 | Design v2 accepted: the @fisicobuenfisico black, white and red look; the physics check per exercise inside the day; "Pronto" for unmodelled exercises. | Owner. The channel's 22k followers come for the physics; the app must look like the reels and put the check with the training. R-0061 AC7, AC9 and AC12 amended. |
+| 2026-10-25 | Days are named by focus only. | Owner: programs come in many styles (5×5, high intensity, volume). The physics check attaches to the exercise. |
 
 ## 8. Architect review — REQUEST CHANGES (2026-10-23), applied
 
@@ -758,3 +777,6 @@ was done with a note on what to salvage.
   blocking) applied in full. OQ-B and OQ-C resolved by the owner. OQ-D
   added for the @fisicobuenfisico visual identity. §2.12 slices added.
   Annex A v2 with exercises per day.
+- 2026-10-25 — design v2 accepted by the owner. §2.5 regions and
+  breakpoints, §2.10 tokens and type, slices 1e and 4, §6 rows for AC7,
+  AC9 and AC12 updated. OQ-D resolved. Status → Accepted.

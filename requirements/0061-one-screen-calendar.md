@@ -138,7 +138,10 @@ owner's adjustments for phones. The mockup is a reference, not a pixel spec.
 ### What sits on the main screen
 
 - **AC7. Few controls.** Besides the calendar and the selected day, the main
-  screen has only these:
+  screen has only these. The selected day includes its exercises' **Física**
+  buttons and, when a physics check is open, that check's own controls:
+  play/pause, the scrubber and *Tus medidas*. *(Amended 2026-10-25, design
+  v2.)*
   - **+ Comida**, which opens meal logging;
   - a **floating microphone**, which opens a dictation sheet and nothing
     more (OQ-4). SPEC-0061 places the rest of today's voice hub (action
@@ -151,11 +154,27 @@ owner's adjustments for phones. The mockup is a reference, not a pixel spec.
     different one.
   - The whole choose flow happens inside the panel. Today's `/programs/get`
     is where the owner got trapped.
-- **AC9. Physics strip.** The main screen has a place for R-0059's squat.
-  - On a wide window it sits beside the calendar.
-  - On a phone it is a compact strip with a small figure and one key figure,
-    and it expands on a tap.
-  - Until R-0059 is Met, the strip is absent. There is no placeholder.
+- **AC9. The physics check.** *(Amended 2026-10-25, design v2; it was "Physics
+  strip".)* Physics is the product's selling point, so it lives with the
+  training, not beside the calendar.
+  - Every exercise in the selected day has a **Física** button. It opens
+    that exercise's physics check **inside the day**: beside the exercise
+    list on a wide window, below the exercise on a phone.
+  - The check is dynamic, in the @fisicobuenfisico grammar:
+    - the figure moving through the rep;
+    - force vectors drawn to one scale;
+    - the lever arm dashed;
+    - torque per muscle group in readout panels;
+    - a live graph of torque against bar height;
+    - the worked sum for the current frame (force × lever arm, plus the
+      body's share), equal to the panel's number.
+  - **An exercise without a model** shows a marked "Pronto" state, with no
+    numbers. Nothing is estimated to fill the gap.
+  - The squat check appears when R-0059 is Met. The deadlift and bench
+    follow R-0045's garust work. Until then, they also show "Pronto".
+  - Every check states its assumptions (R-0045 AC12), makes no injury or
+    safety claim (R-0045 AC14), and colours tension by magnitude, never as
+    good or bad.
 - **AC10. Focus mode.** A session in progress takes the full screen.
   - The R-0035 earbud flow and voice dictation work in it as they do today.
   - Finishing the session returns to the main screen, with that day shown
@@ -173,13 +192,28 @@ owner's adjustments for phones. The mockup is a reference, not a pixel spec.
   - Dates, weekdays and numbers are formatted for the locale.
   - **The app follows the device locale.** It falls back to Spanish when the
     device language has no catalogue (OQ-1).
-- **AC12. The physics style.**
-  - Light and dark themes: lab paper with a fine grid, blueprint-blue ink,
-    orange kept for forces and highlights, and instrument-style numerals.
+- **AC12. The @fisicobuenfisico look.** *(Amended 2026-10-25, design v2. It
+  was blueprint blue on lab paper.)* The app looks like the channel's
+  latest reels, so its followers recognize it.
+  - **Black, white and red.**
+    - Light theme: black ink on white.
+    - Dark theme: white ink on near-black.
+    - Red is the only colour. It marks force, torque, the hot end of the
+      tension ramp, the primary action and the "COMPROBABLE" stamp.
+    - The tension ramp runs from grey to red.
+  - **Type, from the reels:**
+    - a comic display face for short headlines;
+    - a heavy face for big numbers;
+    - a mono face for data;
+    - a sans for UI text.
+
+    All are bundled with their open licences, and none is fetched at run
+    time.
+  - **Focus mode is dark in both themes,** for legibility in the gym.
   - It replaces the green theme everywhere, including the screens before
     sign-in.
   - Text meets WCAG 2.1 AA contrast (4.5:1 body, 3:1 large text) in both
-    themes. This is checked by a test over the theme's colour pairs.
+    themes, checked by a test over the theme's colour pairs.
 - **AC13. Phone and desktop.**
   - At 390×844 and at 1440×900 the main screen, every panel and focus mode
     show no horizontal scroll and no clipped control.
@@ -250,3 +284,9 @@ All answered by the owner on 2026-10-22:
   Status → Accepted.
 - 2026-10-24 — AC6 amended by the owner (SPEC-0061 OQ-C): the projection
   follows the next pending *day of the sequence*, rest days included.
+- 2026-10-25 — AC7, AC9 and AC12 amended by the owner after the one-screen
+  design v2:
+  - the physics check per exercise lives inside the selected day, and its
+    controls count as part of the day;
+  - unmodelled exercises show "Pronto" with no numbers;
+  - the visual identity is @fisicobuenfisico's black, white and red.
