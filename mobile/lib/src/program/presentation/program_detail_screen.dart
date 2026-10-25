@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -20,24 +21,25 @@ class ProgramDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currentProgramProvider);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Your program')),
+      appBar: AppBar(title: Text(l10n.yourProgram)),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Could not load your program'),
+              Text(l10n.couldNotLoadYourProgram),
               TextButton(
                 onPressed: () => ref.invalidate(currentProgramProvider),
-                child: const Text('Retry'),
+                child: Text(l10n.retry),
               ),
             ],
           ),
         ),
         data: (program) => program == null
-            ? const Center(child: Text('No program yet'))
+            ? Center(child: Text(l10n.noProgramYet))
             : _ProgramDetail(program: program),
       ),
     );
@@ -54,6 +56,7 @@ class _ProgramDetail extends ConsumerWidget {
     final p = program.program;
     final d = program.diet;
     final progress = ref.watch(weeklyProgressProvider);
+    final l10n = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -68,21 +71,23 @@ class _ProgramDetail extends ConsumerWidget {
           const SizedBox(height: 16),
         ],
         _Section(
-          title: 'Training',
+          title: l10n.training,
           icon: Icons.fitness_center,
           children: [
-            _InfoRow('Split', p.split),
-            _InfoRow('Training', '${p.daysPerWeek} days/week'),
+            _InfoRow(l10n.split, p.split),
+            _InfoRow(l10n.training, l10n.daysPerWeek(p.daysPerWeek)),
             _InfoRow(
-                'Session duration', '${p.estimatedSessionDurationMin} min'),
-            _InfoRow('Intensity', p.intensityGuidance),
-            _InfoRow('Rest', p.restGuidance),
-            _InfoRow('Progression', p.progressionGuidance, last: true),
+              l10n.sessionDuration,
+              l10n.minutesShort(p.estimatedSessionDurationMin),
+            ),
+            _InfoRow(l10n.intensity, p.intensityGuidance),
+            _InfoRow(l10n.rest, p.restGuidance),
+            _InfoRow(l10n.progression, p.progressionGuidance, last: true),
           ],
         ),
         const SizedBox(height: 16),
         _Section(
-          title: 'Highlight exercises',
+          title: l10n.highlightExercises,
           icon: Icons.star_outline,
           children: [
             Wrap(
@@ -96,12 +101,12 @@ class _ProgramDetail extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         _Section(
-          title: 'Nutrition',
+          title: l10n.nutrition,
           icon: Icons.restaurant_menu,
           children: [
-            _InfoRow('Approach', d.approach),
-            _InfoRow('Strategy', d.calorieStrategy),
-            _InfoRow('Meals', d.mealStructure, last: true),
+            _InfoRow(l10n.approach, d.approach),
+            _InfoRow(l10n.strategy, d.calorieStrategy),
+            _InfoRow(l10n.meals, d.mealStructure, last: true),
             const SizedBox(height: 16),
             _MacroTable(diet: d),
           ],
@@ -257,6 +262,7 @@ class _MacroTable extends StatelessWidget {
     final cKcal = diet.carbsG * 4.0;
     final fKcal = diet.fatG * 9.0;
     final total = (pKcal + cKcal + fKcal).clamp(1.0, double.infinity);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,11 +289,12 @@ class _MacroTable extends StatelessWidget {
         const SizedBox(height: 14),
         Row(
           children: [
-            _macroPill('Protein', '${diet.proteinG} g', _protein, context),
+            _macroPill(
+                l10n.protein, l10n.grams(diet.proteinG), _protein, context),
             const SizedBox(width: 10),
-            _macroPill('Carbs', '${diet.carbsG} g', _carbs, context),
+            _macroPill(l10n.carbs, l10n.grams(diet.carbsG), _carbs, context),
             const SizedBox(width: 10),
-            _macroPill('Fat', '${diet.fatG} g', _fat, context),
+            _macroPill(l10n.fat, l10n.grams(diet.fatG), _fat, context),
           ],
         ),
         const SizedBox(height: 14),
@@ -296,12 +303,12 @@ class _MacroTable extends StatelessWidget {
             Icon(Icons.local_fire_department,
                 size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 6),
-            Text('${diet.estimatedKcal}',
+            Text(diet.estimatedKcal.toString(),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     )),
             const SizedBox(width: 4),
-            Text('kcal / day',
+            Text(l10n.kcalPerDay,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     )),
@@ -360,6 +367,7 @@ class CurrentProgramCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currentProgramProvider);
+    final l10n = AppLocalizations.of(context);
     return async.when(
       loading: () => const LinearProgressIndicator(),
       error: (_, __) => _getProgramCta(context),
@@ -385,7 +393,7 @@ class CurrentProgramCard extends ConsumerWidget {
                     Row(
                       children: [
                         Text(
-                          'YOUR PROGRAM',
+                          l10n.yourProgramCaps,
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: Theme.of(context)
@@ -428,12 +436,13 @@ class CurrentProgramCard extends ConsumerWidget {
                                 children: [
                                   _StatPill(
                                     icon: Icons.calendar_today,
-                                    label:
-                                        '${program.program.daysPerWeek} days/week',
+                                    label: l10n.daysPerWeek(
+                                        program.program.daysPerWeek),
                                   ),
                                   _StatPill(
                                     icon: Icons.local_fire_department,
-                                    label: '${program.diet.estimatedKcal} kcal',
+                                    label: l10n
+                                        .kcalShort(program.diet.estimatedKcal),
                                   ),
                                 ],
                               ),
@@ -447,8 +456,8 @@ class CurrentProgramCard extends ConsumerWidget {
                             size: 72,
                             stroke: 7,
                             onPrimary: true,
-                            label:
-                                '${progress.daysDone}/${progress.daysTarget}',
+                            label: l10n.doneOfTarget(
+                                progress.daysDone, progress.daysTarget),
                           ),
                         ],
                       ],
@@ -464,6 +473,7 @@ class CurrentProgramCard extends ConsumerWidget {
   }
 
   Widget _getProgramCta(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -494,7 +504,7 @@ class CurrentProgramCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Get your program',
+                        l10n.getYourProgram,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
@@ -504,7 +514,7 @@ class CurrentProgramCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Take a photo to get a personalized plan',
+                        l10n.takeAPhotoForPlan,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme

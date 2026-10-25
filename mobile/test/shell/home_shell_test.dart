@@ -33,6 +33,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
 import '../support/workout_fakes.dart';
@@ -78,7 +79,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: HomeShell()),
+        child: localizedApp(home: const HomeShell()),
       ),
     );
     // Bounded pumps flush the restore + the profileProvider future without
@@ -113,7 +114,7 @@ void main() {
     expect(find.byType(ProfilePrompt), findsOneWidget);
 
     // Tap the dismiss affordance; the prompt exposes a close/dismiss control.
-    await tester.tap(find.byTooltip('Dismiss'));
+    await tester.tap(find.byTooltip(l10n.dismiss));
     await tester.pump();
 
     expect(find.byType(ProfilePrompt), findsNothing);

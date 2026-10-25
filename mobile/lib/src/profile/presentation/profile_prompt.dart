@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// The dismissible "complete your profile" banner shown on the home shell when
 /// the user has no profile yet (AC1). Stateless — the shell owns visibility and
 /// the [onDismiss]/[onStart] effects (AC2).
@@ -15,6 +17,7 @@ class ProfilePrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.all(12),
       child: Padding(
@@ -23,14 +26,10 @@ class ProfilePrompt extends StatelessWidget {
           children: [
             const Icon(Icons.account_circle_outlined),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Complete your profile to personalize your training.',
-              ),
-            ),
-            TextButton(onPressed: onStart, child: const Text('Get started')),
+            Expanded(child: Text(l10n.completeYourProfilePrompt)),
+            TextButton(onPressed: onStart, child: Text(l10n.getStarted)),
             IconButton(
-              tooltip: 'Dismiss',
+              tooltip: l10n.dismiss,
               icon: const Icon(Icons.close),
               onPressed: onDismiss,
             ),

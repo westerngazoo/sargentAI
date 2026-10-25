@@ -20,8 +20,6 @@ const notYetMigrated = <String>{
   'hub',
   'measurements',
   'nutrition',
-  'profile',
-  'program',
   'shell',
   'workout',
 };

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_exception.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -60,7 +61,8 @@ class _SyntheticProposalsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose your program')),
+      appBar:
+          AppBar(title: Text(AppLocalizations.of(context).chooseYourProgram)),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: widget.proposals.length,
@@ -101,16 +103,17 @@ class _ProposalCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onChoose;
 
-  String get _rankLabel => switch (rank) {
-        1 => 'Best match',
-        2 => 'Close match',
-        _ => 'Good option',
+  String _rankLabel(AppLocalizations l10n) => switch (rank) {
+        1 => l10n.rankBestMatch,
+        2 => l10n.rankCloseMatch,
+        _ => l10n.rankGoodOption,
       };
 
   @override
   Widget build(BuildContext context) {
     final p = proposal.program;
     final d = proposal.diet;
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -126,14 +129,14 @@ class _ProposalCard extends StatelessWidget {
                     child: Text(proposal.displayName,
                         style: Theme.of(context).textTheme.titleMedium),
                   ),
-                  Chip(label: Text(_rankLabel)),
+                  Chip(label: Text(_rankLabel(l10n))),
                 ],
               ),
               const SizedBox(height: 4),
               Text(proposal.summary,
                   style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 8),
-              Text('${p.daysPerWeek} days/week · ${d.estimatedKcal} kcal/day'),
+              Text(l10n.proposalSummaryLine(p.daysPerWeek, d.estimatedKcal)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
@@ -144,18 +147,18 @@ class _ProposalCard extends StatelessWidget {
               ),
               if (expanded) ...[
                 const Divider(),
-                Text('Intensity: ${p.intensityGuidance}'),
+                Text(l10n.intensityLine(p.intensityGuidance)),
                 const SizedBox(height: 4),
-                Text('Rest: ${p.restGuidance}'),
+                Text(l10n.restLine(p.restGuidance)),
                 const SizedBox(height: 4),
-                Text('Progression: ${p.progressionGuidance}'),
+                Text(l10n.progressionLine(p.progressionGuidance)),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _Macro('Protein', '${d.proteinG}g'),
-                    _Macro('Carbs', '${d.carbsG}g'),
-                    _Macro('Fat', '${d.fatG}g'),
+                    _Macro(l10n.protein, l10n.grams(d.proteinG)),
+                    _Macro(l10n.carbs, l10n.grams(d.carbsG)),
+                    _Macro(l10n.fat, l10n.grams(d.fatG)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -169,7 +172,7 @@ class _ProposalCard extends StatelessWidget {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Choose this program'),
+                        : Text(l10n.chooseThisProgram),
                   ),
                 ),
               ],

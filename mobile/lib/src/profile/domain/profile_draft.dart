@@ -1,18 +1,22 @@
 import 'package:flutter/foundation.dart';
 
 import 'goal.dart';
+import 'profile_field_error.dart';
 import 'sex.dart';
 
-// Validation ranges mirror `backend/crates/core/src/profile.rs` EXACTLY (AC4/AC6);
-// the backend stays the source of truth — these only fail the UI fast.
-const int _minAge = 13;
-const int _maxAge = 120;
-const int _minHeight = 50;
-const int _maxHeight = 300;
-const double _minWeight = 20.0;
-const double _maxWeight = 500.0;
-const double _minBodyFat = 1.0;
-const double _maxBodyFat = 75.0;
+/// Validation ranges. They mirror `backend/crates/core/src/profile.rs`
+/// EXACTLY (AC4/AC6); the backend stays the source of truth — these only fail
+/// the UI fast. Public so the field-error messages can quote them.
+abstract final class ProfileLimits {
+  static const int minAge = 13;
+  static const int maxAge = 120;
+  static const int minHeight = 50;
+  static const int maxHeight = 300;
+  static const double minWeight = 20.0;
+  static const double maxWeight = 500.0;
+  static const double minBodyFat = 1.0;
+  static const double maxBodyFat = 75.0;
+}
 
 /// The validated `PUT /profile/me` payload. Built only from a draft whose
 /// required fields validate; skipped optionals are **omitted** from the JSON.
@@ -46,7 +50,7 @@ class ProfileRequest {
 
 /// The in-progress onboarding input. Immutable with [copyWith] so it survives
 /// step navigation; per-field validators mirror the backend and return `null`
-/// when valid or a user-safe message otherwise.
+/// when valid or the [ProfileFieldError] kind otherwise.
 @immutable
 class ProfileDraft {
   const ProfileDraft({
@@ -85,42 +89,41 @@ class ProfileDraft {
             clearBodyFat ? null : (bodyFatPercentage ?? this.bodyFatPercentage),
       );
 
-  String? dobError(DateTime today) {
+  ProfileFieldError? dobError(DateTime today) {
     final dob = dateOfBirth;
-    if (dob == null) return 'enter your date of birth';
-    if (dob.isAfter(today)) return 'date of birth cannot be in the future';
+    if (dob == null) return ProfileFieldError.dobMissing;
+    if (dob.isAfter(today)) return ProfileFieldError.dobInFuture;
     final age = _ageOn(dob, today);
-    if (age < _minAge || age > _maxAge) {
-      return 'age must be between $_minAge and $_maxAge';
+    if (age < ProfileLimits.minAge || age > ProfileLimits.maxAge) {
+      return ProfileFieldError.ageOutOfRange;
     }
     return null;
   }
 
-  String? heightError() {
+  ProfileFieldError? heightError() {
     final h = heightCm;
-    if (h == null) return 'enter your height';
-    if (h < _minHeight || h > _maxHeight) {
-      return 'height must be between $_minHeight and $_maxHeight cm';
+    if (h == null) return ProfileFieldError.heightMissing;
+    if (h < ProfileLimits.minHeight || h > ProfileLimits.maxHeight) {
+      return ProfileFieldError.heightOutOfRange;
     }
     return null;
   }
 
-  String? weightError() {
+  ProfileFieldError? weightError() {
     final w = weightKg;
-    if (w == null) return 'enter your weight';
-    if (w < _minWeight || w > _maxWeight) {
-      return 'weight must be between ${_minWeight.toStringAsFixed(0)} '
-          'and ${_maxWeight.toStringAsFixed(0)} kg';
+    if (w == null) return ProfileFieldError.weightMissing;
+    if (w < ProfileLimits.minWeight || w > ProfileLimits.maxWeight) {
+      return ProfileFieldError.weightOutOfRange;
     }
     return null;
   }
 
-  /// `null` when absent (skippable, AC6) or in range; a message otherwise.
-  String? bodyFatError() {
+  /// `null` when absent (skippable, AC6) or in range; the kind otherwise.
+  ProfileFieldError? bodyFatError() {
     final b = bodyFatPercentage;
     if (b == null) return null;
-    if (b < _minBodyFat || b > _maxBodyFat) {
-      return 'body fat must be between $_minBodyFat and $_maxBodyFat %';
+    if (b < ProfileLimits.minBodyFat || b > ProfileLimits.maxBodyFat) {
+      return ProfileFieldError.bodyFatOutOfRange;
     }
     return null;
   }
