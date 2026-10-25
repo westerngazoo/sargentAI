@@ -480,3 +480,45 @@ pub async fn png_upload(
         .expect("photo upload response must carry a string id")
         .to_string()
 }
+
+/// Insert a `user_programs` row directly (R-0061 / SPEC-0061 §2.3), bypassing
+/// the choose endpoints so a test can pin the archetype, `starts_on` and
+/// `active` flag it needs. The program and diet blobs are empty objects: the
+/// schedule and workout handlers never read them. Returns the new row's id.
+pub async fn seed_program(
+    pool: &PgPool,
+    user_id: &str,
+    archetype_id: &str,
+    starts_on: chrono::NaiveDate,
+    active: bool,
+) -> uuid::Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO user_programs (user_id, archetype_id, program, diet, active, starts_on) \
+         VALUES ($1, $2, '{}'::jsonb, '{}'::jsonb, $3, $4) RETURNING id",
+    )
+    .bind(uuid::Uuid::parse_str(user_id).expect("a seeded user id is a uuid"))
+    .bind(archetype_id)
+    .bind(active)
+    .bind(starts_on)
+    .fetch_one(pool)
+    .await
+    .expect("seed program row inserted")
+}
+
+/// A minimal valid `POST /workouts` body for `performed_on`, optionally linked
+/// to a plan day (`user_program_id` + `plan_day_index`, SPEC-0061 §2.4).
+pub fn workout_body(performed_on: chrono::NaiveDate, plan: Option<(uuid::Uuid, i64)>) -> Value {
+    let mut body = serde_json::json!({
+        "performed_on": performed_on.to_string(),
+        "exercises": [{
+            "name": "Back Squat",
+            "muscle_group": "legs",
+            "sets": [{ "reps": 5, "weight_kg": 100.0 }]
+        }]
+    });
+    if let Some((program_id, index)) = plan {
+        body["user_program_id"] = Value::String(program_id.to_string());
+        body["plan_day_index"] = Value::from(index);
+    }
+    body
+}
