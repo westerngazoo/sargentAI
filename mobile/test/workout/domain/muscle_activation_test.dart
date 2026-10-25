@@ -1,4 +1,5 @@
-// Activated-muscles mapping: curated lifts, group fallback, target labels.
+// Activated-muscles mapping: curated lifts, group fallback. The spoken
+// target label is presentation (muscle_names_test.dart).
 
 import 'package:fitai/src/workout/domain/muscle_activation.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
@@ -23,11 +24,6 @@ void main() {
 
   test('unknown lift without a group is empty', () {
     expect(activationFor('Mystery movement').isEmpty, isTrue);
-  });
-
-  test('targetLabel reads naturally', () {
-    expect(activationFor('Bench press').targetLabel, 'chest');
-    expect(activationFor('Barbell squat').targetLabel, 'quads and glutes');
   });
 
   test('expanded catalog: new lifts resolve to curated activations', () {

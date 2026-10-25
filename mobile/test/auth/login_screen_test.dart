@@ -79,7 +79,7 @@ void main() {
 
   testWidgets('SAC2 a 401 renders the non-enumerating message', (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException('invalid email or password', statusCode: 401),
+      const ApiException(ApiErrorKind.unauthorized, statusCode: 401),
     );
     await pumpLogin(tester);
 
@@ -87,12 +87,12 @@ void main() {
     await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('invalid email or password'), findsOneWidget);
+    expect(find.text(l10n.apiErrorUnauthorized), findsOneWidget);
   });
 
   testWidgets('SAC9 a timeout renders a retryable message', (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException("can't reach the server — retry"),
+      const ApiException(ApiErrorKind.transport),
     );
     await pumpLogin(tester);
 
@@ -100,7 +100,7 @@ void main() {
     await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('retry'), findsOneWidget);
+    expect(find.text(l10n.apiErrorTransport), findsOneWidget);
   });
 
   testWidgets('SAC9 the button shows a spinner and disables while in flight',
@@ -126,7 +126,7 @@ void main() {
   testWidgets('SAC9 no raw exception text is shown to the user',
       (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException('invalid email or password', statusCode: 401),
+      const ApiException(ApiErrorKind.unauthorized, statusCode: 401),
     );
     await pumpLogin(tester);
 

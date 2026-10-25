@@ -112,7 +112,7 @@ void main() {
 
     test('a failed login rethrows ApiException and keeps state put', () async {
       when(() => repo.login(any(), any())).thenThrow(
-          const ApiException('invalid email or password', statusCode: 401));
+          const ApiException(ApiErrorKind.unauthorized, statusCode: 401));
       final container = makeContainer();
       final controller = container.read(authControllerProvider.notifier);
       container.read(authControllerProvider);
@@ -151,8 +151,8 @@ void main() {
     });
 
     test('a register failure rethrows and never auto-logs-in', () async {
-      when(() => repo.register(any(), any()))
-          .thenThrow(const ApiException('duplicate email', statusCode: 409));
+      when(() => repo.register(any(), any())).thenThrow(
+          const ApiException(ApiErrorKind.conflict, statusCode: 409));
       final container = makeContainer();
       final controller = container.read(authControllerProvider.notifier);
       container.read(authControllerProvider);

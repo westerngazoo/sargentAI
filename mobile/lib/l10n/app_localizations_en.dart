@@ -325,25 +325,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kcalPerDay => 'kcal / day';
 
   @override
-  String get yourProgramCaps => 'YOUR PROGRAM';
-
-  @override
-  String kcalShort(int n) {
-    return '$n kcal';
-  }
-
-  @override
-  String doneOfTarget(int done, int target) {
-    return '$done/$target';
-  }
-
-  @override
-  String get getYourProgram => 'Get your program';
-
-  @override
-  String get takeAPhotoForPlan => 'Take a photo to get a personalized plan';
-
-  @override
   String get targetPhysiqueCaps => 'TARGET PHYSIQUE';
 
   @override
@@ -543,4 +524,633 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get findYourProgram => 'Find your program';
+
+  @override
+  String get apiErrorTransport => 'can\'t reach the server — retry';
+
+  @override
+  String get apiErrorBadRequest => 'please check your details';
+
+  @override
+  String get apiErrorUnauthorized => 'invalid email or password';
+
+  @override
+  String get apiErrorNotFound => 'that no longer exists';
+
+  @override
+  String get apiErrorConflict => 'that already exists';
+
+  @override
+  String get apiErrorUnknown => 'something went wrong — please try again';
+
+  @override
+  String get regionNeck => 'Neck';
+
+  @override
+  String get regionTraps => 'Traps';
+
+  @override
+  String get regionShoulders => 'Shoulders';
+
+  @override
+  String get regionChest => 'Chest';
+
+  @override
+  String get regionBiceps => 'Biceps';
+
+  @override
+  String get regionTriceps => 'Triceps';
+
+  @override
+  String get regionForearms => 'Forearms';
+
+  @override
+  String get regionCore => 'Core';
+
+  @override
+  String get regionLats => 'Lats';
+
+  @override
+  String get regionUpperBack => 'Upper back';
+
+  @override
+  String get regionLowerBack => 'Lower back';
+
+  @override
+  String get regionQuads => 'Quads';
+
+  @override
+  String get regionHamstrings => 'Hamstrings';
+
+  @override
+  String get regionGlutes => 'Glutes';
+
+  @override
+  String get regionCalves => 'Calves';
+
+  @override
+  String get muscleChest => 'Chest';
+
+  @override
+  String get muscleBack => 'Back';
+
+  @override
+  String get muscleShoulders => 'Shoulders';
+
+  @override
+  String get muscleArms => 'Arms';
+
+  @override
+  String get muscleLegs => 'Legs';
+
+  @override
+  String get muscleCore => 'Core';
+
+  @override
+  String listAnd(String head, String last) {
+    return '$head and $last';
+  }
+
+  @override
+  String get rejectStartWorkoutFirst => 'start a workout first';
+
+  @override
+  String get rejectAddExerciseFirst => 'add an exercise first';
+
+  @override
+  String get rejectEnterExerciseName => 'enter an exercise name';
+
+  @override
+  String rejectNameTooLong(int max) {
+    return 'name must be at most $max characters';
+  }
+
+  @override
+  String get rejectEnterReps => 'enter the reps';
+
+  @override
+  String rejectRepsOutOfRange(int min, int max) {
+    return 'reps must be between $min and $max';
+  }
+
+  @override
+  String rejectWeightOutOfRange(int max) {
+    return 'weight must be over 0 and at most $max kg';
+  }
+
+  @override
+  String rejectRpeOutOfRange(double min, double max) {
+    return 'RPE must be between $min and $max in 0.5 steps';
+  }
+
+  @override
+  String get fieldAreaSets => 'your sets';
+
+  @override
+  String get fieldAreaExercise => 'the exercise';
+
+  @override
+  String get fieldAreaWorkout => 'the workout';
+
+  @override
+  String errorCheckArea(String error, String area) {
+    return '$error — check $area';
+  }
+
+  @override
+  String get discardThisWorkout => 'Discard this workout?';
+
+  @override
+  String get yourLoggedSetsWillBeLost => 'Your logged sets will be lost.';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get workout => 'Workout';
+
+  @override
+  String get earbudCoachOn => 'Earbud coach on';
+
+  @override
+  String get earbudCoachOff => 'Earbud coach off';
+
+  @override
+  String get voiceCoachOn => 'Voice coach on';
+
+  @override
+  String get voiceCoachOff => 'Voice coach off';
+
+  @override
+  String get addExercise => 'Add exercise';
+
+  @override
+  String targetMusclesCaps(String name) {
+    return 'TARGET MUSCLES — $name';
+  }
+
+  @override
+  String get stopListening => 'Stop listening';
+
+  @override
+  String get dictateASet => 'Dictate a set';
+
+  @override
+  String get listening => 'Listening…';
+
+  @override
+  String get coachIdleHint =>
+      'Tap the mic and say \"done\" — I will ask your reps and kilos. End every answer with \"over\".';
+
+  @override
+  String setLine(int n, String label) {
+    return 'Set $n: $label';
+  }
+
+  @override
+  String repsCount(int n) {
+    return '$n reps';
+  }
+
+  @override
+  String kg(String value) {
+    return '$value kg';
+  }
+
+  @override
+  String rpeValue(String value) {
+    return 'RPE $value';
+  }
+
+  @override
+  String get repsLabel => 'Reps';
+
+  @override
+  String get rpeLabel => 'RPE';
+
+  @override
+  String get repeatLastSet => 'Repeat last set';
+
+  @override
+  String get logSet => 'Log set';
+
+  @override
+  String get newExercise => 'New exercise';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get exerciseNameLabel => 'Exercise name';
+
+  @override
+  String get commonLifts => 'Common lifts';
+
+  @override
+  String get muscleGroupOptional => 'Muscle group (optional)';
+
+  @override
+  String exerciseWithGroup(String name, String group) {
+    return '$name · $group';
+  }
+
+  @override
+  String get noWorkoutsYet =>
+      'no workouts yet — tap start to log your first one';
+
+  @override
+  String sessionSummary(int exercises, int sets) {
+    return '$exercises exercises · $sets sets';
+  }
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteThisWorkout => 'Delete this workout?';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get workoutNoLongerExists => 'that workout no longer exists';
+
+  @override
+  String get startWorkout => 'Start workout';
+
+  @override
+  String get coachSayDoneHandsFree => 'Say done when your set is in.';
+
+  @override
+  String get coachSayDoneKeyMic =>
+      'Key the mic and say done when your set is in.';
+
+  @override
+  String coachTargetSuffix(String label) {
+    return ' — target $label';
+  }
+
+  @override
+  String coachPlanLoaded(int count, String first, String prompt) {
+    return 'Plan loaded — $count exercises. First up: $first. $prompt';
+  }
+
+  @override
+  String get coachNoPlan =>
+      'Voice coach on. No plan found — add an exercise, then dictate your sets.';
+
+  @override
+  String coachOnCurrent(String name, String prompt) {
+    return 'Voice coach on. Current exercise: $name. $prompt';
+  }
+
+  @override
+  String get coachNoCurrentExercise => 'none';
+
+  @override
+  String get voiceInputUnavailable => 'Voice input is not available here.';
+
+  @override
+  String get coachHowManyReps => 'How many reps?';
+
+  @override
+  String get coachHowManyKilos => 'How many kilos? Or say bodyweight.';
+
+  @override
+  String coachLoggedRestUp(String logged) {
+    return 'Logged $logged. Rest up.';
+  }
+
+  @override
+  String coachAtKilos(String weight) {
+    return 'at $weight kilos';
+  }
+
+  @override
+  String coachNextUp(String next) {
+    return 'Next up: $next.';
+  }
+
+  @override
+  String get coachLastExercise =>
+      'That was the last exercise. Say finish workout to save.';
+
+  @override
+  String get coachSaving => 'Saving your workout.';
+
+  @override
+  String get coachSaved => 'Workout saved. Dismissed!';
+
+  @override
+  String get coachGoodHowManyReps => 'Good. How many reps?';
+
+  @override
+  String get coachStandingBy => 'Standing by. Tap the mic when you are ready.';
+
+  @override
+  String get coachDidNotCatch =>
+      'Did not catch that. Say for example: ten reps at sixty kilos.';
+
+  @override
+  String get coachJustReps => 'Just the number of reps.';
+
+  @override
+  String get coachKilosAsNumber => 'Kilos as a number — or say bodyweight.';
+
+  @override
+  String coachLoggedNextSet(String logged) {
+    return 'Logged $logged. Rest up — say done when the next set is in.';
+  }
+
+  @override
+  String ttsNext(String name) {
+    return 'Next: $name.';
+  }
+
+  @override
+  String ttsNextSets(String name, int sets, int reps) {
+    return 'Next: $name. $sets sets of $reps reps.';
+  }
+
+  @override
+  String ttsNextSetsWeight(String name, int sets, int reps, String weight) {
+    return 'Next: $name. $sets sets of $reps reps at $weight kg.';
+  }
+
+  @override
+  String ttsSetGo(int n) {
+    return 'Set $n. Go.';
+  }
+
+  @override
+  String ttsSetOfGo(int n, int total, int reps) {
+    return 'Set $n of $total. $reps reps. Go.';
+  }
+
+  @override
+  String ttsSetOfWeightGo(int n, int total, int reps, String weight) {
+    return 'Set $n of $total. $reps reps at $weight kg. Go.';
+  }
+
+  @override
+  String get ttsRest => 'Rest.';
+
+  @override
+  String get ttsWorkoutDone => 'Workout done.';
+
+  @override
+  String get ttsSeedFirstSet => 'Log your first set on screen.';
+
+  @override
+  String get sergeantVoiceUnavailable =>
+      'Voice input is not available here — tap an option instead.';
+
+  @override
+  String get sergeantGreeting =>
+      'Sergeant here. Say: start workout, plan workout, log a meal. Finish every command with over.';
+
+  @override
+  String get sergeantRogerOut => 'Roger. Out.';
+
+  @override
+  String get sergeantLogged => 'Logged.';
+
+  @override
+  String get sergeantTellMeMore => 'Tell me more.';
+
+  @override
+  String get sergeantRoger => 'Roger.';
+
+  @override
+  String get sergeantDidNotCatch => 'Did not catch that.';
+
+  @override
+  String get sergeantStandingBy => 'Standing by.';
+
+  @override
+  String get sergeantAskMacros =>
+      'Tell me the grams of protein, carbs, and fat — a portion like 200 grams of chicken breast — or a preset, like protein shake.';
+
+  @override
+  String get sergeantStartingSession => 'Starting your session.';
+
+  @override
+  String get sergeantNoPlanYet => 'No plan yet — let us find your body match.';
+
+  @override
+  String get sergeantOpeningBodyMatch => 'Opening the body match.';
+
+  @override
+  String get sergeantRecentActivity => 'Your recent activity.';
+
+  @override
+  String get sergeantOpeningProfile => 'Opening your profile.';
+
+  @override
+  String get sergeantSayOptions =>
+      'Say: start workout, plan workout, or log a meal.';
+
+  @override
+  String sergeantDidNotGet(String transcript) {
+    return 'Did not get \"$transcript\" — say start workout, plan workout, or log a meal.';
+  }
+
+  @override
+  String get sergeantMacrosExample =>
+      'Grams of protein, carbs, and fat — for example: 40 protein, 60 carbs, 20 fat.';
+
+  @override
+  String get sergeantMealLogged => 'Meal logged';
+
+  @override
+  String sergeantLoggedLabel(String label) {
+    return 'Logged $label';
+  }
+
+  @override
+  String sergeantMealSummary(
+      String what, String protein, String carbs, String fat, int kcal) {
+    return '$what: $protein protein, $carbs carbs, $fat fat — $kcal calories. What else?';
+  }
+
+  @override
+  String get sergeantCouldNotSaveMeal =>
+      'Could not save the meal — try again in a moment.';
+
+  @override
+  String sergeantLookingUp(String food) {
+    return 'Looking up $food.';
+  }
+
+  @override
+  String sergeantCouldNotFind(String food) {
+    return 'Could not find $food — tell me the grams of protein, carbs, and fat instead.';
+  }
+
+  @override
+  String sergeantGramsOf(String grams, String food) {
+    return '$grams grams of $food';
+  }
+
+  @override
+  String sergeantPlanSummary(String split, int days, int kcal) {
+    return 'Your plan: $split. $days days a week, $kcal calories.';
+  }
+
+  @override
+  String get hubWorkout => 'Workout';
+
+  @override
+  String get hubMeal => 'Meal';
+
+  @override
+  String get hubProgram => 'Program';
+
+  @override
+  String get hubBodyMatch => 'Body match';
+
+  @override
+  String get hubHistory => 'History';
+
+  @override
+  String get hubProfile => 'Profile';
+
+  @override
+  String get hubIdleHint =>
+      'Tap the mic and speak — finish every command with \"over\".';
+
+  @override
+  String get progress => 'Progress';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get logMeasurement => 'Log measurement';
+
+  @override
+  String get bodyComposition => 'Body composition';
+
+  @override
+  String get strength => 'Strength';
+
+  @override
+  String get trainingBalance => 'Training balance';
+
+  @override
+  String get couldNotLoadPullToRetry => 'Could not load — pull to retry.';
+
+  @override
+  String get logACoupleOfMeasurements =>
+      'Log a couple of measurements to see your trend.';
+
+  @override
+  String get bodyFatPercentLabel => 'Body fat %';
+
+  @override
+  String get leanMass => 'Lean mass';
+
+  @override
+  String get weight => 'Weight';
+
+  @override
+  String get bodyFat => 'Body fat';
+
+  @override
+  String overTime(String label) {
+    return '$label over time';
+  }
+
+  @override
+  String get logAFewWeightedSessions =>
+      'Log a few weighted sessions to see your strength climb.';
+
+  @override
+  String get estimatedOneRmAllLifts => 'Estimated 1RM · all lifts';
+
+  @override
+  String estimatedOneRm(String name) {
+    return 'Estimated 1RM · $name';
+  }
+
+  @override
+  String get allLifts => 'All lifts';
+
+  @override
+  String gainSinceTracking(String gain) {
+    return '$gain kg since you started tracking it';
+  }
+
+  @override
+  String get e1rmLabel => 'e1RM';
+
+  @override
+  String get sessionVolume => 'Session volume';
+
+  @override
+  String get volume => 'Volume';
+
+  @override
+  String get prBadge => 'PR';
+
+  @override
+  String get coachSuggestions => 'Coach suggestions';
+
+  @override
+  String lastWeeks(int n) {
+    return 'last $n wks';
+  }
+
+  @override
+  String get onTrack => 'On track — keep doing what you\'re doing.';
+
+  @override
+  String get actionCaps => 'ACTION';
+
+  @override
+  String get measurementLogged => 'Measurement logged';
+
+  @override
+  String get weighInHint =>
+      'Weigh in — body fat % is optional but powers the trend.';
+
+  @override
+  String get bodyFatPercentInputLabel => 'Body fat (%)';
+
+  @override
+  String get saveMeasurement => 'Save measurement';
+
+  @override
+  String get mealLogged => 'Meal logged';
+
+  @override
+  String get logAMeal => 'Log a meal';
+
+  @override
+  String get proteinGramsLabel => 'Protein (g)';
+
+  @override
+  String get carbsGramsLabel => 'Carbs (g)';
+
+  @override
+  String get fatGramsLabel => 'Fat (g)';
+
+  @override
+  String kcalLoggedForToday(String kcal) {
+    return '≈ $kcal kcal · logged for today';
+  }
+
+  @override
+  String get saveMeal => 'Save meal';
+
+  @override
+  String valueWithUnit(String value, String unit) {
+    return '$value$unit';
+  }
+
+  @override
+  String get workoutSessionChannel => 'Workout session';
 }

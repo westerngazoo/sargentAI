@@ -142,7 +142,7 @@ void main() {
       (tester) async {
     when(() => repo.putMe(any())).thenThrow(
       const ApiException(
-        'please check your details',
+        ApiErrorKind.badRequest,
         statusCode: 400,
         field: 'height_cm',
       ),
@@ -155,13 +155,13 @@ void main() {
     await tester.pump();
 
     expect(locationOf(router), '/onboarding', reason: 'no navigation on error');
-    expect(find.textContaining('check your details'), findsOneWidget);
+    expect(find.text(l10n.apiErrorBadRequest), findsOneWidget);
   });
 
   testWidgets('SAC8 a transport error shows a retryable message, stays put',
       (tester) async {
     when(() => repo.putMe(any())).thenThrow(
-      const ApiException("can't reach the server — retry"),
+      const ApiException(ApiErrorKind.transport),
     );
     final (container, router) = await pumpWizard(tester);
     fillValidDraft(container);
@@ -171,7 +171,7 @@ void main() {
     await tester.pump();
 
     expect(locationOf(router), '/onboarding');
-    expect(find.textContaining('retry'), findsOneWidget);
+    expect(find.text(l10n.apiErrorTransport), findsOneWidget);
   });
 
   testWidgets(

@@ -1,4 +1,5 @@
 import 'package:fitai/l10n/app_localizations.dart';
+import 'package:fitai/src/l10n/app_localizations_provider.dart';
 import 'package:fitai/src/l10n/locale_rule.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,10 @@ import 'package:go_router/go_router.dart';
 /// The Spanish catalogue, for assertions that name a string by key instead of
 /// repeating its text (R-0061 AC11). Tests run the app in `es`.
 final l10n = lookupAppLocalizations(const Locale('es'));
+
+/// Pins the out-of-tree catalogue (the voice loops) to Spanish too. Add it to
+/// a `ProviderContainer`'s overrides next to the fakes.
+final l10nOverride = appLocalizationsProvider.overrideWithValue(l10n);
 
 const _delegates = AppLocalizations.localizationsDelegates;
 

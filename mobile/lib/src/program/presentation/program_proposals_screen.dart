@@ -78,7 +78,7 @@ class _ProgramProposalsScreenState
       context.go('/programs/current');
     } on ApiException catch (e) {
       if (!mounted) return;
-      final msg = e.statusCode == 409
+      final msg = e.kind == ApiErrorKind.conflict
           ? l10n.selectionNoLongerAvailable
           : l10n.couldNotChooseProgram;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));

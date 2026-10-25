@@ -98,11 +98,6 @@
   "fat": "Fat",
   "grams": "{n} g",
   "kcalPerDay": "kcal / day",
-  "yourProgramCaps": "YOUR PROGRAM",
-  "kcalShort": "{n} kcal",
-  "doneOfTarget": "{done}/{target}",
-  "getYourProgram": "Get your program",
-  "takeAPhotoForPlan": "Take a photo to get a personalized plan",
   "targetPhysiqueCaps": "TARGET PHYSIQUE",
   "physiqueClassicAesthetic": "Classic aesthetic",
   "physiqueModernHypertrophy": "Modern hypertrophy",
@@ -158,5 +153,550 @@
   "addMeal": "+ Meal",
   "showMonth": "Show month",
   "showWeek": "Show week",
-  "findYourProgram": "Find your program"
+  "findYourProgram": "Find your program",
+  "apiErrorTransport": "can't reach the server — retry",
+  "@apiErrorTransport": {
+    "description": "Fallback for a timeout or no-network failure on any API call."
+  },
+  "apiErrorBadRequest": "please check your details",
+  "apiErrorUnauthorized": "invalid email or password",
+  "apiErrorNotFound": "that no longer exists",
+  "apiErrorConflict": "that already exists",
+  "apiErrorUnknown": "something went wrong — please try again",
+  "regionNeck": "Neck",
+  "regionTraps": "Traps",
+  "regionShoulders": "Shoulders",
+  "regionChest": "Chest",
+  "regionBiceps": "Biceps",
+  "regionTriceps": "Triceps",
+  "regionForearms": "Forearms",
+  "regionCore": "Core",
+  "regionLats": "Lats",
+  "regionUpperBack": "Upper back",
+  "regionLowerBack": "Lower back",
+  "regionQuads": "Quads",
+  "regionHamstrings": "Hamstrings",
+  "regionGlutes": "Glutes",
+  "regionCalves": "Calves",
+  "muscleChest": "Chest",
+  "muscleBack": "Back",
+  "muscleShoulders": "Shoulders",
+  "muscleArms": "Arms",
+  "muscleLegs": "Legs",
+  "muscleCore": "Core",
+  "listAnd": "{head} and {last}",
+  "@listAnd": {
+    "description": "Joins the last item of a spoken list to the rest: 'quads and glutes'.",
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "rejectStartWorkoutFirst": "start a workout first",
+  "rejectAddExerciseFirst": "add an exercise first",
+  "rejectEnterExerciseName": "enter an exercise name",
+  "rejectNameTooLong": "name must be at most {max} characters",
+  "@rejectNameTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectEnterReps": "enter the reps",
+  "rejectRepsOutOfRange": "reps must be between {min} and {max}",
+  "@rejectRepsOutOfRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectWeightOutOfRange": "weight must be over 0 and at most {max} kg",
+  "@rejectWeightOutOfRange": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "rejectRpeOutOfRange": "RPE must be between {min} and {max} in 0.5 steps",
+  "@rejectRpeOutOfRange": {
+    "placeholders": {
+      "min": {
+        "type": "double"
+      },
+      "max": {
+        "type": "double"
+      }
+    }
+  },
+  "fieldAreaSets": "your sets",
+  "fieldAreaExercise": "the exercise",
+  "fieldAreaWorkout": "the workout",
+  "errorCheckArea": "{error} — check {area}",
+  "@errorCheckArea": {
+    "description": "A finish failure that names the part of the screen to check.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "discardThisWorkout": "Discard this workout?",
+  "yourLoggedSetsWillBeLost": "Your logged sets will be lost.",
+  "cancel": "Cancel",
+  "discard": "Discard",
+  "workout": "Workout",
+  "earbudCoachOn": "Earbud coach on",
+  "earbudCoachOff": "Earbud coach off",
+  "voiceCoachOn": "Voice coach on",
+  "voiceCoachOff": "Voice coach off",
+  "addExercise": "Add exercise",
+  "targetMusclesCaps": "TARGET MUSCLES — {name}",
+  "@targetMusclesCaps": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stopListening": "Stop listening",
+  "dictateASet": "Dictate a set",
+  "listening": "Listening…",
+  "coachIdleHint": "Tap the mic and say \"done\" — I will ask your reps and kilos. End every answer with \"over\".",
+  "setLine": "Set {n}: {label}",
+  "@setLine": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "repsCount": "{n} reps",
+  "@repsCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "kg": "{value} kg",
+  "@kg": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "rpeValue": "RPE {value}",
+  "@rpeValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "repsLabel": "Reps",
+  "rpeLabel": "RPE",
+  "repeatLastSet": "Repeat last set",
+  "logSet": "Log set",
+  "newExercise": "New exercise",
+  "add": "Add",
+  "exerciseNameLabel": "Exercise name",
+  "commonLifts": "Common lifts",
+  "muscleGroupOptional": "Muscle group (optional)",
+  "exerciseWithGroup": "{name} · {group}",
+  "@exerciseWithGroup": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
+    }
+  },
+  "noWorkoutsYet": "no workouts yet — tap start to log your first one",
+  "sessionSummary": "{exercises} exercises · {sets} sets",
+  "@sessionSummary": {
+    "placeholders": {
+      "exercises": {
+        "type": "int"
+      },
+      "sets": {
+        "type": "int"
+      }
+    }
+  },
+  "delete": "Delete",
+  "deleteThisWorkout": "Delete this workout?",
+  "yesterday": "Yesterday",
+  "workoutNoLongerExists": "that workout no longer exists",
+  "startWorkout": "Start workout",
+  "coachSayDoneHandsFree": "Say done when your set is in.",
+  "coachSayDoneKeyMic": "Key the mic and say done when your set is in.",
+  "coachTargetSuffix": " — target {label}",
+  "@coachTargetSuffix": {
+    "description": "Appended to an exercise name when its target muscles are known.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "coachPlanLoaded": "Plan loaded — {count} exercises. First up: {first}. {prompt}",
+  "@coachPlanLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "first": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "coachNoPlan": "Voice coach on. No plan found — add an exercise, then dictate your sets.",
+  "coachOnCurrent": "Voice coach on. Current exercise: {name}. {prompt}",
+  "@coachOnCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "coachNoCurrentExercise": "none",
+  "voiceInputUnavailable": "Voice input is not available here.",
+  "coachHowManyReps": "How many reps?",
+  "coachHowManyKilos": "How many kilos? Or say bodyweight.",
+  "coachLoggedRestUp": "Logged {logged}. Rest up.",
+  "@coachLoggedRestUp": {
+    "placeholders": {
+      "logged": {
+        "type": "String"
+      }
+    }
+  },
+  "coachAtKilos": "at {weight} kilos",
+  "@coachAtKilos": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "coachNextUp": "Next up: {next}.",
+  "@coachNextUp": {
+    "placeholders": {
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "coachLastExercise": "That was the last exercise. Say finish workout to save.",
+  "coachSaving": "Saving your workout.",
+  "coachSaved": "Workout saved. Dismissed!",
+  "coachGoodHowManyReps": "Good. How many reps?",
+  "coachStandingBy": "Standing by. Tap the mic when you are ready.",
+  "coachDidNotCatch": "Did not catch that. Say for example: ten reps at sixty kilos.",
+  "coachJustReps": "Just the number of reps.",
+  "coachKilosAsNumber": "Kilos as a number — or say bodyweight.",
+  "coachLoggedNextSet": "Logged {logged}. Rest up — say done when the next set is in.",
+  "@coachLoggedNextSet": {
+    "placeholders": {
+      "logged": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsNext": "Next: {name}.",
+  "@ttsNext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsNextSets": "Next: {name}. {sets} sets of {reps} reps.",
+  "@ttsNextSets": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsNextSetsWeight": "Next: {name}. {sets} sets of {reps} reps at {weight} kg.",
+  "@ttsNextSetsWeight": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsSetGo": "Set {n}. Go.",
+  "@ttsSetGo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsSetOfGo": "Set {n} of {total}. {reps} reps. Go.",
+  "@ttsSetOfGo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
+    }
+  },
+  "ttsSetOfWeightGo": "Set {n} of {total}. {reps} reps at {weight} kg. Go.",
+  "@ttsSetOfWeightGo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "ttsRest": "Rest.",
+  "ttsWorkoutDone": "Workout done.",
+  "ttsSeedFirstSet": "Log your first set on screen.",
+  "sergeantVoiceUnavailable": "Voice input is not available here — tap an option instead.",
+  "sergeantGreeting": "Sergeant here. Say: start workout, plan workout, log a meal. Finish every command with over.",
+  "sergeantRogerOut": "Roger. Out.",
+  "sergeantLogged": "Logged.",
+  "sergeantTellMeMore": "Tell me more.",
+  "sergeantRoger": "Roger.",
+  "sergeantDidNotCatch": "Did not catch that.",
+  "sergeantStandingBy": "Standing by.",
+  "sergeantAskMacros": "Tell me the grams of protein, carbs, and fat — a portion like 200 grams of chicken breast — or a preset, like protein shake.",
+  "sergeantStartingSession": "Starting your session.",
+  "sergeantNoPlanYet": "No plan yet — let us find your body match.",
+  "sergeantOpeningBodyMatch": "Opening the body match.",
+  "sergeantRecentActivity": "Your recent activity.",
+  "sergeantOpeningProfile": "Opening your profile.",
+  "sergeantSayOptions": "Say: start workout, plan workout, or log a meal.",
+  "sergeantDidNotGet": "Did not get \"{transcript}\" — say start workout, plan workout, or log a meal.",
+  "@sergeantDidNotGet": {
+    "placeholders": {
+      "transcript": {
+        "type": "String"
+      }
+    }
+  },
+  "sergeantMacrosExample": "Grams of protein, carbs, and fat — for example: 40 protein, 60 carbs, 20 fat.",
+  "sergeantMealLogged": "Meal logged",
+  "sergeantLoggedLabel": "Logged {label}",
+  "@sergeantLoggedLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "sergeantMealSummary": "{what}: {protein} protein, {carbs} carbs, {fat} fat — {kcal} calories. What else?",
+  "@sergeantMealSummary": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      },
+      "kcal": {
+        "type": "int"
+      }
+    }
+  },
+  "sergeantCouldNotSaveMeal": "Could not save the meal — try again in a moment.",
+  "sergeantLookingUp": "Looking up {food}.",
+  "@sergeantLookingUp": {
+    "placeholders": {
+      "food": {
+        "type": "String"
+      }
+    }
+  },
+  "sergeantCouldNotFind": "Could not find {food} — tell me the grams of protein, carbs, and fat instead.",
+  "@sergeantCouldNotFind": {
+    "placeholders": {
+      "food": {
+        "type": "String"
+      }
+    }
+  },
+  "sergeantGramsOf": "{grams} grams of {food}",
+  "@sergeantGramsOf": {
+    "placeholders": {
+      "grams": {
+        "type": "String"
+      },
+      "food": {
+        "type": "String"
+      }
+    }
+  },
+  "sergeantPlanSummary": "Your plan: {split}. {days} days a week, {kcal} calories.",
+  "@sergeantPlanSummary": {
+    "placeholders": {
+      "split": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "kcal": {
+        "type": "int"
+      }
+    }
+  },
+  "hubWorkout": "Workout",
+  "hubMeal": "Meal",
+  "hubProgram": "Program",
+  "hubBodyMatch": "Body match",
+  "hubHistory": "History",
+  "hubProfile": "Profile",
+  "hubIdleHint": "Tap the mic and speak — finish every command with \"over\".",
+  "progress": "Progress",
+  "logout": "Logout",
+  "logMeasurement": "Log measurement",
+  "bodyComposition": "Body composition",
+  "strength": "Strength",
+  "trainingBalance": "Training balance",
+  "couldNotLoadPullToRetry": "Could not load — pull to retry.",
+  "logACoupleOfMeasurements": "Log a couple of measurements to see your trend.",
+  "bodyFatPercentLabel": "Body fat %",
+  "leanMass": "Lean mass",
+  "weight": "Weight",
+  "bodyFat": "Body fat",
+  "overTime": "{label} over time",
+  "@overTime": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "logAFewWeightedSessions": "Log a few weighted sessions to see your strength climb.",
+  "estimatedOneRmAllLifts": "Estimated 1RM · all lifts",
+  "estimatedOneRm": "Estimated 1RM · {name}",
+  "@estimatedOneRm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "allLifts": "All lifts",
+  "gainSinceTracking": "{gain} kg since you started tracking it",
+  "@gainSinceTracking": {
+    "placeholders": {
+      "gain": {
+        "type": "String"
+      }
+    }
+  },
+  "e1rmLabel": "e1RM",
+  "sessionVolume": "Session volume",
+  "volume": "Volume",
+  "prBadge": "PR",
+  "coachSuggestions": "Coach suggestions",
+  "lastWeeks": "last {n} wks",
+  "@lastWeeks": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "onTrack": "On track — keep doing what you're doing.",
+  "actionCaps": "ACTION",
+  "measurementLogged": "Measurement logged",
+  "weighInHint": "Weigh in — body fat % is optional but powers the trend.",
+  "bodyFatPercentInputLabel": "Body fat (%)",
+  "saveMeasurement": "Save measurement",
+  "mealLogged": "Meal logged",
+  "logAMeal": "Log a meal",
+  "proteinGramsLabel": "Protein (g)",
+  "carbsGramsLabel": "Carbs (g)",
+  "fatGramsLabel": "Fat (g)",
+  "kcalLoggedForToday": "≈ {kcal} kcal · logged for today",
+  "@kcalLoggedForToday": {
+    "placeholders": {
+      "kcal": {
+        "type": "String"
+      }
+    }
+  },
+  "saveMeal": "Save meal",
+  "valueWithUnit": "{value}{unit}",
+  "@valueWithUnit": {
+    "description": "A metric tile's number and its unit, e.g. 82kg or 18%.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "workoutSessionChannel": "Workout session",
+  "@workoutSessionChannel": {
+    "description": "Android notification channel name for the earbud coach, shown in the OS notification settings"
+  }
 }

@@ -243,7 +243,7 @@ void main() {
   // AC9: 404 (no current program) on the detail screen shows a CTA or message.
   testWidgets('AC9 detail_screen_no_program_shows_cta', (tester) async {
     when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
 
     final container = ProviderContainer(
       overrides: [

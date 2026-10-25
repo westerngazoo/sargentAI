@@ -68,7 +68,7 @@ void main() {
       'SAC9: a 404 becomes a friendly message AND still invalidates (the '
       'list is stale either way)', () async {
     when(() => repo.delete('s-gone'))
-        .thenThrow(const ApiException('not found', statusCode: 404));
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
     final c = makeContainer();
 
     await c.read(workoutsProvider.future);
@@ -77,8 +77,7 @@ void main() {
     await controllerOf(c).delete('s-gone'); // must NOT throw
 
     final s = c.read(sessionListControllerProvider);
-    expect(s.error, isNotNull);
-    expect(s.error!.toLowerCase(), contains('no longer exists'));
+    expect(s.error?.kind, ApiErrorKind.notFound);
 
     await c.read(workoutsProvider.future);
     verify(() => repo.list()).called(greaterThanOrEqualTo(1));
@@ -87,12 +86,13 @@ void main() {
   test('SAC9: a transport failure surfaces the retryable message as state',
       () async {
     when(() => repo.delete('s-1'))
-        .thenThrow(const ApiException("can't reach the server — retry"));
+        .thenThrow(const ApiException(ApiErrorKind.transport));
     final c = makeContainer();
 
     await controllerOf(c).delete('s-1'); // must NOT throw
 
-    expect(c.read(sessionListControllerProvider).error, contains('retry'));
+    expect(c.read(sessionListControllerProvider).error?.kind,
+        ApiErrorKind.transport);
   });
 
   test('SAC9: submitting reflects the in-flight DELETE', () async {

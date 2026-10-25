@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
 import '../data/workout_repository.dart';
+import '../domain/draft_rejection.dart';
 import '../domain/exercise_draft.dart';
 import '../domain/muscle_group.dart';
 import '../domain/session_draft.dart';
@@ -11,7 +12,7 @@ import 'workouts_provider.dart';
 
 /// The in-progress session as explicit state. `canFinish`/`lastSet` are derived
 /// reactively (pure functions of the fields); failure is **data** here
-/// (`error`/`errorField`), never a thrown exception.
+/// (`error`, with the offending field inside it), never a thrown exception.
 @immutable
 class SessionDriverState {
   const SessionDriverState({
@@ -20,7 +21,6 @@ class SessionDriverState {
     this.currentExercise = 0,
     this.submitting = false,
     this.error,
-    this.errorField,
     this.done = false,
   });
 
@@ -30,8 +30,7 @@ class SessionDriverState {
   final DateTime? performedOn;
   final int currentExercise;
   final bool submitting;
-  final String? error;
-  final String? errorField;
+  final ApiException? error;
   final bool done;
 
   bool get canFinish => draft?.canFinish ?? false;
@@ -53,8 +52,7 @@ class SessionDriverState {
     DateTime? performedOn,
     int? currentExercise,
     bool? submitting,
-    String? error,
-    String? errorField,
+    ApiException? error,
     bool? done,
     bool clearError = false,
   }) =>
@@ -64,7 +62,6 @@ class SessionDriverState {
         currentExercise: currentExercise ?? this.currentExercise,
         submitting: submitting ?? this.submitting,
         error: clearError ? null : (error ?? this.error),
-        errorField: clearError ? null : (errorField ?? this.errorField),
         done: done ?? this.done,
       );
 }
@@ -73,7 +70,8 @@ final sessionDriverProvider =
     NotifierProvider<SessionDriver, SessionDriverState>(SessionDriver.new);
 
 /// The R-0027 seam: a widget-independent state machine. A voice transport calls
-/// exactly this API; a rejected call's returned message is what it speaks back.
+/// exactly this API; a rejected call's returned [DraftRejection] is what it
+/// speaks back, through the catalogue.
 class SessionDriver extends Notifier<SessionDriverState> {
   @override
   SessionDriverState build() => const SessionDriverState();
@@ -87,11 +85,11 @@ class SessionDriver extends Notifier<SessionDriverState> {
       );
 
   /// Validates and appends a new exercise, selecting it. Returns `null` on
-  /// accept or a user-safe reason on reject (driver = single enforcement
+  /// accept or the typed reason on reject (driver = single enforcement
   /// point); the reject does NOT touch `state.error`.
-  String? addExercise(String name, {MuscleGroup? group}) {
+  DraftRejection? addExercise(String name, {MuscleGroup? group}) {
     final d = state.draft;
-    if (d == null) return 'start a workout first';
+    if (d == null) return DraftRejection.noSession;
     final candidate = ExerciseDraft(name: name.trim(), muscleGroup: group);
     final invalid = candidate.nameError();
     if (invalid != null) return invalid;
@@ -105,11 +103,11 @@ class SessionDriver extends Notifier<SessionDriverState> {
 
   /// Validates and appends a set to the current exercise. Returns `null` on
   /// accept or a reason on reject (same contract as [addExercise]).
-  String? logSet(SetDraft set) {
+  DraftRejection? logSet(SetDraft set) {
     final d = state.draft;
-    if (d == null) return 'start a workout first';
+    if (d == null) return DraftRejection.noSession;
     final i = state.currentExercise;
-    if (i < 0 || i >= d.exercises.length) return 'add an exercise first';
+    if (i < 0 || i >= d.exercises.length) return DraftRejection.noExercise;
     final invalid = set.repsError() ?? set.weightError() ?? set.rpeError();
     if (invalid != null) return invalid;
     final exercises = [...d.exercises];
@@ -141,23 +139,9 @@ class SessionDriver extends Notifier<SessionDriverState> {
       await ref.read(workoutsProvider.future);
       state = const SessionDriverState(done: true); // draft cleared
     } on ApiException catch (e) {
-      state = state.copyWith(
-        submitting: false,
-        error: e.message,
-        errorField: e.field,
-      );
+      state = state.copyWith(submitting: false, error: e);
     }
   }
 
   void abandon() => state = const SessionDriverState();
 }
-
-/// Maps a backend `400 {field}` to the area of the live screen that owns it, so
-/// the error message can name where to look (the R-0027 voice transport speaks
-/// this back). `null` when the field maps to no specific area.
-String? fieldArea(String? field) => switch (field) {
-      'reps' || 'weight_kg' || 'rpe' => 'your sets',
-      'name' || 'muscle_group' => 'the exercise',
-      'exercises' || 'sets' || 'performed_on' => 'the workout',
-      _ => null,
-    };

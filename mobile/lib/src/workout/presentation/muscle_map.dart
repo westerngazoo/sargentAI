@@ -6,7 +6,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../domain/muscle_activation.dart';
+import '../application/muscle_names.dart';
 
 class MuscleMap extends StatelessWidget {
   const MuscleMap({super.key, required this.activation});
@@ -16,6 +18,7 @@ class MuscleMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final primary = _rgba(cs.primary, 0.95);
     final secondary = _rgba(cs.tertiary, 0.85);
     const none = 'rgba(150,150,150,0.16)';
@@ -45,9 +48,9 @@ class MuscleMap extends StatelessWidget {
           alignment: WrapAlignment.center,
           children: [
             for (final r in activation.primary)
-              _tag(context, regionLabels[r]!, cs.primary, cs.onPrimary),
+              _tag(context, regionName(r, l10n), cs.primary, cs.onPrimary),
             for (final r in activation.secondary)
-              _tag(context, regionLabels[r]!, cs.tertiary, cs.surface),
+              _tag(context, regionName(r, l10n), cs.tertiary, cs.surface),
           ],
         ),
       ],

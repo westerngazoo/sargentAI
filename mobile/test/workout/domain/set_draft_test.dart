@@ -9,17 +9,19 @@
 // RED until package:fitai/src/workout/domain/set_draft.dart defines SetDraft
 // with repsError()/weightError()/rpeError()/valid.
 
+import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('SAC3 repsError — required int in [1, 10000]', () {
     test('missing reps is rejected (required)', () {
-      expect(const SetDraft().repsError(), isNotNull);
+      expect(const SetDraft().repsError(), DraftRejection.repsMissing);
     });
 
     test('lower boundary: 0 rejected, 1 accepted', () {
-      expect(const SetDraft(reps: 0).repsError(), isNotNull);
+      expect(
+          const SetDraft(reps: 0).repsError(), DraftRejection.repsOutOfRange);
       expect(const SetDraft(reps: 1).repsError(), isNull);
     });
 
@@ -39,7 +41,8 @@ void main() {
     });
 
     test('zero is rejected — the lower bound is EXCLUSIVE', () {
-      expect(const SetDraft(reps: 5, weightKg: 0).weightError(), isNotNull);
+      expect(const SetDraft(reps: 5, weightKg: 0).weightError(),
+          DraftRejection.weightOutOfRange);
     });
 
     test('a small fractional load is accepted (a 0.25 kg microplate)', () {
@@ -78,7 +81,8 @@ void main() {
     test('boundaries: 6.0 and 10.0 accepted; 5.5 and 10.5 rejected', () {
       expect(const SetDraft(reps: 5, rpe: 6.0).rpeError(), isNull);
       expect(const SetDraft(reps: 5, rpe: 10.0).rpeError(), isNull);
-      expect(const SetDraft(reps: 5, rpe: 5.5).rpeError(), isNotNull);
+      expect(const SetDraft(reps: 5, rpe: 5.5).rpeError(),
+          DraftRejection.rpeOutOfRange);
       expect(const SetDraft(reps: 5, rpe: 10.5).rpeError(), isNotNull);
     });
 

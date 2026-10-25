@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../domain/preset_meals.dart';
 import '../services/nutrition_service.dart';
@@ -84,6 +86,7 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
   double get _kcal => 4 * (_p ?? 0) + 4 * (_c ?? 0) + 9 * (_f ?? 0);
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _saving = true;
       _error = null;
@@ -102,11 +105,11 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Meal logged')),
+        SnackBar(content: Text(l10n.mealLogged)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message);
+      setState(() => _error = apiErrorText(e, l10n));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -114,6 +117,7 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -125,7 +129,7 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Log a meal', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.logAMeal, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 10),
           // Preset meals — tap to prefill, tweak, save.
           SizedBox(
@@ -151,16 +155,16 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _macroField('Protein (g)', _protein)),
+              Expanded(child: _macroField(l10n.proteinGramsLabel, _protein)),
               const SizedBox(width: 8),
-              Expanded(child: _macroField('Carbs (g)', _carbs)),
+              Expanded(child: _macroField(l10n.carbsGramsLabel, _carbs)),
               const SizedBox(width: 8),
-              Expanded(child: _macroField('Fat (g)', _fat)),
+              Expanded(child: _macroField(l10n.fatGramsLabel, _fat)),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            '≈ ${_kcal.toStringAsFixed(0)} kcal · logged for today',
+            l10n.kcalLoggedForToday(_kcal.toStringAsFixed(0)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           if (_error != null) ...[
@@ -179,7 +183,7 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save meal'),
+                : Text(l10n.saveMeal),
           ),
         ],
       ),

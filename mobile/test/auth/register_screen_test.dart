@@ -77,14 +77,14 @@ void main() {
   testWidgets('SAC1 a 400 bad email renders a readable inline message',
       (tester) async {
     when(() => repo.register(any(), any())).thenThrow(
-      const ApiException('enter a valid email',
+      const ApiException(ApiErrorKind.badRequest,
           statusCode: 400, field: 'email'),
     );
     final container = await pumpRegister(tester);
 
     await submit(tester);
 
-    expect(find.textContaining('valid email'), findsOneWidget);
+    expect(find.text(l10n.apiErrorBadRequest), findsOneWidget);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
   });
 
@@ -113,7 +113,7 @@ void main() {
     await submit(tester);
 
     expect(find.text(l10n.emailAlreadyRegistered), findsOneWidget);
-    expect(find.textContaining('that already exists'), findsNothing);
+    expect(find.text(l10n.apiErrorConflict), findsNothing);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
     verifyNever(() => repo.login(any(), any()));
   });

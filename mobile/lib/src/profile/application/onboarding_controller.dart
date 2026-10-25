@@ -27,7 +27,7 @@ class OnboardingState {
   final int step;
   final ProfileDraft draft;
   final bool submitting;
-  final String? error;
+  final ApiException? error;
   final int? errorStep;
   final bool done;
 
@@ -35,7 +35,7 @@ class OnboardingState {
     int? step,
     ProfileDraft? draft,
     bool? submitting,
-    String? error,
+    ApiException? error,
     int? errorStep,
     bool? done,
     bool clearError = false,
@@ -116,7 +116,7 @@ class OnboardingController extends Notifier<OnboardingState> {
       final target = _stepFor(e.field);
       state = state.copyWith(
         submitting: false,
-        error: e.message,
+        error: e,
         errorStep: target,
         step: target ?? state.step, // jump the wizard to the offending step
       );

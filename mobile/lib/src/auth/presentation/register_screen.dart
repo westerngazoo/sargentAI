@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
 import 'auth_form.dart';
@@ -35,8 +36,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // A 409 here can only mean the email is taken. The shared copy for 409
       // is deliberately generic ('that already exists', since every endpoint
       // raises it), so the registration-specific sentence lives on this screen.
-      final message =
-          e.statusCode == 409 ? l10n.emailAlreadyRegistered : e.message;
+      final message = e.kind == ApiErrorKind.conflict
+          ? l10n.emailAlreadyRegistered
+          : apiErrorText(e, l10n);
       if (mounted) setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);

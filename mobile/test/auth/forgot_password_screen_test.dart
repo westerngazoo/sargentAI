@@ -137,7 +137,7 @@ void main() {
   testWidgets('M2 a failed request shows no confirmation and no raw exception',
       (tester) async {
     when(() => repo.forgotPassword(any())).thenThrow(
-      const ApiException("can't reach the server — retry"),
+      const ApiException(ApiErrorKind.transport),
     );
     await pumpForgot(tester);
 
@@ -145,7 +145,7 @@ void main() {
 
     expect(find.textContaining(_confirmation), findsNothing);
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.textContaining('retry'), findsOneWidget);
+    expect(find.text(l10n.apiErrorTransport), findsOneWidget);
     expect(find.textContaining('Exception'), findsNothing);
   });
 

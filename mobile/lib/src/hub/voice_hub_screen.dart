@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../core/brand.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../workout/application/session_driver.dart';
@@ -71,16 +72,18 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
       }
     });
 
+    final l10n = AppLocalizations.of(context);
     final options = [
-      _HubOption(Icons.fitness_center, 'Workout', _startWorkout),
+      _HubOption(Icons.fitness_center, l10n.hubWorkout, _startWorkout),
       _HubOption(
-          Icons.restaurant, 'Meal', () => showMealQuickLogSheet(context)),
-      _HubOption(
-          Icons.assignment, 'Program', () => context.go('/programs/current')),
-      _HubOption(Icons.accessibility_new, 'Body match',
+          Icons.restaurant, l10n.hubMeal, () => showMealQuickLogSheet(context)),
+      _HubOption(Icons.assignment, l10n.hubProgram,
+          () => context.go('/programs/current')),
+      _HubOption(Icons.accessibility_new, l10n.hubBodyMatch,
           () => context.go('/programs/get')),
-      _HubOption(Icons.history, 'History', () => context.go('/home')),
-      _HubOption(Icons.person, 'Profile', () => context.go('/onboarding')),
+      _HubOption(Icons.history, l10n.hubHistory, () => context.go('/home')),
+      _HubOption(
+          Icons.person, l10n.hubProfile, () => context.go('/onboarding')),
     ];
 
     return Scaffold(
@@ -166,7 +169,7 @@ class _HintPill extends StatelessWidget {
         sergeant.listening && sergeant.transcript.isNotEmpty
             ? '“${sergeant.transcript}”'
             : (sergeant.line.isEmpty
-                ? 'Tap the mic and speak — finish every command with "over".'
+                ? AppLocalizations.of(context).hubIdleHint
                 : sergeant.line),
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodyMedium,
@@ -196,7 +199,7 @@ class _ChatThread extends StatelessWidget {
           _ChatBubble(
             fromUser: true,
             text: sergeant.transcript.isEmpty
-                ? 'Listening…'
+                ? AppLocalizations.of(context).listening
                 : sergeant.transcript,
             live: true,
           ),

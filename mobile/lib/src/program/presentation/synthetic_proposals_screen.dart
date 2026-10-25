@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -51,8 +52,8 @@ class _SyntheticProposalsScreenState
       context.go('/programs/current');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(apiErrorText(e, AppLocalizations.of(context)))));
     } finally {
       if (mounted) setState(() => _choosingIndex = null);
     }

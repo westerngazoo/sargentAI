@@ -3,6 +3,7 @@
 // dialog. Fills the coverage gap qa flagged at step-7 sign-off (the controller
 // and provider were unit-tested; this pumps the widget).
 
+import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/presentation/session_list.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../support/l10n.dart';
 import '../../support/workout_fakes.dart';
 
 void main() {
@@ -29,7 +31,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: Scaffold(body: SessionList())),
+        child: localizedApp(home: const Scaffold(body: SessionList())),
       ),
     );
     await tester.pump(); // resolve the workoutsProvider future
@@ -41,7 +43,7 @@ void main() {
     when(() => repo.list()).thenAnswer((_) async => []);
     await pumpList(tester);
 
-    expect(find.textContaining('no workouts yet'), findsOneWidget);
+    expect(find.text(l10n.noWorkoutsYet), findsOneWidget);
   });
 
   testWidgets('AC8: a session renders with its exercise and set counts',
@@ -56,8 +58,7 @@ void main() {
         ]);
     await pumpList(tester);
 
-    expect(find.textContaining('1 exercises'), findsOneWidget);
-    expect(find.textContaining('2 sets'), findsOneWidget);
+    expect(find.text(l10n.sessionSummary(1, 2)), findsOneWidget);
   });
 
   testWidgets('AC9: delete asks for confirmation, then calls DELETE',
@@ -66,24 +67,39 @@ void main() {
     when(() => repo.delete('s-1')).thenAnswer((_) async {});
     await pumpList(tester);
 
-    await tester.tap(find.byTooltip('Delete'));
+    await tester.tap(find.byTooltip(l10n.delete));
     await tester.pump();
-    expect(find.text('Delete this workout?'), findsOneWidget);
+    expect(find.text(l10n.deleteThisWorkout), findsOneWidget);
 
-    await tester.tap(find.text('Delete').last);
+    await tester.tap(find.text(l10n.delete).last);
     await tester.pump();
     await tester.pump();
 
     verify(() => repo.delete('s-1')).called(1);
   });
 
+  testWidgets('AC9: a workout deleted elsewhere says so (404)', (tester) async {
+    when(() => repo.list()).thenAnswer((_) async => [sampleSession(id: 's-1')]);
+    when(() => repo.delete('s-1'))
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
+    await pumpList(tester);
+
+    await tester.tap(find.byTooltip(l10n.delete));
+    await tester.pump();
+    await tester.tap(find.text(l10n.delete).last);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(l10n.workoutNoLongerExists), findsOneWidget);
+  });
+
   testWidgets('AC9: cancelling the confirm does NOT delete', (tester) async {
     when(() => repo.list()).thenAnswer((_) async => [sampleSession(id: 's-1')]);
     await pumpList(tester);
 
-    await tester.tap(find.byTooltip('Delete'));
+    await tester.tap(find.byTooltip(l10n.delete));
     await tester.pump();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text(l10n.cancel));
     await tester.pump();
 
     verifyNever(() => repo.delete(any()));

@@ -30,6 +30,7 @@ import 'dart:io';
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
+import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
 import 'package:fitai/src/workout/domain/session_draft.dart';
@@ -78,7 +79,6 @@ void main() {
       expect(s.draft, isNull);
       expect(s.submitting, isFalse);
       expect(s.error, isNull);
-      expect(s.errorField, isNull);
       expect(s.done, isFalse);
       expect(s.canFinish, isFalse);
       expect(s.lastSet, isNull);
@@ -144,7 +144,7 @@ void main() {
       final d = driverOf(c);
       d.start();
 
-      expect(d.addExercise('   '), isNotNull);
+      expect(d.addExercise('   '), DraftRejection.nameEmpty);
       expect(d.addExercise('a' * 101), isNotNull);
 
       final s = stateOf(c);
@@ -187,7 +187,7 @@ void main() {
       d.start();
       d.addExercise('Bench press');
 
-      expect(d.logSet(const SetDraft(reps: 0)), isNotNull);
+      expect(d.logSet(const SetDraft(reps: 0)), DraftRejection.repsOutOfRange);
       expect(d.logSet(const SetDraft(reps: 8, rpe: 7.3)), isNotNull,
           reason: '7.3 is off the 0.5 grid');
       expect(d.logSet(const SetDraft(reps: 8, weightKg: 0)), isNotNull,
@@ -204,7 +204,7 @@ void main() {
       final c = makeContainer();
       final d = driverOf(c);
       d.start();
-      expect(d.logSet(const SetDraft(reps: 5)), isNotNull,
+      expect(d.logSet(const SetDraft(reps: 5)), DraftRejection.noExercise,
           reason: 'null means accepted — nothing was');
       expect(stateOf(c).draft!.exercises, isEmpty);
     });
@@ -212,7 +212,7 @@ void main() {
     test('logSet before start() cannot be accepted (total API, no throw)', () {
       final c = makeContainer();
       final d = driverOf(c);
-      expect(d.logSet(const SetDraft(reps: 5)), isNotNull);
+      expect(d.logSet(const SetDraft(reps: 5)), DraftRejection.noSession);
       expect(stateOf(c).draft, isNull);
     });
   });
@@ -419,7 +419,7 @@ void main() {
     test('a 400{field} surfaces error + errorField; the draft is intact',
         () async {
       when(() => repo.create(any())).thenThrow(
-        const ApiException('please check your details',
+        const ApiException(ApiErrorKind.badRequest,
             statusCode: 400, field: 'rpe'),
       );
       final c = makeContainer();
@@ -431,8 +431,8 @@ void main() {
       await d.finish(); // must NOT throw
 
       final s = stateOf(c);
-      expect(s.error, 'please check your details');
-      expect(s.errorField, 'rpe');
+      expect(s.error?.kind, ApiErrorKind.badRequest);
+      expect(s.error?.field, 'rpe');
       expect(s.done, isFalse);
       expect(s.submitting, isFalse);
       expect(s.draft, isNotNull, reason: 'a failed finish loses NOTHING');
@@ -444,7 +444,7 @@ void main() {
         'a transport failure is retryable — retry re-submits the SAME '
         'session', () async {
       when(() => repo.create(any()))
-          .thenThrow(const ApiException("can't reach the server — retry"));
+          .thenThrow(const ApiException(ApiErrorKind.transport));
       final c = makeContainer();
       final d = driverOf(c);
       d.start();
@@ -452,7 +452,7 @@ void main() {
       d.logSet(const SetDraft(reps: 8, weightKg: 80, rpe: 8.5));
 
       await d.finish();
-      expect(stateOf(c).error, contains('retry'));
+      expect(stateOf(c).error?.kind, ApiErrorKind.transport);
       expect(stateOf(c).done, isFalse);
       expect(stateOf(c).draft, isNotNull);
 
@@ -476,8 +476,8 @@ void main() {
     test(
         'a 401 is data too — no rethrow, no done (the shared interceptor '
         'owns the session sink)', () async {
-      when(() => repo.create(any()))
-          .thenThrow(const ApiException('unauthorized', statusCode: 401));
+      when(() => repo.create(any())).thenThrow(
+          const ApiException(ApiErrorKind.unauthorized, statusCode: 401));
       final c = makeContainer();
       final d = driverOf(c);
       d.start();

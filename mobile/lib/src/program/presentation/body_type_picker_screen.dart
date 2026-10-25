@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../models/synthetic_match.dart';
 import '../services/program_service.dart';
@@ -48,7 +49,7 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message);
+      setState(() => _error = apiErrorText(e, AppLocalizations.of(context)));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
