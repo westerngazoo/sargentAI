@@ -15,8 +15,10 @@ void main() {
         HalftonePainter(ink: FbfTokens.dark.line, paper: FbfTokens.dark.ground);
     expect(light.alpha, lessThan(0.15), reason: 'faint, never a texture');
     expect(light.shouldRepaint(dark), isTrue);
-    expect(light.shouldRepaint(HalftonePainter(
-        ink: FbfTokens.light.line, paper: FbfTokens.light.ground)), isFalse);
+    expect(
+        light.shouldRepaint(HalftonePainter(
+            ink: FbfTokens.light.line, paper: FbfTokens.light.ground)),
+        isFalse);
   });
 
   testWidgets('HalftoneBackground reads the theme extension', (tester) async {
@@ -24,7 +26,7 @@ void main() {
       theme: ThemeData(extensions: const [FbfTokens.dark]),
       home: const HalftoneBackground(child: SizedBox.expand()),
     ));
-    final paint = tester.widget<CustomPaint>(find.byType(CustomPaint).first);
+    final paint = tester.widget<CustomPaint>(find.byKey(const Key('halftone')));
     final painter = paint.painter! as HalftonePainter;
     expect(painter.ink, FbfTokens.dark.line);
     expect(painter.paper, FbfTokens.dark.ground);

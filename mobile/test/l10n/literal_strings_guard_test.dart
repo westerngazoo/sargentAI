@@ -22,7 +22,6 @@ const notYetMigrated = <String>{
   'nutrition',
   'profile',
   'program',
-  'shell',
   'workout',
 };
 

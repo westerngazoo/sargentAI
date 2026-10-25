@@ -11,6 +11,7 @@ import 'package:fitai/src/home/main_screen.dart';
 import 'package:fitai/src/home/selected_day.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
+import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:flutter/material.dart';
@@ -39,8 +40,8 @@ void main() {
   late MockProfileRepository profileRepo;
   late MockWorkoutRepository workoutRepo;
 
-  final today = DateTime(DateTime.now().year, DateTime.now().month,
-      DateTime.now().day);
+  final today =
+      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   final yesterday = today.subtract(const Duration(days: 1));
 
   WorkoutSession session(DateTime on) => WorkoutSession(
@@ -62,7 +63,8 @@ void main() {
     when(() => repo.clear()).thenAnswer((_) async {});
     when(() => repo.me()).thenAnswer((_) async => 'u-1');
     when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
-    when(() => workoutRepo.list()).thenAnswer((_) async => [session(yesterday)]);
+    when(() => workoutRepo.list())
+        .thenAnswer((_) async => [session(yesterday)]);
   });
 
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
@@ -77,15 +79,15 @@ void main() {
       workoutRepositoryProvider.overrideWithValue(workoutRepo),
     ]);
     addTearDown(container.dispose);
-    await container.read(authControllerProvider.notifier).login('a@b.com', 'x');
+    // A stored token restores the session, as a cold start does.
+    container.read(authControllerProvider);
     final router = GoRouter(
       initialLocation: '/home',
       routes: [
         GoRoute(path: '/home', builder: (_, __) => const MainScreen()),
         GoRoute(
             path: '/session',
-            builder: (_, __) =>
-                const Scaffold(body: Text('SESSION-SENTINEL'))),
+            builder: (_, __) => const Scaffold(body: Text('SESSION-SENTINEL'))),
         GoRoute(
             path: '/hub',
             builder: (_, __) => const Scaffold(body: Text('HUB-SENTINEL'))),
@@ -116,7 +118,8 @@ void main() {
       expect(find.text('Logout'), findsNothing);
     });
 
-    testWidgets('the profile menu lists program, measurements, progress and sign out',
+    testWidgets(
+        'the profile menu lists program, measurements, progress and sign out',
         (tester) async {
       await pumpMain(tester);
       await tester.tap(find.byKey(const Key('profile-menu')));
@@ -152,8 +155,7 @@ void main() {
       expect(find.byType(DayCell).evaluate().length, greaterThanOrEqualTo(28));
     });
 
-    testWidgets('a wide window shows the month with no toggle',
-        (tester) async {
+    testWidgets('a wide window shows the month with no toggle', (tester) async {
       await pumpMain(tester, size: desktop);
       expect(find.byType(DayCell).evaluate().length, greaterThanOrEqualTo(28));
       expect(find.byKey(const Key('calendar-toggle')), findsNothing);
@@ -174,16 +176,19 @@ void main() {
   group('AC5 the selected day', () {
     testWidgets('today offers Empezar sesión and it opens the session',
         (tester) async {
-      final (_, router) = await pumpMain(tester);
+      final (container, _) = await pumpMain(tester);
       expect(find.text(l10n.startSession), findsOneWidget);
       await tester.tap(find.byKey(const Key('primary-action')));
       await tester.pumpAndSettle();
-      expect(router.routerDelegate.currentConfiguration.uri.path, '/session');
+      // A push keeps the base uri; the pushed match is the last one.
+      expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+      expect(container.read(sessionDriverProvider).draft, isNotNull);
     });
 
     testWidgets('a done day offers Ver lo registrado', (tester) async {
       await pumpMain(tester);
-      await tester.tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+      await tester
+          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
       await tester.pumpAndSettle();
       expect(find.text(l10n.viewLogged), findsOneWidget);
     });
@@ -206,15 +211,14 @@ void main() {
   });
 
   group('AC1 panels keep the selected day', () {
-    testWidgets('opening and closing Progreso leaves the day selected',
+    testWidgets('opening and closing a panel leaves the day selected',
         (tester) async {
       final (container, _) = await pumpMain(tester);
       container.read(selectedDayProvider.notifier).state = yesterday;
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('profile-menu')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.menuProgress));
+      // Ver lo registrado opens the day's sessions in a panel.
+      await tester.tap(find.byKey(const Key('primary-action')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('panel-close')), findsOneWidget);
 

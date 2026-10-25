@@ -30,7 +30,8 @@ void main() {
   });
 
   test('a future day offers nothing', () {
-    expect(primaryAction(day: tomorrow, today: today, state: const NothingDay()),
+    expect(
+        primaryAction(day: tomorrow, today: today, state: const NothingDay()),
         isA<NoAction>());
   });
 

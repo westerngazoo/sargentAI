@@ -23,16 +23,12 @@ import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
-import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/program/models/user_program.dart';
 import 'package:fitai/src/program/presentation/program_detail_screen.dart';
 import 'package:fitai/src/program/services/program_service.dart';
-import 'package:fitai/src/shell/home_shell.dart';
-import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
@@ -48,14 +44,12 @@ void main() {
   late MockTokenStore tokenStore;
   late MockAuthRepository repo;
   late MockProgramService programService;
-  late MockProfileRepository profileRepo;
   late MockWorkoutRepository workoutRepo;
 
   setUp(() {
     tokenStore = MockTokenStore();
     repo = MockAuthRepository();
     programService = MockProgramService();
-    profileRepo = MockProfileRepository();
     workoutRepo = MockWorkoutRepository();
     when(() => tokenStore.read())
         .thenAnswer((_) async => sampleToken(userId: 'u-1'));
@@ -259,188 +253,6 @@ void main() {
               (w.data ?? '').toLowerCase().contains('get')),
     );
     expect(noProgram, findsAtLeastNWidgets(1));
-  });
-
-  // -------------------------------------------------------------------------
-  // AC8 — HomeShell home shortcut: CurrentProgramCard
-  // -------------------------------------------------------------------------
-
-  /// Pumps [HomeShell] with the program + profile + workout overrides.
-  Future<void> pumpHome(WidgetTester tester) async {
-    when(() => profileRepo.getMe())
-        .thenAnswer((_) async => sampleProfile(userId: 'u-1'));
-    final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(tokenStore),
-        authRepositoryProvider.overrideWithValue(repo),
-        profileRepositoryProvider.overrideWithValue(profileRepo),
-        workoutRepositoryProvider.overrideWithValue(workoutRepo),
-        programServiceProvider.overrideWithValue(programService),
-      ],
-    );
-    addTearDown(container.dispose);
-    container.read(authControllerProvider);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: HomeShell()),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-  }
-
-  // AC8: when a current program exists the home screen shows the
-  // CurrentProgramCard with the program split summary and kcal.
-  testWidgets('AC8 home_current_program_card_shows_split_and_kcal',
-      (tester) async {
-    when(() => programService.getCurrent())
-        .thenAnswer((_) async => sampleUserProgram());
-
-    await pumpHome(tester);
-    await tester.pumpAndSettle();
-
-    // Split or kcal text from the active program appears on the home screen.
-    final splitOrKcal = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').contains('4-day') ||
-              (w.data ?? '').contains('3200') ||
-              (w.data ?? '').contains('split')),
-    );
-    expect(splitOrKcal, findsAtLeastNWidgets(1));
-  });
-
-  // AC8: tapping the CurrentProgramCard navigates to ProgramDetailScreen.
-  testWidgets('AC8 home_current_program_card_navigates_to_detail',
-      (tester) async {
-    when(() => programService.getCurrent())
-        .thenAnswer((_) async => sampleUserProgram());
-
-    final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(tokenStore),
-        authRepositoryProvider.overrideWithValue(repo),
-        profileRepositoryProvider.overrideWithValue(profileRepo),
-        workoutRepositoryProvider.overrideWithValue(workoutRepo),
-        programServiceProvider.overrideWithValue(programService),
-      ],
-    );
-    addTearDown(container.dispose);
-    container.read(authControllerProvider);
-
-    // GoRouter is required because CurrentProgramCard uses context.go().
-    final router = GoRouter(
-      initialLocation: '/home',
-      routes: [
-        GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
-        GoRoute(
-          path: '/programs/current',
-          builder: (_, __) => const ProgramDetailScreen(),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-    await tester.pumpAndSettle();
-
-    // Tap the CurrentProgramCard / program shortcut widget.
-    await tester.tap(
-      find
-          .byWidgetPredicate(
-            (w) =>
-                w is Text &&
-                ((w.data ?? '').contains('4-day') ||
-                    (w.data ?? '').contains('split')),
-          )
-          .first,
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ProgramDetailScreen), findsOneWidget);
-  });
-
-  // AC8: when no program exists the home screen shows a "Get your program" CTA.
-  testWidgets('AC8 home_no_program_cta_shown_when_no_current_program',
-      (tester) async {
-    when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
-
-    await pumpHome(tester);
-    await tester.pumpAndSettle();
-
-    // The CTA text must appear — "Get your program" or equivalent.
-    final ctaFinder = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('get your program') ||
-              (w.data ?? '').toLowerCase().contains('get a program')),
-    );
-    expect(ctaFinder, findsAtLeastNWidgets(1));
-  });
-
-  // AC8: tapping the "Get your program" CTA navigates toward the match flow.
-  testWidgets('AC8 home_no_program_cta_navigates_to_match_flow',
-      (tester) async {
-    when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
-
-    final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(tokenStore),
-        authRepositoryProvider.overrideWithValue(repo),
-        profileRepositoryProvider.overrideWithValue(profileRepo),
-        workoutRepositoryProvider.overrideWithValue(workoutRepo),
-        programServiceProvider.overrideWithValue(programService),
-      ],
-    );
-    addTearDown(container.dispose);
-    container.read(authControllerProvider);
-
-    // GoRouter is required because CurrentProgramCard uses context.go().
-    // /programs/get is the CTA destination (R-0030).
-    final router = GoRouter(
-      initialLocation: '/home',
-      routes: [
-        GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
-        GoRoute(
-          path: '/programs/get',
-          builder: (_, __) => const Scaffold(body: Text('onboarding-sentinel')),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
-    await tester.pumpAndSettle();
-
-    // Tap the CTA.
-    final ctaFinder = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('get your program') ||
-              (w.data ?? '').toLowerCase().contains('get a program')),
-    );
-    expect(ctaFinder, findsAtLeastNWidgets(1));
-    await tester.tap(ctaFinder.first);
-    await tester.pumpAndSettle();
-
-    // Navigation toward the match/onboarding flow must have occurred.
-    expect(find.text('onboarding-sentinel'), findsOneWidget,
-        reason: '"Get your program" CTA must navigate toward the match flow');
   });
 
   // -------------------------------------------------------------------------
