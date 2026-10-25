@@ -335,19 +335,19 @@ abstract class AppLocalizations {
   /// No description provided for @dobMissing.
   ///
   /// In es, this message translates to:
-  /// **'pon tu fecha de nacimiento'**
+  /// **'Elige tu fecha de nacimiento.'**
   String get dobMissing;
 
   /// No description provided for @dobInFuture.
   ///
   /// In es, this message translates to:
-  /// **'la fecha de nacimiento no puede ser futura'**
+  /// **'La fecha de nacimiento no puede estar en el futuro.'**
   String get dobInFuture;
 
   /// No description provided for @ageOutOfRange.
   ///
   /// In es, this message translates to:
-  /// **'la edad debe estar entre {min} y {max}'**
+  /// **'la edad debe estar entre {min} y {max} años'**
   String ageOutOfRange(int min, int max);
 
   /// No description provided for @heightMissing.
@@ -378,7 +378,7 @@ abstract class AppLocalizations {
   ///
   /// In es, this message translates to:
   /// **'la grasa corporal debe estar entre {min} y {max} %'**
-  String bodyFatOutOfRange(num min, num max);
+  String bodyFatOutOfRange(int min, int max);
 
   /// No description provided for @yourGoals.
   ///
@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @bodyShapeEctomorph.
   ///
   /// In es, this message translates to:
-  /// **'Delgado y estrecho'**
+  /// **'Delgado y angosto'**
   String get bodyShapeEctomorph;
 
   /// No description provided for @bodyShapeMesomorph.
@@ -527,13 +527,13 @@ abstract class AppLocalizations {
   /// No description provided for @fatBandModerate.
   ///
   /// In es, this message translates to:
-  /// **'Intermedio'**
+  /// **'Medio'**
   String get fatBandModerate;
 
   /// No description provided for @fatBandBulky.
   ///
   /// In es, this message translates to:
-  /// **'Voluminoso'**
+  /// **'Con más grasa'**
   String get fatBandBulky;
 
   /// No description provided for @fatBandLeanDescription.
@@ -893,7 +893,7 @@ abstract class AppLocalizations {
   /// No description provided for @rankCloseMatch.
   ///
   /// In es, this message translates to:
-  /// **'Opción cercana'**
+  /// **'Segunda opción'**
   String get rankCloseMatch;
 
   /// No description provided for @rankGoodOption.
@@ -943,6 +943,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo elegir el programa. Inténtalo de nuevo.'**
   String get couldNotChooseProgram;
+
+  /// No description provided for @profileMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil'**
+  String get profileMenu;
+
+  /// No description provided for @menuProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get menuProgram;
+
+  /// No description provided for @menuMeasurements.
+  ///
+  /// In es, this message translates to:
+  /// **'Medidas'**
+  String get menuMeasurements;
+
+  /// No description provided for @menuProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso'**
+  String get menuProgress;
+
+  /// No description provided for @signOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get signOut;
+
+  /// No description provided for @dictate.
+  ///
+  /// In es, this message translates to:
+  /// **'Dictar'**
+  String get dictate;
+
+  /// No description provided for @today.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get today;
+
+  /// No description provided for @dayDoneHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenaste'**
+  String get dayDoneHeadline;
+
+  /// No description provided for @dayFreeHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión libre'**
+  String get dayFreeHeadline;
+
+  /// No description provided for @startSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar sesión'**
+  String get startSession;
+
+  /// No description provided for @logLate.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar tarde'**
+  String get logLate;
+
+  /// No description provided for @viewLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver lo registrado'**
+  String get viewLogged;
+
+  /// No description provided for @nothingLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada registrado este día.'**
+  String get nothingLogged;
+
+  /// No description provided for @nutritionToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Alimentación · hoy'**
+  String get nutritionToday;
+
+  /// No description provided for @addMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'+ Comida'**
+  String get addMeal;
+
+  /// No description provided for @showMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el mes'**
+  String get showMonth;
+
+  /// No description provided for @showWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver la semana'**
+  String get showWeek;
+
+  /// No description provided for @findYourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Encuentra tu programa'**
+  String get findYourProgram;
 
   /// Fallback for a timeout or no-network failure on any API call.
   ///
@@ -1381,12 +1489,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'¿Borrar este entrenamiento?'**
   String get deleteThisWorkout;
-
-  /// No description provided for @today.
-  ///
-  /// In es, this message translates to:
-  /// **'Hoy'**
-  String get today;
 
   /// No description provided for @yesterday.
   ///

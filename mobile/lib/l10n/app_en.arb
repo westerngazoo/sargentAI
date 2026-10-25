@@ -141,6 +141,24 @@
   "chooseThisProgram": "Choose this program",
   "selectionNoLongerAvailable": "Selection no longer available — please refresh.",
   "couldNotChooseProgram": "Could not choose program — please retry.",
+  "profileMenu": "Your profile",
+  "menuProgram": "Program",
+  "menuMeasurements": "Measurements",
+  "menuProgress": "Progress",
+  "signOut": "Sign out",
+  "dictate": "Dictate",
+  "today": "Today",
+  "dayDoneHeadline": "You trained",
+  "dayFreeHeadline": "Free session",
+  "startSession": "Start session",
+  "logLate": "Log late",
+  "viewLogged": "See what you logged",
+  "nothingLogged": "Nothing logged this day.",
+  "nutritionToday": "Nutrition · today",
+  "addMeal": "+ Meal",
+  "showMonth": "Show month",
+  "showWeek": "Show week",
+  "findYourProgram": "Find your program",
   "apiErrorTransport": "can't reach the server — retry",
   "@apiErrorTransport": {
     "description": "Fallback for a timeout or no-network failure on any API call."
@@ -175,8 +193,12 @@
   "@listAnd": {
     "description": "Joins the last item of a spoken list to the rest: 'quads and glutes'.",
     "placeholders": {
-      "head": {"type": "String"},
-      "last": {"type": "String"}
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
     }
   },
   "rejectStartWorkoutFirst": "start a workout first",
@@ -185,28 +207,40 @@
   "rejectNameTooLong": "name must be at most {max} characters",
   "@rejectNameTooLong": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectEnterReps": "enter the reps",
   "rejectRepsOutOfRange": "reps must be between {min} and {max}",
   "@rejectRepsOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectWeightOutOfRange": "weight must be over 0 and at most {max} kg",
   "@rejectWeightOutOfRange": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectRpeOutOfRange": "RPE must be between {min} and {max} in 0.5 steps",
   "@rejectRpeOutOfRange": {
     "placeholders": {
-      "min": {"type": "double"},
-      "max": {"type": "double"}
+      "min": {
+        "type": "double"
+      },
+      "max": {
+        "type": "double"
+      }
     }
   },
   "fieldAreaSets": "your sets",
@@ -216,8 +250,12 @@
   "@errorCheckArea": {
     "description": "A finish failure that names the part of the screen to check.",
     "placeholders": {
-      "error": {"type": "String"},
-      "area": {"type": "String"}
+      "error": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
     }
   },
   "discardThisWorkout": "Discard this workout?",
@@ -233,7 +271,9 @@
   "targetMusclesCaps": "TARGET MUSCLES — {name}",
   "@targetMusclesCaps": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "stopListening": "Stop listening",
@@ -243,26 +283,36 @@
   "setLine": "Set {n}: {label}",
   "@setLine": {
     "placeholders": {
-      "n": {"type": "int"},
-      "label": {"type": "String"}
+      "n": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
     }
   },
   "repsCount": "{n} reps",
   "@repsCount": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "kg": "{value} kg",
   "@kg": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "rpeValue": "RPE {value}",
   "@rpeValue": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "repsLabel": "Reps",
@@ -277,21 +327,28 @@
   "exerciseWithGroup": "{name} · {group}",
   "@exerciseWithGroup": {
     "placeholders": {
-      "name": {"type": "String"},
-      "group": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
     }
   },
   "noWorkoutsYet": "no workouts yet — tap start to log your first one",
   "sessionSummary": "{exercises} exercises · {sets} sets",
   "@sessionSummary": {
     "placeholders": {
-      "exercises": {"type": "int"},
-      "sets": {"type": "int"}
+      "exercises": {
+        "type": "int"
+      },
+      "sets": {
+        "type": "int"
+      }
     }
   },
   "delete": "Delete",
   "deleteThisWorkout": "Delete this workout?",
-  "today": "Today",
   "yesterday": "Yesterday",
   "workoutNoLongerExists": "that workout no longer exists",
   "startWorkout": "Start workout",
@@ -301,23 +358,35 @@
   "@coachTargetSuffix": {
     "description": "Appended to an exercise name when its target muscles are known.",
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "coachPlanLoaded": "Plan loaded — {count} exercises. First up: {first}. {prompt}",
   "@coachPlanLoaded": {
     "placeholders": {
-      "count": {"type": "int"},
-      "first": {"type": "String"},
-      "prompt": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "first": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
     }
   },
   "coachNoPlan": "Voice coach on. No plan found — add an exercise, then dictate your sets.",
   "coachOnCurrent": "Voice coach on. Current exercise: {name}. {prompt}",
   "@coachOnCurrent": {
     "placeholders": {
-      "name": {"type": "String"},
-      "prompt": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
     }
   },
   "coachNoCurrentExercise": "none",
@@ -327,19 +396,25 @@
   "coachLoggedRestUp": "Logged {logged}. Rest up.",
   "@coachLoggedRestUp": {
     "placeholders": {
-      "logged": {"type": "String"}
+      "logged": {
+        "type": "String"
+      }
     }
   },
   "coachAtKilos": "at {weight} kilos",
   "@coachAtKilos": {
     "placeholders": {
-      "weight": {"type": "String"}
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "coachNextUp": "Next up: {next}.",
   "@coachNextUp": {
     "placeholders": {
-      "next": {"type": "String"}
+      "next": {
+        "type": "String"
+      }
     }
   },
   "coachLastExercise": "That was the last exercise. Say finish workout to save.",
@@ -353,53 +428,87 @@
   "coachLoggedNextSet": "Logged {logged}. Rest up — say done when the next set is in.",
   "@coachLoggedNextSet": {
     "placeholders": {
-      "logged": {"type": "String"}
+      "logged": {
+        "type": "String"
+      }
     }
   },
   "ttsNext": "Next: {name}.",
   "@ttsNext": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "ttsNextSets": "Next: {name}. {sets} sets of {reps} reps.",
   "@ttsNextSets": {
     "placeholders": {
-      "name": {"type": "String"},
-      "sets": {"type": "int"},
-      "reps": {"type": "int"}
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
     }
   },
   "ttsNextSetsWeight": "Next: {name}. {sets} sets of {reps} reps at {weight} kg.",
   "@ttsNextSetsWeight": {
     "placeholders": {
-      "name": {"type": "String"},
-      "sets": {"type": "int"},
-      "reps": {"type": "int"},
-      "weight": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "ttsSetGo": "Set {n}. Go.",
   "@ttsSetGo": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "ttsSetOfGo": "Set {n} of {total}. {reps} reps. Go.",
   "@ttsSetOfGo": {
     "placeholders": {
-      "n": {"type": "int"},
-      "total": {"type": "int"},
-      "reps": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
     }
   },
   "ttsSetOfWeightGo": "Set {n} of {total}. {reps} reps at {weight} kg. Go.",
   "@ttsSetOfWeightGo": {
     "placeholders": {
-      "n": {"type": "int"},
-      "total": {"type": "int"},
-      "reps": {"type": "int"},
-      "weight": {"type": "String"}
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "ttsRest": "Rest.",
@@ -423,7 +532,9 @@
   "sergeantDidNotGet": "Did not get \"{transcript}\" — say start workout, plan workout, or log a meal.",
   "@sergeantDidNotGet": {
     "placeholders": {
-      "transcript": {"type": "String"}
+      "transcript": {
+        "type": "String"
+      }
     }
   },
   "sergeantMacrosExample": "Grams of protein, carbs, and fat — for example: 40 protein, 60 carbs, 20 fat.",
@@ -431,45 +542,71 @@
   "sergeantLoggedLabel": "Logged {label}",
   "@sergeantLoggedLabel": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "sergeantMealSummary": "{what}: {protein} protein, {carbs} carbs, {fat} fat — {kcal} calories. What else?",
   "@sergeantMealSummary": {
     "placeholders": {
-      "what": {"type": "String"},
-      "protein": {"type": "String"},
-      "carbs": {"type": "String"},
-      "fat": {"type": "String"},
-      "kcal": {"type": "int"}
+      "what": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "sergeantCouldNotSaveMeal": "Could not save the meal — try again in a moment.",
   "sergeantLookingUp": "Looking up {food}.",
   "@sergeantLookingUp": {
     "placeholders": {
-      "food": {"type": "String"}
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantCouldNotFind": "Could not find {food} — tell me the grams of protein, carbs, and fat instead.",
   "@sergeantCouldNotFind": {
     "placeholders": {
-      "food": {"type": "String"}
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantGramsOf": "{grams} grams of {food}",
   "@sergeantGramsOf": {
     "placeholders": {
-      "grams": {"type": "String"},
-      "food": {"type": "String"}
+      "grams": {
+        "type": "String"
+      },
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantPlanSummary": "Your plan: {split}. {days} days a week, {kcal} calories.",
   "@sergeantPlanSummary": {
     "placeholders": {
-      "split": {"type": "String"},
-      "days": {"type": "int"},
-      "kcal": {"type": "int"}
+      "split": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "hubWorkout": "Workout",
@@ -501,7 +638,9 @@
   "overTime": "{label} over time",
   "@overTime": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "logAFewWeightedSessions": "Log a few weighted sessions to see your strength climb.",
@@ -509,14 +648,18 @@
   "estimatedOneRm": "Estimated 1RM · {name}",
   "@estimatedOneRm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "allLifts": "All lifts",
   "gainSinceTracking": "{gain} kg since you started tracking it",
   "@gainSinceTracking": {
     "placeholders": {
-      "gain": {"type": "String"}
+      "gain": {
+        "type": "String"
+      }
     }
   },
   "e1rmLabel": "e1RM",
@@ -527,7 +670,9 @@
   "lastWeeks": "last {n} wks",
   "@lastWeeks": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "onTrack": "On track — keep doing what you're doing.",
@@ -544,7 +689,9 @@
   "kcalLoggedForToday": "≈ {kcal} kcal · logged for today",
   "@kcalLoggedForToday": {
     "placeholders": {
-      "kcal": {"type": "String"}
+      "kcal": {
+        "type": "String"
+      }
     }
   },
   "saveMeal": "Save meal",
@@ -552,8 +699,12 @@
   "@valueWithUnit": {
     "description": "A metric tile's number and its unit, e.g. 82kg or 18%.",
     "placeholders": {
-      "value": {"type": "String"},
-      "unit": {"type": "String"}
+      "value": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
     }
   }
 }

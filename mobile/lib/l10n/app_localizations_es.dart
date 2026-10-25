@@ -133,14 +133,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weightKgLabel => 'Peso (kg)';
 
   @override
-  String get dobMissing => 'pon tu fecha de nacimiento';
+  String get dobMissing => 'Elige tu fecha de nacimiento.';
 
   @override
-  String get dobInFuture => 'la fecha de nacimiento no puede ser futura';
+  String get dobInFuture =>
+      'La fecha de nacimiento no puede estar en el futuro.';
 
   @override
   String ageOutOfRange(int min, int max) {
-    return 'la edad debe estar entre $min y $max';
+    return 'la edad debe estar entre $min y $max años';
   }
 
   @override
@@ -160,7 +161,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String bodyFatOutOfRange(num min, num max) {
+  String bodyFatOutOfRange(int min, int max) {
     return 'la grasa corporal debe estar entre $min y $max %';
   }
 
@@ -216,7 +217,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get findMyProgram => 'Buscar mi programa';
 
   @override
-  String get bodyShapeEctomorph => 'Delgado y estrecho';
+  String get bodyShapeEctomorph => 'Delgado y angosto';
 
   @override
   String get bodyShapeMesomorph => 'Atlético y ancho';
@@ -240,10 +241,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fatBandLean => 'Definido';
 
   @override
-  String get fatBandModerate => 'Intermedio';
+  String get fatBandModerate => 'Medio';
 
   @override
-  String get fatBandBulky => 'Voluminoso';
+  String get fatBandBulky => 'Con más grasa';
 
   @override
   String get fatBandLeanDescription => 'Músculo visible y definido';
@@ -457,7 +458,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rankBestMatch => 'Mejor opción';
 
   @override
-  String get rankCloseMatch => 'Opción cercana';
+  String get rankCloseMatch => 'Segunda opción';
 
   @override
   String get rankGoodOption => 'Buena opción';
@@ -492,6 +493,60 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get couldNotChooseProgram =>
       'No se pudo elegir el programa. Inténtalo de nuevo.';
+
+  @override
+  String get profileMenu => 'Tu perfil';
+
+  @override
+  String get menuProgram => 'Programa';
+
+  @override
+  String get menuMeasurements => 'Medidas';
+
+  @override
+  String get menuProgress => 'Progreso';
+
+  @override
+  String get signOut => 'Cerrar sesión';
+
+  @override
+  String get dictate => 'Dictar';
+
+  @override
+  String get today => 'Hoy';
+
+  @override
+  String get dayDoneHeadline => 'Entrenaste';
+
+  @override
+  String get dayFreeHeadline => 'Sesión libre';
+
+  @override
+  String get startSession => 'Empezar sesión';
+
+  @override
+  String get logLate => 'Registrar tarde';
+
+  @override
+  String get viewLogged => 'Ver lo registrado';
+
+  @override
+  String get nothingLogged => 'Nada registrado este día.';
+
+  @override
+  String get nutritionToday => 'Alimentación · hoy';
+
+  @override
+  String get addMeal => '+ Comida';
+
+  @override
+  String get showMonth => 'Ver el mes';
+
+  @override
+  String get showWeek => 'Ver la semana';
+
+  @override
+  String get findYourProgram => 'Encuentra tu programa';
 
   @override
   String get apiErrorTransport =>
@@ -741,9 +796,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get deleteThisWorkout => '¿Borrar este entrenamiento?';
-
-  @override
-  String get today => 'Hoy';
 
   @override
   String get yesterday => 'Ayer';

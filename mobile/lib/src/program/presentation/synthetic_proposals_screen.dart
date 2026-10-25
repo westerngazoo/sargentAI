@@ -47,7 +47,7 @@ class _SyntheticProposalsScreenState
             widget.fatBand,
           );
       if (!mounted) return;
-      // Invalidate the current-program cache so HomeShell picks it up.
+      // Invalidate the current-program cache so the main screen picks it up.
       ref.invalidate(currentProgramProvider);
       context.go('/programs/current');
     } on ApiException catch (e) {

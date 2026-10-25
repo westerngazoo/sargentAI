@@ -163,4 +163,29 @@ void main() {
       expect(currentLocation(router), '/home');
     });
   });
+
+  // SPEC-0061 §2.5: the session draft lives in memory, so a reload at
+  // /session has nothing to show and lands on the day.
+  testWidgets('authenticated: a cold start at /session with no draft goes home',
+      (tester) async {
+    when(() => tokenStore.read())
+        .thenAnswer((_) async => sampleToken(userId: 'u-1'));
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokenStore),
+        authRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+    final router = container.read(routerProvider);
+    router.go('/session');
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: localizedRouterApp(router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(currentLocation(router), '/home');
+  });
 }

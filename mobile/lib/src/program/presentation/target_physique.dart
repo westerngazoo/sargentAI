@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../core/theme/app_theme.dart';
 
 /// Physique shape parameters, 0..1 relative to the canvas. The name and the
 /// one-line blurb of each build are catalogue strings ([physiqueLabel],
@@ -98,7 +97,13 @@ class TargetPhysique extends StatelessWidget {
           SizedBox(
             width: 96,
             height: 150,
-            child: CustomPaint(painter: _PhysiquePainter(p)),
+            child: CustomPaint(
+              painter: _PhysiquePainter(
+                p,
+                ink: Theme.of(context).colorScheme.onSurface,
+                paper: Theme.of(context).colorScheme.surface,
+              ),
+            ),
           ),
           const SizedBox(width: 18),
           Expanded(
@@ -169,9 +174,13 @@ class TargetPhysique extends StatelessWidget {
   }
 }
 
+/// The silhouette in one ink on the surface it sits on (SPEC-0061 §2.10:
+/// black on white, white on near-black; no gradient).
 class _PhysiquePainter extends CustomPainter {
-  const _PhysiquePainter(this.p);
+  const _PhysiquePainter(this.p, {required this.ink, required this.paper});
   final PhysiqueParams p;
+  final Color ink;
+  final Color paper;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -219,18 +228,11 @@ class _PhysiquePainter extends CustomPainter {
       ..quadraticBezierTo(cx - chestX, chestY, cx - shoulderX, shoulderY)
       ..close();
 
-    final grad = AppTheme.gradEnd;
-    final grad2 = AppTheme.gradStart;
-    final fill = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [grad2, grad],
-      ).createShader(Offset.zero & size);
+    final fill = Paint()..color = ink;
 
     // Arms (behind torso): shoulder → elbow → forearm, slight outward bulge.
     final armPaint = Paint()
-      ..color = grad
+      ..color = ink
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.085 * m
       ..strokeCap = StrokeCap.round;
@@ -246,12 +248,11 @@ class _PhysiquePainter extends CustomPainter {
     canvas.drawPath(torso, fill);
 
     // Head.
-    canvas.drawCircle(
-        Offset(cx, headTop + headR), headR, Paint()..color = grad);
+    canvas.drawCircle(Offset(cx, headTop + headR), headR, Paint()..color = ink);
 
     // A soft centre line for the physique's definition.
     final line = Paint()
-      ..color = Colors.white.withValues(alpha: 0.14)
+      ..color = paper.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4;
     canvas.drawLine(Offset(cx, chestY - h * 0.02), Offset(cx, waistY), line);

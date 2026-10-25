@@ -158,7 +158,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String bodyFatOutOfRange(num min, num max) {
+  String bodyFatOutOfRange(int min, int max) {
     return 'body fat must be between $min and $max %';
   }
 
@@ -491,6 +491,60 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not choose program — please retry.';
 
   @override
+  String get profileMenu => 'Your profile';
+
+  @override
+  String get menuProgram => 'Program';
+
+  @override
+  String get menuMeasurements => 'Measurements';
+
+  @override
+  String get menuProgress => 'Progress';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get dictate => 'Dictate';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get dayDoneHeadline => 'You trained';
+
+  @override
+  String get dayFreeHeadline => 'Free session';
+
+  @override
+  String get startSession => 'Start session';
+
+  @override
+  String get logLate => 'Log late';
+
+  @override
+  String get viewLogged => 'See what you logged';
+
+  @override
+  String get nothingLogged => 'Nothing logged this day.';
+
+  @override
+  String get nutritionToday => 'Nutrition · today';
+
+  @override
+  String get addMeal => '+ Meal';
+
+  @override
+  String get showMonth => 'Show month';
+
+  @override
+  String get showWeek => 'Show week';
+
+  @override
+  String get findYourProgram => 'Find your program';
+
+  @override
   String get apiErrorTransport => 'can\'t reach the server — retry';
 
   @override
@@ -736,9 +790,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteThisWorkout => 'Delete this workout?';
-
-  @override
-  String get today => 'Today';
 
   @override
   String get yesterday => 'Yesterday';

@@ -48,36 +48,52 @@
   "choose": "Elegir",
   "heightCmLabel": "Estatura (cm)",
   "weightKgLabel": "Peso (kg)",
-  "dobMissing": "pon tu fecha de nacimiento",
-  "dobInFuture": "la fecha de nacimiento no puede ser futura",
-  "ageOutOfRange": "la edad debe estar entre {min} y {max}",
+  "dobMissing": "Elige tu fecha de nacimiento.",
+  "dobInFuture": "La fecha de nacimiento no puede estar en el futuro.",
+  "ageOutOfRange": "la edad debe estar entre {min} y {max} años",
   "@ageOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "heightMissing": "pon tu estatura",
   "heightOutOfRange": "la estatura debe estar entre {min} y {max} cm",
   "@heightOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "weightMissing": "pon tu peso",
   "weightOutOfRange": "el peso debe estar entre {min} y {max} kg",
   "@weightOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "bodyFatOutOfRange": "la grasa corporal debe estar entre {min} y {max} %",
   "@bodyFatOutOfRange": {
     "placeholders": {
-      "min": {"type": "num"},
-      "max": {"type": "num"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "yourGoals": "Tus objetivos",
@@ -97,15 +113,15 @@
   "bodyShape": "Complexión",
   "bodyFatLevel": "Nivel de grasa corporal",
   "findMyProgram": "Buscar mi programa",
-  "bodyShapeEctomorph": "Delgado y estrecho",
+  "bodyShapeEctomorph": "Delgado y angosto",
   "bodyShapeMesomorph": "Atlético y ancho",
   "bodyShapeEndomorph": "Robusto y macizo",
   "bodyShapeEctomorphDescription": "Cuerpo delgado, hombros angostos, extremidades largas, poca masa.",
   "bodyShapeMesomorphDescription": "Hombros anchos, cuerpo musculoso, responde bien al entrenamiento.",
   "bodyShapeEndomorphDescription": "Cuerpo robusto, cintura ancha, tiende a cargar más masa.",
   "fatBandLean": "Definido",
-  "fatBandModerate": "Intermedio",
-  "fatBandBulky": "Voluminoso",
+  "fatBandModerate": "Medio",
+  "fatBandBulky": "Con más grasa",
   "fatBandLeanDescription": "Músculo visible y definido",
   "fatBandModerateDescription": "Algo de definición, grasa moderada",
   "fatBandBulkyDescription": "Más grasa corporal, aspecto lleno",
@@ -121,14 +137,18 @@
   "daysPerWeek": "{n} días/semana",
   "@daysPerWeek": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "sessionDuration": "Duración de la sesión",
   "minutesShort": "{n} min",
   "@minutesShort": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "intensity": "Intensidad",
@@ -145,7 +165,9 @@
   "grams": "{n} g",
   "@grams": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "kcalPerDay": "kcal / día",
@@ -156,15 +178,21 @@
   "kcalShort": "{n} kcal",
   "@kcalShort": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "doneOfTarget": "{done}/{target}",
   "@doneOfTarget": {
     "description": "Centre of the progress ring: training days done over the weekly target.",
     "placeholders": {
-      "done": {"type": "int"},
-      "target": {"type": "int"}
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
     }
   },
   "getYourProgram": "Consigue tu programa",
@@ -190,7 +218,9 @@
   "@taperTag": {
     "description": "Tappable tag; ratio is the shoulder-to-waist figure already formatted (e.g. 2.6).",
     "placeholders": {
-      "ratio": {"type": "String"}
+      "ratio": {
+        "type": "String"
+      }
     }
   },
   "physiqueMass": "Masa",
@@ -201,7 +231,9 @@
   "taperRatio": "{ratio}:1",
   "@taperRatio": {
     "placeholders": {
-      "ratio": {"type": "String"}
+      "ratio": {
+        "type": "String"
+      }
     }
   },
   "thisWeekCaps": "ESTA SEMANA",
@@ -211,21 +243,29 @@
   "daysOfTarget": "{done} de {target} días",
   "@daysOfTarget": {
     "placeholders": {
-      "done": {"type": "int"},
-      "target": {"type": "int"}
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
     }
   },
   "sessionsLoggedOnProgram": "{count, plural, =1{1 sesión registrada en este programa} other{{count} sesiones registradas en este programa}}",
   "@sessionsLoggedOnProgram": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "targetMet": "Meta cumplida",
   "percent": "{n}%",
   "@percent": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "chooseYourProgram": "Elige tu programa",
@@ -234,36 +274,64 @@
   "@rankBestMatch": {
     "description": "Chip on the first of the three proposed programs."
   },
-  "rankCloseMatch": "Opción cercana",
+  "rankCloseMatch": "Segunda opción",
   "rankGoodOption": "Buena opción",
   "proposalSummaryLine": "{days} días/semana · {kcal} kcal/día",
   "@proposalSummaryLine": {
     "placeholders": {
-      "days": {"type": "int"},
-      "kcal": {"type": "int"}
+      "days": {
+        "type": "int"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "intensityLine": "Intensidad: {value}",
   "@intensityLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "restLine": "Descanso: {value}",
   "@restLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "progressionLine": "Progresión: {value}",
   "@progressionLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "chooseThisProgram": "Elegir este programa",
   "selectionNoLongerAvailable": "Esa opción ya no está disponible. Vuelve a cargar.",
   "couldNotChooseProgram": "No se pudo elegir el programa. Inténtalo de nuevo.",
+  "profileMenu": "Tu perfil",
+  "menuProgram": "Programa",
+  "menuMeasurements": "Medidas",
+  "menuProgress": "Progreso",
+  "signOut": "Cerrar sesión",
+  "dictate": "Dictar",
+  "today": "Hoy",
+  "dayDoneHeadline": "Entrenaste",
+  "dayFreeHeadline": "Sesión libre",
+  "startSession": "Empezar sesión",
+  "logLate": "Registrar tarde",
+  "viewLogged": "Ver lo registrado",
+  "nothingLogged": "Nada registrado este día.",
+  "nutritionToday": "Alimentación · hoy",
+  "addMeal": "+ Comida",
+  "showMonth": "Ver el mes",
+  "showWeek": "Ver la semana",
+  "findYourProgram": "Encuentra tu programa",
   "apiErrorTransport": "No hay conexión con el servidor. Inténtalo de nuevo.",
   "@apiErrorTransport": {
     "description": "Fallback for a timeout or no-network failure on any API call."
@@ -298,8 +366,12 @@
   "@listAnd": {
     "description": "Joins the last item of a spoken list to the rest: 'quads and glutes'.",
     "placeholders": {
-      "head": {"type": "String"},
-      "last": {"type": "String"}
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
     }
   },
   "rejectStartWorkoutFirst": "Primero empieza un entrenamiento.",
@@ -308,28 +380,40 @@
   "rejectNameTooLong": "El nombre puede tener hasta {max} caracteres.",
   "@rejectNameTooLong": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectEnterReps": "Pon las repeticiones.",
   "rejectRepsOutOfRange": "Las repeticiones van de {min} a {max}.",
   "@rejectRepsOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectWeightOutOfRange": "El peso debe ser mayor que 0 y máximo {max} kg.",
   "@rejectWeightOutOfRange": {
     "placeholders": {
-      "max": {"type": "int"}
+      "max": {
+        "type": "int"
+      }
     }
   },
   "rejectRpeOutOfRange": "El RPE va de {min} a {max}, en pasos de 0.5.",
   "@rejectRpeOutOfRange": {
     "placeholders": {
-      "min": {"type": "double"},
-      "max": {"type": "double"}
+      "min": {
+        "type": "double"
+      },
+      "max": {
+        "type": "double"
+      }
     }
   },
   "fieldAreaSets": "tus series",
@@ -339,8 +423,12 @@
   "@errorCheckArea": {
     "description": "A finish failure that names the part of the screen to check.",
     "placeholders": {
-      "error": {"type": "String"},
-      "area": {"type": "String"}
+      "error": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
     }
   },
   "discardThisWorkout": "¿Descartar este entrenamiento?",
@@ -356,7 +444,9 @@
   "targetMusclesCaps": "MÚSCULOS OBJETIVO — {name}",
   "@targetMusclesCaps": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "stopListening": "Dejar de escuchar",
@@ -366,26 +456,36 @@
   "setLine": "Serie {n}: {label}",
   "@setLine": {
     "placeholders": {
-      "n": {"type": "int"},
-      "label": {"type": "String"}
+      "n": {
+        "type": "int"
+      },
+      "label": {
+        "type": "String"
+      }
     }
   },
   "repsCount": "{n} reps",
   "@repsCount": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "kg": "{value} kg",
   "@kg": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "rpeValue": "RPE {value}",
   "@rpeValue": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "repsLabel": "Reps",
@@ -400,21 +500,28 @@
   "exerciseWithGroup": "{name} · {group}",
   "@exerciseWithGroup": {
     "placeholders": {
-      "name": {"type": "String"},
-      "group": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "group": {
+        "type": "String"
+      }
     }
   },
   "noWorkoutsYet": "Aún no hay entrenamientos. Toca Empezar para registrar el primero.",
   "sessionSummary": "{exercises} ejercicios · {sets} series",
   "@sessionSummary": {
     "placeholders": {
-      "exercises": {"type": "int"},
-      "sets": {"type": "int"}
+      "exercises": {
+        "type": "int"
+      },
+      "sets": {
+        "type": "int"
+      }
     }
   },
   "delete": "Borrar",
   "deleteThisWorkout": "¿Borrar este entrenamiento?",
-  "today": "Hoy",
   "yesterday": "Ayer",
   "workoutNoLongerExists": "Ese entrenamiento ya no existe.",
   "startWorkout": "Empezar entrenamiento",
@@ -424,23 +531,35 @@
   "@coachTargetSuffix": {
     "description": "Appended to an exercise name when its target muscles are known.",
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "coachPlanLoaded": "Plan cargado: {count} ejercicios. Primero: {first}. {prompt}",
   "@coachPlanLoaded": {
     "placeholders": {
-      "count": {"type": "int"},
-      "first": {"type": "String"},
-      "prompt": {"type": "String"}
+      "count": {
+        "type": "int"
+      },
+      "first": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
     }
   },
   "coachNoPlan": "Coach de voz activo. No hay plan: agrega un ejercicio y dicta tus series.",
   "coachOnCurrent": "Coach de voz activo. Ejercicio actual: {name}. {prompt}",
   "@coachOnCurrent": {
     "placeholders": {
-      "name": {"type": "String"},
-      "prompt": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "prompt": {
+        "type": "String"
+      }
     }
   },
   "coachNoCurrentExercise": "ninguno",
@@ -450,19 +569,25 @@
   "coachLoggedRestUp": "Registrado: {logged}. Descansa.",
   "@coachLoggedRestUp": {
     "placeholders": {
-      "logged": {"type": "String"}
+      "logged": {
+        "type": "String"
+      }
     }
   },
   "coachAtKilos": "con {weight} kilos",
   "@coachAtKilos": {
     "placeholders": {
-      "weight": {"type": "String"}
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "coachNextUp": "Sigue: {next}.",
   "@coachNextUp": {
     "placeholders": {
-      "next": {"type": "String"}
+      "next": {
+        "type": "String"
+      }
     }
   },
   "coachLastExercise": "Ese era el último ejercicio. Di terminar entrenamiento para guardar.",
@@ -476,53 +601,87 @@
   "coachLoggedNextSet": "Registrado: {logged}. Descansa y di listo cuando termines la siguiente serie.",
   "@coachLoggedNextSet": {
     "placeholders": {
-      "logged": {"type": "String"}
+      "logged": {
+        "type": "String"
+      }
     }
   },
   "ttsNext": "Sigue: {name}.",
   "@ttsNext": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "ttsNextSets": "Sigue: {name}. {sets} series de {reps} repeticiones.",
   "@ttsNextSets": {
     "placeholders": {
-      "name": {"type": "String"},
-      "sets": {"type": "int"},
-      "reps": {"type": "int"}
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
     }
   },
   "ttsNextSetsWeight": "Sigue: {name}. {sets} series de {reps} repeticiones con {weight} kg.",
   "@ttsNextSetsWeight": {
     "placeholders": {
-      "name": {"type": "String"},
-      "sets": {"type": "int"},
-      "reps": {"type": "int"},
-      "weight": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "sets": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "ttsSetGo": "Serie {n}. Vamos.",
   "@ttsSetGo": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "ttsSetOfGo": "Serie {n} de {total}. {reps} repeticiones. Vamos.",
   "@ttsSetOfGo": {
     "placeholders": {
-      "n": {"type": "int"},
-      "total": {"type": "int"},
-      "reps": {"type": "int"}
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      }
     }
   },
   "ttsSetOfWeightGo": "Serie {n} de {total}. {reps} repeticiones con {weight} kg. Vamos.",
   "@ttsSetOfWeightGo": {
     "placeholders": {
-      "n": {"type": "int"},
-      "total": {"type": "int"},
-      "reps": {"type": "int"},
-      "weight": {"type": "String"}
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "reps": {
+        "type": "int"
+      },
+      "weight": {
+        "type": "String"
+      }
     }
   },
   "ttsRest": "Descansa.",
@@ -546,7 +705,9 @@
   "sergeantDidNotGet": "No entendí \"{transcript}\". Di empezar entrenamiento, ver plan o registrar comida.",
   "@sergeantDidNotGet": {
     "placeholders": {
-      "transcript": {"type": "String"}
+      "transcript": {
+        "type": "String"
+      }
     }
   },
   "sergeantMacrosExample": "Gramos de proteína, carbos y grasa. Por ejemplo: 40 de proteína, 60 de carbos, 20 de grasa.",
@@ -554,45 +715,71 @@
   "sergeantLoggedLabel": "Registré {label}",
   "@sergeantLoggedLabel": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "sergeantMealSummary": "{what}: {protein} de proteína, {carbs} de carbos, {fat} de grasa. {kcal} calorías. ¿Qué más?",
   "@sergeantMealSummary": {
     "placeholders": {
-      "what": {"type": "String"},
-      "protein": {"type": "String"},
-      "carbs": {"type": "String"},
-      "fat": {"type": "String"},
-      "kcal": {"type": "int"}
+      "what": {
+        "type": "String"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "sergeantCouldNotSaveMeal": "No pude guardar la comida. Inténtalo en un momento.",
   "sergeantLookingUp": "Buscando {food}.",
   "@sergeantLookingUp": {
     "placeholders": {
-      "food": {"type": "String"}
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantCouldNotFind": "No encontré {food}. Dime los gramos de proteína, carbos y grasa.",
   "@sergeantCouldNotFind": {
     "placeholders": {
-      "food": {"type": "String"}
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantGramsOf": "{grams} gramos de {food}",
   "@sergeantGramsOf": {
     "placeholders": {
-      "grams": {"type": "String"},
-      "food": {"type": "String"}
+      "grams": {
+        "type": "String"
+      },
+      "food": {
+        "type": "String"
+      }
     }
   },
   "sergeantPlanSummary": "Tu plan: {split}. {days} días a la semana, {kcal} calorías.",
   "@sergeantPlanSummary": {
     "placeholders": {
-      "split": {"type": "String"},
-      "days": {"type": "int"},
-      "kcal": {"type": "int"}
+      "split": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "hubWorkout": "Entrenar",
@@ -624,7 +811,9 @@
   "overTime": "{label} en el tiempo",
   "@overTime": {
     "placeholders": {
-      "label": {"type": "String"}
+      "label": {
+        "type": "String"
+      }
     }
   },
   "logAFewWeightedSessions": "Registra unas sesiones con peso para ver subir tu fuerza.",
@@ -632,14 +821,18 @@
   "estimatedOneRm": "1RM estimado · {name}",
   "@estimatedOneRm": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "allLifts": "Todos",
   "gainSinceTracking": "{gain} kg desde que lo registras",
   "@gainSinceTracking": {
     "placeholders": {
-      "gain": {"type": "String"}
+      "gain": {
+        "type": "String"
+      }
     }
   },
   "e1rmLabel": "1RM est.",
@@ -650,7 +843,9 @@
   "lastWeeks": "últimas {n} sem",
   "@lastWeeks": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "onTrack": "Vas bien. Sigue igual.",
@@ -667,7 +862,9 @@
   "kcalLoggedForToday": "≈ {kcal} kcal · se registra hoy",
   "@kcalLoggedForToday": {
     "placeholders": {
-      "kcal": {"type": "String"}
+      "kcal": {
+        "type": "String"
+      }
     }
   },
   "saveMeal": "Guardar comida",
@@ -675,8 +872,12 @@
   "@valueWithUnit": {
     "description": "A metric tile's number and its unit, e.g. 82kg or 18%.",
     "placeholders": {
-      "value": {"type": "String"},
-      "unit": {"type": "String"}
+      "value": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
     }
   }
 }

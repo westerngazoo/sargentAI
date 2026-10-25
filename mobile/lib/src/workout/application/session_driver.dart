@@ -17,6 +17,7 @@ import 'workouts_provider.dart';
 class SessionDriverState {
   const SessionDriverState({
     this.draft,
+    this.performedOn,
     this.currentExercise = 0,
     this.submitting = false,
     this.error,
@@ -24,6 +25,9 @@ class SessionDriverState {
   });
 
   final SessionDraft? draft;
+
+  /// The day a late log is for; `null` means today at finish time.
+  final DateTime? performedOn;
   final int currentExercise;
   final bool submitting;
   final ApiException? error;
@@ -45,6 +49,7 @@ class SessionDriverState {
 
   SessionDriverState copyWith({
     SessionDraft? draft,
+    DateTime? performedOn,
     int? currentExercise,
     bool? submitting,
     ApiException? error,
@@ -53,6 +58,7 @@ class SessionDriverState {
   }) =>
       SessionDriverState(
         draft: draft ?? this.draft,
+        performedOn: performedOn ?? this.performedOn,
         currentExercise: currentExercise ?? this.currentExercise,
         submitting: submitting ?? this.submitting,
         error: clearError ? null : (error ?? this.error),
@@ -70,8 +76,13 @@ class SessionDriver extends Notifier<SessionDriverState> {
   @override
   SessionDriverState build() => const SessionDriverState();
 
-  void start() => state =
-      const SessionDriverState(draft: SessionDraft(), currentExercise: 0);
+  /// Opens an empty in-progress session. [performedOn] is the day it is
+  /// logged on (R-0061 AC5 "Registrar tarde"); today when omitted.
+  void start({DateTime? performedOn}) => state = SessionDriverState(
+        draft: const SessionDraft(),
+        currentExercise: 0,
+        performedOn: performedOn,
+      );
 
   /// Validates and appends a new exercise, selecting it. Returns `null` on
   /// accept or the typed reason on reject (driver = single enforcement
@@ -118,7 +129,8 @@ class SessionDriver extends Notifier<SessionDriverState> {
   Future<void> finish() async {
     final d = state.draft;
     if (d == null || !d.canFinish) return;
-    final req = d.toRequest(DateTime.now()); // local calendar date, at the edge
+    // The chosen day for a late log, else the local calendar date, at the edge.
+    final req = d.toRequest(state.performedOn ?? DateTime.now());
     if (req == null) return;
     state = state.copyWith(submitting: true, clearError: true);
     try {

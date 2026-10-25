@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../core/theme/app_theme.dart';
 import '../models/coach_suggestion.dart';
 import '../services/adjustment_service.dart';
 
@@ -53,13 +52,11 @@ class _CoachBody extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.military_tech,
-                    size: 19, color: Colors.white),
+                child: Icon(Icons.military_tech,
+                    size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
               Text(

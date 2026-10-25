@@ -27,6 +27,7 @@ import 'package:fitai/src/profile/application/onboarding_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/domain/goal.dart';
 import 'package:fitai/src/profile/domain/profile.dart';
+import 'package:fitai/src/profile/domain/profile_draft.dart';
 import 'package:fitai/src/profile/presentation/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -116,7 +117,10 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text(l10n.heightOutOfRange(50, 300)), findsOneWidget);
+    expect(
+        find.text(l10n.heightOutOfRange(
+            ProfileLimits.minHeight, ProfileLimits.maxHeight)),
+        findsOneWidget);
   });
 
   testWidgets('SAC7 a successful save navigates to /home (screen owns the go)',

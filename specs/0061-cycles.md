@@ -1,7 +1,9 @@
 # SPEC-0061 — Annex A: the six day cycles (OQ-A, for owner approval)
 
-- **Status:** Draft v2. It awaits owner approval (SPEC-0061 §2.1, OQ-A) and
-  blocks slice 2b only.
+- **Status:** Accepted as drafted under the owner's 2026-10-25 authorization
+  of SPEC-0061 ("termina todo lo que está en spec"). The owner may still
+  change Mentzer's spacing (§4.1) or any exercise (§4.2); that is a data fix
+  in `seed.rs`, not a design change.
 - **Realizes:** R-0061 AC6 (the plan is an ordered sequence of days)
 - **Created:** 2026-10-23. **Revised:** 2026-10-24 after the second
   architect review (N7).
@@ -198,6 +200,7 @@ muscles. The test's comment says so.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-10-25 | Days are named by `focus` only; no lift or subtitle labels on `PlanDay::Training`. | Owner: programs come in many styles (5×5, high intensity, volume), so a day is named for what it trains. The physics check attaches to the exercise. |
+| 2026-10-25 | The six cycles ship as tabled, Mentzer at 8 days. | Owner's blanket authorization of SPEC-0061; §4.1 and §4.2 stay open as data fixes. |
 
 ## Changelog
 

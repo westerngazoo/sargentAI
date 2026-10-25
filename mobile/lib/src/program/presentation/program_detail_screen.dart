@@ -1,14 +1,12 @@
 // R-0014 / SPEC-0014 §2.5.3 — ProgramDetailScreen.
 //
 // Displays the active program and diet. Reached from ProgramProposalsScreen
-// after a successful choose, or via the home shortcut (CurrentProgramCard).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../core/theme/app_theme.dart';
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -40,7 +38,20 @@ class ProgramDetailScreen extends ConsumerWidget {
           ),
         ),
         data: (program) => program == null
-            ? Center(child: Text(l10n.noProgramYet))
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.noProgramYet),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      key: const Key('get-program'),
+                      onPressed: () => context.push('/programs/get'),
+                      child: Text(l10n.findYourProgram),
+                    ),
+                  ],
+                ),
+              )
             : _ProgramDetail(program: program),
       ),
     );
@@ -153,12 +164,11 @@ class _Section extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(icon, size: 19, color: Colors.white),
+                child: Icon(icon,
+                    size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
               Text(title,
@@ -357,199 +367,4 @@ class _MacroTable extends StatelessWidget {
           ),
         ),
       );
-}
-
-/// Home-screen shortcut card — taps through to [ProgramDetailScreen].
-///
-/// When no program exists (404) or an error occurs, shows a "Get your program"
-/// CTA that navigates toward the match flow (SPEC-0014 §2.5.4).
-class CurrentProgramCard extends ConsumerWidget {
-  const CurrentProgramCard({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(currentProgramProvider);
-    final l10n = AppLocalizations.of(context);
-    return async.when(
-      loading: () => const LinearProgressIndicator(),
-      error: (_, __) => _getProgramCta(context),
-      data: (program) {
-        if (program == null) return _getProgramCta(context);
-        final progress = ref.watch(weeklyProgressProvider);
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: brandGradient(),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(24),
-              onTap: () => context.go('/programs/current'),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          l10n.yourProgramCaps,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    letterSpacing: 1.2,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.arrow_forward, color: Colors.white),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                program.program.split,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _StatPill(
-                                    icon: Icons.calendar_today,
-                                    label: l10n.daysPerWeek(
-                                        program.program.daysPerWeek),
-                                  ),
-                                  _StatPill(
-                                    icon: Icons.local_fire_department,
-                                    label: l10n
-                                        .kcalShort(program.diet.estimatedKcal),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (progress != null) ...[
-                          const SizedBox(width: 12),
-                          ProgressRing(
-                            ratio: progress.ratio,
-                            size: 72,
-                            stroke: 7,
-                            onGradient: true,
-                            label: l10n.doneOfTarget(
-                                progress.daysDone, progress.daysTarget),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _getProgramCta(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        gradient: brandGradient(),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () => context.go('/programs/get'),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: Colors.white.withValues(alpha: 0.18),
-                  child: Icon(Icons.fitness_center, color: Colors.white),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.getYourProgram,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.takeAPhotoForPlan,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.arrow_forward, color: Colors.white),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Translucent stat pill on the hero program card.
-class _StatPill extends StatelessWidget {
-  const _StatPill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -145,9 +145,13 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate,
 
 **The replay.** A cursor `c` points into the cycle and wraps (`c % len`).
 It starts at 0 on `starts_on` and walks every day from `starts_on` to
-`range.to`, and no further: the replay only moves forward, so nothing after
-the range can change what the range shows (second review, N9). Before the
-walk, `last_plan` is the latest date in `logs` that holds a plan session.
+`range.to`, and no further: the replay only moves forward, so no log after
+the range can move the cursor inside it (second review, N9). Before the
+walk, `last_plan` is the latest date in **all** of `logs` that holds a plan
+session, including dates after the range: a later completion is a fact
+about the past, and an unlogged day before it must not offer that day
+again (rule 4, N2). Slice 2a pinned both readings. The range is at most 62
+days, counted inclusively (`to − from + 1`).
 Rules apply in this order:
 
 1. **Days before `starts_on`** never touch the cursor. They are emitted
@@ -544,7 +548,7 @@ reels.
   (`google_fonts` rejected, as before). Each licence is registered with
   `LicenseRegistry`.
   - **Bangers** (OFL): headlines, short and sparing.
-  - **Luckiest Guy** (OFL): the big numbers in readout panels. The reels
+  - **Luckiest Guy** (Apache 2.0): the big numbers in readout panels. The reels
     use it because Bangers draws 1 and 7 alike.
   - **IBM Plex Mono** (OFL): data, setup lines, the formula bar.
   - **Archivo** (OFL): UI text.
@@ -577,8 +581,9 @@ in the beta when it lands.
 | Slice | Content | Stack | Depends on |
 |-------|---------|-------|------------|
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
+| 1e | Theme tokens, the contrast test and the four bundled faces (§2.10). The halftone painter ships with 1f, its first user | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist. 1b also deletes `Brand.tagline` and wires `appTagline` into `BrandHeader`, adding the delegates to the auth widget tests | mobile | 1a |
-| 1e | Theme tokens, the contrast test, the four bundled faces and the halftone painter (§2.10) | mobile | — |
+| 1f | Router, `MainScreen`, `showPanel`, the halftone ground, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6). Programa and Progreso push the existing `/programs/current` and `/progress` screens from the profile menu, Medidas opens its sheet, and `/programs/get` is reachable from the program screen's empty state, until slice 3 replaces them with panels, so AC2 holds at every merge; the `context.go` guard ships with a shrinking allowlist for the folders slices 3 and 5 migrate | mobile | 1a, 1e |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
@@ -602,7 +607,7 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate, logs: &BTreeMap<NaiveDat
         let any = logs.get(&d).is_some_and(|l| l.any_session);
         emit(&mut out, d, if any { DayState::Done { completed: vec![] } } else { DayState::Nothing { pending: None } });
     }
-    range.check_reach(today)?;                                                // RangeTooFarAhead (N9)
+    // DateRange::new(from, to, today) already rejected an inverted, over-long or too-far-ahead range.
     let last_plan = logs.iter().rev().find(|(_, l)| !l.plan.is_empty()).map(|(d, _)| *d);
     for d in starts_on.iter_days().take_while(|d| *d <= range.to) {           // stops at range.to (N9)
         let state = match logs.get(&d) {
@@ -658,10 +663,10 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
-  approval (§2.1). Days are named by focus only (owner, 2026-10-25). Two
-  questions stay open in the annex: Mentzer's spacing, and the exercises
-  themselves. It blocks slice 2b only, not this spec.
+- **OQ-A. The six cycles, with exercises per day.** *Resolved 2026-10-25:
+  Annex A v2 ships as tabled under the owner's authorization of the spec.*
+  Days are named by focus only (owner). Mentzer's spacing and the exercise
+  lists stay open as data fixes in `seed.rs` (Annex A §4).
 - **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
   removed.* Each of its five items has a home on the new screen.
 - **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
@@ -686,8 +691,8 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | AC8 | Widget tests: each panel opens and holds its body, and choosing a program completes inside the Programa panel. |
 | AC9 | Widget tests: every exercise shows a Física button; an unmodelled exercise reads *Pronto* and opens nothing; the squat check opens beside the list at 1440 px and below the exercise at 390 px; the worked sum equals the hip panel's value for the current frame; no copy in the check matches a safe/dangerous word list. |
 | AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing by button, by voice and by the earbud's `finish()` returns to the day, shown as done (N12); a 409 or a `plan_unavailable` saves the session as free and shows a notice; a cold start at `/session` lands on `/home`. The R-0035 and R-0032 suites stay green. |
+| AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, structural theme tests in both modes (token values, primary and surface, the faces; no pixel goldens, which rasterize differently on the Linux runner), focus mode dark in both, and a licence-registry test for the four faces. |
 | AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the ARB parity test, and locale resolution tests (`es`, `en`, `fr` → `es`). |
-| AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, theme golden tests in both modes, focus mode dark in both, and a licence-registry test for the four faces. |
 | AC13 | Widget tests at 390×844 and 1440×900 (§2.11). |
 
 ## 7. Decision log
@@ -783,3 +788,7 @@ was done with a note on what to salvage.
 - 2026-10-25 — design v2 accepted by the owner. §2.5 regions and
   breakpoints, §2.10 tokens and type, slices 1e and 4, §6 rows for AC7,
   AC9 and AC12 updated. OQ-D resolved. Status → Accepted.
+- 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
+  62-day range is inclusive, and range errors live in `DateRange::new`.
+- 2026-10-25 — slice 1f: the removed routes' redirects move to slice 3 (the old screens stay reachable, pushed, until the panels exist); the `context.go` guard carries a shrinking allowlist like the l10n guard.
+- 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.

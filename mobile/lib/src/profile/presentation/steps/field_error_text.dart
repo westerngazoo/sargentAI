@@ -21,7 +21,7 @@ String? fieldErrorText(ProfileFieldError? error, AppLocalizations l10n) =>
           ProfileLimits.maxWeight.toInt(),
         ),
       ProfileFieldError.bodyFatOutOfRange => l10n.bodyFatOutOfRange(
-          ProfileLimits.minBodyFat,
-          ProfileLimits.maxBodyFat,
+          ProfileLimits.minBodyFat.toInt(),
+          ProfileLimits.maxBodyFat.toInt(),
         ),
     };

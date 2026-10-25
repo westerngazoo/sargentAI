@@ -107,11 +107,12 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
               child: FilledButton(
                 onPressed: _canConfirm ? _confirm : null,
                 child: _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary),
                       )
                     : Text(l10n.findMyProgram),
               ),
