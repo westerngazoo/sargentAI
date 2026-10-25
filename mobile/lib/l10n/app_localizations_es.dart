@@ -11,4 +11,76 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get appTagline =>
       'La física de tu levantamiento: medida, no adivinada.';
+
+  @override
+  String get emailLabel => 'Correo';
+
+  @override
+  String get passwordLabel => 'Contraseña';
+
+  @override
+  String get logIn => 'Entrar';
+
+  @override
+  String get createAnAccount => 'Crear una cuenta';
+
+  @override
+  String get forgotPassword => '¿Olvidaste tu contraseña?';
+
+  @override
+  String get continueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get useTestAccount => 'Usar cuenta de prueba';
+
+  @override
+  String get createYourAccount => 'Crea tu cuenta';
+
+  @override
+  String get createAccount => 'Crear cuenta';
+
+  @override
+  String get backToLogIn => 'Volver a entrar';
+
+  @override
+  String get emailAlreadyRegistered =>
+      'Ese correo ya tiene cuenta. Entra con él.';
+
+  @override
+  String get resetYourPassword => 'Restablece tu contraseña';
+
+  @override
+  String get sendResetLink => 'Enviar link';
+
+  @override
+  String get resetLinkSent =>
+      'Si ese correo tiene cuenta, el link ya va en camino. Vale 30 minutos.';
+
+  @override
+  String get setANewPassword => 'Pon una contraseña nueva';
+
+  @override
+  String get newPasswordLabel => 'Contraseña nueva';
+
+  @override
+  String get confirmNewPasswordLabel => 'Confirma la contraseña nueva';
+
+  @override
+  String get setNewPassword => 'Guardar contraseña';
+
+  @override
+  String get passwordsDoNotMatch => 'Las contraseñas no coinciden.';
+
+  @override
+  String get useAtLeast8Characters => 'Usa al menos 8 caracteres.';
+
+  @override
+  String get passwordUpdated => 'Contraseña actualizada. Entra con ella.';
+
+  @override
+  String get linkNoLongerValid =>
+      'Este link ya no sirve. Los links vencen a los 30 minutos y se usan una vez.';
+
+  @override
+  String get requestANewLink => 'Pedir otro link';
 }

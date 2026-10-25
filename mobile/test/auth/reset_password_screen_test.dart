@@ -30,8 +30,9 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
-const _invalidLink = 'This link is no longer valid';
+final _invalidLink = l10n.linkNoLongerValid;
 
 void main() {
   setUpAll(registerFallbacks);
@@ -80,7 +81,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pumpAndSettle();
@@ -106,7 +107,7 @@ void main() {
       await pumpReset(tester, at: '/reset-password?token=abc');
 
       expect(find.byType(TextField), findsNWidgets(2));
-      expect(find.widgetWithText(ElevatedButton, 'Set new password'),
+      expect(find.widgetWithText(ElevatedButton, l10n.setNewPassword),
           findsOneWidget);
       expect(find.textContaining(_invalidLink), findsNothing);
     });
@@ -133,7 +134,7 @@ void main() {
           password: any(named: 'password'),
         ),
       );
-      expect(find.textContaining('match'), findsOneWidget);
+      expect(find.text(l10n.passwordsDoNotMatch), findsOneWidget);
       expect(currentUri().path, '/reset-password');
     });
 
@@ -169,7 +170,7 @@ void main() {
 
       expect(currentUri().path, '/login');
       expect(find.text('login-screen'), findsOneWidget);
-      expect(find.textContaining('Password updated'), findsOneWidget);
+      expect(find.text(l10n.passwordUpdated), findsOneWidget);
     });
 
     testWidgets('a transport error keeps the form and shows no raw exception',
@@ -210,8 +211,8 @@ void main() {
 
       expect(find.byType(TextField), findsNothing);
       expect(find.textContaining(_invalidLink), findsOneWidget);
-      expect(find.textContaining('30 minutes'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Request a new link'),
+      expect(find.textContaining('30 minutos'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, l10n.requestANewLink),
           findsOneWidget);
       expect(currentUri().path, '/reset-password');
     });
@@ -228,7 +229,7 @@ void main() {
       await submit(tester,
           password: 'newpassword1', confirmation: 'newpassword1');
 
-      await tester.tap(find.text('Request a new link'));
+      await tester.tap(find.text(l10n.requestANewLink));
       await tester.pumpAndSettle();
 
       expect(currentUri().path, '/forgot-password');
@@ -241,7 +242,7 @@ void main() {
 
       expect(find.byType(TextField), findsNothing);
       expect(find.textContaining(_invalidLink), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Request a new link'),
+      expect(find.widgetWithText(ElevatedButton, l10n.requestANewLink),
           findsOneWidget);
       verifyNever(
         () => repo.resetPassword(

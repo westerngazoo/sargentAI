@@ -3,5 +3,28 @@
   "appTagline": "La física de tu levantamiento: medida, no adivinada.",
   "@appTagline": {
     "description": "Brand tagline under the badge on the screens before sign-in."
-  }
+  },
+  "emailLabel": "Correo",
+  "passwordLabel": "Contraseña",
+  "logIn": "Entrar",
+  "createAnAccount": "Crear una cuenta",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+  "continueWithGoogle": "Continuar con Google",
+  "useTestAccount": "Usar cuenta de prueba",
+  "createYourAccount": "Crea tu cuenta",
+  "createAccount": "Crear cuenta",
+  "backToLogIn": "Volver a entrar",
+  "emailAlreadyRegistered": "Ese correo ya tiene cuenta. Entra con él.",
+  "resetYourPassword": "Restablece tu contraseña",
+  "sendResetLink": "Enviar link",
+  "resetLinkSent": "Si ese correo tiene cuenta, el link ya va en camino. Vale 30 minutos.",
+  "setANewPassword": "Pon una contraseña nueva",
+  "newPasswordLabel": "Contraseña nueva",
+  "confirmNewPasswordLabel": "Confirma la contraseña nueva",
+  "setNewPassword": "Guardar contraseña",
+  "passwordsDoNotMatch": "Las contraseñas no coinciden.",
+  "useAtLeast8Characters": "Usa al menos 8 caracteres.",
+  "passwordUpdated": "Contraseña actualizada. Entra con ella.",
+  "linkNoLongerValid": "Este link ya no sirve. Los links vencen a los 30 minutos y se usan una vez.",
+  "requestANewLink": "Pedir otro link"
 }

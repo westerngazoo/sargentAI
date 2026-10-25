@@ -17,7 +17,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Feature folders under lib/src still waiting for slices 1b–1d.
 const notYetMigrated = <String>{
-  'auth',
   'hub',
   'measurements',
   'nutrition',

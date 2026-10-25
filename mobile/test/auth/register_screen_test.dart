@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -45,7 +46,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: RegisterScreen()),
+        child: localizedApp(home: const RegisterScreen()),
       ),
     );
     await tester.pump();
@@ -111,7 +112,7 @@ void main() {
 
     await submit(tester);
 
-    expect(find.text('That email already has an account. Log in instead.'),
+    expect(find.text(l10n.emailAlreadyRegistered),
         findsOneWidget);
     expect(find.textContaining('that already exists'), findsNothing);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
