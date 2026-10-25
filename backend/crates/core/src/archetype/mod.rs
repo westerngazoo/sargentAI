@@ -399,7 +399,7 @@ pub enum ArchetypeError {
     CycleDayFocusEmpty { day: usize },
     #[error("cycle day {day}: a training day must list at least one exercise")]
     CycleDayExercisesEmpty { day: usize },
-    #[error("cycle must not exceed 14 days")]
+    #[error("cycle must not exceed {} days", ProgramTemplate::MAX_CYCLE_DAYS)]
     CycleTooLong,
 }
 

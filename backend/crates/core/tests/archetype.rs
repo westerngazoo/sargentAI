@@ -710,20 +710,37 @@ fn with_cycle_rejects_a_cycle_of_fifteen_days() {
 #[test]
 fn library_cycles_have_the_annex_a_lengths_and_revalidate() {
     // Annex A §1: Yates 6, Mentzer 8, Arnold 7, Columbu 7, Cutler 7, Heath 7.
+    // Length and, since the frequency test must skip `arms` (biceps and
+    // triceps on different days), the number of arm days Annex A tables:
+    // Yates 2, Mentzer 1, Arnold 2, Columbu 2, Cutler 1, Heath 1. That is
+    // what catches v1's Heath, which trained arms three times a week.
     let expected = [
-        ("heavy-duty-mass", 6),
-        ("high-intensity-minimalist", 8),
-        ("classic-aesthetic-taper", 7),
-        ("powerbuilder-leverage", 7),
-        ("mass-monster-volume", 7),
-        ("modern-precision-hypertrophy", 7),
+        ("heavy-duty-mass", 6, 2),
+        ("high-intensity-minimalist", 8, 1),
+        ("classic-aesthetic-taper", 7, 2),
+        ("powerbuilder-leverage", 7, 2),
+        ("mass-monster-volume", 7, 1),
+        ("modern-precision-hypertrophy", 7, 1),
     ];
-    for (id, len) in expected {
+    for (id, len, arm_days) in expected {
         let a = find(id).unwrap_or_else(|| panic!("seed must contain {id}"));
         assert_eq!(
             a.program_template.cycle.len(),
             len,
             "{id}: the cycle must be {len} days long, as Annex A tables it"
+        );
+        let arms = a
+            .program_template
+            .cycle
+            .iter()
+            .filter(|d| match d {
+                PlanDay::Training { focus, .. } => focus.contains(&MuscleGroup::Arms),
+                PlanDay::Rest => false,
+            })
+            .count();
+        assert_eq!(
+            arms, arm_days,
+            "{id}: arm days per cycle, as Annex A tables"
         );
         // The shipped cycle passes `with_cycle`'s rules again.
         let revalidated = valid_program(a.program_template.weekly_frequency_per_muscle)

@@ -659,10 +659,10 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
-  approval (§2.1). Days are named by focus only (owner, 2026-10-25). Two
-  questions stay open in the annex: Mentzer's spacing, and the exercises
-  themselves. It blocks slice 2b only, not this spec.
+- **OQ-A. The six cycles, with exercises per day.** *Resolved 2026-10-25:
+  Annex A v2 ships as tabled under the owner's authorization of the spec.*
+  Days are named by focus only (owner). Mentzer's spacing and the exercise
+  lists stay open as data fixes in `seed.rs` (Annex A §4).
 - **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
   removed.* Each of its five items has a home on the new screen.
 - **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
@@ -786,3 +786,4 @@ was done with a note on what to salvage.
   AC9 and AC12 updated. OQ-D resolved. Status → Accepted.
 - 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
   62-day range is inclusive, and range errors live in `DateRange::new`.
+- 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.
