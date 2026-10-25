@@ -110,6 +110,13 @@ jobs:
       # silently tolerated and the job goes green on a lockfile that never
       # matched the pinned toolchain. --enforce-lockfile fails instead.
       - run: flutter pub get --enforce-lockfile
+
+      # gen-l10n rewrites lib/l10n/*.dart on pub get. The generated files are
+      # committed, so an ARB edited without regenerating must fail here, not
+      # pass green with a stale checkout (SPEC-0061 §2.9).
+      - name: generated localizations are up to date
+        working-directory: mobile
+        run: git diff --exit-code -- lib/l10n
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// The shared email + password form used by both the login and register
 /// screens (SPEC-0007 §2.8). It owns the text fields; the parent owns the
 /// async submit, the busy flag, and the error text — so the in-flight spinner
@@ -39,6 +41,7 @@ class _AuthFormState extends State<AuthForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,13 +51,13 @@ class _AuthFormState extends State<AuthForm> {
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           enableSuggestions: false,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(labelText: l10n.emailLabel),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _password,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
+          decoration: InputDecoration(labelText: l10n.passwordLabel),
         ),
         if (widget.errorText != null) ...[
           const SizedBox(height: 12),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../../core/brand.dart';
 
 /// The gradient goose roundel — the Goose Fitness Physics logo, reusable at
@@ -77,7 +79,7 @@ class BrandHeader extends StatelessWidget {
             if (!compact) ...[
               const SizedBox(height: 6),
               Text(
-                Brand.tagline,
+                AppLocalizations.of(context).appTagline,
                 textAlign: TextAlign.center,
                 style: Theme.of(context)
                     .textTheme
