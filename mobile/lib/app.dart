@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'l10n/app_localizations.dart';
 import 'src/core/brand.dart';
-import 'src/l10n/locale_rule.dart';
 import 'src/core/theme/app_theme.dart';
+import 'src/l10n/locale_rule.dart';
 import 'src/router/app_router.dart';
 
 /// The application root: a `MaterialApp.router` wired to the auth-gated

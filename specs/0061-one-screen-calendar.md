@@ -495,8 +495,8 @@ silently stop doing anything. The change:
   untranslated-messages file is a build artifact, so a test over the
   sources replaces it.)
 - **Locale rule (OQ-1):** `supportedLocales: [es, en]`. A
-  `localeResolutionCallback` matches the device language and returns `es`
-  when nothing matches.
+  `localeListResolutionCallback` walks the device's language list, takes
+  the first with a catalogue, and returns `es` when nothing matches.
 - **Formatting:** dates, weekdays and numbers use `intl` with the resolved
   locale.
 - **Literal-string guard.** A test scans `lib/src/**.dart` for string
@@ -577,7 +577,7 @@ in the beta when it lands.
 | Slice | Content | Stack | Depends on |
 |-------|---------|-------|------------|
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
-| 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist | mobile | 1a |
+| 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist. 1b also deletes `Brand.tagline` and wires `appTagline` into `BrandHeader`, adding the delegates to the auth widget tests | mobile | 1a |
 | 1e | Theme tokens, the contrast test, the four bundled faces and the halftone painter (§2.10) | mobile | — |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
@@ -686,7 +686,7 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | AC8 | Widget tests: each panel opens and holds its body, and choosing a program completes inside the Programa panel. |
 | AC9 | Widget tests: every exercise shows a Física button; an unmodelled exercise reads *Pronto* and opens nothing; the squat check opens beside the list at 1440 px and below the exercise at 390 px; the worked sum equals the hip panel's value for the current frame; no copy in the check matches a safe/dangerous word list. |
 | AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing by button, by voice and by the earbud's `finish()` returns to the day, shown as done (N12); a 409 or a `plan_unavailable` saves the session as free and shows a notice; a cold start at `/session` lands on `/home`. The R-0035 and R-0032 suites stay green. |
-| AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the empty untranslated-messages check, and locale resolution tests (`es`, `en`, `fr` → `es`). |
+| AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the ARB parity test, and locale resolution tests (`es`, `en`, `fr` → `es`). |
 | AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, theme golden tests in both modes, focus mode dark in both, and a licence-registry test for the four faces. |
 | AC13 | Widget tests at 390×844 and 1440×900 (§2.11). |
 

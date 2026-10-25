@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import 'package:fitai/l10n/app_localizations.dart';
 import 'package:fitai/src/l10n/locale_rule.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,5 +35,10 @@ void main() {
   test('no device preference at all falls back to es', () {
     expect(resolveLocale(null, supportedLocales), const Locale('es'));
     expect(resolveLocale(const [], supportedLocales), const Locale('es'));
+  });
+
+  test('the ordered list names exactly the generated catalogues', () {
+    // Order is ours (first = fallback); the set must match gen-l10n's.
+    expect(supportedLocales.toSet(), AppLocalizations.supportedLocales.toSet());
   });
 }
