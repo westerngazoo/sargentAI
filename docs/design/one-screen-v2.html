@@ -1,0 +1,1116 @@
+<title>Goose Fitness Physics</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bangers&family=IBM+Plex+Mono:wght@400;500;600&family=Luckiest+Guy&display=swap">
+<style>
+/* v2. One screen: today's training is the hero, its physics check sits inside it,
+   the calendar is a rail (a week strip on phones), nutrition orbits in a dock.
+   Look: the latest @fisicobuenfisico reels, recast to black, white and red.
+   Red is the only colour: force, torque, the hot end of the tension ramp, the
+   moving point on the graph, the stamp and the primary action. The ramp runs
+   grey to red, so tension reads as magnitude, never as good or bad (R-0045 AC14). */
+:root{
+  --ground:#F4F3F1; --dot:rgba(0,0,0,.06);
+  --panel:#FFFFFF; --panel-2:#F1F0EE; --panel-3:#E4E3E0;
+  --text:#111111; --muted:#505050; --soft:#8A8A8A; --track:#E4E3E0;
+  --line:#111111; --shadow:#111111;
+  --red:#C8102E; --on-red:#FFFFFF;
+  --sel:#111111; --on-sel:#FFFFFF;
+  --fig:#111111; --fig-2:#6B6B6B; --fig-edge:#FFFFFF;
+  --heat0:#BDBDBD; --heat1:#7A7A7A; --heat2:#C8102E;
+  --bar:#0B0B0B; --bar-text:#F2F2F2; --bar-muted:#A6A6A6; --bar-red:#FF4D4D;
+  --scrim:rgba(0,0,0,.55);
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"Bangers","Impact","Arial Black",sans-serif;
+  --f-big:"Luckiest Guy","Arial Black","Impact",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0B0B0B; --dot:rgba(255,255,255,.05);
+  --panel:#161616; --panel-2:#202020; --panel-3:#2C2C2C;
+  --text:#F2F2F2; --muted:#ABABAB; --soft:#767676; --track:#2C2C2C;
+  --line:#D9D9D9; --shadow:#000000;
+  --red:#FF4D4D; --on-red:#0B0B0B;
+  --sel:#F2F2F2; --on-sel:#0B0B0B;
+  --fig:#F2F2F2; --fig-2:#8F8F8F; --fig-edge:#161616;
+  --heat0:#4D4D4D; --heat1:#8F8F8F; --heat2:#FF4D4D;
+  --scrim:rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#0B0B0B; --dot:rgba(255,255,255,.05);
+  --panel:#161616; --panel-2:#202020; --panel-3:#2C2C2C;
+  --text:#F2F2F2; --muted:#ABABAB; --soft:#767676; --track:#2C2C2C;
+  --line:#D9D9D9; --shadow:#000000;
+  --red:#FF4D4D; --on-red:#0B0B0B;
+  --sel:#F2F2F2; --on-sel:#0B0B0B;
+  --fig:#F2F2F2; --fig-2:#8F8F8F; --fig-edge:#161616;
+  --heat0:#4D4D4D; --heat1:#8F8F8F; --heat2:#FF4D4D;
+  --scrim:rgba(0,0,0,.7); color-scheme:dark}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;color:var(--text);font:15px/1.45 var(--f-ui);
+  background-color:var(--ground);
+  background-image:radial-gradient(var(--dot) 1.2px,transparent 1.6px),radial-gradient(var(--dot) 1.2px,transparent 1.6px);
+  background-size:14px 14px;background-position:0 0,7px 7px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 112px}
+body.lock{overflow:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:12;background:var(--ground)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.pan{background:var(--panel);border:2px solid var(--line);box-shadow:4px 4px 0 var(--shadow);border-radius:2px;min-width:0}
+.eyebrow{font:600 11px/1.3 var(--f-num);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.head{font-family:var(--f-head);font-weight:400;letter-spacing:.03em;line-height:.95;margin:0}
+.sub{font-size:13px;color:var(--muted)}
+.red{color:var(--red)}
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:11;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px))) calc(-1 * max(16px,env(safe-area-inset-right,0px)));
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:var(--ground);border-bottom:2px solid var(--line)}
+.top-in{max-width:1360px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.logo{flex:none;width:34px;height:34px}
+.brand{min-width:0;display:grid;gap:1px}
+.brand .wm{font:400 22px/1 var(--f-head);letter-spacing:.04em;color:var(--text)}
+.brand .wm span{color:var(--red)}
+.mock{font:600 10px/1.2 var(--f-num);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.me-wrap{margin-left:auto;position:relative}
+.me{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:var(--panel);font:700 13px var(--f-ui);box-shadow:2px 2px 0 var(--shadow)}
+.menu{position:absolute;right:0;top:calc(100% + 10px);width:240px;padding:6px;z-index:25;display:grid}
+.menu button{background:none;border:0;text-align:left;padding:11px 10px;border-radius:2px;display:flex;justify-content:space-between;gap:8px}
+.menu button:hover{background:var(--panel-2)}
+.menu .m-meta{font:12px var(--f-num);color:var(--muted)}
+.menu hr{border:0;border-top:1.5px dashed var(--soft);margin:4px 0;width:100%}
+/* layout */
+.app{max-width:1360px;margin:16px auto 0;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.rail{display:grid;gap:18px;min-width:0;align-content:start}
+@media (min-width:720px){.app{grid-template-columns:316px minmax(0,1fr);align-items:start}.rail{position:sticky;top:76px}}
+@media (min-width:1180px){.app{grid-template-columns:340px minmax(0,1fr)}}
+/* calendar */
+.cal{padding:12px 12px 10px}
+.cal-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.cal-head h2{font:800 17px/1.1 var(--f-ui);letter-spacing:.02em;text-transform:uppercase;margin:0}
+.cal-nav{margin-left:auto;display:flex;gap:6px}
+.icon-btn{width:36px;height:36px;border:2px solid var(--line);background:var(--panel);color:var(--text);border-radius:2px;display:grid;place-items:center;font-size:18px;line-height:1;box-shadow:2px 2px 0 var(--shadow)}
+.icon-btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--shadow)}
+.pill-btn{height:36px;padding:0 12px;border:2px solid var(--line);background:var(--panel-2);border-radius:2px;font:600 13px var(--f-ui);box-shadow:2px 2px 0 var(--shadow)}
+.grid7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.dow{font:600 11px var(--f-num);color:var(--muted);text-align:center;padding-bottom:3px}
+.day{min-height:62px;min-width:0;border:0;border-radius:2px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:7px 1px 5px;position:relative}
+.day:hover{background:var(--panel-2)}
+.day .d{font:500 15px/1 var(--f-num)}
+.day .g{width:9px;height:9px;border-radius:50%;flex:none}
+.day .lb{font:600 9px/1.1 var(--f-ui);letter-spacing:-.02em;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-inline:1px}
+.g-done{background:var(--text)}
+.g-plan{border:2px solid var(--text)}
+.g-rest{height:2.5px!important;width:12px!important;border-radius:2px!important;background:var(--soft);margin-block:3px}
+.g-none{visibility:hidden}
+.day.out .d{color:var(--soft)}
+.day.today{box-shadow:inset 0 0 0 2.5px var(--red)}
+.day.sel{background:var(--sel)}
+.day.sel .d,.day.sel .lb{color:var(--on-sel)}
+.day.sel .g-done{background:var(--on-sel)} .day.sel .g-plan{border-color:var(--on-sel)} .day.sel .g-rest{background:var(--on-sel)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1.5px dashed var(--soft);font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend .g{display:inline-block;width:9px;height:9px;border-radius:50%}
+.legend .shift{flex-basis:100%;font-size:11.5px}
+/* nutrition orbit */
+.orbit{padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center}
+.ring{width:58px;height:58px;position:relative;grid-row:span 3}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;font:600 12px var(--f-num)}
+.o-line{font-size:14px}
+.o-line b{font:600 17px var(--f-num)}
+.o-more{font-size:12px;color:var(--muted)}
+.o-act{grid-column:1 / -1;margin-top:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--line);border-radius:2px;padding:11px 16px;font:700 15px var(--f-ui);background:var(--panel);color:var(--text);box-shadow:3px 3px 0 var(--shadow);text-decoration:none}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.btn.primary{background:var(--red);color:var(--on-red);font-size:19px;padding:14px 22px}
+.btn.ink{background:var(--sel);color:var(--on-sel)}
+.btn.full{width:100%}
+.btn.small{padding:7px 11px;font-size:13px;box-shadow:2px 2px 0 var(--shadow)}
+@media (max-width:719.98px){
+  .orbit{position:fixed;z-index:8;left:max(12px,env(safe-area-inset-left,0px));right:calc(max(12px,env(safe-area-inset-right,0px)) + 74px);
+    bottom:calc(12px + env(safe-area-inset-bottom,0px));grid-template-columns:auto minmax(0,1fr) auto;padding:8px 8px 8px 10px;gap:0 10px}
+  .ring{width:40px;height:40px;grid-row:auto}
+  .ring .rt{display:none}
+  .o-more,.o-eyebrow{display:none}
+  .o-line{font-size:12.5px;line-height:1.25}
+  .o-line b{font-size:15px}
+  .o-act{grid-column:auto;margin:0}
+  .o-act .btn{width:auto;padding:9px 12px;font-size:14px}
+}
+/* hero */
+.hero{padding:18px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1180px){.hero.split{grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);align-items:start}}
+.hero-main,.hero-side{min-width:0}
+.h-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{font:600 11px/1 var(--f-num);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border:1.5px solid var(--line);border-radius:2px;background:var(--panel-2)}
+.chip.hot{background:var(--red);color:var(--on-red);border-color:var(--red)}
+.chip.ink{background:var(--sel);color:var(--on-sel)}
+.h-title{font-size:clamp(40px,7vw,58px);margin:8px 0 4px;color:var(--text);text-shadow:3px 3px 0 var(--red);overflow-wrap:anywhere}
+.h-meta{font:13px/1.5 var(--f-num);color:var(--muted)}
+.h-act{margin-top:14px;display:grid;gap:8px}
+.h-act .btn{justify-self:stretch}
+@media (min-width:720px){.h-act .btn{justify-self:start;min-width:280px}}
+.h-hint{font-size:13px;color:var(--muted);margin:0}
+.h-next{font:12px/1.5 var(--f-num);color:var(--muted);margin-top:8px}
+.ex-list{list-style:none;margin:16px 0 0;padding:0;border-top:2px solid var(--line)}
+.ex-row{border-bottom:1.5px dashed var(--soft)}
+.ex-line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0}
+.ex-n{font:600 12px var(--f-num);color:var(--muted);width:22px}
+.ex-name{font-weight:600;display:block}
+.ex-how{font:13px var(--f-num);color:var(--muted)}
+.ex-row.on .ex-name{text-decoration:underline;text-decoration-thickness:3px;text-decoration-color:var(--red);text-underline-offset:4px}
+.pchip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--line);background:var(--panel);border-radius:2px;padding:6px 9px;font:700 12.5px var(--f-ui);box-shadow:2px 2px 0 var(--shadow);white-space:nowrap}
+.pchip svg{width:16px;height:16px}
+.pchip[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
+.pchip.soon{border-style:dashed;box-shadow:none;color:var(--muted);font-weight:600}
+.pchip.soon[aria-pressed="true"]{background:var(--panel-3);color:var(--text)}
+.pchip.none{border-color:transparent;box-shadow:none;background:transparent;color:var(--muted);font-weight:500}
+.ex-slot:empty{display:none}
+.ex-slot{padding-bottom:14px}
+.empty-day{margin-top:14px;font-size:14px;color:var(--muted)}
+/* physics check */
+.phys{position:relative;padding:14px;background:var(--panel)}
+.p-head{display:flex;align-items:flex-start;gap:10px;padding-right:96px}
+.p-title{font-size:32px;color:var(--text)}
+.p-title .acc{color:var(--red)}
+.p-meta{font:12px/1.5 var(--f-num);color:var(--muted);margin-top:6px}
+.p-meta b{color:var(--text);font-weight:600}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--text);text-decoration:underline;text-decoration-color:var(--red);text-decoration-thickness:2px;text-underline-offset:3px;font-weight:600}
+.stamp{position:absolute;top:12px;right:10px;transform:rotate(-7deg);border:2.5px solid var(--red);color:var(--red);padding:4px 7px 3px;font:400 14px/1 var(--f-head);letter-spacing:.08em;text-align:center;background:var(--panel)}
+.stamp small{display:block;font:600 8.5px/1.3 var(--f-num);letter-spacing:.06em}
+.p-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:10px;align-items:start}
+.figbox{border:2px solid var(--line);background:var(--panel);background-image:radial-gradient(var(--dot) 1px,transparent 1.4px);background-size:10px 10px;border-radius:2px;position:relative}
+svg.fig{display:block;width:100%;height:auto}
+.heatkey{display:flex;align-items:center;gap:8px;font:600 10.5px var(--f-num);color:var(--muted);padding:6px 8px;border-top:1.5px solid var(--line)}
+.heatkey i{flex:1;height:8px;border:1.5px solid var(--line);background:linear-gradient(90deg,var(--heat0),var(--heat1) 50%,var(--heat2))}
+.hud{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pito{background:var(--panel);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:6px 9px 5px;border-left-width:7px;min-width:0}
+.pito .l{font:500 11.5px/1.2 var(--f-num);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pito .v{font:400 30px/1.1 var(--f-big);color:var(--text);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pito .v small{font:500 12px var(--f-num);color:var(--muted);margin-left:3px}
+.pito.tq .v{color:var(--red)}
+.angles{font:12px/1.6 var(--f-num);color:var(--muted);margin-top:10px}
+.angles b{color:var(--text);font-weight:600}
+.groups{margin-top:12px}
+.groups h4,.graph h4{margin:0 0 6px;font:600 11px var(--f-num);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.trow{margin:7px 0}
+.trow .lab{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px}
+.trow .lab span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trow .lab b{font:600 12.5px var(--f-num);white-space:nowrap}
+.track{height:10px;background:var(--track);border:1.5px solid var(--line);position:relative;overflow:hidden}
+.track i{position:absolute;top:0;bottom:0}
+.track .z{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--line);left:16%}
+.graph{margin-top:14px}
+.graph .gbox{border:2px solid var(--line);background:var(--panel)}
+svg.gsvg{display:block;width:100%;height:auto}
+.ctrl{display:flex;align-items:center;gap:10px;margin-top:12px}
+.ctrl .rng{flex:1;min-width:0}
+.ctrl input[type=range]{width:100%;accent-color:var(--red);margin:0}
+.ctrl .ends{display:flex;justify-content:space-between;font:11px var(--f-num);color:var(--muted)}
+.play{width:42px;height:42px;flex:none;border:2px solid var(--line);background:var(--sel);color:var(--on-sel);border-radius:50%;display:grid;place-items:center;box-shadow:2px 2px 0 var(--shadow)}
+.formula{display:flex;margin-top:12px;border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow);background:var(--panel)}
+.formula span{background:var(--red);color:var(--on-red);font:600 12px var(--f-num);letter-spacing:.08em;padding:7px 10px;display:grid;place-items:center}
+.formula code{font:500 14px var(--f-num);padding:7px 12px;color:var(--text)}
+.cuenta{margin-top:12px;border:2px solid var(--line);background:var(--panel);box-shadow:3px 3px 0 var(--shadow)}
+.cuenta .ct{background:var(--sel);color:var(--on-sel);font:600 12px var(--f-num);letter-spacing:.08em;padding:6px 10px;text-transform:uppercase}
+.cuenta .cb{padding:8px 10px;font:12.5px/1.65 var(--f-num);color:var(--muted)}
+.cuenta .cb b{color:var(--text);font-weight:600}
+.cuenta .cb .tot{border-top:1.5px dashed var(--soft);margin-top:4px;padding-top:4px;color:var(--text)}
+.cuenta .cb .tot b{color:var(--red)}
+.caveat{font:11.5px/1.5 var(--f-num);color:var(--muted);margin:10px 0 0}
+.more{display:none;margin-top:10px}
+.concept{margin:14px -14px -14px;background:var(--bar);color:var(--bar-text);padding:10px 14px 9px;font:12px/1.5 var(--f-num);border-top:2px solid var(--line)}
+.concept b{color:var(--bar-red);font-weight:600}
+.concept .sig{color:var(--bar-muted);margin-top:2px;font-size:11px}
+.concept .sig span{color:var(--bar-red)}
+/* soon state */
+.soon-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:12px}
+.ghost{border:2px dashed var(--soft);min-height:200px;display:grid;place-items:center;text-align:center;padding:14px;font:12px/1.5 var(--f-num);color:var(--muted);background:var(--panel-2)}
+.soon-body .pito .v{color:var(--soft)}
+.soon-txt{font-size:14px;margin:12px 0 0}
+/* phone: compact physics strip that expands on tap (R-0061 AC9) */
+@media (max-width:719.98px){
+  .legend .shift,.h-next{display:none}
+  .phys{padding:12px}
+  .p-head{padding-right:0}
+  .p-title{font-size:27px}
+  .stamp{position:static;display:inline-block;margin-top:8px;transform:rotate(-3deg);font-size:12px}
+  .p-body{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:10px}
+  .hud{grid-template-columns:1fr;gap:8px}
+  .pito .v{font-size:25px}
+  .phys:not(.open) #phys-live .eyebrow,.phys:not(.open) #phys-live .stamp,
+  .phys:not(.open) .pito.x,.phys:not(.open) .groups,.phys:not(.open) .graph,.phys:not(.open) .cuenta,.phys:not(.open) .formula,.phys:not(.open) .angles,.phys:not(.open) .f-lbl.x{display:none}
+  .phys.open .p-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .more{display:inline-flex}
+  .concept{margin:12px -12px -12px;padding:9px 12px}
+  .soon-body{grid-template-columns:1fr}
+  .ghost{min-height:96px}
+}
+/* svg figure: a solid silhouette in ink, outlined in paper so limbs separate */
+.f-floor{stroke:var(--line)} .f-plumb{stroke:var(--soft)} .f-act{stroke:var(--soft)}
+.f-edge{stroke:var(--fig-edge);fill:none;stroke-linecap:round}
+.f-limb{stroke:var(--fig);fill:none;stroke-linecap:round}
+.f-limb2{stroke:var(--fig-2);fill:none;stroke-linecap:round}
+.f-note{fill:var(--muted);font-family:var(--f-num)}
+.f-lbl{font-family:var(--f-num);font-weight:600;paint-order:stroke;stroke:var(--panel);stroke-width:.016px;stroke-linejoin:round;fill:var(--text)}
+.f-lbl.r{fill:var(--red)}
+.f-grf{stroke:var(--text);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.f-lev{stroke:var(--text);fill:none;stroke-linecap:round}
+.f-dot{fill:var(--panel);stroke:var(--fig)}
+.f-ref{stroke:var(--soft);fill:none}
+.f-arc{stroke:var(--text);fill:none}
+.g-axis{stroke:var(--line);fill:none}
+.g-grid{stroke:var(--soft);stroke-dasharray:3 3;fill:none}
+.g-t{font-family:var(--f-num);fill:var(--muted)}
+.g-knee{stroke:var(--text);fill:none}
+/* scrim, panels */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:29}
+.panel{position:fixed;z-index:30;background:var(--panel);border:2px solid var(--line);display:flex;flex-direction:column;
+  left:0;right:0;bottom:0;max-height:88vh;border-radius:6px 6px 0 0;box-shadow:0 -4px 0 var(--shadow);
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);animation:up .22s ease-out}
+@media (min-width:720px){.panel{left:auto;top:0;bottom:0;width:480px;max-height:none;border-radius:0;border-width:0 0 0 2px;box-shadow:-6px 0 0 var(--red);animation:side .22s ease-out;padding-top:env(safe-area-inset-top,0px)}}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+@keyframes side{from{transform:translateX(40px);opacity:0}}
+.panel-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:2px solid var(--line);background:var(--panel-2)}
+.panel-head h2{font-size:30px;flex:1;min-width:0}
+.panel-body{padding:16px;overflow:auto;display:grid;gap:14px;align-content:start}
+.rowlist{list-style:none;margin:0;padding:0;border-top:2px solid var(--line)}
+.rowlist li{border-bottom:1.5px dashed var(--soft)}
+.rowlist button,.rowlist .rl{width:100%;background:none;border:0;text-align:left;padding:13px 2px;display:flex;align-items:center;gap:10px}
+.rowlist .meta{margin-left:auto;font:12px var(--f-num);color:var(--muted);text-align:right}
+.field{display:grid;gap:5px}
+.field label{font:600 12px var(--f-num);color:var(--muted)}
+.field input,.field textarea{border:2px solid var(--line);background:var(--panel);border-radius:2px;padding:10px 12px;font:15px var(--f-ui);width:100%}
+.field input:focus,.field textarea:focus{outline:3px solid var(--red);outline-offset:1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seq{display:flex;gap:6px;flex-wrap:wrap}
+.seq span{border:2px solid var(--line);padding:5px 8px;font:12px var(--f-num);border-radius:2px;background:var(--panel)}
+.seq span.rest{border-style:dashed;color:var(--muted)}
+.seq span.now{background:var(--sel);color:var(--on-sel)}
+.prog-card{border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:12px;display:grid;gap:6px;background:var(--panel);text-align:left;width:100%}
+.prog-card.cur{background:var(--panel-2)}
+.prog-card h3{margin:0;font:400 22px var(--f-head);letter-spacing:.03em}
+.picks{display:flex;gap:8px;flex-wrap:wrap}
+.picks button{border:2px solid var(--line);background:var(--panel);border-radius:2px;padding:8px 10px;font-size:13px}
+.picks button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
+.seg{display:flex;border:2px solid var(--line);border-radius:2px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--panel);padding:9px 6px;font-size:13px}
+.seg button+button{border-left:2px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
+.listen{display:flex;gap:5px;align-items:end;height:38px}
+.listen i{width:7px;background:var(--red);border:1.5px solid var(--line);animation:lv 1s ease-in-out infinite;height:30%}
+.listen i:nth-child(2){animation-delay:.15s}.listen i:nth-child(3){animation-delay:.3s}.listen i:nth-child(4){animation-delay:.45s}.listen i:nth-child(5){animation-delay:.6s}
+@keyframes lv{50%{height:100%}}
+.term{background:var(--bar);color:var(--bar-text);font:13px/1.6 var(--f-num);padding:10px 12px;border-radius:2px}
+.term .pr{color:var(--bar-red)}
+.parsed{border:2px solid var(--line);padding:10px;background:var(--panel-2);font-size:14px}
+.logset{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.logset span{font:12px var(--f-num);border:1.5px solid var(--line);padding:3px 6px;border-radius:2px}
+/* fab */
+.fab{position:fixed;z-index:9;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;
+  border:2.5px solid var(--line);background:var(--sel);color:var(--on-sel);display:grid;place-items:center;box-shadow:3px 3px 0 var(--red)}
+@media (max-width:719.98px){.fab{right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px))}}
+.toast{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--bar);color:var(--bar-text);border:2px solid var(--bar-text);padding:10px 14px;font:13px var(--f-num);max-width:calc(100% - 32px);box-shadow:3px 3px 0 var(--red)}
+.foot{grid-column:1 / -1;text-align:center;font:11px var(--f-num);color:var(--muted);padding:6px 0 0}
+/* focus mode: the gym look (BESTIA), white ink on black with red, in both themes */
+.focus{position:fixed;inset:0;z-index:40;overflow:auto;color:#F2F2F2;background-color:#0B0B0B;
+  background-image:radial-gradient(rgba(255,255,255,.05) 1.2px,transparent 1.6px);background-size:14px 14px;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  --panel:#161616;--panel-2:#202020;--panel-3:#2C2C2C;--line:#D9D9D9;--text:#F2F2F2;--muted:#ABABAB;--soft:#767676;--sel:#F2F2F2;--on-sel:#0B0B0B;
+  --red:#FF4D4D;--on-red:#0B0B0B;--shadow:#000;--track:#2C2C2C;--fig:#F2F2F2;--fig-2:#8F8F8F;--fig-edge:#161616;--heat0:#4D4D4D;--heat1:#8F8F8F;--heat2:#FF4D4D;--dot:rgba(255,255,255,.05)}
+.f-wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px}
+.f-top{display:flex;align-items:center;gap:12px}
+.f-t{min-width:0;flex:1}
+.f-t .head{font-size:32px}
+.f-t .sub{font-family:var(--f-num);font-size:12.5px}
+.ear{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:12.5px var(--f-num);color:var(--muted);border:2px solid var(--soft);padding:8px 10px;background:var(--panel)}
+.ear .on{display:inline-flex;align-items:center;gap:6px;color:var(--text);font-weight:600}
+.ear .on i{width:9px;height:9px;border-radius:50%;background:var(--text)}
+.f-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:960px){.f-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:start}}
+.f-card{background:var(--panel);border:2px solid var(--line);box-shadow:4px 4px 0 var(--red);padding:16px}
+.f-side{box-shadow:4px 4px 0 #000}
+.f-ex{font-size:clamp(32px,6vw,48px);margin:6px 0 10px}
+.dots{display:flex;gap:7px;flex-wrap:wrap}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--text)}
+.dots i.d{background:var(--text)}
+.dots i.c{border-color:var(--red);background:var(--red)}
+.f-big{font:400 clamp(52px,12vw,84px)/1 var(--f-big);margin:14px 0 4px}
+.f-big small{font:500 18px var(--f-num);color:var(--muted)}
+.f-target{font:14px var(--f-num);color:var(--muted)}
+.steps{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0}
+.stepper{display:grid;gap:4px}
+.stepper label{font:600 11px var(--f-num);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.stepper .row{display:flex;border:2px solid var(--line);border-radius:2px;overflow:hidden}
+.stepper button{width:46px;height:50px;border:0;background:var(--panel-2);font-size:22px}
+.stepper input{width:76px;border:0;border-inline:2px solid var(--line);background:#0B0B0B;text-align:center;font:500 22px var(--f-num)}
+.f-done{width:100%;font-size:22px!important;padding:18px!important}
+.f-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.voice{margin-top:14px;border-left:4px solid var(--red);padding:8px 12px;background:#0B0B0B;font:13px/1.6 var(--f-num);color:#D6D6D6}
+.voice b{color:var(--red);font-weight:600}
+.restbar{height:10px;border:2px solid var(--line);margin-top:8px;background:#0B0B0B}
+.restbar i{display:block;height:100%;background:var(--red)}
+.f-side h3{font-size:26px;margin-bottom:8px}
+.f-side .fig{max-width:260px;margin:0 auto}
+.f-next{list-style:none;margin:10px 0 0;padding:0;font:13px/1.9 var(--f-num);color:var(--muted)}
+.f-next b{color:var(--text);font-weight:500}
+.confirm{position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.7);display:grid;place-items:center;padding:16px}
+.confirm .box{max-width:420px;width:100%;background:var(--panel);border:2px solid var(--line);box-shadow:5px 5px 0 var(--red);padding:18px}
+.confirm h2{font-size:30px;margin-bottom:8px}
+.confirm .f-row .btn{flex:1;min-width:140px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect x="3" y="3" width="94" height="94" rx="6" fill="var(--text)"/><path fill="var(--panel)" d="M14 54 C26 52 38 55 47 59 C54 62 58 57 57 48 C56 39 51 31 55 23 C58 15 69 12 74 19 L87 23 L86 26 L74 28 C69 31 66 37 67 46 C68 56 74 62 75 70 C76 82 62 89 45 88 C30 87 20 79 18 68 C17 63 15 59 14 54 Z"/><path fill="var(--red)" d="M74 19 L87 23 L86 26 L74 28 Z"/><circle cx="66.5" cy="20.5" r="2.6" fill="var(--text)"/></svg>
+    <div class="brand">
+      <div class="wm">GOOSE <span>FITNESS PHYSICS</span></div>
+      <div class="mock">Maqueta · datos de ejemplo</div>
+    </div>
+    <div class="me-wrap">
+      <button class="me" id="me" aria-label="Menú de perfil" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">LE</button>
+      <div class="menu pan" id="menu" role="menu" aria-label="Perfil" hidden>
+        <button role="menuitem" data-open="program">Programa <span class="m-meta" id="m-prog"></span></button>
+        <button role="menuitem" data-open="meas">Medidas <span class="m-meta">1.75 m · 80 kg</span></button>
+        <button role="menuitem" data-open="progress">Progreso</button>
+        <button role="menuitem" data-open="account">Cuenta</button>
+        <hr>
+        <button role="menuitem" data-open="signout">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="app">
+  <aside class="rail">
+    <section class="pan cal" aria-labelledby="cal-title">
+      <div class="cal-head">
+        <h2 class="head" id="cal-title">Octubre 2026</h2>
+        <div class="cal-nav">
+          <button class="icon-btn" id="cal-prev" aria-label="Semana anterior">‹</button>
+          <button class="icon-btn" id="cal-next" aria-label="Semana siguiente">›</button>
+          <button class="pill-btn" id="cal-toggle" aria-expanded="false" aria-controls="cal-grid">Mes</button>
+        </div>
+      </div>
+      <div class="grid7" id="cal-dows" aria-hidden="true"></div>
+      <div class="grid7" id="cal-grid"></div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="g g-done"></i>Hecho</span><span><i class="g g-plan"></i>Planeado</span><span><i class="g g-rest" style="width:12px;height:2.5px;border-radius:2px"></i>Descanso</span>
+        <span class="shift">Un día sin registrar no se pierde: el plan se recorre.</span>
+      </div>
+    </section>
+    <section class="pan orbit" id="orbit" aria-label="Alimentación"></section>
+  </aside>
+
+  <section class="pan hero" id="hero" aria-labelledby="h-title">
+    <div class="hero-main" id="hero-main"></div>
+    <div class="hero-side" id="phys-slot">
+      <section class="phys pan" id="phys" aria-label="Chequeo físico">
+        <div id="phys-live">
+          <div class="p-head">
+            <div>
+              <div class="eyebrow">Chequeo físico · tu cuerpo, tu carga</div>
+              <h3 class="head p-title">Tu <span class="acc">sentadilla</span>, tu palanca</h3>
+              <div class="p-meta"><b>100 kg</b> en barra alta · 1.75 m · 80 kg · tus piernas: fémur <b id="len-f"></b> · tibia <b id="len-t"></b> · tronco <b id="len-tr"></b> <button class="linkbtn" id="phys-meas" type="button">Tus medidas</button></div>
+            </div>
+          </div>
+          <div class="stamp" aria-hidden="true">Comprobable<small>física · cuenta a la vista</small></div>
+          <p class="caveat" id="phys-load" hidden></p>
+          <div class="p-body">
+            <div class="figbox">
+              <svg class="fig" id="fig" viewBox="-0.62 -1.96 1.42 2.1" role="img" aria-label="Figura de perfil de la sentadilla, con la palanca de la cadera y los vectores de fuerza"></svg>
+              <div class="heatkey"><span>Tensión 0</span><i></i><span id="heat-max"></span></div>
+            </div>
+            <div>
+              <div class="hud">
+                <div class="pito tq" id="pt-hip"><div class="l">τ cadera</div><div class="v"><span id="v-hip">0</span><small>N·m</small></div></div>
+                <div class="pito" id="pt-d"><div class="l">palanca cadera</div><div class="v"><span id="v-d">0</span><small>cm</small></div></div>
+                <div class="pito x tq" id="pt-knee"><div class="l">τ rodilla</div><div class="v"><span id="v-knee">0</span><small>N·m</small></div></div>
+                <div class="pito x" id="pt-b"><div class="l">β tronco</div><div class="v"><span id="v-b">0</span><small>°</small></div></div>
+              </div>
+              <div class="angles">rodilla <b id="a-k"></b> · cadera <b id="a-h"></b> · recorrido <b id="a-s"></b></div>
+              <div class="groups">
+                <h4>N·m que sostiene cada grupo</h4>
+                <div id="trows"></div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <button class="play" id="play" type="button" aria-label="Pausar"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" id="play-ic"><rect x="3" y="2" width="3.5" height="12" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" fill="currentColor"/></svg></button>
+            <div class="rng">
+              <input type="range" id="scrub" min="0" max="1000" value="1000" aria-label="Recorrer la bajada, de pie al fondo">
+              <div class="ends" aria-hidden="true"><span>de pie</span><span>fondo</span></div>
+            </div>
+          </div>
+          <div class="graph">
+            <h4>τ contra altura de la barra</h4>
+            <div class="gbox"><svg class="gsvg" id="gsvg" viewBox="0 0 330 150" role="img" aria-label="Gráfica del torque de cadera y de rodilla según la altura de la barra"></svg></div>
+          </div>
+          <div class="formula"><span>FÓRMULA</span><code>τ = F × d  [N·m]</code></div>
+          <div class="cuenta" aria-live="off">
+            <div class="ct">La cuenta de tu cadera</div>
+            <div class="cb" id="cuenta"></div>
+          </div>
+          <p class="caveat">Modelo estático, de perfil, con masas de tabla: cada cuadro es una postura en equilibrio sobre el mediopié. Entre de pie y el fondo, las piernas siguen una convención del modelo, no tu trayectoria.</p>
+          <button class="btn small more" id="phys-more" type="button" aria-expanded="false" aria-controls="phys">Ver la cuenta completa</button>
+          <div class="concept"><b>CONCEPTO:</b> TORQUE · τ = r·F, la fuerza que hace girar. Aquí la bisagra es tu cadera: más palanca, más torque.<div class="sig">mecánica fbf · <span>@fisicobuenfisico</span> · Goose Fitness Physics</div></div>
+        </div>
+        <div id="phys-soon" hidden></div>
+      </section>
+    </div>
+  </section>
+  <footer class="foot">Maqueta de diseño v2 · datos de ejemplo, no son de una persona real · la física de la sentadilla sale del motor real</footer>
+</main>
+
+<button class="fab" id="mic" type="button" aria-label="Dictar por voz">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" hidden>
+  <div class="panel-head">
+    <button class="icon-btn" id="panel-back" type="button" aria-label="Atrás" hidden>‹</button>
+    <h2 class="head" id="panel-title"></h2>
+    <button class="icon-btn" id="panel-close" type="button" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<div class="focus" id="focus" role="dialog" aria-modal="true" aria-labelledby="f-title" hidden>
+  <div class="f-wrap">
+    <div class="f-top">
+      <button class="icon-btn" id="f-close" type="button" aria-label="Salir de la sesión">✕</button>
+      <div class="f-t"><h2 class="head" id="f-title"></h2><div class="sub"><span id="f-sub"></span> · <span id="f-clock">0:00</span></div></div>
+      <button class="btn small" id="f-finish" type="button" >Terminar y guardar</button>
+    </div>
+    <div class="ear"><span class="on"><i></i>Audífono conectado</span><span>Un toque: serie hecha · Dos toques: repetir indicación</span><span>(En la maqueta: barra espaciadora = un toque)</span></div>
+    <div class="f-grid">
+      <div class="f-card" id="f-main"></div>
+      <div class="f-card f-side" id="f-side">
+        <div id="f-phys">
+          <h3 class="head">Lo que hace tu cuerpo en el fondo</h3>
+          <div class="figbox"><svg class="fig" id="f-fig" viewBox="-0.62 -1.96 1.42 2.1" role="img" aria-label="Figura en el fondo de la sentadilla"></svg></div>
+          <div class="hud" style="margin-top:12px">
+            <div class="pito tq" id="fp-hip"><div class="l">τ cadera · N·m</div><div class="v" id="fv-hip"></div></div>
+            <div class="pito tq" id="fp-knee"><div class="l">τ rodilla · N·m</div><div class="v" id="fv-knee"></div></div>
+          </div>
+          <p class="caveat" id="f-phys-note"></p>
+        </div>
+        <div id="f-nophys" class="caveat" hidden>Este ejercicio todavía no tiene modelo de física.</div>
+        <h4 class="eyebrow" style="margin:16px 0 0">Siguiente</h4>
+        <ul class="f-next" id="f-next"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="confirm" id="f-confirm" role="alertdialog" aria-modal="true" aria-labelledby="fc-title" aria-describedby="fc-text" hidden>
+    <div class="box">
+      <h2 class="head" id="fc-title">¿Salir de la sesión?</h2>
+      <p id="fc-text"></p>
+      <div class="f-row">
+        <button class="btn primary" id="fc-stay" type="button">Seguir entrenando</button>
+        <button class="btn" id="fc-save" type="button">Guardar y salir</button>
+        <button class="btn" id="fc-drop" type="button">Salir sin guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+const RANGES = {ex:{stopped:null,frames:[{s:0.000,knee:0,hip:0,trunk:3,A:[-0.069,0.068],K:[-0.044,0.498],H:[-0.019,0.926],S:[0.011,1.429],bar:[0.009,1.404],m:[37,-77,121,25]},{s:0.025,knee:3,hip:4,trunk:5,A:[-0.069,0.068],K:[-0.038,0.498],H:[-0.030,0.926],S:[0.013,1.428],bar:[0.011,1.403],m:[55,-67,121,38]},{s:0.050,knee:6,hip:8,trunk:7,A:[-0.069,0.068],K:[-0.032,0.497],H:[-0.042,0.926],S:[0.016,1.426],bar:[0.013,1.401],m:[73,-57,121,50]},{s:0.075,knee:9,hip:12,trunk:8,A:[-0.069,0.068],K:[-0.026,0.497],H:[-0.053,0.924],S:[0.018,1.423],bar:[0.015,1.398],m:[91,-47,121,62]},{s:0.100,knee:12,hip:16,trunk:10,A:[-0.069,0.068],K:[-0.020,0.496],H:[-0.065,0.922],S:[0.021,1.419],bar:[0.017,1.394],m:[108,-37,121,74]},{s:0.125,knee:16,hip:20,trunk:11,A:[-0.069,0.068],K:[-0.014,0.495],H:[-0.076,0.919],S:[0.023,1.414],bar:[0.018,1.389],m:[126,-27,121,86]},{s:0.150,knee:19,hip:24,trunk:13,A:[-0.069,0.068],K:[-0.008,0.494],H:[-0.088,0.916],S:[0.026,1.407],bar:[0.020,1.382],m:[144,-17,121,98]},{s:0.175,knee:22,hip:28,trunk:15,A:[-0.069,0.068],K:[-0.003,0.494],H:[-0.099,0.911],S:[0.029,1.399],bar:[0.022,1.375],m:[161,-7,121,110]},{s:0.200,knee:25,hip:32,trunk:16,A:[-0.069,0.068],K:[0.003,0.493],H:[-0.110,0.906],S:[0.031,1.390],bar:[0.024,1.366],m:[178,3,121,121]},{s:0.225,knee:28,hip:35,trunk:18,A:[-0.069,0.068],K:[0.009,0.492],H:[-0.121,0.900],S:[0.033,1.380],bar:[0.026,1.356],m:[195,13,121,133]},{s:0.250,knee:31,hip:39,trunk:19,A:[-0.069,0.068],K:[0.015,0.490],H:[-0.132,0.893],S:[0.036,1.369],bar:[0.027,1.345],m:[211,23,121,144]},{s:0.275,knee:34,hip:43,trunk:21,A:[-0.069,0.068],K:[0.021,0.489],H:[-0.142,0.886],S:[0.038,1.357],bar:[0.029,1.333],m:[227,33,121,155]},{s:0.300,knee:38,hip:47,trunk:22,A:[-0.069,0.068],K:[0.027,0.488],H:[-0.152,0.878],S:[0.040,1.343],bar:[0.031,1.320],m:[243,43,121,166]},{s:0.325,knee:41,hip:51,trunk:24,A:[-0.069,0.068],K:[0.032,0.487],H:[-0.162,0.869],S:[0.042,1.329],bar:[0.032,1.306],m:[259,53,121,176]},{s:0.350,knee:44,hip:55,trunk:25,A:[-0.069,0.068],K:[0.038,0.485],H:[-0.172,0.859],S:[0.045,1.314],bar:[0.034,1.291],m:[273,63,121,186]},{s:0.375,knee:47,hip:59,trunk:27,A:[-0.069,0.068],K:[0.044,0.484],H:[-0.181,0.849],S:[0.047,1.298],bar:[0.035,1.276],m:[288,73,121,196]},{s:0.400,knee:50,hip:62,trunk:28,A:[-0.069,0.068],K:[0.050,0.482],H:[-0.190,0.838],S:[0.048,1.282],bar:[0.037,1.259],m:[301,83,121,206]},{s:0.425,knee:53,hip:66,trunk:30,A:[-0.069,0.068],K:[0.055,0.480],H:[-0.199,0.826],S:[0.050,1.264],bar:[0.038,1.242],m:[314,92,121,214]},{s:0.450,knee:56,hip:70,trunk:31,A:[-0.069,0.068],K:[0.061,0.479],H:[-0.207,0.813],S:[0.052,1.246],bar:[0.039,1.224],m:[327,102,121,223]},{s:0.475,knee:59,hip:73,trunk:32,A:[-0.069,0.068],K:[0.067,0.477],H:[-0.215,0.800],S:[0.054,1.227],bar:[0.040,1.206],m:[339,112,121,231]},{s:0.500,knee:62,hip:77,trunk:33,A:[-0.069,0.068],K:[0.072,0.475],H:[-0.222,0.787],S:[0.055,1.208],bar:[0.041,1.187],m:[350,121,121,239]},{s:0.525,knee:66,hip:80,trunk:34,A:[-0.069,0.068],K:[0.078,0.473],H:[-0.229,0.773],S:[0.056,1.188],bar:[0.042,1.167],m:[360,131,121,246]},{s:0.550,knee:69,hip:84,trunk:36,A:[-0.069,0.068],K:[0.083,0.471],H:[-0.235,0.758],S:[0.058,1.168],bar:[0.043,1.147],m:[370,141,121,252]},{s:0.575,knee:72,hip:87,trunk:36,A:[-0.069,0.068],K:[0.089,0.469],H:[-0.241,0.742],S:[0.059,1.148],bar:[0.044,1.127],m:[379,150,121,258]},{s:0.600,knee:75,hip:90,trunk:37,A:[-0.069,0.068],K:[0.094,0.466],H:[-0.246,0.726],S:[0.060,1.127],bar:[0.044,1.107],m:[387,160,121,264]},{s:0.625,knee:78,hip:93,trunk:38,A:[-0.069,0.068],K:[0.100,0.464],H:[-0.251,0.710],S:[0.061,1.106],bar:[0.045,1.086],m:[394,169,121,269]},{s:0.650,knee:81,hip:96,trunk:39,A:[-0.069,0.068],K:[0.105,0.462],H:[-0.255,0.693],S:[0.061,1.085],bar:[0.045,1.066],m:[400,178,121,273]},{s:0.675,knee:84,hip:99,trunk:40,A:[-0.069,0.068],K:[0.111,0.459],H:[-0.259,0.676],S:[0.062,1.065],bar:[0.046,1.045],m:[405,188,121,276]},{s:0.700,knee:88,hip:102,trunk:40,A:[-0.069,0.068],K:[0.116,0.457],H:[-0.262,0.658],S:[0.062,1.044],bar:[0.046,1.025],m:[410,197,121,279]},{s:0.725,knee:91,hip:105,trunk:40,A:[-0.069,0.068],K:[0.122,0.454],H:[-0.265,0.640],S:[0.062,1.023],bar:[0.046,1.004],m:[413,206,121,282]},{s:0.750,knee:94,hip:107,trunk:41,A:[-0.069,0.068],K:[0.127,0.452],H:[-0.267,0.621],S:[0.062,1.003],bar:[0.046,0.984],m:[416,215,121,284]},{s:0.775,knee:97,hip:110,trunk:41,A:[-0.069,0.068],K:[0.132,0.449],H:[-0.268,0.602],S:[0.062,0.983],bar:[0.046,0.964],m:[417,224,121,285]},{s:0.800,knee:100,hip:112,trunk:41,A:[-0.069,0.068],K:[0.137,0.446],H:[-0.269,0.583],S:[0.062,0.963],bar:[0.045,0.944],m:[418,233,121,285]},{s:0.825,knee:103,hip:115,trunk:41,A:[-0.069,0.068],K:[0.143,0.443],H:[-0.269,0.564],S:[0.062,0.944],bar:[0.045,0.925],m:[417,242,121,285]},{s:0.850,knee:106,hip:117,trunk:41,A:[-0.069,0.068],K:[0.148,0.440],H:[-0.268,0.544],S:[0.061,0.925],bar:[0.044,0.906],m:[416,251,121,284]},{s:0.875,knee:109,hip:119,trunk:40,A:[-0.069,0.068],K:[0.153,0.437],H:[-0.267,0.524],S:[0.060,0.907],bar:[0.044,0.888],m:[413,259,121,282]},{s:0.900,knee:112,hip:121,trunk:40,A:[-0.069,0.068],K:[0.158,0.434],H:[-0.265,0.504],S:[0.059,0.889],bar:[0.043,0.870],m:[410,268,121,279]},{s:0.925,knee:116,hip:123,trunk:40,A:[-0.069,0.068],K:[0.163,0.431],H:[-0.263,0.483],S:[0.058,0.872],bar:[0.042,0.852],m:[405,277,121,276]},{s:0.950,knee:119,hip:124,trunk:39,A:[-0.069,0.068],K:[0.168,0.428],H:[-0.259,0.462],S:[0.057,0.855],bar:[0.041,0.835],m:[399,285,121,272]},{s:0.975,knee:122,hip:126,trunk:38,A:[-0.069,0.068],K:[0.173,0.424],H:[-0.256,0.442],S:[0.055,0.838],bar:[0.040,0.819],m:[393,294,121,268]},{s:1.000,knee:125,hip:127,trunk:37,A:[-0.069,0.068],K:[0.178,0.421],H:[-0.251,0.421],S:[0.054,0.822],bar:[0.038,0.802],m:[385,302,121,263]},]},};
+</script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const NS="http://www.w3.org/2000/svg";
+const TODAY=new Date(2026,9,22);
+const LOC="es-MX";
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mqWide=matchMedia("(min-width: 720px)"), mqSplit=matchMedia("(min-width: 1180px)");
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const same=(a,b)=>key(a)===key(b);
+const mondayOf=d=>addDays(d,-((d.getDay()+6)%7));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const wd=(d,f)=>d.toLocaleDateString(LOC,{weekday:f||"long"}).replace(".","");
+const mon=(d,f)=>d.toLocaleDateString(LOC,{month:f||"long"}).replace(".","");
+const longDay=d=>`${cap(wd(d))} ${d.getDate()} de ${mon(d)}`;
+const shortDay=d=>`${wd(d,"short")} ${d.getDate()} ${mon(d,"short")}`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- program data (sample) ---------- */
+const S=(n,sets,reps,kg,x)=>Object.assign({n,sets,reps,kg},x||{});
+const SQ={model:"squat",group:"pierna"}, DL={model:"deadlift",group:"espalda"}, BP={model:"bench",group:"pecho"};
+const SESSIONS={
+  "Pierna A":[S("Sentadilla frontal",4,6,70),S("Peso muerto rumano",3,8,90),S("Prensa",3,10,140),S("Plancha",3,null,null,{secs:45})],
+  "Empuje":[S("Press de banca",4,6,72.5,BP),S("Press militar",3,8,40),S("Fondos",3,10,null),S("Tríceps en polea",3,12,25)],
+  "Pierna B":[S("Sentadilla barra alta",5,3,100,SQ),S("Peso muerto",3,5,120,DL),S("Zancada búlgara",3,8,20),S("Elevación de talones",4,12,60)],
+  "Jalón":[S("Dominadas",4,6,null),S("Remo con barra",4,8,60),S("Face pull",3,15,15),S("Curl con mancuerna",3,10,14)],
+  "Pierna":[S("Sentadilla barra alta",4,8,80,SQ),S("Prensa",4,12,160),S("Curl femoral",3,12,40)],
+  "Pecho y hombro":[S("Press de banca",4,10,60,BP),S("Press inclinado con mancuerna",3,12,22),S("Elevaciones laterales",4,15,8)],
+  "Espalda":[S("Peso muerto",3,6,110,DL),S("Jalón al pecho",4,10,55),S("Remo con mancuerna",3,12,26)],
+  "Pierna y glúteo":[S("Hip thrust",4,10,100),S("Zancada búlgara",3,10,18),S("Elevación de talones",4,15,60)],
+  "Brazos":[S("Curl con barra",4,10,30),S("Press francés",4,10,25),S("Curl martillo",3,12,14)],
+  "Cuerpo completo A":[S("Sentadilla barra alta",3,5,100,SQ),S("Press de banca",3,6,70,BP),S("Remo con barra",3,8,60)],
+  "Cuerpo completo B":[S("Peso muerto",3,5,120,DL),S("Press militar",3,8,40),S("Dominadas",3,6,null)],
+  "Sesión libre":[S("Sentadilla barra alta",3,5,100,SQ),S("Press de banca",3,8,60,BP)]
+};
+const PROGRAMS=[
+  {id:"fuerza",name:"Fuerza base · 4 días",desc:"Pierna A, empuje, pierna B y jalón. Pocas repeticiones, cargas altas.",cycle:["Pierna A","Empuje",null,"Pierna B","Jalón",null,null]},
+  {id:"hiper",name:"Hipertrofia · 5 días",desc:"Más volumen, series de 8 a 12.",cycle:["Pierna","Pecho y hombro","Espalda",null,"Pierna y glúteo","Brazos",null]},
+  {id:"min",name:"Mínimo efectivo · 2 días",desc:"Cuerpo completo, poco tiempo.",cycle:["Cuerpo completo A",null,null,"Cuerpo completo B",null,null,null]}
+];
+const progById=id=>PROGRAMS.find(p=>p.id===id);
+const cur={prog:"fuerza",startsOn:new Date(2026,8,27)};
+const scheme=e=>e.secs?`${e.sets} × ${e.secs} s`:`${e.sets} × ${e.reps}`+(e.kg!=null?` · ${e.kg} kg`:" · peso corporal");
+const minutes=list=>Math.max(15,Math.round(list.reduce((a,e)=>a+e.sets,0)*2.75/5)*5);
+
+/* Logged history: seeded by playing the plan forward from its start, with one
+   training day left unlogged (11 oct) so the plan shifts, as R-0061 AC6 says. */
+const LOG={}, PROT={};
+function squatKg(d){return d<new Date(2026,9,5)?95:97.5;}
+function logFrom(name,d){
+  return SESSIONS[name].map(e=>({n:e.n,model:e.model,group:e.group,sets:Array.from({length:e.sets},()=>({reps:e.reps,secs:e.secs,kg:e.model==="squat"&&name==="Pierna B"?squatKg(d):e.kg}))}));
+}
+(function seed(){
+  const p=progById("fuerza"), skip=new Set(["2026-10-11"]);
+  let c=0;
+  for(let d=new Date(cur.startsOn);d<TODAY;d=addDays(d,1)){
+    const name=p.cycle[c%7];
+    if(name===null){c++;continue;}
+    if(skip.has(key(d)))continue;
+    LOG[key(d)]={prog:"fuerza",idx:c%7,name,ex:logFrom(name,d)};c++;
+  }
+  for(let d=addDays(TODAY,-60);d<TODAY;d=addDays(d,1))PROT[key(d)]=126+(d.getDate()*29%41);
+  PROT[key(TODAY)]=92;
+})();
+
+/* The projection. In the app the server computes this (R-0061 AC6); the mockup
+   mirrors its rules so the calendar behaves: a logged plan day advances the
+   cursor, an unlogged training day waits, rest days pass with time. */
+let STATE={};
+function project(){
+  const p=progById(cur.prog), L=p.cycle.length, st={}, end=new Date(2027,2,31);
+  let c=0;
+  for(let d=new Date(cur.startsOn);d<=end;d=addDays(d,1)){
+    const k=key(d), log=LOG[k], n=p.cycle[c%L];
+    if(log&&log.prog===cur.prog&&log.idx!=null){c=log.idx+1;st[k]={s:"done",name:log.name};continue;}
+    if(log){if(n===null)c++;st[k]={s:"done",name:log.name};continue;}
+    if(d<TODAY){if(n===null){c++;st[k]={s:"none",rest:true};}else st[k]={s:"none",pending:{idx:c%L,name:n}};continue;}
+    st[k]=n===null?{s:"rest"}:{s:"plan",name:n,idx:c%L};c++;
+  }
+  STATE=st;
+}
+function stateOf(d){const k=key(d);return STATE[k]||(LOG[k]?{s:"done",name:LOG[k].name}:{s:"none"});}
+function nextPlanned(from){for(let i=1;i<21;i++){const d=addDays(from,i),s=stateOf(d);if(s.s==="plan")return{d,name:s.name};}return null;}
+
+/* ---------- calendar ---------- */
+let sel=new Date(TODAY), monthOpen=false, anchor=mondayOf(TODAY), viewMonth=new Date(2026,9,1);
+const calMode=()=>mqWide.matches||monthOpen?"month":"week";
+$("cal-dows").innerHTML=["L","M","M","J","V","S","D"].map(x=>`<div class="dow">${x}</div>`).join("");
+function cellLabel(st){return st.s==="done"||st.s==="plan"?st.name:"";}
+function renderCal(){
+  const mode=calMode(), days=[];
+  if(mode==="week"){
+    for(let i=0;i<7;i++)days.push(addDays(anchor,i));
+    const a=days[0],b=days[6];
+    $("cal-title").textContent=a.getMonth()===b.getMonth()?`${a.getDate()}–${b.getDate()} ${mon(b,"short")}`:`${a.getDate()} ${mon(a,"short")} – ${b.getDate()} ${mon(b,"short")}`;
+  }else{
+    const first=viewMonth, start=mondayOf(first), last=new Date(first.getFullYear(),first.getMonth()+1,0);
+    for(let d=start;d<=last||days.length%7;d=addDays(d,1))days.push(d);
+    $("cal-title").textContent=`${cap(mon(first))} ${first.getFullYear()}`;
+  }
+  $("cal-prev").setAttribute("aria-label",mode==="week"?"Semana anterior":"Mes anterior");
+  $("cal-next").setAttribute("aria-label",mode==="week"?"Semana siguiente":"Mes siguiente");
+  const tg=$("cal-toggle");tg.hidden=mqWide.matches;tg.textContent=monthOpen?"Semana":"Mes";tg.setAttribute("aria-expanded",String(monthOpen));
+  tg.setAttribute("aria-label",monthOpen?"Mostrar solo la semana":"Abrir el mes completo");
+  $("cal-grid").innerHTML=days.map(d=>{
+    const st=stateOf(d), cls=["day"];
+    if(mode==="month"&&d.getMonth()!==viewMonth.getMonth())cls.push("out");
+    if(same(d,TODAY))cls.push("today");
+    if(same(d,sel))cls.push("sel");
+    const txt={done:"hecho: "+st.name,plan:"planeado: "+st.name,rest:"descanso",none:"sin registro"}[st.s];
+    return `<button type="button" class="${cls.join(" ")}" data-k="${key(d)}" aria-pressed="${same(d,sel)}" ${same(d,TODAY)?'aria-current="date"':""} aria-label="${esc(longDay(d))}, ${esc(txt)}${same(d,TODAY)?", hoy":""}"><span class="d">${d.getDate()}</span><span class="g g-${st.s}"></span><span class="lb">${esc(cellLabel(st))}</span></button>`;
+  }).join("");
+}
+$("cal-grid").addEventListener("click",e=>{
+  const b=e.target.closest(".day");if(!b)return;
+  const [y,m,dd]=b.dataset.k.split("-").map(Number);
+  selectDay(new Date(y,m-1,dd));
+  const again=$("cal-grid").querySelector(`[data-k="${b.dataset.k}"]`);if(again)again.focus();
+});
+function selectDay(d){
+  if(!same(d,sel))physIdx=null;
+  sel=d;
+  if(d.getMonth()!==viewMonth.getMonth()||d.getFullYear()!==viewMonth.getFullYear())viewMonth=new Date(d.getFullYear(),d.getMonth(),1);
+  anchor=mondayOf(d);
+  renderAll();
+}
+$("cal-prev").onclick=()=>{if(calMode()==="week")anchor=addDays(anchor,-7);else viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);renderCal();};
+$("cal-next").onclick=()=>{if(calMode()==="week")anchor=addDays(anchor,7);else viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);renderCal();};
+$("cal-toggle").onclick=()=>{monthOpen=!monthOpen;anchor=mondayOf(sel);viewMonth=new Date(sel.getFullYear(),sel.getMonth(),1);renderCal();};
+
+/* ---------- nutrition orbit ---------- */
+function protOf(d){return d>TODAY?null:(PROT[key(d)]!=null?PROT[key(d)]:0);}
+function renderOrbit(){
+  const d=sel>TODAY?TODAY:sel, p=protOf(d), T=160, pct=Math.min(1,p/T), isT=same(d,TODAY);
+  const when=isT?"hoy":shortDay(d);
+  $("orbit").innerHTML=`<div class="ring" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--track)" stroke-width="4"/><circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--text)" stroke-width="4" stroke-dasharray="${(pct*100).toFixed(1)} 100" pathLength="100"/><circle cx="18" cy="18" r="18" fill="none" stroke="var(--line)" stroke-width="1.2"/></svg><span class="rt">${Math.round(pct*100)}%</span></div>
+  <div class="eyebrow o-eyebrow">Alimentación · ${esc(when)}</div>
+  <div class="o-line"><b>${p}</b><span class="num"> / ${T} g</span> proteína<span class="o-ph"> · ${esc(when)}</span></div>
+  <div class="o-more">${isT?`Faltan ${Math.max(0,T-p)} g · 1 640 de 2 600 kcal · última: pollo con arroz, 14:10`:"Lo que registraste ese día"}</div>
+  <div class="o-act"><button class="btn small" id="meal" type="button">+ Comida</button></div>`;
+  $("meal").onclick=e=>openPanel(pageMeal(),e.currentTarget);
+}
+
+/* ---------- the day (hero) ---------- */
+let physIdx=null, curExs=[];
+function renderHero(){
+  const st=stateOf(sel), isT=same(sel,TODAY), past=sel<TODAY;
+  let chip, title, meta="", exs=[], act="", hint="", next="", empty="";
+  const prog=progById(cur.prog);
+  if(st.s==="done"){
+    const log=LOG[key(sel)];
+    chip='<span class="chip ink">Hecho</span>';title=log.name;
+    exs=log.ex.map(e=>{const k=Math.max(...e.sets.map(s=>s.kg||0));return{n:e.n,model:e.model,group:e.group,kg:k||null,how:`${e.sets.length} series · `+(e.sets[0].secs?`${e.sets[0].secs} s`:`${e.sets[0].reps} × `+(k?`${k} kg`:"peso corporal"))};});
+    meta=`${log.idx!=null?prog.name.split(" · ")[0]+" · ":"Sesión libre · "}${exs.length} ejercicios registrados`;
+    act=`<button class="btn" type="button" data-act="view">Ver lo registrado</button>`;
+  }else if(st.s==="plan"){
+    const list=SESSIONS[st.name];
+    chip=isT?'<span class="chip hot">Hoy</span>':'<span class="chip">Planeado</span>';title=st.name;
+    exs=list.map(e=>({n:e.n,model:e.model,group:e.group,kg:e.kg,how:scheme(e)}));
+    meta=`${prog.name.split(" · ")[0]} · día ${st.idx+1} de ${prog.cycle.length} · ${list.length} ejercicios · ≈ ${minutes(list)} min`;
+    if(isT){
+      act=`<button class="btn primary" type="button" data-act="start"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="currentColor"/></svg>Empezar sesión</button>`;
+      hint=`<p class="h-hint">¿Hoy no puedes? ${esc(st.name)} pasa a mañana y el plan se recorre un día.</p>`;
+      const n=nextPlanned(sel);if(n)next=`<div class="h-next">Después: ${esc(n.name)} · ${esc(shortDay(n.d))}</div>`;
+    }else hint=`<p class="h-hint">Proyectado. Si un día de entrenamiento se queda sin registrar, este día se recorre.</p>`;
+  }else if(st.s==="rest"){
+    chip=isT?'<span class="chip hot">Hoy</span>':'<span class="chip">Descanso</span>';title="Descanso";
+    const n=nextPlanned(sel);
+    empty=`<p class="empty-day">Día de descanso del plan.${n?` Lo siguiente: <b>${esc(n.name)}</b>, ${esc(shortDay(n.d))}.`:""}</p>`;
+    if(isT)act=`<button class="btn primary" type="button" data-act="free">Empezar sesión libre</button>`;
+  }else{
+    chip='<span class="chip">Sin registro</span>';title="Sin registro";
+    if(past||isT){
+      const pend=st.pending;
+      empty=`<p class="empty-day">${pend?`${esc(pend.name)} quedó pendiente ese día; el plan la pasó al día siguiente.`:st.rest?"Era descanso del plan y no hay nada registrado.":"No hay nada registrado este día."}</p>`;
+      act=`<button class="btn" type="button" data-act="late">Registrar tarde${pend?` · ${esc(pend.name)}`:""}</button>`;
+    }
+  }
+  curExs=exs;
+  if(physIdx==null||physIdx>=exs.length){const i=exs.findIndex(e=>e.model==="squat");physIdx=i>=0?i:exs.findIndex(e=>e.model);if(physIdx<0)physIdx=exs.length?0:null;}
+  const list=exs.length?`<ul class="ex-list">${exs.map((e,i)=>{
+    const on=i===physIdx, live=e.model==="squat", soon=e.model&&!live;
+    const cls=live?"pchip":soon?"pchip soon":"pchip none";
+    const lbl=live?"Física":soon?"Pronto":"Física";
+    return `<li class="ex-row${on?" on":""}"><div class="ex-line"><span class="ex-n">${String(i+1).padStart(2,"0")}</span><div><span class="ex-name">${esc(e.n)}</span><span class="ex-how">${esc(e.how)}</span></div>
+      <button type="button" class="${cls}" data-ex="${i}" aria-pressed="${on}" aria-label="Chequeo físico de ${esc(e.n)}${live?"":soon?", próximamente":", sin modelo todavía"}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M3 14l8-9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M7 14a4 4 0 0 0-1.2-2.9" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M13 3v5m-2-2l2 2 2-2" stroke="${live?"var(--red)":"currentColor"}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${lbl}</button></div><div class="ex-slot"></div></li>`;}).join("")}</ul>`:"";
+  $("hero-main").innerHTML=`<div class="h-top"><span class="eyebrow">${esc(longDay(sel))}</span>${chip}</div>
+    <h1 class="head h-title" id="h-title">${esc(title)}</h1><div class="h-meta">${esc(meta)}</div>
+    ${act?`<div class="h-act">${act}${hint}</div>`:hint?`<div class="h-act">${hint}</div>`:""}${next}${empty}${list}`;
+  placePhys();
+}
+$("hero-main").addEventListener("click",e=>{
+  const ch=e.target.closest("[data-ex]");
+  if(ch){const i=+ch.dataset.ex;physIdx=i;renderHero();const b=$("hero-main").querySelector(`[data-ex="${i}"]`);if(b)b.focus();if(!mqSplit.matches)$("phys").scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});return;}
+  const a=e.target.closest("[data-act]");if(!a)return;
+  const st=stateOf(sel);
+  if(a.dataset.act==="start")openFocus({date:sel,name:st.name,idx:st.idx});
+  else if(a.dataset.act==="free")openFocus({date:sel,name:"Sesión libre",idx:null});
+  else if(a.dataset.act==="late")openFocus({date:sel,name:st.pending?st.pending.name:"Sesión libre",idx:st.pending?st.pending.idx:null,late:true});
+  else if(a.dataset.act==="view")openPanel(pageLog(),a);
+});
+
+/* ---------- physics check ---------- */
+const FR=RANGES.ex.frames, LOAD=100, BW=80, G=9.81;
+const MAXM=Math.max(...FR.flatMap(f=>f.m.map(Math.abs)));
+/* Tension ramp, after fbf muneco.heat: low to high tension, grey to red.
+   Read from the theme tokens so light and dark each get a legible ramp. */
+let HEAT=[];
+const hex=h=>{h=h.trim().replace("#","");return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));};
+function readHeat(){const cs=getComputedStyle(document.documentElement);HEAT=[[0,hex(cs.getPropertyValue("--heat0"))],[.5,hex(cs.getPropertyValue("--heat1"))],[1,hex(cs.getPropertyValue("--heat2"))]];}
+readHeat();
+function heat(t){t=Math.max(0,Math.min(1,t));for(let i=1;i<HEAT.length;i++){const[p0,c0]=HEAT[i-1],[p1,c1]=HEAT[i];if(t<=p1){const k=(t-p0)/(p1-p0);return`rgb(${c0.map((a,j)=>Math.round(a+(c1[j]-a)*k)).join(",")})`;}}return`rgb(${HEAT[2][1].join(",")})`;}
+function frameAt(u){
+  const x=u*(FR.length-1), i=Math.min(FR.length-2,Math.floor(x)), w=x-i, a=FR[i], b=FR[i+1];
+  const L=(p,q)=>[p[0]+(q[0]-p[0])*w,p[1]+(q[1]-p[1])*w], N=(p,q)=>p+(q-p)*w;
+  return{s:N(a.s,b.s),knee:N(a.knee,b.knee),hip:N(a.hip,b.hip),trunk:N(a.trunk,b.trunk),A:L(a.A,b.A),K:L(a.K,b.K),H:L(a.H,b.H),S:L(a.S,b.S),bar:L(a.bar,b.bar),m:a.m.map((v,j)=>N(v,b.m[j]))};
+}
+const dist=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+$("len-f").textContent=Math.round(dist(FR[0].H,FR[0].K)*100)+" cm";
+$("len-t").textContent=Math.round(dist(FR[0].K,FR[0].A)*100)+" cm";
+$("len-tr").textContent=Math.round(dist(FR[0].H,FR[0].S)*100)+" cm";
+$("heat-max").textContent=Math.round(MAXM)+" N·m";
+function el(parent,t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);parent.appendChild(e);return e;}
+const N_PER_M=4000; /* force scale: every arrow on the figure uses it, so they compare */
+function arrowD(x0,y0,x1,y1,h){const a=Math.atan2(y1-y0,x1-x0);return`M${x0},${y0} L${x1},${y1} M${x1-h*Math.cos(a-.5)},${y1-h*Math.sin(a-.5)} L${x1},${y1} L${x1-h*Math.cos(a+.5)},${y1-h*Math.sin(a+.5)}`;}
+function makeFigure(svg){
+  const back=el(svg,"g",{}), glow=el(svg,"g",{}), body=el(svg,"g",{}), over=el(svg,"g",{});
+  el(back,"line",{x1:-0.62,y1:0,x2:0.8,y2:0,class:"f-floor","stroke-width":0.016});
+  el(back,"line",{x1:0,y1:0,x2:0,y2:-1.9,class:"f-plumb","stroke-width":0.007,"stroke-dasharray":"0.024 0.024"});
+  el(back,"text",{x:0.014,y:-1.885,class:"f-note","font-size":0.045}).textContent="mediopié";
+  const act=el(back,"line",{class:"f-act","stroke-width":0.007,"stroke-dasharray":"0.034 0.02"});
+  const grfLen=(LOAD+BW)*G/N_PER_M;
+  el(back,"path",{d:arrowD(0,0,0,-grfLen,0.04),class:"f-grf","stroke-width":0.016});
+  el(back,"text",{x:0,y:0.1,"text-anchor":"middle",class:"f-lbl x","font-size":0.05}).textContent=`↑ suelo ${Math.round((LOAD+BW)*G)} N (barra + cuerpo)`;
+  const glows=["H","L","K","A"].map(()=>[0.9,0.6,0.33].map(f=>el(glow,"circle",{r:0,opacity:0.2})));
+  const capsule=(w,cls)=>{const o=el(body,"line",{class:"f-edge","stroke-width":w+0.022}),f=el(body,"line",{class:cls,"stroke-width":w});return(p,q)=>{for(const e of[o,f]){e.setAttribute("x1",p[0]);e.setAttribute("y1",p[1]);e.setAttribute("x2",q[0]);e.setAttribute("y2",q[1]);}};};
+  const foot=capsule(0.034,"f-limb"), shin=capsule(0.052,"f-limb"), thigh=capsule(0.062,"f-limb"), shorts=capsule(0.078,"f-limb2"), torso=capsule(0.072,"f-limb"), uarm=capsule(0.042,"f-limb"), farm=capsule(0.038,"f-limb");
+  const plate=el(body,"circle",{r:0.15,fill:"var(--panel)",stroke:"var(--fig)","stroke-width":0.026});
+  const ring=el(body,"circle",{r:0.105,fill:"none",class:"f-limb2","stroke-width":0.012});
+  const hub=el(body,"circle",{r:0.03,fill:"var(--fig)"});
+  const headO=el(body,"circle",{r:0.094,fill:"var(--fig-edge)"}), head=el(body,"circle",{r:0.082,fill:"var(--fig)"});
+  const shades=el(body,"rect",{fill:"var(--fig-edge)",rx:0.012});
+  const lev=el(over,"line",{class:"f-lev","stroke-width":0.014,"stroke-dasharray":"0.03 0.022"});
+  const levT=el(over,"text",{class:"f-lbl","font-size":0.056,"text-anchor":"middle"});
+  const vref=el(over,"line",{class:"f-ref","stroke-width":0.007});
+  const arc=el(over,"path",{class:"f-arc","stroke-width":0.01});
+  const betaT=el(over,"text",{class:"f-lbl x","font-size":0.05,"text-anchor":"end"});
+  const load=el(over,"path",{fill:"none","stroke-width":0.022,"stroke-linecap":"round","stroke-linejoin":"round"});
+  const loadT=el(over,"text",{class:"f-lbl r","font-size":0.056});
+  const dots=["H","K","A"].map(()=>el(over,"circle",{r:0.017,class:"f-dot","stroke-width":0.008}));
+  const lum=el(over,"circle",{r:0.013,class:"f-dot","stroke-width":0.007});
+  return function draw(u){
+    const f=frameAt(u), P=q=>[q[0],-q[1]];
+    const A=P(f.A),K=P(f.K),H=P(f.H),Sh=P(f.S),B=P(f.bar);
+    const tx=Sh[0]-H[0],ty=Sh[1]-H[1],tl=Math.hypot(tx,ty),ux=tx/tl,uy=ty/tl;
+    const Lm=[H[0]+tx*0.14,H[1]+ty*0.14];
+    act.setAttribute("x1",B[0]);act.setAttribute("x2",B[0]);act.setAttribute("y1",B[1]);act.setAttribute("y2",0);
+    [H,Lm,K,A].forEach((p,j)=>{const t=Math.max(0,f.m[j===0?0:j===1?3:j===2?1:2]);const r=0.02+t/MAXM*0.12;
+      glows[j].forEach((c,k)=>{c.setAttribute("cx",p[0]);c.setAttribute("cy",p[1]);c.setAttribute("r",r*[1,0.66,0.33][k]);c.setAttribute("fill",heat(t/MAXM));c.style.display=t>0?"":"none";});});
+    foot([A[0]-0.06,-0.017],[A[0]+0.2,-0.017]);
+    shin(A,K);thigh(K,H);shorts(H,[H[0]*0.6+K[0]*0.4,H[1]*0.6+K[1]*0.4]);torso(H,Sh);
+    const E=[B[0]-0.03,B[1]+0.19];uarm([Sh[0]+ux*0.02,Sh[1]+uy*0.02],E);farm(E,[B[0]+0.005,B[1]+0.015]);
+    for(const c of[plate,ring,hub]){c.setAttribute("cx",B[0]);c.setAttribute("cy",B[1]);}
+    const C=[Sh[0]+ux*0.2,Sh[1]+uy*0.2], r=0.082;
+    for(const c of[headO,head]){c.setAttribute("cx",C[0]);c.setAttribute("cy",C[1]);}
+    const ang=Math.atan2(uy,ux)+Math.PI/2; /* head tilt follows the trunk */
+    shades.setAttribute("x",C[0]+r*0.12);shades.setAttribute("y",C[1]-r*0.36);shades.setAttribute("width",r*0.72);shades.setAttribute("height",r*0.34);
+    shades.setAttribute("transform",`rotate(${ang*180/Math.PI} ${C[0]} ${C[1]})`);
+    const d=f.bar[0]-f.H[0], tauBar=LOAD*G*d, hc=heat(Math.max(0,f.m[0])/MAXM);
+    lev.setAttribute("x1",H[0]);lev.setAttribute("y1",H[1]);lev.setAttribute("x2",B[0]);lev.setAttribute("y2",H[1]);
+    lev.style.display=Math.abs(d)>0.015?"":"none";
+    levT.setAttribute("x",(H[0]+B[0])/2);levT.setAttribute("y",H[1]+0.085);levT.textContent=`d=${Math.round(Math.abs(d)*100)} cm`;levT.style.display=Math.abs(d)>0.06?"":"none";
+    vref.setAttribute("x1",H[0]);vref.setAttribute("y1",H[1]);vref.setAttribute("x2",H[0]);vref.setAttribute("y2",H[1]-0.2);
+    const bR=0.13, bt=Math.atan2(tx,-ty);
+    arc.setAttribute("d",`M${H[0]},${H[1]-bR} A${bR},${bR} 0 0 1 ${H[0]+bR*Math.sin(bt)},${H[1]-bR*Math.cos(bt)}`);
+    betaT.setAttribute("x",H[0]-0.03);betaT.setAttribute("y",H[1]-0.14);betaT.textContent=`β ${Math.round(f.trunk)}°`;
+    const y0=B[1]+0.165, len=LOAD*G/N_PER_M;
+    load.setAttribute("d",arrowD(B[0],y0,B[0],y0+len,0.04));load.setAttribute("stroke",hc);
+    loadT.setAttribute("x",B[0]+0.035);loadT.setAttribute("y",y0+len*0.62);loadT.textContent=`${Math.round(LOAD*G)} N`;
+    [H,K,A].forEach((p,j)=>{dots[j].setAttribute("cx",p[0]);dots[j].setAttribute("cy",p[1]);});
+    lum.setAttribute("cx",Lm[0]);lum.setAttribute("cy",Lm[1]);
+    return{f,d,tauBar};
+  };
+}
+const drawFig=makeFigure($("fig"));
+/* torque per muscle group (R-0045 AC5: groups, never single muscles) */
+const GROUPS=[["Extensores de cadera","cadera",0],["Extensores de rodilla","rodilla",1],["Flexores plantares","tobillo",2],["Erectores espinales","L5/S1",3]];
+$("trows").innerHTML=GROUPS.map(([n,j])=>`<div class="trow"><div class="lab"><span>${n} <span class="sub">· ${j}</span></span><b>0 N·m</b></div><div class="track"><i></i><span class="z"></span></div></div>`).join("");
+const trows=[...$("trows").querySelectorAll(".trow")];
+/* live graph: τ against bar height, current point moving */
+const GX0=40,GX1=318,GY0=14,GY1=118, HMAX=Math.ceil(FR[0].bar[1]*100/10)*10+2, HMIN=Math.floor(FR[FR.length-1].bar[1]*100/10)*10-2, YMIN=-100, YMAX=450;
+const gx=h=>GX0+(HMAX-h)/(HMAX-HMIN)*(GX1-GX0), gy=v=>GY1-(v-YMIN)/(YMAX-YMIN)*(GY1-GY0);
+const gs=$("gsvg");
+el(gs,"rect",{x:GX0,y:GY0,width:GX1-GX0,height:GY1-GY0,class:"g-axis","stroke-width":1.5});
+[0,200,400].forEach(v=>{el(gs,"line",{x1:GX0,x2:GX1,y1:gy(v),y2:gy(v),class:v===0?"g-axis":"g-grid","stroke-width":v===0?1.2:1});el(gs,"text",{x:GX0-5,y:gy(v)+3.5,"text-anchor":"end","font-size":10,class:"g-t"}).textContent=v;});
+[140,120,100,80].forEach(h=>{if(h<=HMAX&&h>=HMIN)el(gs,"text",{x:gx(h),y:GY1+13,"text-anchor":"middle","font-size":10,class:"g-t"}).textContent=h;});
+el(gs,"text",{x:(GX0+GX1)/2,y:GY1+27,"text-anchor":"middle","font-size":9.5,class:"g-t"}).textContent="altura de la barra (cm) · de pie → fondo";
+el(gs,"text",{x:GX0-5,y:GY0-3,"text-anchor":"end","font-size":9.5,class:"g-t"}).textContent="N·m";
+const gpts=FR.map(f=>[gx(f.bar[1]*100),gy(f.m[0]),gy(f.m[1]),f.m[0]]);
+el(gs,"polyline",{points:gpts.map(p=>`${p[0]},${p[2]}`).join(" "),class:"g-knee","stroke-width":1.6,"stroke-dasharray":"4 3"});
+const hipSegs=gpts.slice(1).map((p,i)=>el(gs,"line",{x1:gpts[i][0],y1:gpts[i][1],x2:p[0],y2:p[1],stroke:heat(Math.max(0,(gpts[i][3]+p[3])/2)/MAXM),"stroke-width":4.5,"stroke-linecap":"round"}));
+const lg=el(gs,"g",{transform:`translate(${GX1-122},${GY1-30})`});
+el(lg,"rect",{x:-6,y:-9,width:116,height:34,fill:"var(--panel)",stroke:"var(--line)","stroke-width":1});
+const lgr=el(lg,"defs",{}), grd=el(lgr,"linearGradient",{id:"hg"});
+[[0,"--heat0"],[50,"--heat1"],[100,"--heat2"]].forEach(([o,c])=>el(grd,"stop",{offset:o+"%",style:`stop-color:var(${c})`}));
+el(lg,"rect",{x:0,y:-3,width:22,height:5,fill:"url(#hg)"});
+el(lg,"text",{x:28,y:2,"font-size":10,class:"g-t"}).textContent="τ cadera";
+el(lg,"line",{x1:0,x2:22,y1:14,y2:14,class:"g-knee","stroke-width":1.6,"stroke-dasharray":"4 3"});
+el(lg,"text",{x:28,y:17.5,"font-size":10,class:"g-t"}).textContent="τ rodilla";
+const ptKnee=el(gs,"circle",{r:4,fill:"var(--panel)",stroke:"var(--text)","stroke-width":1.5});
+const ptHip=el(gs,"circle",{r:6.5,fill:"var(--red)",stroke:"var(--text)","stroke-width":1.8});
+el(gs,"text",{x:GX0,y:148,"font-size":9,class:"g-t"}).textContent="La forma de la curva sale de la convención del modelo.";
+function setPito(id,t){$(id).style.borderLeftColor=heat(Math.max(0,t)/MAXM);}
+function drawHero(u){
+  const {f,d,tauBar}=drawFig(u);
+  $("v-hip").textContent=Math.round(f.m[0]);$("v-knee").textContent=Math.round(f.m[1]);
+  $("v-d").textContent=Math.round(Math.abs(d)*100);$("v-b").textContent=Math.round(f.trunk);
+  setPito("pt-hip",f.m[0]);setPito("pt-knee",f.m[1]);setPito("pt-d",f.m[0]);$("pt-b").style.borderLeftColor="var(--line)";
+  $("a-k").textContent=Math.round(f.knee)+"°";$("a-h").textContent=Math.round(f.hip)+"°";$("a-s").textContent=Math.round(f.s*100)+"%";
+  GROUPS.forEach(([,,j],r)=>{const v=f.m[j],row=trows[r],bar=row.querySelector("i");row.querySelector("b").textContent=Math.round(v)+" N·m";
+    const span=Math.abs(v)/MAXM*84;
+    if(v>=0){bar.style.left="16%";bar.style.width=span+"%";bar.style.background=heat(v/MAXM);}else{bar.style.left=(16-Math.min(16,span))+"%";bar.style.width=Math.min(16,span)+"%";bar.style.background="var(--soft)";}});
+  const x=u*(FR.length-1), i=Math.min(FR.length-2,Math.floor(x));
+  hipSegs.forEach((s,k)=>s.setAttribute("opacity",k<=i?1:0.22));
+  const gH=gx(f.bar[1]*100);
+  ptHip.setAttribute("cx",gH);ptHip.setAttribute("cy",gy(f.m[0]));
+  ptKnee.setAttribute("cx",gH);ptKnee.setAttribute("cy",gy(f.m[1]));
+  const rest=f.m[0]-tauBar, sg=v=>(v<0?"−":"")+Math.abs(Math.round(v));
+  $("cuenta").innerHTML=`barra: <b>${LOAD} kg × ${G} m/s² = ${Math.round(LOAD*G)} N</b><br>× d <b>${Math.abs(d).toFixed(2)} m</b> (cadera → línea de la barra) = <b>${sg(tauBar)} N·m</b><br>+ tu cuerpo arriba de la cadera (tronco, cabeza, brazos) = <b>${sg(rest)} N·m</b><div class="tot">= τ cadera del modelo: <b>${Math.round(f.m[0])} N·m</b></div>`;
+  $("scrub").value=Math.round(u*1000);
+}
+/* playback: down 1.8 s, hold 0.6 s, up 1.8 s, hold 0.6 s (same as the prototype) */
+let playing=!reduce, t=0, last=null;
+const CYC=4.8, phase=t=>{const c=t%CYC;return c<1.8?c/1.8:c<2.4?1:c<4.2?1-(c-2.4)/1.8:0;}, ease=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+function setPlaying(p){playing=p;$("play").setAttribute("aria-label",p?"Pausar":"Reproducir");
+  $("play-ic").innerHTML=p?'<rect x="3" y="2" width="3.5" height="12" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" fill="currentColor"/>':'<path d="M4 2l10 6-10 6z" fill="currentColor"/>';}
+function tick(ts){if(last!==null&&playing&&!$("phys-live").hidden)t+=(ts-last)/1000;last=ts;if(playing&&!$("phys-live").hidden)drawHero(ease(phase(t)));requestAnimationFrame(tick);}
+$("play").onclick=()=>setPlaying(!playing);
+$("scrub").oninput=e=>{setPlaying(false);drawHero(e.target.value/1000);};
+$("phys-more").onclick=e=>{const o=$("phys").classList.toggle("open");e.currentTarget.setAttribute("aria-expanded",String(o));e.currentTarget.textContent=o?"Ver menos":"Ver la cuenta completa";};
+$("phys-meas").onclick=e=>openPanel(pageMeas(),e.currentTarget);
+
+function placePhys(){
+  const phys=$("phys"), hero=$("hero");
+  if(physIdx==null||!curExs.length){$("phys-slot").appendChild(phys);phys.hidden=true;$("phys-slot").hidden=true;hero.classList.remove("split");return;}
+  $("phys-slot").hidden=!mqSplit.matches;
+  phys.hidden=false;hero.classList.add("split");
+  const e=curExs[physIdx];
+  const live=e.model==="squat";
+  $("phys-live").hidden=!live;$("phys-soon").hidden=live;
+  if(live){
+    const ln=$("phys-load");
+    if(e.kg&&e.kg!==LOAD){ln.hidden=false;ln.textContent=`Ese día la carga fue ${e.kg} kg. La maqueta trae un solo cálculo, con ${LOAD} kg; la app calcula con la carga de cada serie.`;}else ln.hidden=true;
+  }else{
+    const soon=!!e.model, hasSq=curExs.some(x=>x.model==="squat");
+    $("phys-soon").innerHTML=`<div class="p-head"><div><div class="eyebrow">Chequeo físico</div><h3 class="head p-title">${esc(e.n)}</h3><div class="p-meta">${esc(e.how)}</div></div></div>
+      ${soon?'<div class="stamp" aria-hidden="true">Próximamente<small>en el modelo</small></div>':""}
+      <div class="soon-body"><div class="ghost">${soon?"Aquí irá tu figura en movimiento,<br>con la palanca y los vectores a escala.":"Sin modelo de física<br>para este ejercicio por ahora."}</div>
+      <div class="hud"><div class="pito"><div class="l">τ ${e.model==="bench"?"hombro":"cadera"} [N·m]</div><div class="v">—</div></div><div class="pito"><div class="l">d palanca</div><div class="v">—</div></div></div></div>
+      <p class="soon-txt">${soon?`Próximamente: el modelo ${e.model==="bench"?"del press de banca":"del peso muerto"} está en desarrollo. Cuando esté listo verás lo mismo que en la sentadilla, con tu carga: figura en movimiento, palanca, vectores a escala y N·m por grupo muscular. Sin números hasta entonces.`:"Hoy el chequeo cubre la sentadilla. Siguen el peso muerto y el press de banca."}</p>
+      ${hasSq?'<div style="margin-top:10px"><button class="btn small" type="button" id="to-squat">Ver la sentadilla</button></div>':""}`;
+    const ts=$("to-squat");if(ts)ts.onclick=()=>{physIdx=curExs.findIndex(x=>x.model==="squat");renderHero();};
+  }
+  if(mqSplit.matches)$("phys-slot").appendChild(phys);
+  else{const slot=$("hero-main").querySelectorAll(".ex-slot")[physIdx];if(slot)slot.appendChild(phys);}
+}
+
+/* ---------- panels ---------- */
+let stack=[], opener=null;
+const panel=$("panel"), scrim=$("scrim");
+function openPanel(page,from){closeMenu();opener=from||document.activeElement;stack=[page];showPanel();}
+function pushPage(page){stack.push(page);showPanel();}
+function popPage(){if(stack.length>1){stack.pop();showPanel();}else closePanel();}
+function showPanel(){
+  const p=stack[stack.length-1];
+  $("panel-title").textContent=p.title;$("panel-body").innerHTML=p.html();
+  $("panel-back").hidden=stack.length<2;panel.hidden=false;scrim.hidden=false;document.body.classList.add("lock");
+  if(p.mount)p.mount($("panel-body"));
+  (stack.length>1?$("panel-back"):$("panel-close")).focus();
+}
+function closePanel(){panel.hidden=true;scrim.hidden=true;stack=[];document.body.classList.remove("lock");if(opener&&opener.isConnected)opener.focus();}
+$("panel-close").onclick=closePanel;$("panel-back").onclick=popPage;scrim.onclick=closePanel;
+
+function pageProgram(){
+  const p=progById(cur.prog), st=stateOf(TODAY), now=st.s==="plan"?st.idx:-1;
+  return{title:"Programa",html:()=>`<div><div class="eyebrow">Tu programa</div><h3 class="head" style="font-size:30px;margin-top:4px">${esc(p.name)}</h3><p class="sub">${esc(p.desc)} Empezó el ${esc(longDay(cur.startsOn).toLowerCase())}.</p></div>
+    <div><div class="eyebrow" style="margin-bottom:6px">La secuencia</div><div class="seq">${p.cycle.map((n,i)=>`<span class="${n?"":"rest"}${i===now?" now":""}">${i+1}. ${n?esc(n):"Descanso"}</span>`).join("")}</div>
+    <p class="sub" style="margin-top:8px">${now>=0?`Hoy toca el día ${now+1}. `:""}Si un día de entrenamiento no se registra, la secuencia espera: no se salta.</p></div>
+    <button class="btn full" type="button" id="pg-change">Cambiar de programa</button>`,
+    mount:b=>{b.querySelector("#pg-change").onclick=()=>pushPage(pagePick());}};
+}
+function pagePick(){
+  return{title:"Elegir programa",html:()=>PROGRAMS.map(p=>`<button type="button" class="prog-card${p.id===cur.prog?" cur":""}" data-p="${p.id}"><span class="eyebrow">${p.id===cur.prog?"Actual":p.cycle.filter(Boolean).length+" días de entrenamiento por ciclo"}</span><h3>${esc(p.name)}</h3><span class="sub">${esc(p.desc)}</span></button>`).join(""),
+    mount:b=>b.querySelectorAll("[data-p]").forEach(x=>x.onclick=()=>pushPage(pageDetail(x.dataset.p)))};
+}
+function pageDetail(id){
+  const p=progById(id), first=p.cycle.find(Boolean);
+  return{title:"Detalle",html:()=>`<h3 class="head" style="font-size:30px">${esc(p.name)}</h3><p class="sub">${esc(p.desc)}</p>
+    <div class="seq">${p.cycle.map((n,i)=>`<span class="${n?"":"rest"}">${i+1}. ${n?esc(n):"Descanso"}</span>`).join("")}</div>
+    <div class="parsed"><b>${esc(first)}</b><div class="sub">${SESSIONS[first].map(e=>esc(e.n)+" · "+esc(scheme(e))).join("<br>")}</div></div>
+    ${id===cur.prog?'<p class="sub">Es tu programa actual.</p>':`<button class="btn primary full" type="button" id="pg-go">Elegir y empezar hoy</button><p class="sub">Empieza hoy con ${esc(first)}. Lo que ya registraste se queda en el calendario.</p>`}`,
+    mount:b=>{const g=b.querySelector("#pg-go");if(g)g.onclick=()=>{cur.prog=id;cur.startsOn=new Date(TODAY);project();physIdx=null;sel=new Date(TODAY);closePanel();renderAll();toast(`Programa cambiado. Hoy empiezas con ${first}.`);};}};
+}
+function pageMeas(){
+  const fl=[["m-height","Estatura (cm)",175],["m-weight","Peso (kg)",80],["m-femur","Fémur (cm)",Math.round(dist(FR[0].H,FR[0].K)*100)],["m-tibia","Tibia (cm)",Math.round(dist(FR[0].K,FR[0].A)*100)],["m-trunk","Tronco, cadera a hombro (cm)",Math.round(dist(FR[0].H,FR[0].S)*100)],["m-ankle","Tobillo, flexión máxima (°)",35]];
+  return{title:"Medidas",html:()=>`<p class="sub">Tu fémur, tu tibia y tu tronco cambian la palanca de cada articulación. Hoy son valores de tabla para 1.75 m; con los tuyos, el chequeo físico se recalcula.</p>
+    <div class="two">${fl.map(([id,l,v])=>`<div class="field"><label for="${id}">${l}</label><input id="${id}" type="number" inputmode="decimal" value="${v}"></div>`).join("")}</div>
+    <button class="btn primary full" type="button" id="m-save">Guardar medidas</button><p class="caveat">En la maqueta el cálculo no cambia: trae un solo cuerpo de ejemplo.</p>`,
+    mount:b=>{b.querySelector("#m-save").onclick=()=>{closePanel();toast("Medidas guardadas. El chequeo se recalcularía con ellas.");};}};
+}
+function pageProgress(){
+  const sq=Object.keys(LOG).sort().map(k=>{const e=LOG[k].ex.find(x=>x.model==="squat");return e?[k,Math.max(...e.sets.map(s=>s.kg||0))]:null;}).filter(Boolean);
+  const pts=sq.concat(stateOf(TODAY).s==="plan"&&stateOf(TODAY).name==="Pierna B"?[[key(TODAY),100,1]]:[]);
+  const x=i=>30+i*(270/Math.max(1,pts.length-1)), y=v=>110-(v-90)/(102-90)*90;
+  const n=Object.keys(LOG).filter(k=>k.startsWith("2026-10")).length;
+  return{title:"Progreso",html:()=>`<div class="hud"><div class="pito"><div class="l">sesiones en octubre</div><div class="v">${n}</div></div><div class="pito"><div class="l">peso corporal</div><div class="v">80<small>kg</small></div></div></div>
+    <div><div class="eyebrow" style="margin-bottom:6px">Sentadilla barra alta · serie más pesada</div><div class="gbox" style="border:2px solid var(--line);background:var(--panel-2)"><svg class="gsvg" viewBox="0 0 320 130" role="img" aria-label="Carga de la sentadilla por sesión">
+      ${[92.5,97.5,102.5].map(v=>`<line x1="30" x2="310" y1="${y(v)}" y2="${y(v)}" class="g-grid"/><text x="26" y="${y(v)+3.5}" text-anchor="end" font-size="10" class="g-t">${v}</text>`).join("")}
+      <polyline fill="none" stroke="var(--text)" stroke-width="2.5" points="${pts.map((p,i)=>`${x(i)},${y(p[1])}`).join(" ")}"/>
+      ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p[1])}" r="5" fill="${p[2]?"var(--panel)":"var(--text)"}" stroke="var(--text)" stroke-width="2"/><text x="${x(i)}" y="126" text-anchor="middle" font-size="9.5" class="g-t">${+p[0].slice(8)}/${+p[0].slice(5,7)}</text>`).join("")}
+    </svg></div><p class="caveat">Círculo hueco: planeado para hoy.</p></div>`};
+}
+function themeNow(){return document.documentElement.dataset.theme||"system";}
+function pageAccount(){
+  return{title:"Cuenta",html:()=>`<ul class="rowlist"><li><div class="rl">Nombre<span class="meta">Lifter de ejemplo</span></div></li><li><div class="rl">Correo<span class="meta">ejemplo@correo.mx</span></div></li>
+    <li><button type="button" id="ac-edit">Editar perfil<span class="meta">abre el onboarding</span></button></li></ul>
+    <div><div class="eyebrow" style="margin-bottom:6px" id="th-l">Tema</div><div class="seg" role="group" aria-labelledby="th-l">${[["system","Sistema"],["light","Claro"],["dark","Oscuro"]].map(([v,l])=>`<button type="button" id="th-${v}" data-th="${v}" aria-pressed="${themeNow()===v}">${l}</button>`).join("")}</div></div>
+    <button class="btn full" type="button" id="ac-out">Cerrar sesión</button>`,
+    mount:b=>{b.querySelectorAll("[data-th]").forEach(x=>x.onclick=()=>{const v=x.dataset.th;if(v==="system")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=v;b.querySelectorAll("[data-th]").forEach(y=>y.setAttribute("aria-pressed",String(y===x)));});
+      b.querySelector("#ac-edit").onclick=()=>toast("Abriría el onboarding en modo edición.");b.querySelector("#ac-out").onclick=()=>{closePanel();toast("Cerrarías sesión aquí.");};}};
+}
+function pageMeal(){
+  const picks=[["Desayuno de siempre",32],["Batido de proteína",25],["Pollo con arroz",45],["Huevos (3)",18]];
+  let g=null;
+  return{title:"Comida",html:()=>`<div class="field"><label for="meal-text">¿Qué comiste?</label><input id="meal-text" type="text" placeholder="Por ejemplo: tacos de bistec, 3"></div>
+    <div><div class="eyebrow" style="margin-bottom:6px">Frecuentes</div><div class="picks">${picks.map(([n,p])=>`<button type="button" data-g="${p}" aria-pressed="false">${n} · ${p} g</button>`).join("")}</div></div>
+    <button class="btn primary full" type="button" id="meal-save">Guardar comida</button><p class="sub">También puedes dictarla con el micrófono.</p>`,
+    mount:b=>{b.querySelectorAll("[data-g]").forEach(x=>x.onclick=()=>{b.querySelectorAll("[data-g]").forEach(y=>y.setAttribute("aria-pressed",String(y===x)));g=+x.dataset.g;});
+      b.querySelector("#meal-save").onclick=()=>addProtein(g||30);}};
+}
+function addProtein(g){const d=sel>TODAY?TODAY:sel;PROT[key(d)]=(PROT[key(d)]||0)+g;closePanel();renderOrbit();toast(`Comida guardada: +${g} g de proteína, ${same(d,TODAY)?"hoy":shortDay(d)}.`);}
+function pageDictation(){
+  return{title:"Dictado",html:()=>`<div class="listen" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="term"><span class="pr">&gt;</span> escuchando…<br><span class="pr">&gt;</span> «comí 200 gramos de pechuga con arroz»</div>
+    <div class="field"><label for="dict-text">Lo que entendí (puedes corregirlo)</label><textarea id="dict-text" rows="2">Comí 200 g de pechuga con arroz</textarea></div>
+    <div class="parsed">Comida · pechuga 200 g, arroz 1 taza · <b>46 g de proteína</b></div>
+    <button class="btn primary full" type="button" id="d-save">Guardar comida</button>
+    <p class="sub">También entiende «empieza el entrenamiento» y «pesé 80 kilos».</p>
+    <button class="btn full" type="button" id="d-start">Probar: «empieza el entrenamiento»</button>`,
+    mount:b=>{b.querySelector("#d-save").onclick=()=>addProtein(46);b.querySelector("#d-start").onclick=()=>{closePanel();const st=stateOf(TODAY);sel=new Date(TODAY);renderAll();openFocus(st.s==="plan"?{date:TODAY,name:st.name,idx:st.idx}:{date:TODAY,name:"Sesión libre",idx:null});};}};
+}
+function pageLog(){
+  const log=LOG[key(sel)];
+  return{title:"Lo registrado",html:()=>`<div><div class="eyebrow">${esc(longDay(sel))}</div><h3 class="head" style="font-size:30px;margin-top:4px">${esc(log.name)}</h3></div>
+    ${log.ex.map(e=>`<div class="parsed"><b>${esc(e.n)}</b><div class="logset">${e.sets.map((s,i)=>`<span>${i+1}: ${s.secs?s.secs+" s":s.reps+(s.kg?" × "+s.kg+" kg":"")}</span>`).join("")}</div></div>`).join("")}
+    <p class="sub">Para corregir una serie, tócala (en la app).</p>`};
+}
+const PAGES={program:pageProgram,meas:pageMeas,progress:pageProgress,account:pageAccount};
+
+/* ---------- profile menu ---------- */
+const menu=$("menu"), me=$("me");
+function closeMenu(){if(!menu.hidden){menu.hidden=true;me.setAttribute("aria-expanded","false");}}
+me.onclick=()=>{const o=menu.hidden;menu.hidden=!o;me.setAttribute("aria-expanded",String(o));$("m-prog").textContent=progById(cur.prog).name.split(" · ")[0];if(o)menu.querySelector("button").focus();};
+menu.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(!b)return;const k=b.dataset.open;closeMenu();
+  if(k==="signout")toast("Cerrarías sesión aquí.");else openPanel(PAGES[k](),me);});
+document.addEventListener("click",e=>{if(!menu.hidden&&!e.target.closest(".me-wrap"))closeMenu();});
+$("mic").onclick=e=>openPanel(pageDictation(),e.currentTarget);
+
+/* ---------- focus mode ---------- */
+let F=null, ftimer=null, fOpener=null;
+const drawFF=makeFigure($("f-fig"));
+const bottom=FR[FR.length-1];
+function openFocus(o){
+  fOpener=document.activeElement;
+  const tmpl=SESSIONS[o.name];
+  F=Object.assign({},o,{exs:tmpl.map(e=>Object.assign({},e)),ei:0,si:0,done:tmpl.map(()=>[]),rest:null,start:Date.now(),finished:false});
+  F.coach=o.late?`Registra lo que hiciste el ${shortDay(o.date)}. Sin descansos que contar.`:`Primera serie: ${scheme(tmpl[0]).split(" · ").slice(1).join(" · ")||scheme(tmpl[0])}. Cuando termines, toca el audífono o di «hecha».`;
+  F.heard="";
+  $("focus").hidden=false;document.body.classList.add("lock");
+  renderFocus();clearInterval(ftimer);ftimer=setInterval(tickFocus,250);
+  const d=$("f-done");if(d)d.focus();
+}
+const mmss=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+const restFor=e=>e.reps&&e.reps<=5?150:90;
+function setsLogged(){return F?F.done.reduce((a,x)=>a+x.length,0):0;}
+function renderFocus(){
+  const e=F.exs[F.ei]||F.exs[F.exs.length-1];
+  $("f-title").textContent=F.name;
+  $("f-sub").textContent=`${F.late?"Registro tarde · ":""}${shortDay(F.date)} · ${F.idx!=null?"día "+(F.idx+1)+" del plan":"no avanza el plan"}`;
+  let html;
+  if(F.finished){
+    html=`<div class="eyebrow" style="color:var(--muted)">Sesión completa</div><h2 class="head f-ex">${setsLogged()} series</h2><p style="color:var(--text)">Todo listo. Guarda y vuelve al calendario: el día queda como hecho.</p>
+      <button class="btn primary f-done" id="f-done" type="button">Guardar y volver</button>`;
+  }else if(F.rest){
+    const left=Math.max(0,(F.rest.end-Date.now())/1000);
+    html=`<div class="eyebrow" style="color:var(--muted)">Descanso · luego ${esc(e.n)}, serie ${F.si+1} de ${e.sets}</div>
+      <div class="f-big" id="f-rest">${mmss(left)}</div><div class="restbar"><i id="f-restbar" style="width:${100*left/F.rest.len}%"></i></div>
+      <div class="f-row" style="margin-top:16px"><button class="btn primary" id="f-done" type="button" style="flex:1">Saltar descanso</button><button class="btn" id="f-plus" type="button">+30 s</button></div>`;
+  }else{
+    const isS=!!e.secs, bw=e.kg==null&&!isS;
+    html=`<div class="eyebrow" style="color:var(--muted)">Ejercicio ${F.ei+1} de ${F.exs.length}</div><h2 class="head f-ex">${esc(e.n)}</h2>
+      <div class="dots" aria-label="Serie ${F.si+1} de ${e.sets}">${Array.from({length:e.sets},(_,k)=>`<i class="${k<F.si?"d":k===F.si?"c":""}"></i>`).join("")}</div>
+      <div class="f-big">Serie ${F.si+1}<small> / ${e.sets}</small></div><div class="f-target">Objetivo: ${esc(scheme(e))}</div>
+      <div class="steps">
+        <div class="stepper"><label for="f-reps">${isS?"Segundos":"Reps"}</label><div class="row"><button type="button" data-st="f-reps" data-d="-1" aria-label="Menos">−</button><input id="f-reps" type="number" inputmode="numeric" value="${isS?e.secs:e.reps}"><button type="button" data-st="f-reps" data-d="1" aria-label="Más">+</button></div></div>
+        ${bw||isS?"":`<div class="stepper"><label for="f-kg">Kg</label><div class="row"><button type="button" data-st="f-kg" data-d="-2.5" aria-label="Menos peso">−</button><input id="f-kg" type="number" inputmode="decimal" step="2.5" value="${e.kg}"><button type="button" data-st="f-kg" data-d="2.5" aria-label="Más peso">+</button></div></div>`}
+      </div>
+      <button class="btn primary f-done" id="f-done" type="button">Serie hecha</button>`;
+  }
+  html+=`<div class="voice">${F.heard?`Tú: «${esc(F.heard)}»<br>`:""}<b>Coach:</b> ${esc(F.coach)}</div>`;
+  $("f-main").innerHTML=html;
+  $("f-done").onclick=F.finished?saveFocus:F.rest?endRest:setDone;
+  const pl=$("f-plus");if(pl)pl.onclick=()=>{F.rest.end+=30000;F.rest.len+=30;};
+  $("f-main").querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{const i=$(b.dataset.st);i.value=Math.max(0,(+i.value||0)+(+b.dataset.d));});
+  const live=e.model==="squat";
+  $("f-phys").hidden=!live;$("f-nophys").hidden=live;
+  if(!live)$("f-nophys").textContent=e.model?`${e.n}: modelo de física próximamente.`:"Este ejercicio todavía no tiene modelo de física.";
+  if(live){
+    const kgNow=$("f-kg")?+$("f-kg").value:e.kg;
+    $("fv-hip").textContent=Math.round(bottom.m[0]);$("fv-knee").textContent=Math.round(bottom.m[1]);
+    $("fp-hip").style.borderLeftColor=heat(bottom.m[0]/MAXM);$("fp-knee").style.borderLeftColor=heat(bottom.m[1]/MAXM);
+    $("f-phys-note").textContent=`Con ${LOAD} kg${kgNow&&kgNow!==LOAD?` (tu serie: ${kgNow} kg; la app recalcula con tu carga)`:""}, palanca de cadera ${Math.round((bottom.bar[0]-bottom.H[0])*100)} cm. Modelo estático de perfil: postura en equilibrio sobre el mediopié; el camino entre de pie y el fondo es una convención.`;
+  }
+  const rest=F.exs.slice(F.ei+1);
+  $("f-next").innerHTML=rest.length?rest.map(x=>`<li><b>${esc(x.n)}</b> · ${esc(scheme(x))}</li>`).join(""):"<li>Último ejercicio</li>";
+}
+function setDone(){
+  const e=F.exs[F.ei], r=$("f-reps"), k=$("f-kg");
+  const val=e.secs?{secs:+r.value}:{reps:+r.value,kg:k?+k.value:null};
+  F.done[F.ei].push(val);
+  const txt=e.secs?`${val.secs} s`:`${val.reps}${val.kg?" × "+val.kg+" kg":""}`;
+  F.si++;
+  if(F.si>=e.sets){F.ei++;F.si=0;}
+  if(F.ei>=F.exs.length){F.finished=true;F.ei=F.exs.length-1;F.coach=`Última serie registrada: ${txt}. Sesión completa.`;renderFocus();$("f-done").focus();return;}
+  const ne=F.exs[F.ei];
+  if(F.late){F.coach=`Registrada: ${txt}. Sigue: ${ne.n}, serie ${F.si+1}.`;}
+  else{const len=restFor(e);F.rest={end:Date.now()+len*1000,len};F.coach=`Serie registrada: ${txt}. Descansa ${mmss(len)}. Luego ${ne.n}, serie ${F.si+1}.`;}
+  renderFocus();$("f-done").focus();
+}
+function endRest(){F.rest=null;const e=F.exs[F.ei];F.coach=`Vamos: ${e.n}, serie ${F.si+1} de ${e.sets}.`;renderFocus();$("f-done").focus();}
+function tickFocus(){
+  if(!F)return;
+  const el2=Math.floor((Date.now()-F.start)/1000);
+  $("f-clock").textContent=mmss(el2);
+  if(F.rest){const left=(F.rest.end-Date.now())/1000;if(left<=0){F.rest=null;const e=F.exs[F.ei];F.coach=`Descanso terminado. ${e.n}, serie ${F.si+1}.`;renderFocus();}else{const r=$("f-rest"),b=$("f-restbar");if(r)r.textContent=mmss(left);if(b)b.style.width=(100*left/F.rest.len)+"%";}}
+}
+function earbudTap(){if(!F||F.finished||!$("f-confirm").hidden)return;F.heard="(toque del audífono)";if(F.rest)endRest();else setDone();}
+function saveFocus(){
+  if(!setsLogged()){closeFocus();toast("No se guardó nada: no había series.");return;}
+  LOG[key(F.date)]={prog:F.idx!=null?cur.prog:null,idx:F.idx,name:F.name,ex:F.exs.map((e,i)=>({n:e.n,model:e.model,group:e.group,sets:F.done[i]})).filter(x=>x.sets.length)};
+  const d=F.date;closeFocus();project();physIdx=null;sel=new Date(d);anchor=mondayOf(sel);viewMonth=new Date(sel.getFullYear(),sel.getMonth(),1);renderAll();
+  toast("Sesión guardada. El día queda como hecho.");
+}
+function closeFocus(){clearInterval(ftimer);F=null;$("f-confirm").hidden=true;$("focus").hidden=true;document.body.classList.remove("lock");if(fOpener&&fOpener.isConnected)fOpener.focus();}
+function exitFocus(){
+  const n=setsLogged();
+  if(n&&!F.finished){$("fc-text").textContent=`Tienes ${n} ${n===1?"serie":"series"} sin guardar.`;$("f-confirm").hidden=false;$("fc-stay").focus();}
+  else if(n)saveFocus();
+  else closeFocus();
+}
+$("f-close").onclick=exitFocus;$("f-finish").onclick=()=>{if(F)saveFocus();};
+$("fc-stay").onclick=()=>{$("f-confirm").hidden=true;$("f-done").focus();};
+$("fc-save").onclick=saveFocus;$("fc-drop").onclick=()=>{closeFocus();toast("Saliste sin guardar.");};
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(!$("f-confirm").hidden){$("f-confirm").hidden=true;$("f-done").focus();return;}
+    if(!panel.hidden){popPage();return;}
+    if(!menu.hidden){closeMenu();me.focus();return;}
+    if(!$("focus").hidden){exitFocus();return;}
+  }
+  if((e.key===" "||e.code==="Space")&&!$("focus").hidden&&!e.target.closest("button,input,textarea")){e.preventDefault();earbudTap();}
+});
+
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
+
+function renderAll(){renderCal();renderHero();renderOrbit();}
+mqWide.addEventListener("change",()=>{monthOpen=false;renderCal();});
+mqSplit.addEventListener("change",placePhys);
+function repaint(){readHeat();hipSegs.forEach((sg,k)=>sg.setAttribute("stroke",heat(Math.max(0,(gpts[k][3]+gpts[k+1][3])/2)/MAXM)));drawHero($("scrub").value/1000);drawFF(1);if(F)renderFocus();}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",repaint);
+new MutationObserver(repaint).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+project();renderAll();
+drawHero(1);drawFF(1);setPlaying(playing);requestAnimationFrame(tick);
+})();
+</script>
