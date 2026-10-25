@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'l10n/app_localizations.dart';
 import 'src/core/brand.dart';
+import 'src/l10n/locale_rule.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/router/app_router.dart';
 
@@ -17,6 +20,16 @@ class FitAiApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
+      // R-0061 AC11: every UI string comes from the catalogues; the device
+      // language picks one and Spanish is the fallback (SPEC-0061 §2.9).
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: supportedLocales,
+      localeListResolutionCallback: resolveLocale,
       routerConfig: ref.watch(routerProvider),
     );
   }

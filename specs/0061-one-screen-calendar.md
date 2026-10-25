@@ -489,8 +489,11 @@ silently stop doing anything. The change:
   rejected because the first-party route covers the need.
 - **Catalogues:** `lib/l10n/app_es.arb` is the template and
   `lib/l10n/app_en.arb` comes from today's strings. Both are complete.
-  `gen-l10n` writes an untranslated-messages file, and CI fails unless it
-  is empty.
+  Completeness is checked in `flutter test` by a parity test over the two
+  ARB files (every template key has an English value, and English has no
+  extra key), which needs no build step. (Slice 1a: gen-l10n's
+  untranslated-messages file is a build artifact, so a test over the
+  sources replaces it.)
 - **Locale rule (OQ-1):** `supportedLocales: [es, en]`. A
   `localeResolutionCallback` matches the device language and returns `es`
   when nothing matches.

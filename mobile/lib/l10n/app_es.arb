@@ -1,0 +1,7 @@
+{
+  "@@locale": "es",
+  "appTagline": "La física de tu levantamiento: medida, no adivinada.",
+  "@appTagline": {
+    "description": "Brand tagline under the badge on the screens before sign-in."
+  }
+}
