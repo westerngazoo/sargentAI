@@ -583,6 +583,7 @@ in the beta when it lands.
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
 | 1e | Theme tokens, the contrast test and the four bundled faces (§2.10). The halftone painter ships with 1f, its first user | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist. 1b also deletes `Brand.tagline` and wires `appTagline` into `BrandHeader`, adding the delegates to the auth widget tests | mobile | 1a |
+| 1f | Router, `MainScreen`, `showPanel`, the halftone ground, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6). Programa and Progreso push the existing `/programs/current` and `/progress` screens from the profile menu, Medidas opens its sheet, and `/programs/get` is reachable from the program screen's empty state, until slice 3 replaces them with panels, so AC2 holds at every merge; the `context.go` guard ships with a shrinking allowlist for the folders slices 3 and 5 migrate | mobile | 1a, 1e |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
@@ -789,4 +790,5 @@ was done with a note on what to salvage.
   AC9 and AC12 updated. OQ-D resolved. Status → Accepted.
 - 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
   62-day range is inclusive, and range errors live in `DateRange::new`.
+- 2026-10-25 — slice 1f: the removed routes' redirects move to slice 3 (the old screens stay reachable, pushed, until the panels exist); the `context.go` guard carries a shrinking allowlist like the l10n guard.
 - 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.

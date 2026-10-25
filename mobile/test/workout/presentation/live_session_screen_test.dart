@@ -27,7 +27,6 @@ import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/program/services/program_service.dart';
-import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/earbud_coach.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/voice_coach.dart';
@@ -36,12 +35,17 @@ import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/domain/preset_exercises.dart';
+import 'package:fitai/src/auth/application/auth_controller.dart';
+import 'package:fitai/src/core/storage/token_store.dart';
+import 'package:fitai/src/home/main_screen.dart';
+import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../support/fakes.dart';
 import '../../support/l10n.dart';
 import '../../support/profile_fakes.dart';
 import '../../support/program_fakes.dart';
@@ -132,10 +136,16 @@ void main() {
     });
 
     testWidgets(
-        'Start workout on the home shell opens /session with a session '
+        'Empezar sesión on the main screen opens /session with a session '
         'in progress', (tester) async {
       final profileRepo = MockProfileRepository();
       final programService = MockProgramService();
+      final tokenStore = MockTokenStore();
+      final authRepo = MockAuthRepository();
+      when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
+      when(() => tokenStore.clear()).thenAnswer((_) async {});
+      when(() => authRepo.clear()).thenAnswer((_) async {});
+      when(() => authRepo.me()).thenAnswer((_) async => 'u-1');
       when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
       when(() => programService.getCurrent()).thenAnswer((_) async => null);
       final container = ProviderContainer(
@@ -143,34 +153,36 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(repo),
           profileRepositoryProvider.overrideWithValue(profileRepo),
           programServiceProvider.overrideWithValue(programService),
+          tokenStoreProvider.overrideWithValue(tokenStore),
+          authRepositoryProvider.overrideWithValue(authRepo),
         ],
       );
+      container.read(authControllerProvider);
       addTearDown(container.dispose);
       final router = GoRouter(
         initialLocation: '/home',
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+          GoRoute(path: '/home', builder: (_, __) => const MainScreen()),
           GoRoute(
             path: '/session',
             builder: (_, __) => const LiveSessionScreen(),
           ),
         ],
       );
-      // The shell hosts the program card, which reads the catalogue.
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
           child: localizedRouterApp(router),
         ),
       );
-      await tester.pump();
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start workout'));
-      await tester.pump();
-      await tester.pump();
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
 
-      expect(locationOf(router), '/session');
+      // The session is pushed over the main screen, so the base uri stays
+      // /home; the live screen itself is the proof.
+      expect(find.byType(LiveSessionScreen), findsOneWidget);
       expect(stateOf(container).draft, isNotNull,
           reason: 'starting opens an empty in-progress session');
       expect(find.byIcon(Icons.calendar_today), findsNothing);
