@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // The licence loader reads the licence texts from the asset bundle.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('tokens', () {
     test('light is black ink on white with red', () {
       final t = FbfTokens.light;

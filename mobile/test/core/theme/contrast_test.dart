@@ -42,18 +42,24 @@ void main() {
         'onError/error': (cs.onError, cs.error),
         'onSurface/surface': (cs.onSurface, cs.surface),
         'onSurfaceVariant/surface': (cs.onSurfaceVariant, cs.surface),
-        'onPrimaryContainer/primaryContainer':
-            (cs.onPrimaryContainer, cs.primaryContainer),
-        'onSecondaryContainer/secondaryContainer':
-            (cs.onSecondaryContainer, cs.secondaryContainer),
+        'onPrimaryContainer/primaryContainer': (
+          cs.onPrimaryContainer,
+          cs.primaryContainer
+        ),
+        'onSecondaryContainer/secondaryContainer': (
+          cs.onSecondaryContainer,
+          cs.secondaryContainer
+        ),
         'onSurface/surfaceContainer': (cs.onSurface, cs.surfaceContainer),
-        'onSurface/surfaceContainerHigh':
-            (cs.onSurface, cs.surfaceContainerHigh),
+        'onSurface/surfaceContainerHigh': (
+          cs.onSurface,
+          cs.surfaceContainerHigh
+        ),
       };
       for (final e in schemePairs.entries) {
         test('${e.key} is body-text legible', () {
-          expect(contrast(e.value.$1, e.value.$2),
-              greaterThanOrEqualTo(bodyText),
+          expect(
+              contrast(e.value.$1, e.value.$2), greaterThanOrEqualTo(bodyText),
               reason: e.key);
         });
       }

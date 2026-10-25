@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -148,12 +147,11 @@ class _Section extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(icon, size: 19, color: Colors.white),
+                child: Icon(icon,
+                    size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
               Text(title,
@@ -371,8 +369,8 @@ class CurrentProgramCard extends ConsumerWidget {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            gradient: brandGradient(),
-            borderRadius: BorderRadius.circular(24),
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Material(
             color: Colors.transparent,
@@ -462,8 +460,8 @@ class CurrentProgramCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: brandGradient(),
-        borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Material(
         color: Colors.transparent,
