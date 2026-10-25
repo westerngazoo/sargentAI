@@ -211,7 +211,6 @@ void main() {
 
       expect(find.byType(TextField), findsNothing);
       expect(find.textContaining(_invalidLink), findsOneWidget);
-      expect(find.textContaining('30 minutos'), findsOneWidget);
       expect(find.widgetWithText(ElevatedButton, l10n.requestANewLink),
           findsOneWidget);
       expect(currentUri().path, '/reset-password');

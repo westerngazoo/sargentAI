@@ -24,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String? _error;
 
   Future<void> _submit(String email, String password) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -34,9 +35,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // A 409 here can only mean the email is taken. The shared copy for 409
       // is deliberately generic ('that already exists', since every endpoint
       // raises it), so the registration-specific sentence lives on this screen.
-      final message = e.statusCode == 409 && mounted
-          ? AppLocalizations.of(context).emailAlreadyRegistered
-          : e.message;
+      final message =
+          e.statusCode == 409 ? l10n.emailAlreadyRegistered : e.message;
       if (mounted) setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _busy = false);

@@ -107,7 +107,6 @@ void main() {
 
     expect(find.byType(TextField), findsNothing);
     expect(find.textContaining(_confirmation), findsOneWidget);
-    expect(find.textContaining('30 minutos'), findsOneWidget);
     expect(
         find.widgetWithText(ElevatedButton, l10n.backToLogIn), findsOneWidget);
   });

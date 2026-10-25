@@ -190,4 +190,9 @@ void main() {
     );
     expect(find.byType(ForgotPasswordScreen), findsOneWidget);
   });
+
+  testWidgets('the brand header speaks the catalogue tagline', (tester) async {
+    await pumpLogin(tester);
+    expect(find.text(l10n.appTagline), findsOneWidget);
+  });
 }

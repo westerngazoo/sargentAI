@@ -40,7 +40,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get createAccount => 'Crear cuenta';
 
   @override
-  String get backToLogIn => 'Volver a entrar';
+  String get backToLogIn => 'Volver';
 
   @override
   String get emailAlreadyRegistered =>
@@ -54,7 +54,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get resetLinkSent =>
-      'Si ese correo tiene cuenta, el link ya va en camino. Vale 30 minutos.';
+      'Si ese correo tiene cuenta, el link ya va en camino. Vence en 30 minutos.';
 
   @override
   String get setANewPassword => 'Pon una contraseña nueva';
@@ -79,7 +79,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get linkNoLongerValid =>
-      'Este link ya no sirve. Los links vencen a los 30 minutos y se usan una vez.';
+      'Este link ya no sirve. Los links vencen a los 30 minutos y solo sirven una vez.';
 
   @override
   String get requestANewLink => 'Pedir otro link';

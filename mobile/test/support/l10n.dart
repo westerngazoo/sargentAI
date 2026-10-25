@@ -1,19 +1,13 @@
 import 'package:fitai/l10n/app_localizations.dart';
 import 'package:fitai/src/l10n/locale_rule.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 /// The Spanish catalogue, for assertions that name a string by key instead of
 /// repeating its text (R-0061 AC11). Tests run the app in `es`.
 final l10n = lookupAppLocalizations(const Locale('es'));
 
-const _delegates = [
-  AppLocalizations.delegate,
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-];
+const _delegates = AppLocalizations.localizationsDelegates;
 
 /// A `MaterialApp` with the app's catalogues, pinned to Spanish.
 Widget localizedApp({required Widget home}) => MaterialApp(

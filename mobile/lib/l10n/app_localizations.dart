@@ -161,7 +161,7 @@ abstract class AppLocalizations {
   /// No description provided for @backToLogIn.
   ///
   /// In es, this message translates to:
-  /// **'Volver a entrar'**
+  /// **'Volver'**
   String get backToLogIn;
 
   /// No description provided for @emailAlreadyRegistered.
@@ -185,7 +185,7 @@ abstract class AppLocalizations {
   /// No description provided for @resetLinkSent.
   ///
   /// In es, this message translates to:
-  /// **'Si ese correo tiene cuenta, el link ya va en camino. Vale 30 minutos.'**
+  /// **'Si ese correo tiene cuenta, el link ya va en camino. Vence en 30 minutos.'**
   String get resetLinkSent;
 
   /// No description provided for @setANewPassword.
@@ -233,7 +233,7 @@ abstract class AppLocalizations {
   /// No description provided for @linkNoLongerValid.
   ///
   /// In es, this message translates to:
-  /// **'Este link ya no sirve. Los links vencen a los 30 minutos y se usan una vez.'**
+  /// **'Este link ya no sirve. Los links vencen a los 30 minutos y solo sirven una vez.'**
   String get linkNoLongerValid;
 
   /// No description provided for @requestANewLink.
