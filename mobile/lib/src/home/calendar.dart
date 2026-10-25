@@ -46,7 +46,7 @@ class CalendarView extends StatelessWidget {
         : _monthGrid(anchor, firstDay);
     final title = mode == CalendarMode.week
         ? _weekTitle(days.first, days.last, locale)
-        : _capitalize(DateFormat.yMMMM(locale).format(anchor));
+        : capitalizeFirst(DateFormat.yMMMM(locale).format(anchor));
     final materialL10n = MaterialLocalizations.of(context);
 
     return Column(
@@ -121,8 +121,8 @@ class CalendarView extends StatelessWidget {
   static List<DateTime> _week(DateTime anchor, int firstDay) {
     final a = dateOnly(anchor);
     final offset = (a.weekday % 7 - firstDay + 7) % 7;
-    final start = a.subtract(Duration(days: offset));
-    return [for (var i = 0; i < 7; i++) start.add(Duration(days: i))];
+    final start = addDays(a, -offset);
+    return [for (var i = 0; i < 7; i++) addDays(start, i)];
   }
 
   /// Whole weeks covering [anchor]'s month.
@@ -131,9 +131,16 @@ class CalendarView extends StatelessWidget {
     final last = DateTime(anchor.year, anchor.month + 1, 0);
     final start = _week(first, firstDay).first;
     final end = _week(last, firstDay).last;
-    final n = end.difference(start).inDays + 1;
-    return [for (var i = 0; i < n; i++) start.add(Duration(days: i))];
+    final n = _daysBetween(start, end) + 1;
+    return [for (var i = 0; i < n; i++) addDays(start, i)];
   }
+
+  /// Calendar days from [a] to [b], counted on dates so a DST change (a 23-
+  /// or 25-hour day) cannot shift the count.
+  static int _daysBetween(DateTime a, DateTime b) =>
+      DateTime.utc(b.year, b.month, b.day)
+          .difference(DateTime.utc(a.year, a.month, a.day))
+          .inDays;
 
   static String _weekdayInitial(DateTime d, String locale) =>
       DateFormat.E(locale).format(d).characters.first.toUpperCase();
@@ -142,14 +149,22 @@ class CalendarView extends StatelessWidget {
     final day = DateFormat.d(locale);
     final month = DateFormat.MMM(locale);
     return a.month == b.month
-        ? '${day.format(a)}–${day.format(b)} ${_capitalize(month.format(b))}'
-        : '${day.format(a)} ${_capitalize(month.format(a))} – '
-            '${day.format(b)} ${_capitalize(month.format(b))}';
+        ? '${day.format(a)}–${day.format(b)} ${capitalizeFirst(month.format(b))}'
+        : '${day.format(a)} ${capitalizeFirst(month.format(a))} – '
+            '${day.format(b)} ${capitalizeFirst(month.format(b))}';
   }
-
-  static String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }
+
+/// [date] plus [n] calendar days, at midnight local time. Built from the
+/// date parts, never with `Duration`, so a DST change cannot land on 23:00
+/// of the same day and duplicate or skip a cell.
+DateTime addDays(DateTime date, int n) =>
+    DateTime(date.year, date.month, date.day + n);
+
+/// Spanish month and weekday names come lowercase from `intl`; titles want
+/// a capital.
+String capitalizeFirst(String s) =>
+    s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
 enum CalendarMode { week, month }
 

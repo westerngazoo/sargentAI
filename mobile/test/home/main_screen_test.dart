@@ -95,6 +95,13 @@ void main() {
             path: '/onboarding',
             builder: (_, __) =>
                 const Scaffold(body: Text('ONBOARDING-SENTINEL'))),
+        GoRoute(
+            path: '/programs/current',
+            builder: (_, __) => const Scaffold(body: Text('PROGRAM-SENTINEL'))),
+        GoRoute(
+            path: '/progress',
+            builder: (_, __) =>
+                const Scaffold(body: Text('PROGRESS-SENTINEL'))),
       ],
     );
     await tester.pumpWidget(UncontrolledProviderScope(
@@ -135,6 +142,23 @@ void main() {
     });
   });
 
+  group('AC2 nothing is lost: the menu reaches the old screens', () {
+    for (final (item, sentinel) in [
+      (l10n.menuProgram, 'PROGRAM-SENTINEL'),
+      (l10n.menuProgress, 'PROGRESS-SENTINEL'),
+    ]) {
+      testWidgets('$item pushes its screen with no exception', (tester) async {
+        await pumpMain(tester);
+        await tester.tap(find.byKey(const Key('profile-menu')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(item));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text(sentinel), findsOneWidget);
+      });
+    }
+  });
+
   group('AC4 the calendar from the logs', () {
     testWidgets('a day with a session is marked done, today is selected',
         (tester) async {
@@ -153,6 +177,19 @@ void main() {
       await tester.tap(find.byKey(const Key('calendar-toggle')));
       await tester.pumpAndSettle();
       expect(find.byType(DayCell).evaluate().length, greaterThanOrEqualTo(28));
+    });
+
+    testWidgets('back to the week strip, the selected day is in view',
+        (tester) async {
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('calendar-toggle')));
+      await tester.pumpAndSettle();
+      container.read(selectedDayProvider.notifier).state = yesterday;
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('calendar-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')),
+          findsOneWidget);
     });
 
     testWidgets('a wide window shows the month with no toggle', (tester) async {
@@ -193,12 +230,25 @@ void main() {
       expect(find.text(l10n.viewLogged), findsOneWidget);
     });
 
-    testWidgets('a past empty day offers Registrar tarde', (tester) async {
+    testWidgets('a past empty day offers Registrar tarde, dated that day',
+        (tester) async {
       final (container, _) = await pumpMain(tester);
-      container.read(selectedDayProvider.notifier).state =
-          today.subtract(const Duration(days: 2));
+      final twoDaysAgo = DateTime(today.year, today.month, today.day - 2);
+      container.read(selectedDayProvider.notifier).state = twoDaysAgo;
       await tester.pumpAndSettle();
       expect(find.text(l10n.logLate), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+      expect(container.read(sessionDriverProvider).performedOn, twoDaysAgo);
+    });
+
+    testWidgets('today\'s session carries no date: finish logs today',
+        (tester) async {
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+      expect(container.read(sessionDriverProvider).performedOn, isNull);
     });
 
     testWidgets('a future day offers no action', (tester) async {
@@ -255,8 +305,19 @@ void main() {
         await pumpMain(tester, size: size);
         expect(tester.takeException(), isNull);
         final rect = tester.getRect(find.byKey(const Key('primary-action')));
+        expect(rect.top, greaterThanOrEqualTo(0));
+        expect(rect.left, greaterThanOrEqualTo(0));
         expect(rect.bottom, lessThanOrEqualTo(size.height));
         expect(rect.right, lessThanOrEqualTo(size.width));
+        // No horizontal scroll wider than the screen.
+        for (final e in find.byType(Scrollable).evaluate()) {
+          final s = e.widget as Scrollable;
+          if (s.axisDirection == AxisDirection.left ||
+              s.axisDirection == AxisDirection.right) {
+            final r = tester.getRect(find.byWidget(s));
+            expect(r.width, lessThanOrEqualTo(size.width));
+          }
+        }
       });
     }
   });

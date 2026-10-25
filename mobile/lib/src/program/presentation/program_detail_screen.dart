@@ -1,10 +1,12 @@
 // R-0014 / SPEC-0014 §2.5.3 — ProgramDetailScreen.
 //
 // Displays the active program and diet. Reached from ProgramProposalsScreen
-// after a successful choose, or via the home shortcut (CurrentProgramCard).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../l10n/app_localizations.dart';
 
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
@@ -36,7 +38,20 @@ class ProgramDetailScreen extends ConsumerWidget {
           ),
         ),
         data: (program) => program == null
-            ? const Center(child: Text('No program yet'))
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('No program yet'),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      key: const Key('get-program'),
+                      onPressed: () => context.push('/programs/get'),
+                      child: Text(AppLocalizations.of(context).findYourProgram),
+                    ),
+                  ],
+                ),
+              )
             : _ProgramDetail(program: program),
       ),
     );

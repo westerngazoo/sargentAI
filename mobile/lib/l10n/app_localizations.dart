@@ -343,6 +343,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver la semana'**
   String get showWeek;
+
+  /// No description provided for @findYourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Encuentra tu programa'**
+  String get findYourProgram;
 }
 
 class _AppLocalizationsDelegate

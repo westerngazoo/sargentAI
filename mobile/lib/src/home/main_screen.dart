@@ -11,14 +11,12 @@ import '../core/panels/show_panel.dart';
 import '../core/theme/halftone.dart';
 import '../core/theme/tokens.dart';
 import '../measurements/presentation/log_measurement_sheet.dart';
-import '../measurements/presentation/progress_screen.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
-import '../program/presentation/program_detail_screen.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/workouts_provider.dart';
-import '../workout/domain/workout_session.dart';
+import '../workout/presentation/session_list.dart';
 import 'calendar.dart';
 import 'day_action.dart';
 import 'selected_day.dart';
@@ -52,12 +50,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final wide = MediaQuery.sizeOf(context).width >= panelBreakpoint;
     final mode = wide ? CalendarMode.month : _phoneMode;
 
-    final byDay = <DateTime, List<WorkoutSession>>{};
-    for (final s in sessions) {
-      byDay.putIfAbsent(dateOnly(s.performedOn), () => []).add(s);
-    }
+    final doneDays = {for (final s in sessions) dateOnly(s.performedOn)};
     DayState stateOf(DateTime d) =>
-        byDay.containsKey(dateOnly(d)) ? const DoneDay() : const NothingDay();
+        doneDays.contains(dateOnly(d)) ? const DoneDay() : const NothingDay();
 
     final calendar = CalendarView(
       mode: mode,
@@ -68,7 +63,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       onSelect: (d) => ref.read(selectedDayProvider.notifier).state = d,
       onShift: (n) => setState(() {
         _anchor = mode == CalendarMode.week
-            ? _anchor.add(Duration(days: 7 * n))
+            ? addDays(_anchor, 7 * n)
             : DateTime(_anchor.year, _anchor.month + n, 1);
       }),
       onToggleMode: wide
@@ -77,6 +72,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 _phoneMode = _phoneMode == CalendarMode.week
                     ? CalendarMode.month
                     : CalendarMode.week;
+                // Back to the week strip: show the selected day's week, not
+                // the month's first.
+                if (_phoneMode == CalendarMode.week) _anchor = selected;
               }),
     );
 
@@ -96,10 +94,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       day: selected,
       today: today,
       state: stateOf(selected),
-      sessions: byDay[selected] ?? const [],
+      loading: ref.watch(workoutsProvider).isLoading,
       prompt: prompt,
       onStart: (performedOn) {
-        ref.read(sessionDriverProvider.notifier).start();
+        ref
+            .read(sessionDriverProvider.notifier)
+            .start(performedOn: performedOn == today ? null : performedOn);
         context.push('/session');
       },
     );
@@ -134,7 +134,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             key: const Key('profile-menu'),
             tooltip: l10n.profileMenu,
             icon: const Icon(Icons.account_circle_outlined),
-            onSelected: (item) => _open(item, l10n),
+            onSelected: _open,
             itemBuilder: (_) => [
               PopupMenuItem(
                   value: _Menu.program, child: Text(l10n.menuProgram)),
@@ -168,7 +168,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: 340,
+                            // §2.5: a 316 px rail, 340 from 1180.
+                            width: MediaQuery.sizeOf(context).width >= 1180
+                                ? 340
+                                : 316,
                             child: Column(
                               children: [
                                 _Panel(child: calendar),
@@ -199,16 +202,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     );
   }
 
-  void _open(_Menu item, AppLocalizations l10n) {
+  /// Until slice 3 gives each its panel, Programa and Progreso push the
+  /// existing screens, so back returns here and nothing is lost (AC2).
+  void _open(_Menu item) {
     switch (item) {
       case _Menu.program:
-        showPanel<void>(context,
-            title: l10n.menuProgram, body: (_) => const ProgramDetailScreen());
+        context.push('/programs/current');
       case _Menu.measurements:
         showLogMeasurementSheet(context);
       case _Menu.progress:
-        showPanel<void>(context,
-            title: l10n.menuProgress, body: (_) => const ProgressScreen());
+        context.push('/progress');
       case _Menu.signOut:
         ref.read(authControllerProvider.notifier).logout();
     }
@@ -245,7 +248,7 @@ class _DayRegion extends StatelessWidget {
     required this.day,
     required this.today,
     required this.state,
-    required this.sessions,
+    required this.loading,
     required this.prompt,
     required this.onStart,
   });
@@ -253,7 +256,7 @@ class _DayRegion extends StatelessWidget {
   final DateTime day;
   final DateTime today;
   final DayState state;
-  final List<WorkoutSession> sessions;
+  final bool loading;
   final Widget prompt;
   final ValueChanged<DateTime> onStart;
 
@@ -265,7 +268,7 @@ class _DayRegion extends StatelessWidget {
     final t = Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
     final action = primaryAction(day: day, today: today, state: state);
     final isToday = dateOnly(day) == today;
-    final title = DateFormat.MMMMEEEEd(locale).format(day);
+    final title = capitalizeFirst(DateFormat.MMMMEEEEd(locale).format(day));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -274,7 +277,7 @@ class _DayRegion extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                title[0].toUpperCase() + title.substring(1),
+                title,
                 key: const Key('day-title'),
                 style: text.labelMedium?.copyWith(color: t.muted),
               ),
@@ -315,68 +318,29 @@ class _DayRegion extends StatelessWidget {
               key: const Key('primary-action'),
               icon: const Icon(Icons.list_alt),
               label: Text(l10n.viewLogged),
-              onPressed: () => _SessionsSheet.show(context, day, sessions),
+              onPressed: () => showPanel<void>(
+                context,
+                title: title,
+                body: (_) => SessionList(day: day),
+              ),
             ),
           NoAction() => const SizedBox.shrink(),
         },
-        if (sessions.isNotEmpty) ...[
+        if (loading) ...[
           const SizedBox(height: 12),
-          for (final s in sessions) _SessionSummary(session: s),
-        ] else if (action is! StartSession) ...[
+          const Center(
+            child: SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ] else if (state is NothingDay && action is! StartSession) ...[
           const SizedBox(height: 12),
           Text(l10n.nothingLogged,
               style: text.bodyMedium?.copyWith(color: t.muted)),
         ],
       ],
-    );
-  }
-}
-
-/// "3 × 5/5/4": the set count and each set's reps.
-String setsSummary(WorkoutExercise e) =>
-    '${e.sets.length} × ${e.sets.map((s) => s.reps).join('/')}';
-
-/// One logged session, as a line per exercise.
-class _SessionSummary extends StatelessWidget {
-  const _SessionSummary({required this.session});
-  final WorkoutSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final e in session.exercises)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Expanded(child: Text(e.name, style: text.bodyMedium)),
-                Text(
-                  setsSummary(e),
-                  style: text.labelMedium,
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// *Ver lo registrado*: the day's sessions in a panel.
-class _SessionsSheet {
-  static Future<void> show(
-      BuildContext context, DateTime day, List<WorkoutSession> sessions) {
-    final locale = Localizations.localeOf(context).toString();
-    return showPanel<void>(
-      context,
-      title: DateFormat.MMMMEEEEd(locale).format(day),
-      body: (_) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [for (final s in sessions) _SessionSummary(session: s)],
-      ),
     );
   }
 }

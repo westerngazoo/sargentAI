@@ -9,11 +9,23 @@ import '../domain/workout_session.dart';
 /// [workoutsProvider] via `AsyncValue.when`; the empty backlog shows the AC8
 /// empty state. Delete failures are owned by [SessionListController].
 class SessionList extends ConsumerWidget {
-  const SessionList({super.key});
+  const SessionList({super.key, this.day});
+
+  /// When set, only the sessions performed on this calendar day.
+  final DateTime? day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(workoutsProvider);
+    final sessions = ref.watch(workoutsProvider).whenData((all) {
+      final d = day;
+      if (d == null) return all;
+      return all
+          .where((s) =>
+              s.performedOn.year == d.year &&
+              s.performedOn.month == d.month &&
+              s.performedOn.day == d.day)
+          .toList();
+    });
     ref.listen(sessionListControllerProvider, (_, next) {
       final error = next.error;
       if (error != null) {
@@ -51,6 +63,9 @@ class SessionList extends ConsumerWidget {
               ),
             )
           : ListView.builder(
+              shrinkWrap: day != null,
+              physics:
+                  day != null ? const NeverScrollableScrollPhysics() : null,
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
               itemCount: list.length,
               itemBuilder: (_, i) => _SessionTile(session: list[i]),

@@ -134,4 +134,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get showWeek => 'Ver la semana';
+
+  @override
+  String get findYourProgram => 'Encuentra tu programa';
 }
