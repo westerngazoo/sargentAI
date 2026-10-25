@@ -36,6 +36,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
 import '../support/workout_fakes.dart';
@@ -84,7 +85,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: ProgramDetailScreen()),
+        child: localizedApp(home: const ProgramDetailScreen()),
       ),
     );
     await tester.pump();
@@ -117,7 +118,28 @@ void main() {
   testWidgets('AC9 program_detail_screen_shows_days_per_week', (tester) async {
     await pumpDetail(tester);
 
-    expect(find.textContaining('days/week'), findsAtLeastNWidgets(1));
+    expect(find.text(l10n.daysPerWeek(4)), findsOneWidget);
+    expect(find.text(l10n.minutesShort(45)), findsOneWidget);
+  });
+
+  // R-0061 AC11: the section headers and row labels speak the catalogue.
+  testWidgets('program_detail_screen_speaks_the_catalogue', (tester) async {
+    await pumpDetail(tester);
+
+    expect(find.text(l10n.yourProgram), findsOneWidget);
+    // The section header and the days-per-week row label share the key.
+    expect(find.text(l10n.training), findsNWidgets(2));
+    expect(find.text(l10n.split), findsOneWidget);
+    expect(find.text(l10n.targetPhysiqueCaps), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text(l10n.kcalPerDay),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text(l10n.nutrition), findsOneWidget);
+    expect(find.text(l10n.protein), findsOneWidget);
+    expect(find.text(l10n.grams(176)), findsOneWidget);
   });
 
   // AC9: detail screen shows intensity guidance from the program template.
@@ -176,7 +198,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: ProgramDetailScreen()),
+        child: localizedApp(home: const ProgramDetailScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -210,7 +232,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
+        child: localizedApp(
           initialRoute: '/',
           routes: {
             '/': (_) => const Scaffold(body: Text('home')),
@@ -245,20 +267,15 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: ProgramDetailScreen()),
+        child: localizedApp(home: const ProgramDetailScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    // Some form of "get your program" or "no program" message must appear.
-    final noProgram = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('program') ||
-              (w.data ?? '').toLowerCase().contains('match') ||
-              (w.data ?? '').toLowerCase().contains('get')),
-    );
-    expect(noProgram, findsAtLeastNWidgets(1));
+    // The provider surfaces the thrown 404 as an error, so the screen shows
+    // the could-not-load message with its retry action.
+    expect(find.text(l10n.couldNotLoadYourProgram), findsOneWidget);
+    expect(find.text(l10n.retry), findsOneWidget);
   });
 
   // -------------------------------------------------------------------------
@@ -283,7 +300,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: HomeShell()),
+        child: localizedApp(home: const HomeShell()),
       ),
     );
     await tester.pump();
@@ -344,7 +361,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -376,14 +393,9 @@ void main() {
     await pumpHome(tester);
     await tester.pumpAndSettle();
 
-    // The CTA text must appear — "Get your program" or equivalent.
-    final ctaFinder = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('get your program') ||
-              (w.data ?? '').toLowerCase().contains('get a program')),
-    );
-    expect(ctaFinder, findsAtLeastNWidgets(1));
+    // The CTA and its one-line explanation speak the catalogue.
+    expect(find.text(l10n.getYourProgram), findsOneWidget);
+    expect(find.text(l10n.takeAPhotoForPlan), findsOneWidget);
   });
 
   // AC8: tapping the "Get your program" CTA navigates toward the match flow.
@@ -420,7 +432,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -428,14 +440,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap the CTA.
-    final ctaFinder = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('get your program') ||
-              (w.data ?? '').toLowerCase().contains('get a program')),
-    );
-    expect(ctaFinder, findsAtLeastNWidgets(1));
-    await tester.tap(ctaFinder.first);
+    final ctaFinder = find.text(l10n.getYourProgram);
+    expect(ctaFinder, findsOneWidget);
+    await tester.tap(ctaFinder);
     await tester.pumpAndSettle();
 
     // Navigation toward the match/onboarding flow must have occurred.
@@ -469,7 +476,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: ProgramDetailScreen()),
+        child: localizedApp(home: const ProgramDetailScreen()),
       ),
     );
     await tester.pumpAndSettle();

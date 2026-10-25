@@ -14,6 +14,7 @@
 import 'dart:async';
 
 import 'package:fitai/src/program/models/synthetic_match.dart';
+import 'package:fitai/src/program/presentation/body_type_names.dart';
 import 'package:fitai/src/program/presentation/body_type_picker_screen.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../support/l10n.dart';
 import '../support/program_fakes.dart';
 
 void main() {
@@ -36,7 +38,7 @@ void main() {
         overrides: [
           programServiceProvider.overrideWithValue(programService),
         ],
-        child: const MaterialApp(home: BodyTypePickerScreen()),
+        child: localizedApp(home: const BodyTypePickerScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -47,7 +49,8 @@ void main() {
     await pumpPicker(tester);
 
     for (final shape in BodyShape.values) {
-      expect(find.text(shape.label), findsOneWidget);
+      expect(find.text(bodyShapeName(shape, l10n)), findsOneWidget);
+      expect(find.text(bodyShapeDescription(shape, l10n)), findsOneWidget);
     }
     // The three shape icons are present.
     expect(find.byIcon(Icons.straighten), findsOneWidget); // ectomorph
@@ -61,17 +64,18 @@ void main() {
     await pumpPicker(tester);
 
     // Before selection: no band section, no band labels.
-    expect(find.text('Body fat level'), findsNothing);
-    expect(find.text('Moderate'), findsNothing);
+    expect(find.text(l10n.bodyFatLevel), findsNothing);
+    expect(find.text(fatBandName(FatBand.moderate, l10n)), findsNothing);
 
     // Select a shape.
-    await tester.tap(find.text(BodyShape.mesomorph.label));
+    await tester.tap(find.text(bodyShapeName(BodyShape.mesomorph, l10n)));
     await tester.pumpAndSettle();
 
     // After selection: band section + all three bands visible, shape highlighted.
-    expect(find.text('Body fat level'), findsOneWidget);
+    expect(find.text(l10n.bodyFatLevel), findsOneWidget);
     for (final band in FatBand.values) {
-      expect(find.text(band.label), findsOneWidget);
+      expect(find.text(fatBandName(band, l10n)), findsOneWidget);
+      expect(find.text(fatBandDescription(band, l10n)), findsOneWidget);
     }
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
@@ -88,12 +92,12 @@ void main() {
     expect(confirmButton().onPressed, isNull);
 
     // Shape only → still disabled.
-    await tester.tap(find.text(BodyShape.mesomorph.label));
+    await tester.tap(find.text(bodyShapeName(BodyShape.mesomorph, l10n)));
     await tester.pumpAndSettle();
     expect(confirmButton().onPressed, isNull);
 
     // Shape + band → enabled.
-    await tester.tap(find.text(FatBand.moderate.label));
+    await tester.tap(find.text(fatBandName(FatBand.moderate, l10n)));
     await tester.pumpAndSettle();
     expect(confirmButton().onPressed, isNotNull);
   });
@@ -110,12 +114,13 @@ void main() {
 
     await pumpPicker(tester);
 
-    await tester.tap(find.text(BodyShape.endomorph.label));
+    await tester.tap(find.text(bodyShapeName(BodyShape.endomorph, l10n)));
     await tester.pumpAndSettle();
     // The last band chip can sit below the test fold — bring it into view.
-    await tester.ensureVisible(find.text(FatBand.bulky.label));
+    final bulky = find.text(fatBandName(FatBand.bulky, l10n));
+    await tester.ensureVisible(bulky);
     await tester.pumpAndSettle();
-    await tester.tap(find.text(FatBand.bulky.label));
+    await tester.tap(bulky);
     await tester.pumpAndSettle();
     // Tap the confirm button by type (robust against layout/fold changes).
     await tester.ensureVisible(find.byType(FilledButton));

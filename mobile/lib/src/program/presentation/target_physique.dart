@@ -4,20 +4,18 @@
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Physique shape parameters, 0..1 relative to the canvas.
+/// Physique shape parameters, 0..1 relative to the canvas. The name and the
+/// one-line blurb of each build are catalogue strings ([physiqueLabel],
+/// [physiqueBlurb]), keyed by the same archetype id.
 class PhysiqueParams {
   const PhysiqueParams({
     required this.shoulder,
     required this.waist,
     required this.muscularity,
-    required this.blurb,
-    this.label = 'Your target',
   });
-
-  /// Short human name, used to label this build in the comparison table.
-  final String label;
 
   /// Half-width of the shoulders (the V's top).
   final double shoulder;
@@ -28,67 +26,54 @@ class PhysiqueParams {
   /// Limb/muscle thickness 0.8 (lean) .. 1.25 (mass).
   final double muscularity;
 
-  /// One-line description of the target look.
-  final String blurb;
-
   double get taper => shoulder / waist;
 }
 
 /// Archetype id → target physique. Hand-authored to match each program's
 /// aesthetic (V-taper, mass, powerbuilder…).
 const Map<String, PhysiqueParams> _byArchetype = {
-  'classic-aesthetic-taper': PhysiqueParams(
-    label: 'Classic aesthetic',
-    shoulder: 0.40,
-    waist: 0.155,
-    muscularity: 1.0,
-    blurb: 'Wide shoulders, small waist — the golden-era X-frame.',
-  ),
-  'modern-precision-hypertrophy': PhysiqueParams(
-    label: 'Modern hypertrophy',
-    shoulder: 0.38,
-    waist: 0.17,
-    muscularity: 1.05,
-    blurb: 'Balanced, detailed, athletic — proportion over pure size.',
-  ),
-  'high-intensity-minimalist': PhysiqueParams(
-    label: 'Lean minimalist',
-    shoulder: 0.36,
-    waist: 0.175,
-    muscularity: 0.95,
-    blurb: 'Lean and hard — dense muscle, minimal excess.',
-  ),
-  'powerbuilder-leverage': PhysiqueParams(
-    label: 'Powerbuilder',
-    shoulder: 0.40,
-    waist: 0.225,
-    muscularity: 1.18,
-    blurb: 'Thick and powerful — a strongman-meets-bodybuilder build.',
-  ),
-  'heavy-duty-mass': PhysiqueParams(
-    label: 'Heavy-duty mass',
-    shoulder: 0.41,
-    waist: 0.215,
-    muscularity: 1.2,
-    blurb: 'Dense, heavy-duty mass — maximum muscle, blocky and strong.',
-  ),
-  'mass-monster-volume': PhysiqueParams(
-    label: 'Mass monster',
-    shoulder: 0.44,
-    waist: 0.24,
-    muscularity: 1.25,
-    blurb: 'Maximum size — the mass-monster silhouette.',
-  ),
+  'classic-aesthetic-taper':
+      PhysiqueParams(shoulder: 0.40, waist: 0.155, muscularity: 1.0),
+  'modern-precision-hypertrophy':
+      PhysiqueParams(shoulder: 0.38, waist: 0.17, muscularity: 1.05),
+  'high-intensity-minimalist':
+      PhysiqueParams(shoulder: 0.36, waist: 0.175, muscularity: 0.95),
+  'powerbuilder-leverage':
+      PhysiqueParams(shoulder: 0.40, waist: 0.225, muscularity: 1.18),
+  'heavy-duty-mass':
+      PhysiqueParams(shoulder: 0.41, waist: 0.215, muscularity: 1.2),
+  'mass-monster-volume':
+      PhysiqueParams(shoulder: 0.44, waist: 0.24, muscularity: 1.25),
 };
 
 PhysiqueParams physiqueFor(String archetypeId) =>
     _byArchetype[archetypeId] ??
-    const PhysiqueParams(
-      shoulder: 0.38,
-      waist: 0.18,
-      muscularity: 1.0,
-      blurb: 'Your program\'s target build.',
-    );
+    const PhysiqueParams(shoulder: 0.38, waist: 0.18, muscularity: 1.0);
+
+/// Short human name of a build, for the comparison table. The table only
+/// lists the ids in [_byArchetype], so an unknown id falls back to itself.
+String physiqueLabel(String archetypeId, AppLocalizations l10n) =>
+    switch (archetypeId) {
+      'classic-aesthetic-taper' => l10n.physiqueClassicAesthetic,
+      'modern-precision-hypertrophy' => l10n.physiqueModernHypertrophy,
+      'high-intensity-minimalist' => l10n.physiqueLeanMinimalist,
+      'powerbuilder-leverage' => l10n.physiquePowerbuilder,
+      'heavy-duty-mass' => l10n.physiqueHeavyDutyMass,
+      'mass-monster-volume' => l10n.physiqueMassMonster,
+      _ => archetypeId,
+    };
+
+/// One-line description of the target look.
+String physiqueBlurb(String archetypeId, AppLocalizations l10n) =>
+    switch (archetypeId) {
+      'classic-aesthetic-taper' => l10n.physiqueClassicAestheticBlurb,
+      'modern-precision-hypertrophy' => l10n.physiqueModernHypertrophyBlurb,
+      'high-intensity-minimalist' => l10n.physiqueLeanMinimalistBlurb,
+      'powerbuilder-leverage' => l10n.physiquePowerbuilderBlurb,
+      'heavy-duty-mass' => l10n.physiqueHeavyDutyMassBlurb,
+      'mass-monster-volume' => l10n.physiqueMassMonsterBlurb,
+      _ => l10n.physiqueDefaultBlurb,
+    };
 
 /// The hero "target physique" card for the program screen.
 class TargetPhysique extends StatelessWidget {
@@ -99,6 +84,7 @@ class TargetPhysique extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final p = physiqueFor(archetypeId);
     return Container(
       decoration: BoxDecoration(
@@ -120,7 +106,7 @@ class TargetPhysique extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TARGET PHYSIQUE',
+                  l10n.targetPhysiqueCaps,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         letterSpacing: 1.2,
                         fontWeight: FontWeight.w700,
@@ -128,7 +114,8 @@ class TargetPhysique extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 6),
-                Text(p.blurb, style: Theme.of(context).textTheme.bodyMedium),
+                Text(physiqueBlurb(archetypeId, l10n),
+                    style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
@@ -141,14 +128,16 @@ class TargetPhysique extends StatelessWidget {
                       onTap: () => showTaperTable(context, archetypeId),
                       borderRadius: BorderRadius.circular(999),
                       child: _tag(context, Icons.open_in_full,
-                          'Taper ${p.taper.toStringAsFixed(1)}:1  ⓘ'),
+                          l10n.taperTag(p.taper.toStringAsFixed(1))),
                     ),
                     _tag(
                       context,
                       Icons.fitness_center,
                       p.muscularity >= 1.15
-                          ? 'Mass'
-                          : (p.muscularity <= 0.97 ? 'Lean' : 'Balanced'),
+                          ? l10n.physiqueMass
+                          : (p.muscularity <= 0.97
+                              ? l10n.physiqueLean
+                              : l10n.physiqueBalanced),
                     ),
                   ],
                 ),
@@ -285,6 +274,7 @@ class _PhysiquePainter extends CustomPainter {
 /// the one job it can do honestly: rank these builds against each other.
 Future<void> showTaperTable(BuildContext context, String archetypeId) {
   final cs = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context);
   final rows = _byArchetype.entries.toList()
     ..sort((a, b) => b.value.taper.compareTo(a.value.taper));
 
@@ -298,13 +288,11 @@ Future<void> showTaperTable(BuildContext context, String archetypeId) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Taper by build',
+            Text(l10n.taperByBuild,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Shoulder-to-waist of the target silhouette. A higher number is '
-              'a more dramatic V. It compares these builds with each other — '
-              'it is not a measurement of your body.',
+              l10n.taperTableExplainer,
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -325,7 +313,7 @@ Future<void> showTaperTable(BuildContext context, String archetypeId) {
                     ),
                     Expanded(
                       child: Text(
-                        e.value.label,
+                        physiqueLabel(e.key, l10n),
                         style: TextStyle(
                           fontWeight: mine ? FontWeight.w700 : FontWeight.w400,
                           color: mine ? cs.primary : null,
@@ -346,7 +334,7 @@ Future<void> showTaperTable(BuildContext context, String archetypeId) {
                     SizedBox(
                       width: 46,
                       child: Text(
-                        '${e.value.taper.toStringAsFixed(1)}:1',
+                        l10n.taperRatio(e.value.taper.toStringAsFixed(1)),
                         textAlign: TextAlign.right,
                         style: TextStyle(
                           fontWeight: mine ? FontWeight.w700 : FontWeight.w400,

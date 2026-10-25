@@ -42,6 +42,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../support/l10n.dart';
 import '../../support/profile_fakes.dart';
 import '../../support/program_fakes.dart';
 import '../../support/voice_fakes.dart';
@@ -155,10 +156,11 @@ void main() {
           ),
         ],
       );
+      // The shell hosts the program card, which reads the catalogue.
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: localizedRouterApp(router),
         ),
       );
       await tester.pump();

@@ -26,5 +26,242 @@
   "useAtLeast8Characters": "Usa al menos 8 caracteres.",
   "passwordUpdated": "Contraseña actualizada. Entra con ella.",
   "linkNoLongerValid": "Este link ya no sirve. Los links vencen a los 30 minutos y solo sirven una vez.",
-  "requestANewLink": "Pedir otro link"
+  "requestANewLink": "Pedir otro link",
+  "setUpYourProfile": "Configura tu perfil",
+  "onboardingMissingBodyStats": "Pon tu fecha de nacimiento, estatura y peso para seguir.",
+  "onboardingMissingGoals": "Elige al menos un objetivo para seguir.",
+  "back": "Atrás",
+  "next": "Siguiente",
+  "finish": "Terminar",
+  "completeYourProfilePrompt": "Completa tu perfil para personalizar tu entrenamiento.",
+  "getStarted": "Empezar",
+  "dismiss": "Cerrar",
+  "@dismiss": {
+    "description": "Tooltip of the X that hides the complete-your-profile banner."
+  },
+  "aboutYou": "Sobre ti",
+  "dateOfBirthLabel": "Fecha de nacimiento",
+  "notSet": "Sin elegir",
+  "@notSet": {
+    "description": "Shown in the date-of-birth field before a date is picked."
+  },
+  "choose": "Elegir",
+  "heightCmLabel": "Estatura (cm)",
+  "weightKgLabel": "Peso (kg)",
+  "dobMissing": "pon tu fecha de nacimiento",
+  "dobInFuture": "la fecha de nacimiento no puede ser futura",
+  "ageOutOfRange": "la edad debe estar entre {min} y {max}",
+  "@ageOutOfRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "heightMissing": "pon tu estatura",
+  "heightOutOfRange": "la estatura debe estar entre {min} y {max} cm",
+  "@heightOutOfRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "weightMissing": "pon tu peso",
+  "weightOutOfRange": "el peso debe estar entre {min} y {max} kg",
+  "@weightOutOfRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "bodyFatOutOfRange": "la grasa corporal debe estar entre {min} y {max} %",
+  "@bodyFatOutOfRange": {
+    "placeholders": {
+      "min": {"type": "num"},
+      "max": {"type": "num"}
+    }
+  },
+  "yourGoals": "Tus objetivos",
+  "pickAtLeastOne": "Elige al menos uno.",
+  "goalLoseFat": "Bajar grasa",
+  "goalBuildMuscle": "Ganar músculo",
+  "goalRecomp": "Recomposición",
+  "goalMaintain": "Mantener",
+  "goalGainStrength": "Ganar fuerza",
+  "optionalDetails": "Datos opcionales",
+  "youCanSkipThese": "Estos te los puedes saltar.",
+  "sexMale": "Hombre",
+  "sexFemale": "Mujer",
+  "clear": "Quitar",
+  "bodyFatOptionalLabel": "% de grasa corporal (opcional)",
+  "chooseYourBodyType": "Elige tu tipo de cuerpo",
+  "bodyShape": "Complexión",
+  "bodyFatLevel": "Nivel de grasa corporal",
+  "findMyProgram": "Buscar mi programa",
+  "bodyShapeEctomorph": "Delgado y estrecho",
+  "bodyShapeMesomorph": "Atlético y ancho",
+  "bodyShapeEndomorph": "Robusto y macizo",
+  "bodyShapeEctomorphDescription": "Cuerpo delgado, hombros angostos, extremidades largas, poca masa.",
+  "bodyShapeMesomorphDescription": "Hombros anchos, cuerpo musculoso, responde bien al entrenamiento.",
+  "bodyShapeEndomorphDescription": "Cuerpo robusto, cintura ancha, tiende a cargar más masa.",
+  "fatBandLean": "Definido",
+  "fatBandModerate": "Intermedio",
+  "fatBandBulky": "Voluminoso",
+  "fatBandLeanDescription": "Músculo visible y definido",
+  "fatBandModerateDescription": "Algo de definición, grasa moderada",
+  "fatBandBulkyDescription": "Más grasa corporal, aspecto lleno",
+  "yourProgram": "Tu programa",
+  "couldNotLoadYourProgram": "No se pudo cargar tu programa",
+  "retry": "Reintentar",
+  "noProgramYet": "Todavía no tienes programa",
+  "training": "Entrenamiento",
+  "split": "Split",
+  "@split": {
+    "description": "Row label: how the training days divide the body. Lifters use the English word."
+  },
+  "daysPerWeek": "{n} días/semana",
+  "@daysPerWeek": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "sessionDuration": "Duración de la sesión",
+  "minutesShort": "{n} min",
+  "@minutesShort": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "intensity": "Intensidad",
+  "rest": "Descanso",
+  "progression": "Progresión",
+  "highlightExercises": "Ejercicios clave",
+  "nutrition": "Alimentación",
+  "approach": "Enfoque",
+  "strategy": "Estrategia",
+  "meals": "Comidas",
+  "protein": "Proteína",
+  "carbs": "Carbos",
+  "fat": "Grasa",
+  "grams": "{n} g",
+  "@grams": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "kcalPerDay": "kcal / día",
+  "yourProgramCaps": "TU PROGRAMA",
+  "@yourProgramCaps": {
+    "description": "Eyebrow label on the home program card, set in capitals."
+  },
+  "kcalShort": "{n} kcal",
+  "@kcalShort": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "doneOfTarget": "{done}/{target}",
+  "@doneOfTarget": {
+    "description": "Centre of the progress ring: training days done over the weekly target.",
+    "placeholders": {
+      "done": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+  "getYourProgram": "Consigue tu programa",
+  "takeAPhotoForPlan": "Tómate una foto y recibe un plan a tu medida",
+  "targetPhysiqueCaps": "FÍSICO OBJETIVO",
+  "@targetPhysiqueCaps": {
+    "description": "Eyebrow label on the target-physique card, set in capitals."
+  },
+  "physiqueClassicAesthetic": "Estética clásica",
+  "physiqueModernHypertrophy": "Hipertrofia moderna",
+  "physiqueLeanMinimalist": "Minimalista definido",
+  "physiquePowerbuilder": "Powerbuilder",
+  "physiqueHeavyDutyMass": "Masa heavy-duty",
+  "physiqueMassMonster": "Mass monster",
+  "physiqueClassicAestheticBlurb": "Hombros anchos, cintura chica: la X de la era dorada.",
+  "physiqueModernHypertrophyBlurb": "Equilibrado, detallado, atlético: proporción antes que puro tamaño.",
+  "physiqueLeanMinimalistBlurb": "Seco y duro: músculo denso, sin exceso.",
+  "physiquePowerbuilderBlurb": "Grueso y potente: mezcla de strongman y fisicoculturista.",
+  "physiqueHeavyDutyMassBlurb": "Masa densa heavy-duty: máximo músculo, cuadrado y fuerte.",
+  "physiqueMassMonsterBlurb": "Tamaño máximo: la silueta del mass monster.",
+  "physiqueDefaultBlurb": "El físico al que apunta tu programa.",
+  "taperTag": "Taper {ratio}:1  ⓘ",
+  "@taperTag": {
+    "description": "Tappable tag; ratio is the shoulder-to-waist figure already formatted (e.g. 2.6).",
+    "placeholders": {
+      "ratio": {"type": "String"}
+    }
+  },
+  "physiqueMass": "Masa",
+  "physiqueLean": "Definido",
+  "physiqueBalanced": "Equilibrado",
+  "taperByBuild": "Taper por físico",
+  "taperTableExplainer": "Relación hombros-cintura de la silueta objetivo. Un número mayor es una V más marcada. Compara estos físicos entre sí; no es una medida de tu cuerpo.",
+  "taperRatio": "{ratio}:1",
+  "@taperRatio": {
+    "placeholders": {
+      "ratio": {"type": "String"}
+    }
+  },
+  "thisWeekCaps": "ESTA SEMANA",
+  "@thisWeekCaps": {
+    "description": "Eyebrow label on the weekly progress card, set in capitals."
+  },
+  "daysOfTarget": "{done} de {target} días",
+  "@daysOfTarget": {
+    "placeholders": {
+      "done": {"type": "int"},
+      "target": {"type": "int"}
+    }
+  },
+  "sessionsLoggedOnProgram": "{count, plural, =1{1 sesión registrada en este programa} other{{count} sesiones registradas en este programa}}",
+  "@sessionsLoggedOnProgram": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "targetMet": "Meta cumplida",
+  "percent": "{n}%",
+  "@percent": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "chooseYourProgram": "Elige tu programa",
+  "couldNotLoadProposals": "No se pudieron cargar las propuestas",
+  "rankBestMatch": "Mejor opción",
+  "@rankBestMatch": {
+    "description": "Chip on the first of the three proposed programs."
+  },
+  "rankCloseMatch": "Opción cercana",
+  "rankGoodOption": "Buena opción",
+  "proposalSummaryLine": "{days} días/semana · {kcal} kcal/día",
+  "@proposalSummaryLine": {
+    "placeholders": {
+      "days": {"type": "int"},
+      "kcal": {"type": "int"}
+    }
+  },
+  "intensityLine": "Intensidad: {value}",
+  "@intensityLine": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "restLine": "Descanso: {value}",
+  "@restLine": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "progressionLine": "Progresión: {value}",
+  "@progressionLine": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "chooseThisProgram": "Elegir este programa",
+  "selectionNoLongerAvailable": "Esa opción ya no está disponible. Vuelve a cargar.",
+  "couldNotChooseProgram": "No se pudo elegir el programa. Inténtalo de nuevo."
 }

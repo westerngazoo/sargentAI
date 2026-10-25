@@ -241,6 +241,708 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pedir otro link'**
   String get requestANewLink;
+
+  /// No description provided for @setUpYourProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Configura tu perfil'**
+  String get setUpYourProfile;
+
+  /// No description provided for @onboardingMissingBodyStats.
+  ///
+  /// In es, this message translates to:
+  /// **'Pon tu fecha de nacimiento, estatura y peso para seguir.'**
+  String get onboardingMissingBodyStats;
+
+  /// No description provided for @onboardingMissingGoals.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige al menos un objetivo para seguir.'**
+  String get onboardingMissingGoals;
+
+  /// No description provided for @back.
+  ///
+  /// In es, this message translates to:
+  /// **'Atrás'**
+  String get back;
+
+  /// No description provided for @next.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get next;
+
+  /// No description provided for @finish.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get finish;
+
+  /// No description provided for @completeYourProfilePrompt.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa tu perfil para personalizar tu entrenamiento.'**
+  String get completeYourProfilePrompt;
+
+  /// No description provided for @getStarted.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get getStarted;
+
+  /// Tooltip of the X that hides the complete-your-profile banner.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar'**
+  String get dismiss;
+
+  /// No description provided for @aboutYou.
+  ///
+  /// In es, this message translates to:
+  /// **'Sobre ti'**
+  String get aboutYou;
+
+  /// No description provided for @dateOfBirthLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de nacimiento'**
+  String get dateOfBirthLabel;
+
+  /// Shown in the date-of-birth field before a date is picked.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin elegir'**
+  String get notSet;
+
+  /// No description provided for @choose.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir'**
+  String get choose;
+
+  /// No description provided for @heightCmLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Estatura (cm)'**
+  String get heightCmLabel;
+
+  /// No description provided for @weightKgLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso (kg)'**
+  String get weightKgLabel;
+
+  /// No description provided for @dobMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'pon tu fecha de nacimiento'**
+  String get dobMissing;
+
+  /// No description provided for @dobInFuture.
+  ///
+  /// In es, this message translates to:
+  /// **'la fecha de nacimiento no puede ser futura'**
+  String get dobInFuture;
+
+  /// No description provided for @ageOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'la edad debe estar entre {min} y {max}'**
+  String ageOutOfRange(int min, int max);
+
+  /// No description provided for @heightMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'pon tu estatura'**
+  String get heightMissing;
+
+  /// No description provided for @heightOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'la estatura debe estar entre {min} y {max} cm'**
+  String heightOutOfRange(int min, int max);
+
+  /// No description provided for @weightMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'pon tu peso'**
+  String get weightMissing;
+
+  /// No description provided for @weightOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'el peso debe estar entre {min} y {max} kg'**
+  String weightOutOfRange(int min, int max);
+
+  /// No description provided for @bodyFatOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'la grasa corporal debe estar entre {min} y {max} %'**
+  String bodyFatOutOfRange(num min, num max);
+
+  /// No description provided for @yourGoals.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus objetivos'**
+  String get yourGoals;
+
+  /// No description provided for @pickAtLeastOne.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige al menos uno.'**
+  String get pickAtLeastOne;
+
+  /// No description provided for @goalLoseFat.
+  ///
+  /// In es, this message translates to:
+  /// **'Bajar grasa'**
+  String get goalLoseFat;
+
+  /// No description provided for @goalBuildMuscle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ganar músculo'**
+  String get goalBuildMuscle;
+
+  /// No description provided for @goalRecomp.
+  ///
+  /// In es, this message translates to:
+  /// **'Recomposición'**
+  String get goalRecomp;
+
+  /// No description provided for @goalMaintain.
+  ///
+  /// In es, this message translates to:
+  /// **'Mantener'**
+  String get goalMaintain;
+
+  /// No description provided for @goalGainStrength.
+  ///
+  /// In es, this message translates to:
+  /// **'Ganar fuerza'**
+  String get goalGainStrength;
+
+  /// No description provided for @optionalDetails.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos opcionales'**
+  String get optionalDetails;
+
+  /// No description provided for @youCanSkipThese.
+  ///
+  /// In es, this message translates to:
+  /// **'Estos te los puedes saltar.'**
+  String get youCanSkipThese;
+
+  /// No description provided for @sexMale.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombre'**
+  String get sexMale;
+
+  /// No description provided for @sexFemale.
+  ///
+  /// In es, this message translates to:
+  /// **'Mujer'**
+  String get sexFemale;
+
+  /// No description provided for @clear.
+  ///
+  /// In es, this message translates to:
+  /// **'Quitar'**
+  String get clear;
+
+  /// No description provided for @bodyFatOptionalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'% de grasa corporal (opcional)'**
+  String get bodyFatOptionalLabel;
+
+  /// No description provided for @chooseYourBodyType.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige tu tipo de cuerpo'**
+  String get chooseYourBodyType;
+
+  /// No description provided for @bodyShape.
+  ///
+  /// In es, this message translates to:
+  /// **'Complexión'**
+  String get bodyShape;
+
+  /// No description provided for @bodyFatLevel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nivel de grasa corporal'**
+  String get bodyFatLevel;
+
+  /// No description provided for @findMyProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar mi programa'**
+  String get findMyProgram;
+
+  /// No description provided for @bodyShapeEctomorph.
+  ///
+  /// In es, this message translates to:
+  /// **'Delgado y estrecho'**
+  String get bodyShapeEctomorph;
+
+  /// No description provided for @bodyShapeMesomorph.
+  ///
+  /// In es, this message translates to:
+  /// **'Atlético y ancho'**
+  String get bodyShapeMesomorph;
+
+  /// No description provided for @bodyShapeEndomorph.
+  ///
+  /// In es, this message translates to:
+  /// **'Robusto y macizo'**
+  String get bodyShapeEndomorph;
+
+  /// No description provided for @bodyShapeEctomorphDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuerpo delgado, hombros angostos, extremidades largas, poca masa.'**
+  String get bodyShapeEctomorphDescription;
+
+  /// No description provided for @bodyShapeMesomorphDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombros anchos, cuerpo musculoso, responde bien al entrenamiento.'**
+  String get bodyShapeMesomorphDescription;
+
+  /// No description provided for @bodyShapeEndomorphDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuerpo robusto, cintura ancha, tiende a cargar más masa.'**
+  String get bodyShapeEndomorphDescription;
+
+  /// No description provided for @fatBandLean.
+  ///
+  /// In es, this message translates to:
+  /// **'Definido'**
+  String get fatBandLean;
+
+  /// No description provided for @fatBandModerate.
+  ///
+  /// In es, this message translates to:
+  /// **'Intermedio'**
+  String get fatBandModerate;
+
+  /// No description provided for @fatBandBulky.
+  ///
+  /// In es, this message translates to:
+  /// **'Voluminoso'**
+  String get fatBandBulky;
+
+  /// No description provided for @fatBandLeanDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Músculo visible y definido'**
+  String get fatBandLeanDescription;
+
+  /// No description provided for @fatBandModerateDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo de definición, grasa moderada'**
+  String get fatBandModerateDescription;
+
+  /// No description provided for @fatBandBulkyDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Más grasa corporal, aspecto lleno'**
+  String get fatBandBulkyDescription;
+
+  /// No description provided for @yourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu programa'**
+  String get yourProgram;
+
+  /// No description provided for @couldNotLoadYourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar tu programa'**
+  String get couldNotLoadYourProgram;
+
+  /// No description provided for @retry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get retry;
+
+  /// No description provided for @noProgramYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no tienes programa'**
+  String get noProgramYet;
+
+  /// No description provided for @training.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento'**
+  String get training;
+
+  /// Row label: how the training days divide the body. Lifters use the English word.
+  ///
+  /// In es, this message translates to:
+  /// **'Split'**
+  String get split;
+
+  /// No description provided for @daysPerWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} días/semana'**
+  String daysPerWeek(int n);
+
+  /// No description provided for @sessionDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración de la sesión'**
+  String get sessionDuration;
+
+  /// No description provided for @minutesShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} min'**
+  String minutesShort(int n);
+
+  /// No description provided for @intensity.
+  ///
+  /// In es, this message translates to:
+  /// **'Intensidad'**
+  String get intensity;
+
+  /// No description provided for @rest.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso'**
+  String get rest;
+
+  /// No description provided for @progression.
+  ///
+  /// In es, this message translates to:
+  /// **'Progresión'**
+  String get progression;
+
+  /// No description provided for @highlightExercises.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicios clave'**
+  String get highlightExercises;
+
+  /// No description provided for @nutrition.
+  ///
+  /// In es, this message translates to:
+  /// **'Alimentación'**
+  String get nutrition;
+
+  /// No description provided for @approach.
+  ///
+  /// In es, this message translates to:
+  /// **'Enfoque'**
+  String get approach;
+
+  /// No description provided for @strategy.
+  ///
+  /// In es, this message translates to:
+  /// **'Estrategia'**
+  String get strategy;
+
+  /// No description provided for @meals.
+  ///
+  /// In es, this message translates to:
+  /// **'Comidas'**
+  String get meals;
+
+  /// No description provided for @protein.
+  ///
+  /// In es, this message translates to:
+  /// **'Proteína'**
+  String get protein;
+
+  /// No description provided for @carbs.
+  ///
+  /// In es, this message translates to:
+  /// **'Carbos'**
+  String get carbs;
+
+  /// No description provided for @fat.
+  ///
+  /// In es, this message translates to:
+  /// **'Grasa'**
+  String get fat;
+
+  /// No description provided for @grams.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} g'**
+  String grams(int n);
+
+  /// No description provided for @kcalPerDay.
+  ///
+  /// In es, this message translates to:
+  /// **'kcal / día'**
+  String get kcalPerDay;
+
+  /// Eyebrow label on the home program card, set in capitals.
+  ///
+  /// In es, this message translates to:
+  /// **'TU PROGRAMA'**
+  String get yourProgramCaps;
+
+  /// No description provided for @kcalShort.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} kcal'**
+  String kcalShort(int n);
+
+  /// Centre of the progress ring: training days done over the weekly target.
+  ///
+  /// In es, this message translates to:
+  /// **'{done}/{target}'**
+  String doneOfTarget(int done, int target);
+
+  /// No description provided for @getYourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Consigue tu programa'**
+  String get getYourProgram;
+
+  /// No description provided for @takeAPhotoForPlan.
+  ///
+  /// In es, this message translates to:
+  /// **'Tómate una foto y recibe un plan a tu medida'**
+  String get takeAPhotoForPlan;
+
+  /// Eyebrow label on the target-physique card, set in capitals.
+  ///
+  /// In es, this message translates to:
+  /// **'FÍSICO OBJETIVO'**
+  String get targetPhysiqueCaps;
+
+  /// No description provided for @physiqueClassicAesthetic.
+  ///
+  /// In es, this message translates to:
+  /// **'Estética clásica'**
+  String get physiqueClassicAesthetic;
+
+  /// No description provided for @physiqueModernHypertrophy.
+  ///
+  /// In es, this message translates to:
+  /// **'Hipertrofia moderna'**
+  String get physiqueModernHypertrophy;
+
+  /// No description provided for @physiqueLeanMinimalist.
+  ///
+  /// In es, this message translates to:
+  /// **'Minimalista definido'**
+  String get physiqueLeanMinimalist;
+
+  /// No description provided for @physiquePowerbuilder.
+  ///
+  /// In es, this message translates to:
+  /// **'Powerbuilder'**
+  String get physiquePowerbuilder;
+
+  /// No description provided for @physiqueHeavyDutyMass.
+  ///
+  /// In es, this message translates to:
+  /// **'Masa heavy-duty'**
+  String get physiqueHeavyDutyMass;
+
+  /// No description provided for @physiqueMassMonster.
+  ///
+  /// In es, this message translates to:
+  /// **'Mass monster'**
+  String get physiqueMassMonster;
+
+  /// No description provided for @physiqueClassicAestheticBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombros anchos, cintura chica: la X de la era dorada.'**
+  String get physiqueClassicAestheticBlurb;
+
+  /// No description provided for @physiqueModernHypertrophyBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Equilibrado, detallado, atlético: proporción antes que puro tamaño.'**
+  String get physiqueModernHypertrophyBlurb;
+
+  /// No description provided for @physiqueLeanMinimalistBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Seco y duro: músculo denso, sin exceso.'**
+  String get physiqueLeanMinimalistBlurb;
+
+  /// No description provided for @physiquePowerbuilderBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Grueso y potente: mezcla de strongman y fisicoculturista.'**
+  String get physiquePowerbuilderBlurb;
+
+  /// No description provided for @physiqueHeavyDutyMassBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Masa densa heavy-duty: máximo músculo, cuadrado y fuerte.'**
+  String get physiqueHeavyDutyMassBlurb;
+
+  /// No description provided for @physiqueMassMonsterBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'Tamaño máximo: la silueta del mass monster.'**
+  String get physiqueMassMonsterBlurb;
+
+  /// No description provided for @physiqueDefaultBlurb.
+  ///
+  /// In es, this message translates to:
+  /// **'El físico al que apunta tu programa.'**
+  String get physiqueDefaultBlurb;
+
+  /// Tappable tag; ratio is the shoulder-to-waist figure already formatted (e.g. 2.6).
+  ///
+  /// In es, this message translates to:
+  /// **'Taper {ratio}:1  ⓘ'**
+  String taperTag(String ratio);
+
+  /// No description provided for @physiqueMass.
+  ///
+  /// In es, this message translates to:
+  /// **'Masa'**
+  String get physiqueMass;
+
+  /// No description provided for @physiqueLean.
+  ///
+  /// In es, this message translates to:
+  /// **'Definido'**
+  String get physiqueLean;
+
+  /// No description provided for @physiqueBalanced.
+  ///
+  /// In es, this message translates to:
+  /// **'Equilibrado'**
+  String get physiqueBalanced;
+
+  /// No description provided for @taperByBuild.
+  ///
+  /// In es, this message translates to:
+  /// **'Taper por físico'**
+  String get taperByBuild;
+
+  /// No description provided for @taperTableExplainer.
+  ///
+  /// In es, this message translates to:
+  /// **'Relación hombros-cintura de la silueta objetivo. Un número mayor es una V más marcada. Compara estos físicos entre sí; no es una medida de tu cuerpo.'**
+  String get taperTableExplainer;
+
+  /// No description provided for @taperRatio.
+  ///
+  /// In es, this message translates to:
+  /// **'{ratio}:1'**
+  String taperRatio(String ratio);
+
+  /// Eyebrow label on the weekly progress card, set in capitals.
+  ///
+  /// In es, this message translates to:
+  /// **'ESTA SEMANA'**
+  String get thisWeekCaps;
+
+  /// No description provided for @daysOfTarget.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {target} días'**
+  String daysOfTarget(int done, int target);
+
+  /// No description provided for @sessionsLoggedOnProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 sesión registrada en este programa} other{{count} sesiones registradas en este programa}}'**
+  String sessionsLoggedOnProgram(int count);
+
+  /// No description provided for @targetMet.
+  ///
+  /// In es, this message translates to:
+  /// **'Meta cumplida'**
+  String get targetMet;
+
+  /// No description provided for @percent.
+  ///
+  /// In es, this message translates to:
+  /// **'{n}%'**
+  String percent(int n);
+
+  /// No description provided for @chooseYourProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige tu programa'**
+  String get chooseYourProgram;
+
+  /// No description provided for @couldNotLoadProposals.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las propuestas'**
+  String get couldNotLoadProposals;
+
+  /// Chip on the first of the three proposed programs.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejor opción'**
+  String get rankBestMatch;
+
+  /// No description provided for @rankCloseMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Opción cercana'**
+  String get rankCloseMatch;
+
+  /// No description provided for @rankGoodOption.
+  ///
+  /// In es, this message translates to:
+  /// **'Buena opción'**
+  String get rankGoodOption;
+
+  /// No description provided for @proposalSummaryLine.
+  ///
+  /// In es, this message translates to:
+  /// **'{days} días/semana · {kcal} kcal/día'**
+  String proposalSummaryLine(int days, int kcal);
+
+  /// No description provided for @intensityLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Intensidad: {value}'**
+  String intensityLine(String value);
+
+  /// No description provided for @restLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso: {value}'**
+  String restLine(String value);
+
+  /// No description provided for @progressionLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Progresión: {value}'**
+  String progressionLine(String value);
+
+  /// No description provided for @chooseThisProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir este programa'**
+  String get chooseThisProgram;
+
+  /// No description provided for @selectionNoLongerAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa opción ya no está disponible. Vuelve a cargar.'**
+  String get selectionNoLongerAvailable;
+
+  /// No description provided for @couldNotChooseProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo elegir el programa. Inténtalo de nuevo.'**
+  String get couldNotChooseProgram;
 }
 
 class _AppLocalizationsDelegate
