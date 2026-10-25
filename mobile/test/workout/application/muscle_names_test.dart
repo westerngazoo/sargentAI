@@ -33,4 +33,22 @@ void main() {
     );
     expect(targetLabel(activationFor('Mystery movement'), l10n), isEmpty);
   });
+
+  test('focusName names a plan day by its focus, never by a lift (SPEC-0061)',
+      () {
+    expect(focusName([MuscleGroup.legs], l10n), l10n.muscleLegs);
+    expect(
+      focusName([MuscleGroup.chest, MuscleGroup.arms], l10n),
+      l10n.listAnd(l10n.muscleChest, l10n.muscleArms.toLowerCase()),
+    );
+    expect(
+      focusName(
+          [MuscleGroup.back, MuscleGroup.shoulders, MuscleGroup.core], l10n),
+      l10n.listAnd(
+        '${l10n.muscleBack}, ${l10n.muscleShoulders.toLowerCase()}',
+        l10n.muscleCore.toLowerCase(),
+      ),
+    );
+    expect(focusName(const [], l10n), isEmpty);
+  });
 }

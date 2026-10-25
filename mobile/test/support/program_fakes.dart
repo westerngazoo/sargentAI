@@ -15,6 +15,7 @@
 //   application/program_providers.dart         -> currentProgramProvider
 
 import 'package:fitai/src/program/models/program_proposal.dart';
+import 'package:fitai/src/program/models/schedule.dart';
 import 'package:fitai/src/program/models/user_program.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -163,9 +164,85 @@ UserProgram sampleUserProgram({
       active: active,
     ));
 
+// ---------------------------------------------------------------------------
+// GET /programs/me/schedule (SPEC-0061 §2.4, slice 2d)
+// ---------------------------------------------------------------------------
+
+/// A `training` cycle entry.
+Map<String, dynamic> trainingDayJson({
+  List<String> focus = const ['legs'],
+  List<String> exercises = const ['Back Squat', 'Leg Press'],
+}) =>
+    <String, dynamic>{
+      'kind': 'training',
+      'focus': focus,
+      'exercises': exercises,
+    };
+
+/// A `rest` cycle entry.
+const Map<String, dynamic> restDayJson = {'kind': 'rest'};
+
+/// One `days[]` entry: the date next to the state's own tagged fields, as
+/// serde's `#[serde(flatten)]` writes it. `pending` is always present on a
+/// `done` or `nothing` day (serde `None` → `null`).
+Map<String, dynamic> dayJson(
+  String date, {
+  required String state,
+  List<int>? completed,
+  int? pending,
+  int? cycleIndex,
+}) =>
+    <String, dynamic>{
+      'date': date,
+      'state': state,
+      if (completed != null) 'completed': completed,
+      if (state == 'done' || state == 'nothing') 'pending': pending,
+      if (cycleIndex != null) 'cycle_index': cycleIndex,
+    };
+
+/// A `ScheduleResponse`-shaped JSON map. A null [programId] is the
+/// no-program response: empty cycle, days from the logs alone.
+Map<String, dynamic> scheduleJson({
+  String? programId = 'prog-uuid-001',
+  String? startsOn = '2026-10-20',
+  List<Map<String, dynamic>>? cycle,
+  List<Map<String, dynamic>> days = const [],
+  Map<String, List<String>> sessionIds = const {},
+}) =>
+    <String, dynamic>{
+      'program_id': programId,
+      'starts_on': programId == null ? null : startsOn,
+      'cycle': cycle ??
+          (programId == null
+              ? const <Map<String, dynamic>>[]
+              : [
+                  trainingDayJson(
+                      focus: ['chest', 'arms'],
+                      exercises: ['Bench Press', 'Barbell Curl']),
+                  trainingDayJson(),
+                  restDayJson,
+                ]),
+      'days': days,
+      'session_ids': sessionIds,
+    };
+
+/// Parsed [Schedule] convenience builder over [scheduleJson].
+Schedule sampleSchedule({
+  List<Map<String, dynamic>> days = const [],
+  String? programId = 'prog-uuid-001',
+}) =>
+    Schedule.fromJson(scheduleJson(days: days, programId: programId));
+
+/// The `getSchedule` stub for any range, so a test says only what comes back.
+When<Future<Schedule>> whenGetSchedule(MockProgramService service) =>
+    when(() => service.getSchedule(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+          today: any(named: 'today'),
+        ));
+
 /// Registers mocktail fallbacks for non-primitive types used in `when()`/
 /// `thenAnswer()` calls in the program test suite.
 void registerProgramFallbacks() {
-  // No non-primitive argument types needed for the current stubs;
-  // extend here if a future stub requires `registerFallbackValue`.
+  registerFallbackValue(DateTime(2000)); // getSchedule's named date args
 }

@@ -8,6 +8,7 @@
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/program/application/program_providers.dart';
+import 'package:fitai/src/program/application/schedule_provider.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/workouts_provider.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
@@ -79,6 +80,19 @@ void main() {
     container.read(userId.notifier).state = 'user-b';
     await container.read(profileProvider.future);
     verify(() => profileRepo.getMe()).called(1);
+  });
+
+  test('scheduleProvider refetches when the user changes', () async {
+    whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule());
+    final range = DateRange(DateTime(2026, 10, 1), DateTime(2026, 10, 31));
+    await container.read(scheduleProvider(range).future);
+    container.read(userId.notifier).state = 'user-b';
+    await container.read(scheduleProvider(range).future);
+    verify(() => programService.getSchedule(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+          today: any(named: 'today'),
+        )).called(2);
   });
 
   test('same user does NOT refetch (cache preserved)', () async {

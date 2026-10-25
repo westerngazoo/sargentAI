@@ -48,6 +48,8 @@ void main() {
     tokenStore = MockTokenStore();
     repo = MockAuthRepository();
     programService = MockProgramService();
+    // The weekly card's target now reads the schedule (SPEC-0061 N6).
+    whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule());
     when(() => tokenStore.read())
         .thenAnswer((_) async => sampleToken(userId: 'u-1'));
     when(() => tokenStore.clear()).thenAnswer((_) async {});

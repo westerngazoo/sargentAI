@@ -1,20 +1,27 @@
-// R-0061 AC1, AC4, AC5, AC7, AC13 -> SPEC-0061 §2.5 (slice 1f): the one
-// screen, its calendar from the logs, the selected day's one action, the
-// few controls, the liveness probe and the onboarding prompt that moved here
-// from HomeShell, and the two sizes.
+// R-0061 AC1, AC4, AC5, AC7, AC13 -> SPEC-0061 §2.5 (slices 1f and 2d): the
+// one screen, its calendar from the schedule (and from the logs alone while
+// the schedule loads or fails), the selected day's one action and its
+// secondary one, the few controls, the liveness probe and the onboarding
+// prompt that moved here from HomeShell, and the two sizes.
+
+import 'dart:async';
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
+import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/home/calendar.dart';
 import 'package:fitai/src/home/main_screen.dart';
 import 'package:fitai/src/home/selected_day.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
+import 'package:fitai/src/program/models/schedule.dart';
+import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +30,7 @@ import 'package:mocktail/mocktail.dart';
 import '../support/fakes.dart';
 import '../support/l10n.dart';
 import '../support/profile_fakes.dart';
+import '../support/program_fakes.dart';
 import '../support/workout_fakes.dart';
 
 const phone = Size(390, 844);
@@ -33,16 +41,28 @@ void main() {
     registerFallbacks();
     registerProfileFallbacks();
     registerWorkoutFallbacks();
+    registerProgramFallbacks();
   });
 
   late MockTokenStore tokenStore;
   late MockAuthRepository repo;
   late MockProfileRepository profileRepo;
   late MockWorkoutRepository workoutRepo;
+  late MockProgramService programService;
 
   final today =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   final yesterday = today.subtract(const Duration(days: 1));
+  final tomorrow = DateTime(today.year, today.month, today.day + 1);
+
+  /// The cycle is [chest+arms, legs, rest] (`scheduleJson`). Yesterday
+  /// completed day 0, today is legs, tomorrow rests; every other day is
+  /// absent, so the screen falls back to the logs for it.
+  Schedule schedule() => sampleSchedule(days: [
+        dayJson(isoDate(yesterday), state: 'done', completed: [0]),
+        dayJson(isoDate(today), state: 'planned', cycleIndex: 1),
+        dayJson(isoDate(tomorrow), state: 'rest', cycleIndex: 2),
+      ]);
 
   WorkoutSession session(DateTime on) => WorkoutSession(
         id: 's-${on.day}',
@@ -58,6 +78,7 @@ void main() {
     repo = MockAuthRepository();
     profileRepo = MockProfileRepository();
     workoutRepo = MockWorkoutRepository();
+    programService = MockProgramService();
     when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
@@ -65,6 +86,7 @@ void main() {
     when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
     when(() => workoutRepo.list())
         .thenAnswer((_) async => [session(yesterday)]);
+    whenGetSchedule(programService).thenAnswer((_) async => schedule());
   });
 
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
@@ -77,6 +99,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(repo),
       profileRepositoryProvider.overrideWithValue(profileRepo),
       workoutRepositoryProvider.overrideWithValue(workoutRepo),
+      programServiceProvider.overrideWithValue(programService),
     ]);
     addTearDown(container.dispose);
     // A stored token restores the session, as a cold start does.
@@ -120,6 +143,8 @@ void main() {
       expect(find.byKey(const Key('add-meal')), findsOneWidget);
       expect(find.byKey(const Key('mic')), findsOneWidget);
       expect(find.byKey(const Key('primary-action')), findsOneWidget);
+      // The secondary action exists only for a free workout on a plan day.
+      expect(find.byKey(const Key('secondary-action')), findsNothing);
       // Nothing the old shell had: no Start-workout FAB label, no logout.
       expect(find.text('Start workout'), findsNothing);
       expect(find.text('Logout'), findsNothing);
@@ -159,7 +184,7 @@ void main() {
     }
   });
 
-  group('AC4 the calendar from the logs', () {
+  group('AC4 the calendar from the schedule', () {
     testWidgets('a day with a session is marked done, today is selected',
         (tester) async {
       await pumpMain(tester);
@@ -168,6 +193,72 @@ void main() {
           find.byKey(ValueKey('day-${today.toIso8601String()}')));
       expect(cell.isToday, isTrue);
       expect(cell.isSelected, isTrue);
+    });
+
+    testWidgets('today is planned and tomorrow rests, as the server says',
+        (tester) async {
+      await pumpMain(tester, size: desktop); // the month holds both days
+      expect(find.byKey(const Key('mark-planned')), findsOneWidget);
+      expect(find.byKey(const Key('mark-rest')), findsOneWidget);
+    });
+
+    testWidgets('it asks for a window that covers the month shown',
+        (tester) async {
+      await pumpMain(tester);
+      final captured = verify(() => programService.getSchedule(
+            from: captureAny(named: 'from'),
+            to: captureAny(named: 'to'),
+            today: captureAny(named: 'today'),
+          )).captured;
+      final from = captured[0] as DateTime;
+      final to = captured[1] as DateTime;
+      expect(captured[2], today);
+      expect(from.isAfter(DateTime(today.year, today.month, 1 - 6)), isFalse);
+      expect(to.isBefore(DateTime(today.year, today.month + 1, 6)), isFalse);
+    });
+
+    testWidgets('while the schedule loads, the logs alone draw the calendar',
+        (tester) async {
+      whenGetSchedule(programService)
+          .thenAnswer((_) => Completer<Schedule>().future);
+      await pumpMain(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('mark-done')), findsOneWidget);
+      expect(find.byKey(const Key('mark-planned')), findsNothing);
+      expect(find.text(l10n.startSession), findsOneWidget);
+    });
+
+    testWidgets('when the schedule fails, the logs alone draw the calendar',
+        (tester) async {
+      whenGetSchedule(programService)
+          .thenThrow(const ApiException(ApiErrorKind.transport));
+      await pumpMain(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('mark-done')), findsOneWidget);
+      expect(find.text(l10n.startSession), findsOneWidget);
+      await tester
+          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.viewLogged), findsOneWidget);
+    });
+
+    testWidgets('app resume re-reads the schedule', (tester) async {
+      await pumpMain(tester);
+      // The lifecycle arrives from the engine on its channel, as it would
+      // when the user comes back to the app.
+      for (final state in ['paused', 'resumed']) {
+        await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          'flutter/lifecycle',
+          const StringCodec().encodeMessage('AppLifecycleState.$state'),
+          (_) {},
+        );
+      }
+      await tester.pumpAndSettle();
+      verify(() => programService.getSchedule(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            today: any(named: 'today'),
+          )).called(2);
     });
 
     testWidgets('a phone shows the week and can open the month',
@@ -257,6 +348,70 @@ void main() {
           today.add(const Duration(days: 1));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('primary-action')), findsNothing);
+    });
+
+    testWidgets('a planned day is named by its focus and lists its exercises',
+        (tester) async {
+      await pumpMain(tester);
+      // Today is cycle day 1: legs.
+      expect(find.text(l10n.muscleLegs), findsOneWidget);
+      expect(find.text('Back Squat'), findsOneWidget);
+      expect(find.text('Leg Press'), findsOneWidget);
+      expect(find.text(l10n.dayFreeHeadline), findsNothing);
+    });
+
+    testWidgets('a two-group focus joins the names in the catalogue',
+        (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 0)],
+          ));
+      await pumpMain(tester);
+      expect(
+        find.text(
+            l10n.listAnd(l10n.muscleChest, l10n.muscleArms.toLowerCase())),
+        findsOneWidget,
+      );
+      expect(find.text('Bench Press'), findsOneWidget);
+    });
+
+    testWidgets('a rest day says so and offers nothing', (tester) async {
+      final (container, _) = await pumpMain(tester);
+      container.read(selectedDayProvider.notifier).state = tomorrow;
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.dayRestHeadline), findsOneWidget);
+      expect(find.byKey(const Key('primary-action')), findsNothing);
+      expect(find.text(l10n.nothingLogged), findsNothing);
+    });
+
+    testWidgets(
+        'a free workout today keeps the plan day startable (N1): Ver lo '
+        'registrado first, Empezar sesión second', (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [
+              dayJson(isoDate(today), state: 'done', completed: [], pending: 1),
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      expect(find.byKey(const Key('primary-action')), findsOneWidget);
+      expect(find.text(l10n.viewLogged), findsOneWidget);
+      expect(find.text(l10n.pendingPlanDay(l10n.muscleLegs)), findsOneWidget);
+      expect(find.byKey(const Key('secondary-action')), findsOneWidget);
+      expect(find.text(l10n.startSession), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('secondary-action')));
+      await tester.pumpAndSettle();
+      expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+      expect(container.read(sessionDriverProvider).draft, isNotNull);
+      expect(container.read(sessionDriverProvider).performedOn, isNull);
+    });
+
+    testWidgets('a done day with a plan session has no secondary action',
+        (tester) async {
+      await pumpMain(tester);
+      await tester
+          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('secondary-action')), findsNothing);
     });
   });
 
