@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 
 import '../../core/brand.dart';
-import '../../core/theme/app_theme.dart';
 
 /// The gradient goose roundel — the Goose Fitness Physics logo, reusable at
 /// any size (brand header, splash, app bars). A goose on the brand gradient.
@@ -19,19 +18,20 @@ class BrandBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: brandGradient(),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(size * 0.30),
         boxShadow: shadow
             ? [
                 BoxShadow(
-                  color: AppTheme.gradEnd.withValues(alpha: 0.4),
-                  blurRadius: size * 0.25,
-                  offset: Offset(0, size * 0.1),
+                  color: Theme.of(context).colorScheme.outline,
+                  offset: Offset(size * 0.06, size * 0.06),
                 ),
               ]
             : null,
       ),
-      child: const CustomPaint(painter: _GoosePainter(color: Colors.white)),
+      child: CustomPaint(
+        painter: _GoosePainter(color: Theme.of(context).colorScheme.onPrimary),
+      ),
     );
   }
 }
