@@ -135,10 +135,13 @@ pub enum PlanError {
     /// kept so [`project`] is total.
     #[error("the cycle has no training day")]
     NoTrainingDay,
+    /// `to` is earlier than `from`.
     #[error("the range ends before it starts")]
     RangeInverted,
+    /// More than [`DateRange::MAX_DAYS`] days, counted inclusively.
     #[error("the range spans more than {} days", DateRange::MAX_DAYS)]
     RangeTooLong,
+    /// `to` is more than [`DateRange::MAX_DAYS_AHEAD`] days after today.
     #[error(
         "the range ends more than {} days after today",
         DateRange::MAX_DAYS_AHEAD
@@ -201,7 +204,11 @@ pub fn project(
             Some(l) if !l.plan.is_empty() => {
                 cursor.complete(&l.plan);
                 DayState::Done {
-                    completed: l.plan.clone(),
+                    // Normalised like the cursor reads them, so a stored
+                    // index from a since-shortened cycle still names a day
+                    // the client can look up (the cycle is not frozen per
+                    // user, §4).
+                    completed: l.plan.iter().map(|i| i % cursor.len).collect(),
                     pending: None,
                 }
             }
@@ -695,6 +702,48 @@ mod tests {
             s,
             vec![Planned { cycle_index: 0 }, Planned { cycle_index: 1 }]
         );
+    }
+
+    #[test]
+    fn a_plan_log_after_the_range_still_clears_pending_on_earlier_days() {
+        // N2 over N9: the walk stops at range.to, but a later completion is
+        // a fact about the past, so unlogged days before it offer nothing.
+        let cycle = vec![training(MuscleGroup::Legs), training(MuscleGroup::Chest)];
+        let logs = logs(&[(oct(22), plan(&[0]))]);
+        let s = states(&cycle, oct(19), &logs, oct(23), oct(19), oct(20));
+        assert_eq!(
+            s,
+            vec![Nothing { pending: None }, Nothing { pending: None }]
+        );
+    }
+
+    #[test]
+    fn days_before_starts_on_do_not_consume_a_leading_rest_day() {
+        // A rest-first cycle: if rules 3/4 ran before starts_on, the rest at
+        // index 0 would be consumed and starts_on would show index 1.
+        let cycle = vec![PlanDay::Rest, training(MuscleGroup::Legs)];
+        let logs = logs(&[(oct(19), free()), (oct(20), free())]);
+        let s = states(&cycle, oct(21), &logs, oct(21), oct(19), oct(22));
+        assert_eq!(
+            s,
+            vec![
+                done(&[], None),
+                done(&[], None),
+                DayState::Rest { cycle_index: 0 },
+                Planned { cycle_index: 1 },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_stored_index_past_the_cycle_length_is_read_modulo_it() {
+        // The cycle was shortened after the session was stored (§4: the
+        // cycle is not frozen per user). Index 5 in a 4-day cycle is day 1.
+        let cycle = four_day_cycle();
+        let logs = logs(&[(oct(19), plan(&[5]))]);
+        let s = states(&cycle, oct(19), &logs, oct(19), oct(19), oct(20));
+        assert_eq!(s[0], done(&[1], None));
+        assert_eq!(s[1], Planned { cycle_index: 2 });
     }
 
     // --- errors ----------------------------------------------------------
