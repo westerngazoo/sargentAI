@@ -335,19 +335,19 @@ abstract class AppLocalizations {
   /// No description provided for @dobMissing.
   ///
   /// In es, this message translates to:
-  /// **'pon tu fecha de nacimiento'**
+  /// **'Elige tu fecha de nacimiento.'**
   String get dobMissing;
 
   /// No description provided for @dobInFuture.
   ///
   /// In es, this message translates to:
-  /// **'la fecha de nacimiento no puede ser futura'**
+  /// **'La fecha de nacimiento no puede estar en el futuro.'**
   String get dobInFuture;
 
   /// No description provided for @ageOutOfRange.
   ///
   /// In es, this message translates to:
-  /// **'la edad debe estar entre {min} y {max}'**
+  /// **'la edad debe estar entre {min} y {max} años'**
   String ageOutOfRange(int min, int max);
 
   /// No description provided for @heightMissing.
@@ -378,7 +378,7 @@ abstract class AppLocalizations {
   ///
   /// In es, this message translates to:
   /// **'la grasa corporal debe estar entre {min} y {max} %'**
-  String bodyFatOutOfRange(num min, num max);
+  String bodyFatOutOfRange(int min, int max);
 
   /// No description provided for @yourGoals.
   ///
@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @bodyShapeEctomorph.
   ///
   /// In es, this message translates to:
-  /// **'Delgado y estrecho'**
+  /// **'Delgado y angosto'**
   String get bodyShapeEctomorph;
 
   /// No description provided for @bodyShapeMesomorph.
@@ -527,13 +527,13 @@ abstract class AppLocalizations {
   /// No description provided for @fatBandModerate.
   ///
   /// In es, this message translates to:
-  /// **'Intermedio'**
+  /// **'Medio'**
   String get fatBandModerate;
 
   /// No description provided for @fatBandBulky.
   ///
   /// In es, this message translates to:
-  /// **'Voluminoso'**
+  /// **'Con más grasa'**
   String get fatBandBulky;
 
   /// No description provided for @fatBandLeanDescription.
@@ -893,7 +893,7 @@ abstract class AppLocalizations {
   /// No description provided for @rankCloseMatch.
   ///
   /// In es, this message translates to:
-  /// **'Opción cercana'**
+  /// **'Segunda opción'**
   String get rankCloseMatch;
 
   /// No description provided for @rankGoodOption.

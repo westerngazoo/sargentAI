@@ -133,14 +133,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weightKgLabel => 'Peso (kg)';
 
   @override
-  String get dobMissing => 'pon tu fecha de nacimiento';
+  String get dobMissing => 'Elige tu fecha de nacimiento.';
 
   @override
-  String get dobInFuture => 'la fecha de nacimiento no puede ser futura';
+  String get dobInFuture =>
+      'La fecha de nacimiento no puede estar en el futuro.';
 
   @override
   String ageOutOfRange(int min, int max) {
-    return 'la edad debe estar entre $min y $max';
+    return 'la edad debe estar entre $min y $max años';
   }
 
   @override
@@ -160,7 +161,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String bodyFatOutOfRange(num min, num max) {
+  String bodyFatOutOfRange(int min, int max) {
     return 'la grasa corporal debe estar entre $min y $max %';
   }
 
@@ -216,7 +217,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get findMyProgram => 'Buscar mi programa';
 
   @override
-  String get bodyShapeEctomorph => 'Delgado y estrecho';
+  String get bodyShapeEctomorph => 'Delgado y angosto';
 
   @override
   String get bodyShapeMesomorph => 'Atlético y ancho';
@@ -240,10 +241,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get fatBandLean => 'Definido';
 
   @override
-  String get fatBandModerate => 'Intermedio';
+  String get fatBandModerate => 'Medio';
 
   @override
-  String get fatBandBulky => 'Voluminoso';
+  String get fatBandBulky => 'Con más grasa';
 
   @override
   String get fatBandLeanDescription => 'Músculo visible y definido';
@@ -457,7 +458,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rankBestMatch => 'Mejor opción';
 
   @override
-  String get rankCloseMatch => 'Opción cercana';
+  String get rankCloseMatch => 'Segunda opción';
 
   @override
   String get rankGoodOption => 'Buena opción';

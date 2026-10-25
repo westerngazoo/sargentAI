@@ -158,7 +158,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String bodyFatOutOfRange(num min, num max) {
+  String bodyFatOutOfRange(int min, int max) {
     return 'body fat must be between $min and $max %';
   }
 

@@ -48,36 +48,52 @@
   "choose": "Elegir",
   "heightCmLabel": "Estatura (cm)",
   "weightKgLabel": "Peso (kg)",
-  "dobMissing": "pon tu fecha de nacimiento",
-  "dobInFuture": "la fecha de nacimiento no puede ser futura",
-  "ageOutOfRange": "la edad debe estar entre {min} y {max}",
+  "dobMissing": "Elige tu fecha de nacimiento.",
+  "dobInFuture": "La fecha de nacimiento no puede estar en el futuro.",
+  "ageOutOfRange": "la edad debe estar entre {min} y {max} años",
   "@ageOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "heightMissing": "pon tu estatura",
   "heightOutOfRange": "la estatura debe estar entre {min} y {max} cm",
   "@heightOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "weightMissing": "pon tu peso",
   "weightOutOfRange": "el peso debe estar entre {min} y {max} kg",
   "@weightOutOfRange": {
     "placeholders": {
-      "min": {"type": "int"},
-      "max": {"type": "int"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "bodyFatOutOfRange": "la grasa corporal debe estar entre {min} y {max} %",
   "@bodyFatOutOfRange": {
     "placeholders": {
-      "min": {"type": "num"},
-      "max": {"type": "num"}
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "yourGoals": "Tus objetivos",
@@ -97,15 +113,15 @@
   "bodyShape": "Complexión",
   "bodyFatLevel": "Nivel de grasa corporal",
   "findMyProgram": "Buscar mi programa",
-  "bodyShapeEctomorph": "Delgado y estrecho",
+  "bodyShapeEctomorph": "Delgado y angosto",
   "bodyShapeMesomorph": "Atlético y ancho",
   "bodyShapeEndomorph": "Robusto y macizo",
   "bodyShapeEctomorphDescription": "Cuerpo delgado, hombros angostos, extremidades largas, poca masa.",
   "bodyShapeMesomorphDescription": "Hombros anchos, cuerpo musculoso, responde bien al entrenamiento.",
   "bodyShapeEndomorphDescription": "Cuerpo robusto, cintura ancha, tiende a cargar más masa.",
   "fatBandLean": "Definido",
-  "fatBandModerate": "Intermedio",
-  "fatBandBulky": "Voluminoso",
+  "fatBandModerate": "Medio",
+  "fatBandBulky": "Con más grasa",
   "fatBandLeanDescription": "Músculo visible y definido",
   "fatBandModerateDescription": "Algo de definición, grasa moderada",
   "fatBandBulkyDescription": "Más grasa corporal, aspecto lleno",
@@ -121,14 +137,18 @@
   "daysPerWeek": "{n} días/semana",
   "@daysPerWeek": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "sessionDuration": "Duración de la sesión",
   "minutesShort": "{n} min",
   "@minutesShort": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "intensity": "Intensidad",
@@ -145,7 +165,9 @@
   "grams": "{n} g",
   "@grams": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "kcalPerDay": "kcal / día",
@@ -156,15 +178,21 @@
   "kcalShort": "{n} kcal",
   "@kcalShort": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "doneOfTarget": "{done}/{target}",
   "@doneOfTarget": {
     "description": "Centre of the progress ring: training days done over the weekly target.",
     "placeholders": {
-      "done": {"type": "int"},
-      "target": {"type": "int"}
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
     }
   },
   "getYourProgram": "Consigue tu programa",
@@ -190,7 +218,9 @@
   "@taperTag": {
     "description": "Tappable tag; ratio is the shoulder-to-waist figure already formatted (e.g. 2.6).",
     "placeholders": {
-      "ratio": {"type": "String"}
+      "ratio": {
+        "type": "String"
+      }
     }
   },
   "physiqueMass": "Masa",
@@ -201,7 +231,9 @@
   "taperRatio": "{ratio}:1",
   "@taperRatio": {
     "placeholders": {
-      "ratio": {"type": "String"}
+      "ratio": {
+        "type": "String"
+      }
     }
   },
   "thisWeekCaps": "ESTA SEMANA",
@@ -211,21 +243,29 @@
   "daysOfTarget": "{done} de {target} días",
   "@daysOfTarget": {
     "placeholders": {
-      "done": {"type": "int"},
-      "target": {"type": "int"}
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
     }
   },
   "sessionsLoggedOnProgram": "{count, plural, =1{1 sesión registrada en este programa} other{{count} sesiones registradas en este programa}}",
   "@sessionsLoggedOnProgram": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "targetMet": "Meta cumplida",
   "percent": "{n}%",
   "@percent": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "chooseYourProgram": "Elige tu programa",
@@ -234,31 +274,41 @@
   "@rankBestMatch": {
     "description": "Chip on the first of the three proposed programs."
   },
-  "rankCloseMatch": "Opción cercana",
+  "rankCloseMatch": "Segunda opción",
   "rankGoodOption": "Buena opción",
   "proposalSummaryLine": "{days} días/semana · {kcal} kcal/día",
   "@proposalSummaryLine": {
     "placeholders": {
-      "days": {"type": "int"},
-      "kcal": {"type": "int"}
+      "days": {
+        "type": "int"
+      },
+      "kcal": {
+        "type": "int"
+      }
     }
   },
   "intensityLine": "Intensidad: {value}",
   "@intensityLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "restLine": "Descanso: {value}",
   "@restLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "progressionLine": "Progresión: {value}",
   "@progressionLine": {
     "placeholders": {
-      "value": {"type": "String"}
+      "value": {
+        "type": "String"
+      }
     }
   },
   "chooseThisProgram": "Elegir este programa",
