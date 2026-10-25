@@ -156,8 +156,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('program-sentinel'), findsOneWidget);
-    expect(voiceOut.spoken.join(' '),
-        contains(l10n.sergeantPlanSummary('', 0, 0).split(':').first));
+    final program = sampleUserProgram();
+    expect(
+        voiceOut.spoken.join(' '),
+        contains(l10n.sergeantPlanSummary(program.program.split,
+            program.program.daysPerWeek, program.diet.estimatedKcal)));
   });
 
   testWidgets('a dictated meal with macros logs directly — no sheet',

@@ -1158,4 +1158,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String valueWithUnit(String value, String unit) {
     return '$value$unit';
   }
+
+  @override
+  String get workoutSessionChannel => 'Sesión de entrenamiento';
 }

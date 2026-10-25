@@ -8,10 +8,20 @@ import 'package:dio/dio.dart';
 enum ApiErrorKind {
   /// No HTTP response at all — timeout or no network. The AC9 retryable case.
   transport,
+
+  /// 400: the request was malformed or a field failed validation.
   badRequest,
+
+  /// 401: the token is missing, expired or revoked.
   unauthorized,
+
+  /// 404: the resource does not exist or is not the caller's.
   notFound,
+
+  /// 409: the request collides with current state.
   conflict,
+
+  /// Any other HTTP status.
   unknown,
 }
 
@@ -21,7 +31,8 @@ enum ApiErrorKind {
 /// translates transport and HTTP failures into this typed shape via
 /// [ApiException.fromDio]:
 /// * [kind] is what went wrong, localized by `apiErrorText`;
-/// * [statusCode] is the HTTP status, or `null` for a transport/timeout error;
+/// * [statusCode] is the HTTP status, or `null` for a transport/timeout error
+///   (diagnostics only: `kind` drives every decision);
 /// * [field] names the offending request field when the backend reports one —
 ///   read from the backend's **flat** body `{"error":"<kind>","field":"<name>"}`
 ///   (`backend/crates/api/src/error.rs`, SPEC-0008 §2.7).

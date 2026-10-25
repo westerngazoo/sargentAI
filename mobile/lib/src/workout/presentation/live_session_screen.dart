@@ -14,9 +14,9 @@ import '../domain/muscle_activation.dart';
 import '../domain/muscle_group.dart';
 import '../domain/preset_exercises.dart';
 import '../domain/set_draft.dart';
-import 'draft_rejection_text.dart';
+import '../application/draft_rejection_text.dart';
 import 'muscle_map.dart';
-import 'muscle_names.dart';
+import '../application/muscle_names.dart';
 
 /// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
 /// business logic (validation, the state machine) is driver-side; this widget

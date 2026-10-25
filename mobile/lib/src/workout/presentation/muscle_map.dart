@@ -8,7 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../domain/muscle_activation.dart';
-import 'muscle_names.dart';
+import '../application/muscle_names.dart';
 
 class MuscleMap extends StatelessWidget {
   const MuscleMap({super.key, required this.activation});

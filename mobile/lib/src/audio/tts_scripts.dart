@@ -3,6 +3,8 @@ import '../../l10n/app_localizations.dart';
 /// The earbud coach's spoken lines, from the catalogue (R-0061 AC11). Each
 /// takes the catalogue because the coach runs outside the widget tree.
 abstract final class TtsScripts {
+  /// The line that opens an exercise: its name and, when known, its sets,
+  /// reps and weight.
   static String exerciseStart(
     AppLocalizations l10n,
     String name,
@@ -17,6 +19,8 @@ abstract final class TtsScripts {
     return l10n.ttsNextSets(name, sets, reps);
   }
 
+  /// The line that opens a set: its number and, when known, the total,
+  /// reps and weight.
   static String setStart(
     AppLocalizations l10n,
     int setNumber,

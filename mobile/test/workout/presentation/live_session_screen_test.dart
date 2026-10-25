@@ -33,7 +33,7 @@ import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
-import 'package:fitai/src/workout/presentation/draft_rejection_text.dart';
+import 'package:fitai/src/workout/application/draft_rejection_text.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/domain/preset_exercises.dart';

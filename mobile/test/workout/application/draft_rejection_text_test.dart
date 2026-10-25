@@ -1,10 +1,10 @@
 // R-0061 AC11: the driver and the drafts report a typed DraftRejection; the
-// presentation layer renders it from the catalogue, quoting the shared limits.
+// application layer renders it from the catalogue, quoting the shared limits.
 
 import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/domain/exercise_draft.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
-import 'package:fitai/src/workout/presentation/draft_rejection_text.dart';
+import 'package:fitai/src/workout/application/draft_rejection_text.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/l10n.dart';

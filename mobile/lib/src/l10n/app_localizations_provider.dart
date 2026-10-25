@@ -12,6 +12,10 @@ import 'locale_rule.dart';
 /// list (`localeListResolutionCallback: resolveLocale`), so a spoken line and
 /// a drawn one agree on the language. Tests override it with the Spanish
 /// catalogue (`test/support/l10n.dart`).
+///
+/// Resolved once per app run: a system-language change while the app is
+/// open reaches `MaterialApp`, but the voice loops keep this catalogue until
+/// the next start. Accepted for the beta.
 final appLocalizationsProvider = Provider<AppLocalizations>(
   (ref) => lookupAppLocalizations(
     resolveLocale(PlatformDispatcher.instance.locales, supportedLocales),

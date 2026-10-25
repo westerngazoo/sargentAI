@@ -694,5 +694,9 @@
         "type": "String"
       }
     }
+  },
+  "workoutSessionChannel": "Workout session",
+  "@workoutSessionChannel": {
+    "description": "Android notification channel name for the earbud coach, shown in the OS notification settings"
   }
 }

@@ -3,6 +3,7 @@
 // dialog. Fills the coverage gap qa flagged at step-7 sign-off (the controller
 // and provider were unit-tested; this pumps the widget).
 
+import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/presentation/session_list.dart';
 import 'package:flutter/material.dart';
@@ -75,6 +76,21 @@ void main() {
     await tester.pump();
 
     verify(() => repo.delete('s-1')).called(1);
+  });
+
+  testWidgets('AC9: a workout deleted elsewhere says so (404)', (tester) async {
+    when(() => repo.list()).thenAnswer((_) async => [sampleSession(id: 's-1')]);
+    when(() => repo.delete('s-1'))
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
+    await pumpList(tester);
+
+    await tester.tap(find.byTooltip(l10n.delete));
+    await tester.pump();
+    await tester.tap(find.text(l10n.delete).last);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(l10n.workoutNoLongerExists), findsOneWidget);
   });
 
   testWidgets('AC9: cancelling the confirm does NOT delete', (tester) async {

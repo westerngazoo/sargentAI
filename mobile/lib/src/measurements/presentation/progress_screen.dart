@@ -9,7 +9,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../workout/application/workouts_provider.dart';
 import '../../workout/domain/muscle_group.dart';
 import '../../workout/domain/workout_session.dart';
-import '../../workout/presentation/muscle_names.dart';
+import '../../workout/application/muscle_names.dart';
 import '../application/strength_trend.dart';
 import '../models/measurement.dart';
 import '../services/measurement_service.dart';

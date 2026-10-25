@@ -17,8 +17,8 @@ import '../../program/application/program_providers.dart';
 import '../domain/muscle_activation.dart';
 import '../domain/preset_exercises.dart';
 import '../domain/set_draft.dart';
-import '../presentation/draft_rejection_text.dart';
-import '../presentation/muscle_names.dart';
+import 'draft_rejection_text.dart';
+import 'muscle_names.dart';
 import 'session_driver.dart';
 import 'session_voice_intent.dart';
 

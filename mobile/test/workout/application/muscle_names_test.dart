@@ -3,7 +3,7 @@
 
 import 'package:fitai/src/workout/domain/muscle_activation.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
-import 'package:fitai/src/workout/presentation/muscle_names.dart';
+import 'package:fitai/src/workout/application/muscle_names.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/l10n.dart';

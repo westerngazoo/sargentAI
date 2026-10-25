@@ -2084,6 +2084,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{value}{unit}'**
   String valueWithUnit(String value, String unit);
+
+  /// Android notification channel name for the earbud coach, shown in the OS notification settings
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión de entrenamiento'**
+  String get workoutSessionChannel;
 }
 
 class _AppLocalizationsDelegate
