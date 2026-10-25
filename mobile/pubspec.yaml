@@ -45,3 +45,30 @@ flutter:
     # AudioServiceHandler._initAudio swallows the load failure by design, which
     # made a missing asset look identical to a working one at runtime.
     - assets/audio/silence.mp3
+    # Font licences, shown on the licence page (SPEC-0061 §2.10).
+    - assets/fonts/OFL-Bangers.txt
+    - assets/fonts/LICENSE-LuckiestGuy.txt
+    - assets/fonts/OFL-IBMPlexMono.txt
+    - assets/fonts/OFL-Archivo.txt
+  # The @fisicobuenfisico faces, bundled so nothing is fetched at run time.
+  fonts:
+    - family: Bangers
+      fonts:
+        - asset: assets/fonts/Bangers-Regular.ttf
+    - family: LuckiestGuy
+      fonts:
+        - asset: assets/fonts/LuckiestGuy-Regular.ttf
+    - family: IBMPlexMono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Regular.ttf
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
+    - family: Archivo
+      fonts:
+        - asset: assets/fonts/Archivo-Regular.ttf
+        - asset: assets/fonts/Archivo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Archivo-ExtraBold.ttf
+          weight: 800

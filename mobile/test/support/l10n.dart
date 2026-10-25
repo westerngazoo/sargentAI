@@ -20,6 +20,9 @@ Widget localizedApp({
       home: home,
       routes: routes,
       initialRoute: initialRoute,
+/// A `MaterialApp` with the app's catalogues, pinned to Spanish.
+Widget localizedApp({required Widget home}) => MaterialApp(
+      home: home,
       locale: const Locale('es'),
       supportedLocales: supportedLocales,
       localizationsDelegates: _delegates,

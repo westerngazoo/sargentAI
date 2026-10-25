@@ -153,12 +153,11 @@ class _Section extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: Icon(icon, size: 19, color: Colors.white),
+                child: Icon(icon,
+                    size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
               Text(title,
@@ -379,8 +378,8 @@ class CurrentProgramCard extends ConsumerWidget {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            gradient: brandGradient(),
-            borderRadius: BorderRadius.circular(24),
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Material(
             color: Colors.transparent,
@@ -398,13 +397,17 @@ class CurrentProgramCard extends ConsumerWidget {
                           l10n.yourProgramCaps,
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary
+                                        .withValues(alpha: 0.8),
                                     letterSpacing: 1.2,
                                     fontWeight: FontWeight.w700,
                                   ),
                         ),
                         const Spacer(),
-                        Icon(Icons.arrow_forward, color: Colors.white),
+                        Icon(Icons.arrow_forward,
+                            color: Theme.of(context).colorScheme.onPrimary),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -422,7 +425,10 @@ class CurrentProgramCard extends ConsumerWidget {
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
-                                    ?.copyWith(color: Colors.white),
+                                    ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary),
                               ),
                               const SizedBox(height: 14),
                               Wrap(
@@ -453,6 +459,9 @@ class CurrentProgramCard extends ConsumerWidget {
                             onGradient: true,
                             label: l10n.doneOfTarget(
                                 progress.daysDone, progress.daysTarget),
+                            onPrimary: true,
+                            label:
+                                '${progress.daysDone}/${progress.daysTarget}',
                           ),
                         ],
                       ],
@@ -472,8 +481,8 @@ class CurrentProgramCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: brandGradient(),
-        borderRadius: BorderRadius.circular(24),
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Material(
         color: Colors.transparent,
@@ -486,8 +495,12 @@ class CurrentProgramCard extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: Colors.white.withValues(alpha: 0.18),
-                  child: Icon(Icons.fitness_center, color: Colors.white),
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.18),
+                  child: Icon(Icons.fitness_center,
+                      color: Theme.of(context).colorScheme.onPrimary),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -500,18 +513,29 @@ class CurrentProgramCard extends ConsumerWidget {
                             Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Colors.white,
                                 ),
+                        'Get your program',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         l10n.takeAPhotoForPlan,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.85),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary
+                                  .withValues(alpha: 0.85),
                             ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward, color: Colors.white),
+                Icon(Icons.arrow_forward,
+                    color: Theme.of(context).colorScheme.onPrimary),
               ],
             ),
           ),
@@ -533,18 +557,18 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.white),
+          Icon(icon, size: 14, color: Theme.of(context).colorScheme.onPrimary),
           const SizedBox(width: 6),
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontWeight: FontWeight.w600,
                 ),
           ),
