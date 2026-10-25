@@ -9,9 +9,17 @@ final l10n = lookupAppLocalizations(const Locale('es'));
 
 const _delegates = AppLocalizations.localizationsDelegates;
 
-/// A `MaterialApp` with the app's catalogues, pinned to Spanish.
-Widget localizedApp({required Widget home}) => MaterialApp(
+/// A `MaterialApp` with the app's catalogues, pinned to Spanish. Takes a
+/// [home], or named [routes] with an [initialRoute], like `MaterialApp`.
+Widget localizedApp({
+  Widget? home,
+  Map<String, WidgetBuilder> routes = const {},
+  String? initialRoute,
+}) =>
+    MaterialApp(
       home: home,
+      routes: routes,
+      initialRoute: initialRoute,
       locale: const Locale('es'),
       supportedLocales: supportedLocales,
       localizationsDelegates: _delegates,

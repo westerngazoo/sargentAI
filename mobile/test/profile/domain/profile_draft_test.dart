@@ -18,6 +18,7 @@
 
 import 'package:fitai/src/profile/domain/goal.dart';
 import 'package:fitai/src/profile/domain/profile_draft.dart';
+import 'package:fitai/src/profile/domain/profile_field_error.dart';
 import 'package:fitai/src/profile/domain/sex.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,7 +48,7 @@ void main() {
 
     test('age 12 (just under the floor) is rejected with a message', () {
       final d = ProfileDraft(dateOfBirth: dobForAge(12));
-      expect(d.dobError(today), isNotNull);
+      expect(d.dobError(today), ProfileFieldError.ageOutOfRange);
     });
 
     test('exactly 120 (upper bound) passes', () {
@@ -57,17 +58,17 @@ void main() {
 
     test('age 121 (just over the ceiling) is rejected', () {
       final d = ProfileDraft(dateOfBirth: dobForAge(121));
-      expect(d.dobError(today), isNotNull);
+      expect(d.dobError(today), ProfileFieldError.ageOutOfRange);
     });
 
     test('a future DOB is rejected', () {
       final d = ProfileDraft(dateOfBirth: today.add(const Duration(days: 1)));
-      expect(d.dobError(today), isNotNull);
+      expect(d.dobError(today), ProfileFieldError.dobInFuture);
     });
 
     test('an empty/absent DOB is rejected (required field)', () {
       const d = ProfileDraft();
-      expect(d.dobError(DateTime(2026, 6, 6)), isNotNull);
+      expect(d.dobError(DateTime(2026, 6, 6)), ProfileFieldError.dobMissing);
     });
   });
 
@@ -82,12 +83,15 @@ void main() {
     });
 
     test('49 and 301 (just out of range) are rejected', () {
-      expect(const ProfileDraft(heightCm: 49).heightError(), isNotNull);
-      expect(const ProfileDraft(heightCm: 301).heightError(), isNotNull);
+      expect(const ProfileDraft(heightCm: 49).heightError(),
+          ProfileFieldError.heightOutOfRange);
+      expect(const ProfileDraft(heightCm: 301).heightError(),
+          ProfileFieldError.heightOutOfRange);
     });
 
     test('an absent height is rejected (required field)', () {
-      expect(const ProfileDraft().heightError(), isNotNull);
+      expect(
+          const ProfileDraft().heightError(), ProfileFieldError.heightMissing);
     });
   });
 

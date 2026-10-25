@@ -584,6 +584,7 @@ in the beta when it lands.
 | 1e | Theme tokens, the contrast test and the four bundled faces (§2.10). The halftone painter ships with 1f, its first user | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist. 1b also deletes `Brand.tagline` and wires `appTagline` into `BrandHeader`, adding the delegates to the auth widget tests | mobile | 1a |
 | 1f | Router, `MainScreen`, `showPanel`, the halftone ground, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6). Programa and Progreso push the existing `/programs/current` and `/progress` screens from the profile menu, Medidas opens its sheet, and `/programs/get` is reachable from the program screen's empty state, until slice 3 replaces them with panels, so AC2 holds at every merge; the `context.go` guard ships with a shrinking allowlist for the folders slices 3 and 5 migrate | mobile | 1a, 1e |
+| 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
 | 2c | Migration 00012, `GET /programs/me/schedule`, and the `POST`/`PUT /workouts` and choose changes (§2.3–§2.4) | backend | 2b |
@@ -662,10 +663,10 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
-  approval (§2.1). Days are named by focus only (owner, 2026-10-25). Two
-  questions stay open in the annex: Mentzer's spacing, and the exercises
-  themselves. It blocks slice 2b only, not this spec.
+- **OQ-A. The six cycles, with exercises per day.** *Resolved 2026-10-25:
+  Annex A v2 ships as tabled under the owner's authorization of the spec.*
+  Days are named by focus only (owner). Mentzer's spacing and the exercise
+  lists stay open as data fixes in `seed.rs` (Annex A §4).
 - **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
   removed.* Each of its five items has a home on the new screen.
 - **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
@@ -790,3 +791,4 @@ was done with a note on what to salvage.
 - 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
   62-day range is inclusive, and range errors live in `DateRange::new`.
 - 2026-10-25 — slice 1f: the removed routes' redirects move to slice 3 (the old screens stay reachable, pushed, until the panels exist); the `context.go` guard carries a shrinking allowlist like the l10n guard.
+- 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.

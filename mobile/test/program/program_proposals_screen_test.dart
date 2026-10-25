@@ -39,6 +39,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 import '../support/program_fakes.dart';
 
 void main() {
@@ -78,7 +79,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
+        child: localizedApp(
           home: ProgramProposalsScreen(sessionId: sessionId),
         ),
       ),
@@ -115,9 +116,9 @@ void main() {
     await pumpProposals(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Best match'), findsOneWidget);
-    expect(find.text('Close match'), findsOneWidget);
-    expect(find.text('Good option'), findsOneWidget);
+    expect(find.text(l10n.rankBestMatch), findsOneWidget);
+    expect(find.text(l10n.rankCloseMatch), findsOneWidget);
+    expect(find.text(l10n.rankGoodOption), findsOneWidget);
   });
 
   // AC8: each card (collapsed) shows days_per_week summary.
@@ -129,9 +130,10 @@ void main() {
     await pumpProposals(tester);
     await tester.pumpAndSettle();
 
-    // "4 days/week" or equivalent must appear for at least one card.
+    // The 4 days/week · 3200 kcal/day summary line (generatedProgramJson,
+    // generatedDietJson) appears on every card.
     expect(
-      find.textContaining('days/week'),
+      find.text(l10n.proposalSummaryLine(4, 3200)),
       findsAtLeastNWidgets(1),
     );
   });
@@ -163,14 +165,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // "Choose this program" button must NOT be visible before any tap.
-    expect(find.text('Choose this program'), findsNothing);
+    expect(find.text(l10n.chooseThisProgram), findsNothing);
 
     // Tap card 1 (first card by display name).
     await tester.tap(find.text('Low-Volume Mass Builder'));
     await tester.pumpAndSettle();
 
     // The button appears in the expanded card.
-    expect(find.text('Choose this program'), findsOneWidget);
+    expect(find.text(l10n.chooseThisProgram), findsOneWidget);
   });
 
   // AC8: tapping card 2 collapses card 1 and expands card 2 — exclusive.
@@ -184,7 +186,7 @@ void main() {
     // Expand card 1.
     await tester.tap(find.text('Low-Volume Mass Builder'));
     await tester.pumpAndSettle();
-    expect(find.text('Choose this program'), findsOneWidget);
+    expect(find.text(l10n.chooseThisProgram), findsOneWidget);
 
     // Tap card 2.
     await tester.tap(find.text('Minimalist High-Intensity'));
@@ -192,7 +194,7 @@ void main() {
 
     // Still exactly one "Choose this program" button — card 2 is now expanded,
     // card 1 is collapsed.
-    expect(find.text('Choose this program'), findsOneWidget);
+    expect(find.text(l10n.chooseThisProgram), findsOneWidget);
   });
 
   // AC8: expanded card shows full GeneratedProgram fields (intensity guidance).
@@ -206,10 +208,10 @@ void main() {
     await tester.tap(find.text('Low-Volume Mass Builder'));
     await tester.pumpAndSettle();
 
-    // Intensity guidance text from generatedProgramJson.
+    // Intensity guidance text from generatedProgramJson, in its labelled line.
     expect(
-      find.textContaining('1 all-out working set to failure'),
-      findsAtLeastNWidgets(1),
+      find.text(l10n.intensityLine('1 all-out working set to failure')),
+      findsOneWidget,
     );
   });
 
@@ -225,9 +227,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Protein / carbs / fat from generatedDietJson.
-    expect(find.textContaining('176'), findsAtLeastNWidgets(1)); // protein_g
-    expect(find.textContaining('360'), findsAtLeastNWidgets(1)); // carbs_g
-    expect(find.textContaining('89'), findsAtLeastNWidgets(1)); // fat_g
+    expect(find.text(l10n.grams(176)), findsOneWidget); // protein_g
+    expect(find.text(l10n.grams(360)), findsOneWidget); // carbs_g
+    expect(find.text(l10n.grams(89)), findsOneWidget); // fat_g
   });
 
   // -------------------------------------------------------------------------
@@ -275,7 +277,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -286,7 +288,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap "Choose this program".
-    await tester.tap(find.text('Choose this program'));
+    await tester.tap(find.text(l10n.chooseThisProgram));
     await tester.pumpAndSettle();
 
     // ProgramDetailScreen must now be on screen.
@@ -311,7 +313,7 @@ void main() {
     await tester.tap(find.text('Low-Volume Mass Builder'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Choose this program'));
+    await tester.tap(find.text(l10n.chooseThisProgram));
     await tester.pump(); // start the async call, do NOT settle
 
     // A loading indicator must be visible.
@@ -335,14 +337,11 @@ void main() {
     await tester.tap(find.text('Low-Volume Mass Builder'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Choose this program'));
+    await tester.tap(find.text(l10n.chooseThisProgram));
     await tester.pumpAndSettle();
 
     // The spec §2.5.3 snackbar message for 409.
-    expect(
-      find.textContaining('Selection no longer available'),
-      findsAtLeastNWidgets(1),
-    );
+    expect(find.text(l10n.selectionNoLongerAvailable), findsOneWidget);
   });
 
   // AC8: the first card shows the first three highlight exercises as chips.
@@ -374,14 +373,8 @@ void main() {
     // Some error text must appear; no raw 'Exception' string.
     expect(find.textContaining('Exception'), findsNothing);
     expect(find.textContaining('DioException'), findsNothing);
-    // A human-readable string (retry, error, could not load, etc.) appears.
-    final errorOrRetry = find.byWidgetPredicate(
-      (w) =>
-          w is Text &&
-          ((w.data ?? '').toLowerCase().contains('retry') ||
-              (w.data ?? '').toLowerCase().contains('error') ||
-              (w.data ?? '').toLowerCase().contains('could not')),
-    );
-    expect(errorOrRetry, findsAtLeastNWidgets(1));
+    // The catalogue's message and its retry action appear.
+    expect(find.text(l10n.couldNotLoadProposals), findsOneWidget);
+    expect(find.text(l10n.retry), findsOneWidget);
   });
 }

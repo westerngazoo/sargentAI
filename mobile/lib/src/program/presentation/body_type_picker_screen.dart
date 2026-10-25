@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_exception.dart';
 import '../models/synthetic_match.dart';
 import '../services/program_service.dart';
+import 'body_type_names.dart';
 import 'synthetic_proposals_screen.dart';
 
 class BodyTypePickerScreen extends ConsumerStatefulWidget {
@@ -54,9 +56,10 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Choose your body type'),
+        title: Text(l10n.chooseYourBodyType),
         leading: BackButton(onPressed: () => context.go('/home')),
       ),
       body: SafeArea(
@@ -69,7 +72,7 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Body shape',
+                    Text(l10n.bodyShape,
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _ShapeGrid(
@@ -78,7 +81,7 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
                     ),
                     if (_shape != null) ...[
                       const SizedBox(height: 24),
-                      Text('Body fat level',
+                      Text(l10n.bodyFatLevel,
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       _FatBandChips(
@@ -110,7 +113,7 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
                             strokeWidth: 2,
                             color: Theme.of(context).colorScheme.onPrimary),
                       )
-                    : const Text('Find my program'),
+                    : Text(l10n.findMyProgram),
               ),
             ),
           ],
@@ -164,6 +167,7 @@ class _ShapeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: isSelected ? cs.primaryContainer : null,
@@ -188,12 +192,12 @@ class _ShapeCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(shape.label,
+                    Text(bodyShapeName(shape, l10n),
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: isSelected ? cs.primary : null,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
-                    Text(shape.description,
+                    Text(bodyShapeDescription(shape, l10n),
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
@@ -246,12 +250,15 @@ class _FatBandTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return ChoiceChip(
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(band.label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(band.sublabel, style: Theme.of(context).textTheme.bodySmall),
+          Text(fatBandName(band, l10n),
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(fatBandDescription(band, l10n),
+              style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
       selected: isSelected,

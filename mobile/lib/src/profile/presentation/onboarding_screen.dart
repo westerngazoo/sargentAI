@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/onboarding_controller.dart';
 import 'steps/body_stats_step.dart';
 import 'steps/goals_step.dart';
@@ -27,7 +28,8 @@ class OnboardingScreen extends ConsumerWidget {
     final ctrl = ref.read(onboardingControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Set up your profile')),
+      appBar:
+          AppBar(title: Text(AppLocalizations.of(context).setUpYourProfile)),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,10 +83,11 @@ class OnboardingScreen extends ConsumerWidget {
 const double _maxWidth = 560;
 
 /// What a disabled "Next" is waiting for, per step.
-const _missing = {
-  0: 'Add your date of birth, height and weight to continue.',
-  1: 'Pick at least one goal to continue.',
-};
+String? _missing(int step, AppLocalizations l10n) => switch (step) {
+      0 => l10n.onboardingMissingBodyStats,
+      1 => l10n.onboardingMissingGoals,
+      _ => null,
+    };
 
 class _Controls extends StatelessWidget {
   const _Controls({required this.state, required this.ctrl});
@@ -94,6 +97,7 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isLast = state.step == onboardingStepCount - 1;
     final canAdvance = switch (state.step) {
       0 => state.draft.bodyStatsValidOn(DateTime.now()),
@@ -101,7 +105,7 @@ class _Controls extends StatelessWidget {
       _ => true,
     };
 
-    final hint = canAdvance || isLast ? null : _missing[state.step];
+    final hint = canAdvance || isLast ? null : _missing(state.step, l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,13 +115,13 @@ class _Controls extends StatelessWidget {
             if (state.step > 0)
               TextButton(
                 onPressed: state.submitting ? null : ctrl.back,
-                child: const Text('Back'),
+                child: Text(l10n.back),
               ),
             const Spacer(),
             if (!isLast)
               FilledButton(
                 onPressed: canAdvance ? ctrl.next : null,
-                child: const Text('Next'),
+                child: Text(l10n.next),
               )
             else
               FilledButton(
@@ -128,7 +132,7 @@ class _Controls extends StatelessWidget {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Finish'),
+                    : Text(l10n.finish),
               ),
           ],
         ),

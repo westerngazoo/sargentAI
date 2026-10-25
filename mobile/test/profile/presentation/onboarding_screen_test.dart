@@ -27,6 +27,7 @@ import 'package:fitai/src/profile/application/onboarding_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/domain/goal.dart';
 import 'package:fitai/src/profile/domain/profile.dart';
+import 'package:fitai/src/profile/domain/profile_draft.dart';
 import 'package:fitai/src/profile/presentation/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../support/l10n.dart';
 import '../../support/profile_fakes.dart';
 
 void main() {
@@ -72,7 +74,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -96,7 +98,29 @@ void main() {
     await pumpWizard(tester);
     // A linear progress header (not a spinner) shows wizard progress.
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
+    expect(find.text(l10n.next), findsOneWidget);
+  });
+
+  // R-0061 AC11: the step speaks the catalogue, including the field errors
+  // the draft reports as typed values.
+  testWidgets('the body-stats step and its field errors speak the catalogue',
+      (tester) async {
+    await pumpWizard(tester);
+
+    expect(find.text(l10n.setUpYourProfile), findsOneWidget);
+    expect(find.text(l10n.aboutYou), findsOneWidget);
+    expect(find.text(l10n.notSet), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.heightCmLabel),
+      '10',
+    );
+    await tester.pump();
+
+    expect(
+        find.text(l10n.heightOutOfRange(
+            ProfileLimits.minHeight, ProfileLimits.maxHeight)),
+        findsOneWidget);
   });
 
   testWidgets('SAC7 a successful save navigates to /home (screen owns the go)',
@@ -190,9 +214,9 @@ void main() {
       desktop(tester);
       await pumpWizard(tester);
 
-      final next = tester.getRect(find.widgetWithText(FilledButton, 'Next'));
+      final next = tester.getRect(find.widgetWithText(FilledButton, l10n.next));
       final weight =
-          tester.getRect(find.widgetWithText(TextField, 'Weight (kg)'));
+          tester.getRect(find.widgetWithText(TextField, l10n.weightKgLabel));
 
       expect(next.right, lessThanOrEqualTo(720 + 300),
           reason: 'Next must not hug the right edge of a wide window');
@@ -204,7 +228,7 @@ void main() {
 
     testWidgets('a disabled Next says what is missing', (tester) async {
       final (container, _) = await pumpWizard(tester);
-      const hint = 'Add your date of birth, height and weight to continue.';
+      final hint = l10n.onboardingMissingBodyStats;
 
       expect(find.text(hint), findsOneWidget);
 
@@ -217,7 +241,7 @@ void main() {
         (tester) async {
       await pumpWizard(tester);
 
-      await tester.tap(find.text('Choose'));
+      await tester.tap(find.text(l10n.choose));
       await tester.pumpAndSettle();
 
       expect(find.byType(YearPicker), findsOneWidget);

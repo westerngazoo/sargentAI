@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_exception.dart';
 import '../models/program_proposal.dart';
 import '../services/program_service.dart';
@@ -67,6 +68,7 @@ class _ProgramProposalsScreenState
   }
 
   Future<void> _choose(int index, ProgramProposal proposal) async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _choosingIndex = index);
     try {
       await ref
@@ -77,8 +79,8 @@ class _ProgramProposalsScreenState
     } on ApiException catch (e) {
       if (!mounted) return;
       final msg = e.statusCode == 409
-          ? 'Selection no longer available — please refresh.'
-          : 'Could not choose program — please retry.';
+          ? l10n.selectionNoLongerAvailable
+          : l10n.couldNotChooseProgram;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _choosingIndex = null);
@@ -88,7 +90,8 @@ class _ProgramProposalsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose your program')),
+      appBar:
+          AppBar(title: Text(AppLocalizations.of(context).chooseYourProgram)),
       body: _buildBody(),
     );
   }
@@ -98,12 +101,13 @@ class _ProgramProposalsScreenState
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
+      final l10n = AppLocalizations.of(context);
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Could not load proposals"),
-            TextButton(onPressed: _load, child: const Text('Retry')),
+            Text(l10n.couldNotLoadProposals),
+            TextButton(onPressed: _load, child: Text(l10n.retry)),
           ],
         ),
       );
@@ -147,16 +151,17 @@ class _ProposalCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onChoose;
 
-  String get _rankLabel => switch (rank) {
-        1 => 'Best match',
-        2 => 'Close match',
-        _ => 'Good option',
+  String _rankLabel(AppLocalizations l10n) => switch (rank) {
+        1 => l10n.rankBestMatch,
+        2 => l10n.rankCloseMatch,
+        _ => l10n.rankGoodOption,
       };
 
   @override
   Widget build(BuildContext context) {
     final p = proposal.program;
     final d = proposal.diet;
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -176,7 +181,7 @@ class _ProposalCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  Chip(label: Text(_rankLabel)),
+                  Chip(label: Text(_rankLabel(l10n))),
                 ],
               ),
               const SizedBox(height: 4),
@@ -184,7 +189,7 @@ class _ProposalCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 8),
               // Collapsed summary row
-              Text('${p.daysPerWeek} days/week · ${d.estimatedKcal} kcal/day'),
+              Text(l10n.proposalSummaryLine(p.daysPerWeek, d.estimatedKcal)),
               // Highlight exercises chips (always visible)
               const SizedBox(height: 8),
               Wrap(
@@ -197,19 +202,19 @@ class _ProposalCard extends StatelessWidget {
               // Expanded detail
               if (expanded) ...[
                 const Divider(),
-                Text('Intensity: ${p.intensityGuidance}'),
+                Text(l10n.intensityLine(p.intensityGuidance)),
                 const SizedBox(height: 4),
-                Text('Rest: ${p.restGuidance}'),
+                Text(l10n.restLine(p.restGuidance)),
                 const SizedBox(height: 4),
-                Text('Progression: ${p.progressionGuidance}'),
+                Text(l10n.progressionLine(p.progressionGuidance)),
                 const SizedBox(height: 8),
                 // Macro table
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _MacroCell('Protein', '${d.proteinG}g'),
-                    _MacroCell('Carbs', '${d.carbsG}g'),
-                    _MacroCell('Fat', '${d.fatG}g'),
+                    _MacroCell(l10n.protein, l10n.grams(d.proteinG)),
+                    _MacroCell(l10n.carbs, l10n.grams(d.carbsG)),
+                    _MacroCell(l10n.fat, l10n.grams(d.fatG)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -223,7 +228,7 @@ class _ProposalCard extends StatelessWidget {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Choose this program'),
+                        : Text(l10n.chooseThisProgram),
                   ),
                 ),
               ],
