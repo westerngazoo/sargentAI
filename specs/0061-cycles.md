@@ -106,22 +106,19 @@ heavy compounds.
 
 | # | Day | `focus` | Exercises |
 |---|-----|---------|-----------|
-| 0 | Sentadilla | legs | Back Squat, Front Squat, Leg Press, Leg Curl, Standing Calf Raise |
-| 1 | Banca | chest, arms | Bench Press, Incline Dumbbell Press, Dips, Close-Grip Bench Press, Barbell Curl |
+| 0 | Pierna | legs | Back Squat, Front Squat, Leg Press, Leg Curl, Standing Calf Raise |
+| 1 | Pecho y brazo | chest, arms | Bench Press, Incline Dumbbell Press, Dips, Close-Grip Bench Press, Barbell Curl |
 | 2 | Descanso | — | — |
-| 3 | Peso muerto | back, legs | Deadlift, Barbell Row, Pull-Up, Good Morning |
+| 3 | Espalda y pierna | back, legs | Deadlift, Barbell Row, Pull-Up, Good Morning |
 | 4 | Hombro y brazo | shoulders, arms | Overhead Press, Lateral Raise, Face Pull, Skull Crusher, Hammer Curl |
 | 5 | Descanso | — | — |
 | 6 | Descanso | — | — |
 
-- **Day names.** "Sentadilla", "Banca" and "Peso muerto" name the lift,
-  not the focus. That needs a small change to §2.1: an optional `lift`
-  label (`squat`, `bench`, `deadlift`) on `PlanDay::Training`, localized
-  on the client like `focus`.
-  - It is also the hook for the physics check. A day built on a modelled
-    lift can show that lift's mechanics.
-  - **For the owner:** accept the `lift` label, or name these days by
-    focus like the others.
+- **Day names come from `focus`,** like every other cycle (owner,
+  2026-10-25). Programs can be built in many styles (5×5, high intensity,
+  volume), so a day is named for what it trains, not for one lift. The
+  physics check hangs on the **exercise** (Back Squat, Deadlift, Bench
+  Press), not on the day's name.
 - **The record contradicts itself.** Its `weekly_frequency_per_muscle` is
   2, but its own prose says "~2x per ~14-day cycle", which is once a week.
   This cycle trains legs twice a week and everything else once, which
@@ -135,18 +132,17 @@ as the record says.
 
 | # | Day | `focus` | Exercises |
 |---|-----|---------|-----------|
-| 0 | Cuádriceps | legs | Leg Extension, Back Squat, Leg Press, Hack Squat, Standing Calf Raise |
+| 0 | Pierna | legs | Leg Extension, Back Squat, Leg Press, Hack Squat, Standing Calf Raise |
 | 1 | Pecho | chest | Incline Dumbbell Press, Bench Press, Hammer Strength Press, Cable Crossover |
-| 2 | Espalda (amplitud) | back | Pull-Up, Wide-Grip Pulldown, Close-Grip Pulldown, Straight-Arm Pulldown |
+| 2 | Espalda | back | Pull-Up, Wide-Grip Pulldown, Close-Grip Pulldown, Straight-Arm Pulldown |
 | 3 | Hombro y brazo | shoulders, arms | Seated Dumbbell Press, Lateral Raise, Rear Delt Fly, Barbell Curl, Triceps Pushdown |
-| 4 | Femoral y espalda (grosor) | legs, back | Lying Leg Curl, Romanian Deadlift, Barbell Row, T-Bar Row |
+| 4 | Pierna y espalda | legs, back | Lying Leg Curl, Romanian Deadlift, Barbell Row, T-Bar Row |
 | 5 | Descanso | — | — |
 | 6 | Descanso | — | — |
 
-"Cuádriceps", "Femoral", "amplitud" and "grosor" are finer than the
-`MuscleGroup` vocabulary. They need the same optional label as Columbu's
-lifts, here a free `subtitle` key localized on the client. **For the
-owner:** keep these labels, or show plain "Pierna" and "Espalda".
+Day 0 is quads and day 4 is hamstrings plus back thickness, as the
+exercises show. The names stay at the `focus` level, by the same rule as
+Columbu's.
 
 ### `modern-precision-hypertrophy` (Heath; order ours)
 
@@ -194,17 +190,14 @@ muscles. The test's comment says so.
 ## 4. Questions for the owner
 
 1. **Mentzer's spacing:** keep 8 days, or accept legs at 3?
-2. **Lift and subtitle labels** ("Sentadilla", "Peso muerto", "Cuádriceps"):
-   accept the optional label on `PlanDay::Training`, or name every day by
-   its focus?
-3. **The exercises themselves:** change anything you would not program
+2. **The exercises themselves:** change anything you would not program
    for that style.
 
 ## 5. Owner decisions recorded here
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| | *(awaiting owner)* | |
+| 2026-10-25 | Days are named by `focus` only; no lift or subtitle labels on `PlanDay::Training`. | Owner: programs come in many styles (5×5, high intensity, volume), so a day is named for what it trains. The physics check attaches to the exercise. |
 
 ## Changelog
 
@@ -218,3 +211,4 @@ muscles. The test's comment says so.
   - Heath trains each muscle once a week;
   - the frequency check is added;
   - three questions for the owner.
+- 2026-10-25 — owner: days named by focus only; the lift and subtitle labels are dropped.
