@@ -583,7 +583,6 @@ in the beta when it lands.
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
 | 1e | Theme tokens, the contrast test and the four bundled faces (§2.10). The halftone painter ships with 1f, its first user | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist. 1b also deletes `Brand.tagline` and wires `appTagline` into `BrandHeader`, adding the delegates to the auth widget tests | mobile | 1a |
-| 1e | Theme tokens, the contrast test, the four bundled faces and the halftone painter (§2.10) | mobile | — |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
@@ -663,10 +662,10 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
-  approval (§2.1). Days are named by focus only (owner, 2026-10-25). Two
-  questions stay open in the annex: Mentzer's spacing, and the exercises
-  themselves. It blocks slice 2b only, not this spec.
+- **OQ-A. The six cycles, with exercises per day.** *Resolved 2026-10-25:
+  Annex A v2 ships as tabled under the owner's authorization of the spec.*
+  Days are named by focus only (owner). Mentzer's spacing and the exercise
+  lists stay open as data fixes in `seed.rs` (Annex A §4).
 - **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
   removed.* Each of its five items has a home on the new screen.
 - **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
@@ -790,3 +789,4 @@ was done with a note on what to salvage.
   AC9 and AC12 updated. OQ-D resolved. Status → Accepted.
 - 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
   62-day range is inclusive, and range errors live in `DateRange::new`.
+- 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.

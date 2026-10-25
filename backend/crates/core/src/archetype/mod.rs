@@ -36,6 +36,11 @@ use thiserror::Error;
 
 use crate::Goal;
 
+// SPEC-0061 §2.1 places `PlanDay` under `core::archetype`, which owns the day
+// cycle. The type is defined in `plan`, where the projection consumes it, and
+// re-exported here so callers read it as the archetype's vocabulary.
+pub use crate::plan::PlanDay;
+
 /// How tall an archetype's frame stands, as a coarse band (the pose pipeline
 /// emits a height estimate, not a precise stature).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -184,13 +189,21 @@ pub struct ProgramTemplate {
     pub intensity: String,
     pub rest: String,
     pub progression: String,
+    /// The ordered day cycle (R-0061, SPEC-0061 §2.1). Empty until
+    /// [`ProgramTemplate::with_cycle`] attaches a validated one.
+    pub cycle: Vec<PlanDay>,
 }
 
 impl ProgramTemplate {
     /// The accepted weekly-frequency-per-muscle range (inclusive).
     pub const WEEKLY_FREQUENCY: std::ops::RangeInclusive<u8> = 1..=7;
 
-    /// Build a validated program template.
+    /// The most days a cycle may span: a two-week sanity bound (SPEC-0061
+    /// §2.1), not a claim about any record.
+    pub const MAX_CYCLE_DAYS: usize = 14;
+
+    /// Build a validated program template with an empty cycle; see
+    /// [`ProgramTemplate::with_cycle`].
     ///
     /// # Errors
     /// [`ArchetypeError::WeeklyFrequencyOutOfRange`] if
@@ -215,7 +228,41 @@ impl ProgramTemplate {
             intensity,
             rest,
             progression,
+            cycle: Vec::new(),
         })
+    }
+
+    /// Attach the ordered day cycle. A separate builder step rather than more
+    /// arguments on [`ProgramTemplate::new`], which would trip clippy's
+    /// `too_many_arguments` (SPEC-0061 §2.1, second review N8).
+    ///
+    /// # Errors
+    /// [`ArchetypeError::CycleTooLong`] past [`ProgramTemplate::MAX_CYCLE_DAYS`]
+    /// days; [`ArchetypeError::CycleWithoutTrainingDay`] if no day trains;
+    /// [`ArchetypeError::CycleDayFocusEmpty`] /
+    /// [`ArchetypeError::CycleDayExercisesEmpty`] for a training day that names
+    /// no muscle group or no exercise.
+    pub fn with_cycle(mut self, cycle: Vec<PlanDay>) -> Result<Self, ArchetypeError> {
+        if cycle.len() > Self::MAX_CYCLE_DAYS {
+            return Err(ArchetypeError::CycleTooLong);
+        }
+        let mut trains = false;
+        for (day, plan_day) in cycle.iter().enumerate() {
+            if let PlanDay::Training { focus, exercises } = plan_day {
+                if focus.is_empty() {
+                    return Err(ArchetypeError::CycleDayFocusEmpty { day });
+                }
+                if exercises.is_empty() {
+                    return Err(ArchetypeError::CycleDayExercisesEmpty { day });
+                }
+                trains = true;
+            }
+        }
+        if !trains {
+            return Err(ArchetypeError::CycleWithoutTrainingDay);
+        }
+        self.cycle = cycle;
+        Ok(self)
     }
 }
 
@@ -346,6 +393,14 @@ pub enum ArchetypeError {
     DisplayNameEmpty,
     #[error("internal_name must not be empty")]
     InternalNameEmpty,
+    #[error("cycle must have at least one training day")]
+    CycleWithoutTrainingDay,
+    #[error("cycle day {day}: a training day must name at least one muscle group")]
+    CycleDayFocusEmpty { day: usize },
+    #[error("cycle day {day}: a training day must list at least one exercise")]
+    CycleDayExercisesEmpty { day: usize },
+    #[error("cycle must not exceed {} days", ProgramTemplate::MAX_CYCLE_DAYS)]
+    CycleTooLong,
 }
 
 impl ArchetypeError {
@@ -358,6 +413,10 @@ impl ArchetypeError {
             ArchetypeError::GoalsServedEmpty => "goals_served",
             ArchetypeError::DisplayNameEmpty => "display_name",
             ArchetypeError::InternalNameEmpty => "internal_name",
+            ArchetypeError::CycleWithoutTrainingDay
+            | ArchetypeError::CycleDayFocusEmpty { .. }
+            | ArchetypeError::CycleDayExercisesEmpty { .. }
+            | ArchetypeError::CycleTooLong => "cycle",
         }
     }
 }
