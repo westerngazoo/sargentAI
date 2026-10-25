@@ -83,8 +83,8 @@ void main() {
     await pumpForgot(tester);
 
     expect(find.byType(TextField), findsOneWidget);
-    expect(
-        find.widgetWithText(ElevatedButton, l10n.sendResetLink), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, l10n.sendResetLink),
+        findsOneWidget);
     expect(find.textContaining(_confirmation), findsNothing);
   });
 

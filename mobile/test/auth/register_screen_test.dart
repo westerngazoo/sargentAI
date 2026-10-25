@@ -112,8 +112,7 @@ void main() {
 
     await submit(tester);
 
-    expect(find.text(l10n.emailAlreadyRegistered),
-        findsOneWidget);
+    expect(find.text(l10n.emailAlreadyRegistered), findsOneWidget);
     expect(find.textContaining('that already exists'), findsNothing);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
     verifyNever(() => repo.login(any(), any()));
