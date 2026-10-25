@@ -792,3 +792,4 @@ was done with a note on what to salvage.
   62-day range is inclusive, and range errors live in `DateRange::new`.
 - 2026-10-25 — slice 1f: the removed routes' redirects move to slice 3 (the old screens stay reachable, pushed, until the panels exist); the `context.go` guard carries a shrinking allowlist like the l10n guard.
 - 2026-10-25 — slice 2b: Annex A accepted as drafted (OQ-A); `GET /archetypes` now carries `program_template.cycle`.
+- 2026-10-25 — slice 2c: the `422` reasons are fixed tokens the client may match on: `today_out_of_bounds`, `starts_on_out_of_bounds`, `range_inverted`, `range_too_long`, `range_too_far_ahead`, `plan_fields_both_or_neither`, `plan_unavailable`, `plan_day_not_training`, `performed_on_before_starts_on`; the `409` is `program_not_current`.

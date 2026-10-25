@@ -69,7 +69,7 @@ pub(crate) async fn intent(
             )
         }
         ParsedAction::Workout(new) => {
-            let session = db::insert_session(&state.pool, user.user_id, &new).await?;
+            let session = db::insert_session(&state.pool, user.user_id, &new, None).await?;
             let summary = session.exercises.first().map_or_else(
                 || "Workout logged.".to_string(),
                 |ex| {

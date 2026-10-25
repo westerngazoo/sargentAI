@@ -97,6 +97,29 @@ impl From<fitai_core::FrameError> for ApiError {
     }
 }
 
+impl From<fitai_core::plan::PlanError> for ApiError {
+    /// A range the caller can fix is a 422 with a fixed token (SPEC-0061
+    /// §2.4). `NoTrainingDay` cannot arise from a library cycle (§2.1
+    /// validates every seed), so it is a server-side fault.
+    fn from(e: fitai_core::plan::PlanError) -> Self {
+        use fitai_core::plan::PlanError;
+        match e {
+            PlanError::RangeInverted => ApiError::Unprocessable {
+                reason: "range_inverted",
+            },
+            PlanError::RangeTooLong => ApiError::Unprocessable {
+                reason: "range_too_long",
+            },
+            PlanError::RangeTooFarAhead => ApiError::Unprocessable {
+                reason: "range_too_far_ahead",
+            },
+            PlanError::NoTrainingDay => {
+                ApiError::Internal(eyre::eyre!("cycle without a training day"))
+            }
+        }
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {
