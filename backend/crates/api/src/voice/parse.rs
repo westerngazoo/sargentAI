@@ -18,6 +18,53 @@ pub(super) enum IntentStatus {
     Unknown,
 }
 
+/// What the client does after a `navigate` intent (SPEC-0061 §2.8).
+///
+/// The server used to answer with route strings, but after SPEC-0061 §2.5
+/// most of those routes redirect to `/home`, so voice would silently stop
+/// doing anything. The wire field is now this token, serialized in
+/// `snake_case`; the client maps it to its own sealed `VoiceEffect`.
+///
+/// The old `route` field stays on the wire for one release, filled from the
+/// token by [`VoiceEffect::legacy_route`], so clients still in the field keep
+/// working. Remove it, and this mapping, in the release after SPEC-0061 ships.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum VoiceEffect {
+    /// Open focus mode with today's plan, or a free session. Was `/session`.
+    OpenFocusMode,
+    /// Open the Programa panel. Was `/programs/current` and `/programs/get`.
+    OpenProgram,
+    /// Open onboarding to edit the profile. Was `/onboarding`.
+    OpenOnboarding,
+    /// Close the Dictado sheet; the main screen is already there. Was `/home`.
+    Close,
+}
+
+impl VoiceEffect {
+    /// The route string this token replaces, for the deprecated `route` field.
+    pub(super) fn legacy_route(self) -> &'static str {
+        match self {
+            Self::OpenFocusMode => "/session",
+            Self::OpenProgram => "/programs/current",
+            Self::OpenOnboarding => "/onboarding",
+            Self::Close => "/home",
+        }
+    }
+
+    /// The token for a route string an LLM prompted before SPEC-0061 might
+    /// still produce. `None` for anything that was never a voice route.
+    fn from_legacy_route(route: &str) -> Option<Self> {
+        match route {
+            "/session" => Some(Self::OpenFocusMode),
+            "/programs/current" | "/programs/get" => Some(Self::OpenProgram),
+            "/onboarding" => Some(Self::OpenOnboarding),
+            "/home" => Some(Self::Close),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub(super) struct IntentResponse {
     pub status: IntentStatus,
@@ -25,6 +72,9 @@ pub(super) struct IntentResponse {
     pub message: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect: Option<VoiceEffect>,
+    /// Deprecated: `effect` as a route string, kept one release (SPEC-0061 §2.8).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,17 +87,19 @@ impl IntentResponse {
             status: IntentStatus::Clarify,
             message: None,
             prompt: Some(prompt.into()),
+            effect: None,
             route: None,
             record_id: None,
         }
     }
 
-    pub(super) fn navigate(route: impl Into<String>, message: impl Into<String>) -> Self {
+    pub(super) fn navigate(effect: VoiceEffect, message: impl Into<String>) -> Self {
         Self {
             status: IntentStatus::Navigate,
             message: Some(message.into()),
             prompt: None,
-            route: Some(route.into()),
+            effect: Some(effect),
+            route: Some(effect.legacy_route().to_string()),
             record_id: None,
         }
     }
@@ -57,6 +109,7 @@ impl IntentResponse {
             status: IntentStatus::LoggedNutrition,
             message: Some(message.into()),
             prompt: None,
+            effect: None,
             route: None,
             record_id: Some(id.to_string()),
         }
@@ -67,6 +120,7 @@ impl IntentResponse {
             status: IntentStatus::LoggedWorkout,
             message: Some(message.into()),
             prompt: None,
+            effect: None,
             route: None,
             record_id: Some(id.to_string()),
         }
@@ -77,6 +131,7 @@ impl IntentResponse {
             status: IntentStatus::Unknown,
             message: Some(message.into()),
             prompt: None,
+            effect: None,
             route: None,
             record_id: None,
         }
@@ -103,7 +158,7 @@ pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedActi
         text,
         &["stop", "cancel", "pause", "never mind", "stand by", "out"],
     ) {
-        return ParsedAction::Response(IntentResponse::navigate("/home", "Standing by."));
+        return navigate(VoiceEffect::Close, "Standing by.");
     }
 
     if let Some(workout) = parse_workout_set(text, today) {
@@ -144,10 +199,7 @@ pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedActi
     }
 
     if matches_any(text, &["plan"]) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/programs/current",
-            "Opening your program.",
-        ));
+        return navigate(VoiceEffect::OpenProgram, "Opening your program.");
     }
     if matches_any(
         text,
@@ -161,39 +213,31 @@ pub(super) fn parse_transcript(transcript: &str, today: NaiveDate) -> ParsedActi
             "start workout",
         ],
     ) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/session",
-            "Starting your session.",
-        ));
+        return navigate(VoiceEffect::OpenFocusMode, "Starting your session.");
     }
     if matches_any(
         text,
         &["body type", "body match", "match me", "find my type"],
     ) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/programs/get",
-            "Opening body match.",
-        ));
+        return navigate(VoiceEffect::OpenProgram, "Opening body match.");
     }
     if matches_any(text, &["program", "routine"]) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/programs/current",
-            "Opening your program.",
-        ));
+        return navigate(VoiceEffect::OpenProgram, "Opening your program.");
     }
     if matches_any(text, &["history", "past", "log list", "sessions"]) {
-        return ParsedAction::Response(IntentResponse::navigate("/home", "Your recent activity."));
+        return navigate(VoiceEffect::Close, "Your recent activity.");
     }
     if matches_any(text, &["profile", "my details", "settings", "account"]) {
-        return ParsedAction::Response(IntentResponse::navigate(
-            "/onboarding",
-            "Opening your profile.",
-        ));
+        return navigate(VoiceEffect::OpenOnboarding, "Opening your profile.");
     }
 
     ParsedAction::Response(IntentResponse::unknown(format!(
         "Didn't understand \"{transcript}\" — try 'log a meal' or 'log 10 reps bench at 100 kg'."
     )))
+}
+
+fn navigate(effect: VoiceEffect, message: &str) -> ParsedAction {
+    ParsedAction::Response(IntentResponse::navigate(effect, message))
 }
 
 fn parse_workout_set(t: &str, today: NaiveDate) -> Option<NewWorkoutSession> {
@@ -397,7 +441,7 @@ pub(super) async fn parse_with_llm(
          {{\"action\":\"log_workout\",\"exercise\":\"name\",\"reps\":N,\"weight_kg\":N|null}}\n\
          {{\"action\":\"log_meal\",\"protein_g\":N,\"carbs_g\":N,\"fat_g\":N}}\n\
          {{\"action\":\"clarify\",\"prompt\":\"question\"}}\n\
-         {{\"action\":\"navigate\",\"route\":\"/session|/home|/programs/current|/programs/get|/onboarding\",\"message\":\"...\"}}\n\
+         {{\"action\":\"navigate\",\"effect\":\"open_focus_mode|open_program|open_onboarding|close\",\"message\":\"...\"}}\n\
          {{\"action\":\"unknown\",\"message\":\"...\"}}"
     );
 
@@ -484,13 +528,24 @@ fn llm_json_to_action(v: &serde_json::Value, today: NaiveDate) -> ApiResult<Pars
             v["prompt"].as_str().unwrap_or("Can you say that again?"),
         ))),
         Some("navigate") => Ok(ParsedAction::Response(IntentResponse::navigate(
-            v["route"].as_str().unwrap_or("/home"),
+            llm_effect(v),
             v["message"].as_str().unwrap_or("Roger."),
         ))),
         _ => Ok(ParsedAction::Response(IntentResponse::unknown(
             v["message"].as_str().unwrap_or("Didn't understand that."),
         ))),
     }
+}
+
+/// The effect a `navigate` answer names. Reads `effect`, then a legacy `route`
+/// a model prompted before SPEC-0061 might still produce; anything else
+/// closes the sheet, as the old `/home` default did. Malformed model output
+/// is never a 500.
+fn llm_effect(v: &serde_json::Value) -> VoiceEffect {
+    serde_json::from_value(v["effect"].clone())
+        .ok()
+        .or_else(|| v["route"].as_str().and_then(VoiceEffect::from_legacy_route))
+        .unwrap_or(VoiceEffect::Close)
 }
 
 #[cfg(test)]
