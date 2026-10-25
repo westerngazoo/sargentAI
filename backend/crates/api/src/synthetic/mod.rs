@@ -24,7 +24,7 @@ use crate::{
     auth::AuthenticatedUser,
     db,
     error::{ApiError, ApiResult},
-    program::handlers::UserProgramResponse,
+    program::handlers::{resolve_starts_on, UserProgramResponse},
     AppState,
 };
 
@@ -68,6 +68,10 @@ pub(crate) struct SyntheticChooseRequest {
     pub archetype_id: String,
     pub shape: BodyShape,
     pub fat_band: FatBand,
+    /// The client's local date the plan starts on (R-0061, SPEC-0061 §2.4);
+    /// defaults to the server's UTC date.
+    #[serde(default)]
+    pub starts_on: Option<chrono::NaiveDate>,
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +160,7 @@ pub(crate) async fn choose_synthetic(
     user: AuthenticatedUser,
     Json(body): Json<SyntheticChooseRequest>,
 ) -> ApiResult<(StatusCode, Json<UserProgramResponse>)> {
+    let starts_on = resolve_starts_on(body.starts_on)?;
     let profile = db::find_profile_by_user(&state.pool, user.user_id)
         .await?
         .ok_or(ApiError::NotFound)?;
@@ -186,6 +191,7 @@ pub(crate) async fn choose_synthetic(
         None, // no photo session
         &chosen.program,
         &chosen.diet,
+        starts_on,
     )
     .await?;
 

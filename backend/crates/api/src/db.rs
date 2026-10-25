@@ -565,7 +565,17 @@ async fn load_exercises_by_session(
     Ok(exercises_by_session)
 }
 
-/// Insert a full session atomically; returns the stored aggregate.
+/// The plan day a session was seeded with (R-0061, SPEC-0061 §2.3): the
+/// program it belongs to and the cycle index it completes. Validated by the
+/// workout handler before it reaches the database.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PlanLink {
+    pub user_program_id: Uuid,
+    pub plan_day_index: i16,
+}
+
+/// Insert a full session atomically; returns the stored aggregate. A `plan`
+/// link stores the session's program and cycle index alongside it.
 ///
 /// # Errors
 /// Returns [`ApiError::Database`] on any query failure (the transaction rolls
@@ -574,16 +584,21 @@ pub async fn insert_session(
     pool: &PgPool,
     user_id: UserId,
     new: &NewWorkoutSession,
+    plan: Option<PlanLink>,
 ) -> ApiResult<WorkoutSession> {
     let mut tx = pool.begin().await?;
     let session_id = Uuid::new_v4();
     let row: SessionRow = sqlx::query_as(
-        "INSERT INTO workout_sessions (id, user_id, performed_on) VALUES ($1, $2, $3) \
+        "INSERT INTO workout_sessions \
+           (id, user_id, performed_on, user_program_id, plan_day_index) \
+         VALUES ($1, $2, $3, $4, $5) \
          RETURNING id, user_id, performed_on, created_at, updated_at",
     )
     .bind(session_id)
     .bind(user_id.0)
     .bind(new.performed_on)
+    .bind(plan.map(|p| p.user_program_id))
+    .bind(plan.map(|p| p.plan_day_index))
     .fetch_one(&mut *tx)
     .await?;
 
@@ -714,6 +729,58 @@ pub async fn replace_session(
         created_at: row.created_at,
         updated_at: row.updated_at,
     }))
+}
+
+/// The `starts_on` of the program a session is linked to, if the session is
+/// the caller's and carries a plan link whose program still exists. `None`
+/// otherwise: a missing or foreign session, a free workout, or a link whose
+/// program was deleted (`ON DELETE SET NULL`).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn session_plan_starts_on(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+) -> ApiResult<Option<NaiveDate>> {
+    Ok(sqlx::query_scalar(
+        "SELECT up.starts_on FROM workout_sessions ws \
+         JOIN user_programs up ON up.id = ws.user_program_id \
+         WHERE ws.id = $1 AND ws.user_id = $2",
+    )
+    .bind(id)
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?)
+}
+
+/// One session's date and plan link, as the schedule projection reads them
+/// (R-0061, SPEC-0061 §2.4).
+#[derive(Debug, FromRow)]
+pub struct SessionPlanRow {
+    pub id: Uuid,
+    pub performed_on: NaiveDate,
+    pub user_program_id: Option<Uuid>,
+    pub plan_day_index: Option<i16>,
+}
+
+/// Every session of the caller, oldest first and in `created_at` order within
+/// a day, with its plan link. The whole history is read because a plan session
+/// after the requested range still decides what earlier days offer (§2.2 N2).
+///
+/// # Errors
+/// Returns [`ApiError::Database`] on a query failure.
+pub async fn find_session_plan_rows(
+    pool: &PgPool,
+    user_id: UserId,
+) -> ApiResult<Vec<SessionPlanRow>> {
+    Ok(sqlx::query_as(
+        "SELECT id, performed_on, user_program_id, plan_day_index FROM workout_sessions \
+         WHERE user_id = $1 ORDER BY performed_on ASC, created_at ASC",
+    )
+    .bind(user_id.0)
+    .fetch_all(pool)
+    .await?)
 }
 
 /// Delete the caller's session (children cascade); `false` when the session is
@@ -1234,10 +1301,13 @@ pub struct UserProgramRow {
     pub diet: serde_json::Value,
     pub active: bool,
     pub chosen_at: DateTime<Utc>,
+    /// The day the plan's cycle starts (R-0061, SPEC-0061 §2.3).
+    pub starts_on: NaiveDate,
 }
 
-/// Insert a new program row, deactivate every previous active row for the same
-/// user, and return the inserted row — all inside one transaction.
+/// Insert a new program row starting on `starts_on`, deactivate every previous
+/// active row for the same user, and return the inserted row — all inside one
+/// transaction.
 ///
 /// # Errors
 /// [`ApiError::Database`] on any query failure.
@@ -1248,6 +1318,7 @@ pub async fn insert_program(
     source_session_id: Option<Uuid>,
     program: &fitai_core::program::GeneratedProgram,
     diet: &fitai_core::program::GeneratedDiet,
+    starts_on: NaiveDate,
 ) -> ApiResult<UserProgramRow> {
     let program_json = serde_json::to_value(program)
         .map_err(|e| ApiError::Internal(eyre::eyre!("serialise program: {e}")))?;
@@ -1263,16 +1334,17 @@ pub async fn insert_program(
 
     let row = sqlx::query_as::<_, UserProgramRow>(
         "INSERT INTO user_programs \
-           (user_id, archetype_id, source_session_id, program, diet) \
-         VALUES ($1, $2, $3, $4, $5) \
+           (user_id, archetype_id, source_session_id, program, diet, starts_on) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
          RETURNING id, user_id, archetype_id, source_session_id, \
-                   program, diet, active, chosen_at",
+                   program, diet, active, chosen_at, starts_on",
     )
     .bind(user_id.0)
     .bind(archetype_id)
     .bind(source_session_id)
     .bind(&program_json)
     .bind(&diet_json)
+    .bind(starts_on)
     .fetch_one(&mut *tx)
     .await?;
 
@@ -1290,12 +1362,35 @@ pub async fn get_current_program(
 ) -> ApiResult<Option<UserProgramRow>> {
     Ok(sqlx::query_as::<_, UserProgramRow>(
         "SELECT id, user_id, archetype_id, source_session_id, \
-                program, diet, active, chosen_at \
+                program, diet, active, chosen_at, starts_on \
          FROM user_programs \
          WHERE user_id = $1 AND active = TRUE \
          ORDER BY chosen_at DESC \
          LIMIT 1",
     )
+    .bind(user_id.0)
+    .fetch_optional(pool)
+    .await?)
+}
+
+/// Fetch one of the caller's programs by id, current or not; `None` when it is
+/// missing or another user's (→ 404, R-0006), so nothing about a foreign
+/// program is revealed (SPEC-0061 §2.4, N10).
+///
+/// # Errors
+/// [`ApiError::Database`] on a query failure.
+pub async fn get_program_by_id(
+    pool: &PgPool,
+    user_id: UserId,
+    id: Uuid,
+) -> ApiResult<Option<UserProgramRow>> {
+    Ok(sqlx::query_as::<_, UserProgramRow>(
+        "SELECT id, user_id, archetype_id, source_session_id, \
+                program, diet, active, chosen_at, starts_on \
+         FROM user_programs \
+         WHERE id = $1 AND user_id = $2",
+    )
+    .bind(id)
     .bind(user_id.0)
     .fetch_optional(pool)
     .await?)
@@ -1316,7 +1411,7 @@ pub async fn get_program_history(
 ) -> ApiResult<(Vec<UserProgramRow>, i64)> {
     let rows = sqlx::query_as::<_, UserProgramRow>(
         "SELECT id, user_id, archetype_id, source_session_id, \
-                program, diet, active, chosen_at \
+                program, diet, active, chosen_at, starts_on \
          FROM user_programs \
          WHERE user_id = $1 \
          ORDER BY chosen_at DESC \
