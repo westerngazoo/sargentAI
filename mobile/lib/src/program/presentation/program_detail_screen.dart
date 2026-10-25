@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../core/theme/app_theme.dart';
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
@@ -456,12 +455,9 @@ class CurrentProgramCard extends ConsumerWidget {
                             ratio: progress.ratio,
                             size: 72,
                             stroke: 7,
-                            onGradient: true,
+                            onPrimary: true,
                             label: l10n.doneOfTarget(
                                 progress.daysDone, progress.daysTarget),
-                            onPrimary: true,
-                            label:
-                                '${progress.daysDone}/${progress.daysTarget}',
                           ),
                         ],
                       ],
@@ -509,11 +505,6 @@ class CurrentProgramCard extends ConsumerWidget {
                     children: [
                       Text(
                         l10n.getYourProgram,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                ),
-                        'Get your program',
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium

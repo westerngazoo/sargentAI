@@ -5,12 +5,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
-import '../../core/theme/app_theme.dart';
 
 /// Physique shape parameters, 0..1 relative to the canvas. The name and the
 /// one-line blurb of each build are catalogue strings ([physiqueLabel],
 /// [physiqueBlurb]), keyed by the same archetype id.
-/// Physique shape parameters, 0..1 relative to the canvas.
 class PhysiqueParams {
   const PhysiqueParams({
     required this.shoulder,
