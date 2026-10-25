@@ -111,8 +111,10 @@ owner's adjustments for phones. The mockup is a reference, not a pixel spec.
   - **Logging** a training day of the plan completes it. That includes
     starting it from *Empezar sesión* or logging it late. A free workout
     does not advance the plan.
-  - **The projection.** The next pending training day falls on today, or on
-    tomorrow if a plan session was already logged today. The days after it
+  - **The projection.** The next pending day of the sequence falls on
+    today, or on tomorrow if a plan session was already logged today.
+    *(Amended 2026-10-24: "training day" → "day of the sequence", since rest
+    days are part of the sequence. OQ-C of SPEC-0061.)* The days after it
     follow in sequence order, one per calendar day.
   - **A training day that is not logged is not consumed.** It moves to the
     next day, and the whole projection shifts with it.
@@ -246,3 +248,5 @@ All answered by the owner on 2026-10-22:
 - 2026-10-22 — the owner answered all five open questions. AC4, AC5 and AC6
   were rewritten for the shifting plan, and AC7 and AC11 take the answers.
   Status → Accepted.
+- 2026-10-24 — AC6 amended by the owner (SPEC-0061 OQ-C): the projection
+  follows the next pending *day of the sequence*, rest days included.

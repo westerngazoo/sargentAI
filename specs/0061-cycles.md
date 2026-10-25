@@ -1,147 +1,220 @@
 # SPEC-0061 — Annex A: the six day cycles (OQ-A, for owner approval)
 
-- **Status:** Draft — awaiting owner approval (SPEC-0061 §2.1, OQ-A)
+- **Status:** Draft v2. It awaits owner approval (SPEC-0061 §2.1, OQ-A) and
+  blocks slice 2b only.
 - **Realizes:** R-0061 AC6 (the plan is an ordered sequence of days)
-- **Created:** 2026-10-23
+- **Created:** 2026-10-23. **Revised:** 2026-10-24 after the second
+  architect review (N7).
 
-Every cycle below is derived from its record's own `split` prose in
-`core/src/archetype/seed.rs`. The bodypart order is the record's; the
-exercises are **not** in any record, so they come from the generic
-`default_exercises` list in §2. Per SPEC-0061 §2.1, every cycle is
-therefore labelled **reconstructed**, including the two records whose
-splits are documented.
+## 0. How to read this annex
 
-`focus` uses the closed `MuscleGroup` vocabulary (`core/src/workout.rs`):
-`chest`, `back`, `shoulders`, `arms`, `legs`, `core`. It is coarse on
-purpose: "delts/triceps" becomes `shoulders, arms`, and the client names
-the day "Hombro y brazo".
+**Every cycle is reconstructed.** No archetype record in
+`core/src/archetype/seed.rs` lists exercises, and four of the six give no
+day order either. The column *Order from* says, cycle by cycle, what comes
+from the record and what is ours:
+
+| Record | Order from | What the record's split prose gives |
+|--------|------------|-------------------------------------|
+| `heavy-duty-mass` (Yates) | **the record** | "4-day split (delts/triceps, back, chest/biceps, legs); each muscle once every ~6 days" |
+| `high-intensity-minimalist` (Mentzer) | **the record** | "4-workout rotation (chest/back, legs, delts/arms, legs); each muscle every ~4-7 days" |
+| `mass-monster-volume` (Cutler) | ours, within the record's structure | "5-day bodypart split; each muscle once weekly; back and legs split into two sessions" (no order) |
+| `classic-aesthetic-taper` (Arnold) | ours | "high-volume double split, ~6 days/week; each major muscle ~2x/week" |
+| `powerbuilder-leverage` (Columbu) | ours | "heavy compounds (squat/bench/deadlift) plus bodybuilding accessories; each muscle ~2x per ~14-day cycle" |
+| `modern-precision-hypertrophy` (Heath) | ours | "5-day bodypart split; each muscle once weekly; ~3-5 exercises per bodypart" |
+
+**Exercises are listed per day.** v1 joined a generic list per muscle
+group, which put skull crushers on a chest-and-biceps day (second review,
+N7). Every day below names its own exercises.
+- Names stay in English, as curated data (SPEC-0061 §4).
+- Sets, reps and loads are **not** part of the cycle. The record's own
+  intensity, rest and progression guidance still say how to train.
+
+**`focus`** uses the closed `MuscleGroup` vocabulary: `chest`, `back`,
+`shoulders`, `arms`, `legs`, `core`. The client builds the day's name from
+it, for example `[shoulders, arms]` → "Hombro y brazo".
 
 ## 1. The cycles
 
-Day names are what the Spanish client will show, built from `focus`.
+### `heavy-duty-mass` (Yates; order from the record)
 
-### `heavy-duty-mass` (HIT; split documented, cycle reconstructed)
+A 6-day cycle with 4 training days, so each muscle comes round every 6
+days, as the record says. That is about 4.7 training days a week.
 
-Split: "4-day split (delts/triceps, back, chest/biceps, legs); each muscle
-once every ~6 days". 7-day cycle, 4 training days.
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Hombro y brazo | shoulders, arms | Seated Dumbbell Press, Lateral Raise, Reverse Pec Deck, Lying Triceps Extension, Triceps Pushdown |
+| 1 | Espalda | back | Pulldown, Barbell Row, One-Arm Dumbbell Row, Deadlift, Back Extension |
+| 2 | Descanso | — | — |
+| 3 | Pecho y brazo | chest, arms | Incline Barbell Press, Flat Dumbbell Press, Pec Deck, Barbell Curl, Hammer Curl |
+| 4 | Pierna | legs | Leg Extension, Leg Press, Hack Squat, Lying Leg Curl, Standing Calf Raise |
+| 5 | Descanso | — | — |
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Hombro y brazo | shoulders, arms |
-| 1 | Espalda | back |
-| 2 | Descanso | — |
-| 3 | Pecho y brazo | chest, arms |
-| 4 | Descanso | — |
-| 5 | Pierna | legs |
-| 6 | Descanso | — |
+Day 0 trains triceps and day 3 trains biceps. That matches the record's
+"delts/triceps" and "chest/biceps".
 
-### `high-intensity-minimalist` (HIT; split documented, cycle reconstructed)
+### `high-intensity-minimalist` (Mentzer; order from the record)
 
-Split: "4-workout rotation (chest/back, legs, delts/arms, legs); each muscle
-every ~4-7 days". 12-day cycle, 4 training days, one session every third
-day. The record's recovery window is 4–7 days; three days is the floor
-that keeps a 14-day cycle limit while honouring the rotation.
+An 8-day cycle with 4 training days, one session every other day: about
+3.5 training days a week.
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Pecho y espalda | chest, back |
-| 1–2 | Descanso | — |
-| 3 | Pierna | legs |
-| 4–5 | Descanso | — |
-| 6 | Hombro y brazo | shoulders, arms |
-| 7–8 | Descanso | — |
-| 9 | Pierna | legs |
-| 10–11 | Descanso | — |
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Pecho y espalda | chest, back | Pec Deck, Incline Press, Dips, Dumbbell Pullover, Pulldown, Barbell Row |
+| 1 | Descanso | — | — |
+| 2 | Pierna | legs | Leg Extension, Leg Press, Leg Curl, Standing Calf Raise |
+| 3 | Descanso | — | — |
+| 4 | Hombro y brazo | shoulders, arms | Lateral Raise, Overhead Press, Barbell Curl, Triceps Pushdown |
+| 5 | Descanso | — | — |
+| 6 | Pierna | legs | Back Squat, Leg Curl, Seated Calf Raise |
+| 7 | Descanso | — | — |
 
-### `classic-aesthetic-taper` (high-volume; reconstructed)
+- **The pairs are pre-exhaustion,** as the record says ("pre-exhaust
+  supersets"): an isolation move straight into a compound one, such as Pec
+  Deck then Incline Press, or Leg Extension then Leg Press.
+- **No integer spacing fits the record exactly.** The rotation trains legs
+  twice and everything else once. With a session every other day:
+  - legs come round every 4 days, inside the record's "4–7";
+  - chest, back, shoulders and arms come round every 8 days, one day over.
 
-Split: "high-volume double split, ~6 days/week; each major muscle
-~2x/week". 7-day cycle, 6 training days. The era's morning/evening double
-sessions collapse into one session per day: the app logs one session per
-plan day.
+  A tighter spacing would bring legs inside 4 days. **For the owner:** keep
+  8 days, or accept legs at 3?
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Pecho y espalda | chest, back |
-| 1 | Hombro y brazo | shoulders, arms |
-| 2 | Pierna | legs |
-| 3 | Pecho y espalda | chest, back |
-| 4 | Hombro y brazo | shoulders, arms |
-| 5 | Pierna | legs |
-| 6 | Descanso | — |
+### `classic-aesthetic-taper` (Arnold; order ours)
 
-### `powerbuilder-leverage` (powerbuilding; reconstructed)
+A 7-day cycle with 6 training days: the familiar chest-and-back,
+shoulders-and-arms, legs order, twice through. The era's morning and
+evening double sessions become one session per day, because the app logs
+one session per plan day.
 
-Split: "heavy compounds (squat/bench/deadlift) plus bodybuilding
-accessories; each muscle ~2x per ~14-day cycle". Expressed as a 7-day
-cycle: two passes make the record's 14 days, with each muscle twice.
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Pecho y espalda | chest, back | Bench Press, Incline Press, Dumbbell Flye, Wide-Grip Pull-Up, Barbell Row, Dumbbell Pullover |
+| 1 | Hombro y brazo | shoulders, arms | Overhead Press, Lateral Raise, Barbell Curl, Incline Dumbbell Curl, Close-Grip Bench Press, Triceps Pushdown |
+| 2 | Pierna | legs | Back Squat, Leg Press, Leg Extension, Leg Curl, Stiff-Leg Deadlift, Standing Calf Raise |
+| 3 | Pecho y espalda | chest, back | Incline Dumbbell Press, Dips, Cable Crossover, T-Bar Row, Close-Grip Pulldown |
+| 4 | Hombro y brazo | shoulders, arms | Seated Dumbbell Press, Upright Row, Preacher Curl, Concentration Curl, Overhead Triceps Extension |
+| 5 | Pierna | legs | Front Squat, Hack Squat, Lying Leg Curl, Seated Calf Raise |
+| 6 | Descanso | — | — |
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Pierna | legs |
-| 1 | Pecho y brazo | chest, arms |
-| 2 | Descanso | — |
-| 3 | Espalda | back |
-| 4 | Hombro y brazo | shoulders, arms |
-| 5 | Descanso | — |
-| 6 | Descanso | — |
+The second pass varies the exercises, as high-volume routines of the era
+did.
 
-### `mass-monster-volume` (high-volume; reconstructed)
+### `powerbuilder-leverage` (Columbu; order ours)
 
-Split: "5-day bodypart split; each muscle once weekly; back and legs split
-into two sessions". 7-day cycle, 5 training days.
+A 7-day cycle with 4 training days, each built on one of the record's
+heavy compounds.
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Pecho | chest |
-| 1 | Espalda | back |
-| 2 | Hombro y brazo | shoulders, arms |
-| 3 | Pierna | legs |
-| 4 | Pierna, espalda y brazo | legs, back, arms |
-| 5 | Descanso | — |
-| 6 | Descanso | — |
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Sentadilla | legs | Back Squat, Front Squat, Leg Press, Leg Curl, Standing Calf Raise |
+| 1 | Banca | chest, arms | Bench Press, Incline Dumbbell Press, Dips, Close-Grip Bench Press, Barbell Curl |
+| 2 | Descanso | — | — |
+| 3 | Peso muerto | back, legs | Deadlift, Barbell Row, Pull-Up, Good Morning |
+| 4 | Hombro y brazo | shoulders, arms | Overhead Press, Lateral Raise, Face Pull, Skull Crusher, Hammer Curl |
+| 5 | Descanso | — | — |
+| 6 | Descanso | — | — |
 
-### `modern-precision-hypertrophy` (modern hypertrophy; reconstructed)
+- **Day names.** "Sentadilla", "Banca" and "Peso muerto" name the lift,
+  not the focus. That needs a small change to §2.1: an optional `lift`
+  label (`squat`, `bench`, `deadlift`) on `PlanDay::Training`, localized
+  on the client like `focus`.
+  - It is also the hook for the physics check. A day built on a modelled
+    lift can show that lift's mechanics.
+  - **For the owner:** accept the `lift` label, or name these days by
+    focus like the others.
+- **The record contradicts itself.** Its `weekly_frequency_per_muscle` is
+  2, but its own prose says "~2x per ~14-day cycle", which is once a week.
+  This cycle trains legs twice a week and everything else once, which
+  keeps both readings within the seed test's ±1. Correcting the record's
+  field is a separate data fix.
 
-Split: "5-day bodypart split; each muscle once weekly; ~3-5 exercises per
-bodypart". 7-day cycle, 5 training days.
+### `mass-monster-volume` (Cutler; order ours, structure from the record)
 
-| # | Day | `focus` |
-|---|-----|---------|
-| 0 | Pierna | legs |
-| 1 | Pecho y brazo | chest, arms |
-| 2 | Espalda y brazo | back, arms |
-| 3 | Hombro y core | shoulders, core |
-| 4 | Brazo | arms |
-| 5 | Descanso | — |
-| 6 | Descanso | — |
+A 7-day cycle with 5 training days. Back and legs each take two sessions,
+as the record says.
 
-## 2. `default_exercises(MuscleGroup)`
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Cuádriceps | legs | Leg Extension, Back Squat, Leg Press, Hack Squat, Standing Calf Raise |
+| 1 | Pecho | chest | Incline Dumbbell Press, Bench Press, Hammer Strength Press, Cable Crossover |
+| 2 | Espalda (amplitud) | back | Pull-Up, Wide-Grip Pulldown, Close-Grip Pulldown, Straight-Arm Pulldown |
+| 3 | Hombro y brazo | shoulders, arms | Seated Dumbbell Press, Lateral Raise, Rear Delt Fly, Barbell Curl, Triceps Pushdown |
+| 4 | Femoral y espalda (grosor) | legs, back | Lying Leg Curl, Romanian Deadlift, Barbell Row, T-Bar Row |
+| 5 | Descanso | — | — |
+| 6 | Descanso | — | — |
 
-A training day's `exercises` is the concatenation of this list for each
-group in its `focus`, in `focus` order. Names stay in English (SPEC-0061
-§4). Loads, sets and reps are **not** part of the cycle: the record's own
-intensity, rest and progression guidance still describe how to train.
+"Cuádriceps", "Femoral", "amplitud" and "grosor" are finer than the
+`MuscleGroup` vocabulary. They need the same optional label as Columbu's
+lifts, here a free `subtitle` key localized on the client. **For the
+owner:** keep these labels, or show plain "Pierna" and "Espalda".
 
-| Group | Exercises |
-|-------|-----------|
-| chest | Barbell Bench Press, Incline Dumbbell Press, Cable Fly |
-| back | Deadlift, Barbell Row, Pull-up, Lat Pulldown |
-| shoulders | Overhead Press, Lateral Raise, Rear Delt Fly |
-| arms | Barbell Curl, Triceps Pushdown, Incline Dumbbell Curl, Skull Crusher |
-| legs | Barbell Squat, Romanian Deadlift, Leg Press, Leg Curl, Standing Calf Raise |
-| core | Hanging Leg Raise, Cable Crunch |
+### `modern-precision-hypertrophy` (Heath; order ours)
 
-## 3. Validation this annex must pass (SPEC-0061 §2.1)
+A 7-day cycle with 5 training days: each muscle once a week, 3 to 5
+exercises per bodypart, as the record says. v1 trained arms three times a
+week, against the record (N7).
+
+| # | Day | `focus` | Exercises |
+|---|-----|---------|-----------|
+| 0 | Pierna | legs | Leg Extension, Back Squat, Leg Press, Lying Leg Curl, Standing Calf Raise |
+| 1 | Pecho | chest | Incline Dumbbell Press, Bench Press, Cable Crossover, Dips |
+| 2 | Espalda | back | Pull-Up, Barbell Row, Seated Cable Row, Straight-Arm Pulldown |
+| 3 | Hombro | shoulders | Seated Dumbbell Press, Lateral Raise, Rear Delt Fly, Face Pull |
+| 4 | Brazo | arms | Barbell Curl, Incline Dumbbell Curl, Close-Grip Bench Press, Triceps Pushdown, Overhead Triceps Extension |
+| 5 | Descanso | — | — |
+| 6 | Descanso | — | — |
+
+## 2. The frequency check (SPEC-0061 §2.1)
+
+For every `MuscleGroup` in a cycle, the seed test computes how often it is
+trained per 7 days (`count × 7 / len`). The result must lie within ±1 of
+the record's `weekly_frequency_per_muscle`.
+
+**`arms` is excluded.** It merges biceps and triceps, which split routines
+train on different days, so Yates' two arm days are two different
+muscles. The test's comment says so.
+
+| Record | Field | chest | back | shoulders | legs | ✔ |
+|--------|-------|-------|------|-----------|------|---|
+| `heavy-duty-mass` | 1 | 1.17 | 1.17 | 1.17 | 1.17 | ✔ |
+| `high-intensity-minimalist` | 1 | 0.88 | 0.88 | 0.88 | 1.75 | ✔ |
+| `classic-aesthetic-taper` | 2 | 2 | 2 | 2 | 2 | ✔ |
+| `powerbuilder-leverage` | 2 | 1 | 1 | 1 | 2 | ✔ (see the note above) |
+| `mass-monster-volume` | 1 | 1 | 2 | 1 | 2 | ✔ |
+| `modern-precision-hypertrophy` | 1 | 1 | 1 | 1 | 1 | ✔ |
+
+## 3. Validation this annex must pass
 
 - Every cycle has at least one training day. ✔ (4, 4, 6, 4, 5, 5)
 - Every training day has a non-empty `focus` and at least one exercise. ✔
-- No cycle exceeds 14 days. ✔ (longest: 12)
+- No cycle exceeds 14 days. ✔ (the longest is 8)
 - Every record's provenance notes gain the line "day cycle and exercises
   reconstructed for R-0061".
 
-## 4. Owner decisions recorded here
+## 4. Questions for the owner
+
+1. **Mentzer's spacing:** keep 8 days, or accept legs at 3?
+2. **Lift and subtitle labels** ("Sentadilla", "Peso muerto", "Cuádriceps"):
+   accept the optional label on `PlanDay::Training`, or name every day by
+   its focus?
+3. **The exercises themselves:** change anything you would not program
+   for that style.
+
+## 5. Owner decisions recorded here
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | | *(awaiting owner)* | |
+
+## Changelog
+
+- 2026-10-23 — v1: six cycles with a generic per-muscle exercise list.
+- 2026-10-24 — v2, after the second architect review (N7):
+  - exercises are listed per day;
+  - each cycle's provenance is stated (order from the record for Yates and
+    Mentzer only);
+  - Yates is now a 6-day cycle, matching "once every ~6 days";
+  - Mentzer is an 8-day cycle;
+  - Heath trains each muscle once a week;
+  - the frequency check is added;
+  - three questions for the owner.

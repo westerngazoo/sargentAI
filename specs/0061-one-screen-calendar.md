@@ -1,6 +1,6 @@
 # SPEC-0061 — One screen, built around a calendar
 
-- **Status:** Draft (architect review applied; awaiting owner acceptance)
+- **Status:** Draft (second architect review applied; awaiting owner acceptance)
 - **Realizes:** R-0061 (Accepted, owner, 2026-10-22). Supersedes R-0011.
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-23
@@ -13,7 +13,7 @@
   - SPEC-0035 (earbud hands-free)
 - **Module(s):**
   - `backend/crates/core`: `archetype`, and a new `plan` module
-  - `backend/crates/api`: `program`, `synthetic`, `workout`, `db`
+  - `backend/crates/api`: `program`, `synthetic`, `workout`, `voice`, `db`
   - `backend/migrations`
   - `mobile/lib/src`: `shell`, `router`, `core/theme`, `hub`, a new `l10n`,
     and the feature folders
@@ -65,27 +65,44 @@ pub struct ProgramTemplate { /* existing fields */ pub cycle: Vec<PlanDay> }
   name from `focus` in the user's language: `[legs]` → "Pierna",
   `[shoulders, arms]` → "Hombro y brazo". This keeps AC11 true for every
   string the server would otherwise send.
-- **Validation in `ProgramTemplate::new`:**
+- **Validation in `ProgramTemplate::with_cycle(self, cycle) -> Result<Self, ArchetypeError>`.**
+  It is a separate builder step, not two more arguments on
+  `ProgramTemplate::new`, which would reach eight and trip clippy's
+  `too_many_arguments` under `-D warnings` (second review, N8). It checks:
   - at least one `Training` day;
   - every `Training` day has a non-empty `focus` and at least one exercise;
-  - the cycle has no more than 14 days, which is the length of Columbu's
-    reconstructed split.
+  - the cycle has no more than 14 days. That is a sanity bound of two
+    weeks, not a claim about any record. Every cycle in Annex A is 8 days
+    or shorter.
 
   `seed::all` keeps its single justified `expect` (SPEC-0012), so an
   invalid record fails the build.
-- **Where the exercises come from (architect finding 8).** No archetype
-  record carries per-day exercises today.
-  - The bodypart order of each cycle comes from the record's own split
-    prose.
-  - The exercises for each day come from a new curated
-    `default_exercises(MuscleGroup)` list in `core::archetype`.
-  - Every cycle is therefore labelled **reconstructed** in the record's
-    provenance. Even a documented split gets exercises we supplied.
-  - The six cycles and the default list are drafted in
-    [Annex A](0061-cycles.md). The owner approves that table before slice 2
-    merges (OQ-A).
-- **`days_per_week` and `highlight_exercises` stay as they are.** Removing
-  them is a separate change, and it is not needed here.
+- **Where the exercises come from (architect finding 8, second review N7).**
+  No archetype record carries per-day exercises.
+  - **Each training day lists its own exercises** in Annex A. There is no
+    generic per-muscle list, because a coarse list put skull crushers on a
+    chest-and-biceps day.
+  - The bodypart **order** comes from the record's split prose only for
+    `heavy-duty-mass` (Yates) and `high-intensity-minimalist` (Mentzer).
+    `mass-monster-volume`'s prose gives the structure (back and legs each
+    split across two sessions) but no order. For the other three the
+    order is ours. Annex A says which is which, per cycle.
+  - Every cycle is labelled **reconstructed** in the record's provenance,
+    including the two documented splits, since the exercises are ours.
+  - **A seed test** computes, for every `MuscleGroup` in a cycle, how many
+    times it is trained per 7 days (`count × 7 / len`). The result must lie
+    within ±1 of the record's `weekly_frequency_per_muscle`. That catches a
+    cycle that trains a muscle three times in a "once weekly" record.
+  - The owner approves Annex A before slice 2b merges (OQ-A).
+- **`days_per_week` stops being shown as a weekly target (second review,
+  N6).** It is parsed from prose (`program/mod.rs:151–162`), so every seed
+  reads as 4, while the cycles train from 3.5 to 6 days a week.
+  - The Progreso panel's weekly target (`program_progress.dart:79`) becomes
+    the number of `Training` days the projection places in the current
+    Monday-to-Sunday week, read from `GET /programs/me/schedule`.
+  - The field stays in `GeneratedProgram` for old clients. Removing it is a
+    separate change.
+- **`highlight_exercises` stays as it is,** for the same reason.
 
 **Why the archetype and not the stored program.** `user_programs.program`
 is a per-user JSONB snapshot. The cycle is read from the library through
@@ -106,10 +123,11 @@ pub struct DayLog {
     pub any_session: bool,   // any workout at all that day (plan or free)
 }
 pub enum DayState {
-    Done { completed: Vec<u32> },          // cycle indices completed that day (empty: free workout(s) only)
+    Done { completed: Vec<u32>,            // cycle indices completed that day (empty: free workout(s) only)
+           pending: Option<u32> },         // with free workouts only: the training day still pending (N1)
     Planned { cycle_index: u32 },
     Rest { cycle_index: u32 },
-    Nothing { pending: Option<u32> },      // past day; the training day that was pending then, if any
+    Nothing { pending: Option<u32> },      // past day; the training day a late log would complete, if any
 }
 pub fn project(cycle: &[PlanDay], starts_on: NaiveDate,
                logs: &BTreeMap<NaiveDate, DayLog>, today: NaiveDate,
@@ -127,21 +145,36 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate,
 
 **The replay.** A cursor `c` points into the cycle and wraps (`c % len`).
 It starts at 0 on `starts_on` and walks every day from `starts_on` to
-`max(range.to, today)`. Rules apply in this order:
+`range.to`, and no further: the replay only moves forward, so nothing after
+the range can change what the range shows (second review, N9). Before the
+walk, `last_plan` is the latest date in `logs` that holds a plan session.
+Rules apply in this order:
 
 1. **Days before `starts_on`** never touch the cursor. They are emitted
    only if they fall in the range, as `Done { [] }` when any session was
    logged, otherwise `Nothing { pending: None }` (finding 1).
 2. **A day with plan sessions**, whatever its tense (finding 4), becomes
-   `Done { completed: plan }`. The cursor moves to `last(plan) + 1`.
-3. **A day with only free sessions** becomes `Done { [] }`, whatever its
-   tense. If `cycle[c]` is `Rest`, the rest is consumed by time and the
-   cursor moves (finding 2). A training day stays pending.
-4. **A past day with nothing logged** becomes
-   `Nothing { pending: Some(c) }` when `cycle[c]` is a training day: that
-   training day **shifts**, and the cursor stays. When `cycle[c]` is a rest
-   day, the state is `Nothing { pending: None }`, the rest is consumed and
-   the cursor moves.
+   `Done { completed: plan, pending: None }`. The cursor moves to
+   `last(plan) + 1`.
+3. **A day with only free sessions**, whatever its tense, becomes
+   `Done { completed: [], pending }`. If `cycle[c]` is `Rest`, the rest is
+   consumed by time, the cursor moves (finding 2) and `pending` is `None`.
+   If `cycle[c]` is a training day, it stays pending, the cursor stays, and
+   `pending` is `Some(c)` (second review, N1). The client uses that only for
+   today's secondary *Empezar sesión*.
+4. **A past day with nothing logged:**
+   - If the day is **before `last_plan`**, the state is
+     `Nothing { pending: None }`. A later plan session already completed
+     whatever was pending here, so offering it again would make a late log
+     repeat it (second review, N2). Take [Legs, Push]: Monday is not
+     logged, and Tuesday is logged as Legs. Monday must not offer Legs
+     again. A late log on Monday is a free workout. The cursor still
+     follows rule 4's second bullet below, which keeps the replay identical
+     for every later day.
+   - Otherwise, when `cycle[c]` is a training day, the state is
+     `Nothing { pending: Some(c) }`: that training day **shifts**, and the
+     cursor stays. When `cycle[c]` is a rest day, the state is
+     `Nothing { pending: None }`, the rest is consumed and the cursor moves.
 5. **Today or later, with nothing logged.** The day becomes
    `Planned { c }` or `Rest { c }`, and the cursor moves. The projection
    assumes the user follows the plan.
@@ -151,11 +184,12 @@ It starts at 0 on `starts_on` and walks every day from `starts_on` to
   tomorrow at `last + 1`, so if the next cycle day is a rest day, tomorrow
   shows Rest. That is the sequence order, read as "the next pending
   **day**". See OQ-C for the wording of R-0061 AC6.
-- A **free workout today** makes today `Done { [] }`. The training day it
-  did not complete is still pending. Today's primary action is
+- A **free workout today** makes today `Done { completed: [], pending: Some(c) }`
+  when `cycle[c]` is a training day. Today's primary action is
   *Ver lo registrado* (AC5), and the pending plan day is shown below it
-  with a secondary *Empezar sesión*. Without that secondary action, a
-  warm-up would hide the plan for the rest of the day.
+  with a secondary *Empezar sesión* that carries the server's `pending`
+  index (N1). Without that secondary action, a warm-up would hide the plan
+  for the rest of the day.
 
 **Edge cases from R-0061 AC6:**
 
@@ -163,20 +197,23 @@ It starts at 0 on `starts_on` and walks every day from `starts_on` to
 |------|--------|
 | A plan session on a projected **rest** day | The session stores the training index it was seeded with. Rule 2 marks that day done and the cursor moves past it, skipping the rest. |
 | **Two** plan sessions on one day | `completed` holds both indices, and the cursor follows the last one. |
-| A **late log** dated before a later plan log | Each session keeps its own stored index, so neither rewrites the other. The cursor after the replay follows the latest session by date. |
+| A **late log** dated before a later plan log | Each session keeps its own stored index, so neither rewrites the other. The cursor after the replay follows the latest session by date. An unlogged day before `last_plan` offers only a free late log (rule 4, N2). |
 | A **program change** | The new `user_programs` row has its own `starts_on`. `DayLog.plan` counts only sessions of the **current** program (finding 11). Old plan sessions show as `Done { [] }`, so they appear on the calendar but do not advance the new plan. |
 | `starts_on` in the future | Days up to it fall under rule 1, and projection starts on `starts_on`. |
 | A cycle with one training day | `[Legs]` projects Legs every day, and shifts the same way. |
 
-**Errors.** `PlanError` has three variants:
+**Errors.** `PlanError` has four variants:
 - `NoTrainingDay`: unreachable after §2.1 validation, but it keeps the
   function total;
 - `RangeInverted`;
-- `RangeTooLong`.
+- `RangeTooLong`: more than 62 days;
+- `RangeTooFarAhead`: `range.to` later than `today + 366 days` (N9). With
+  the walk bounded by `range.to`, this caps the work of any request.
 
 `BTreeMap` makes "sorted, one entry per date" a property of the type, not a
-precondition. The cost is O(days since `starts_on` + range). That is fine
-for a beta, and the spec does not optimize ahead of need.
+precondition. The cost is O(days from `starts_on` to `range.to`), and
+`range.to` is at most a year ahead. That is fine for a beta, and the spec
+does not optimize ahead of need.
 
 ### 2.3 Schema (migration `00012_plan_projection.sql`)
 
@@ -208,7 +245,8 @@ CREATE INDEX idx_workout_sessions_user_program ON workout_sessions (user_program
 {
   "program_id": "…", "starts_on": "2026-10-23",
   "cycle": [ { "kind": "training", "focus": ["legs"], "exercises": ["Back Squat", "…"] }, { "kind": "rest" } ],
-  "days": [ { "date": "2026-10-22", "state": "nothing", "pending": 0 },
+  "days": [ { "date": "2026-10-21", "state": "done", "completed": [], "pending": 0 },
+            { "date": "2026-10-22", "state": "nothing", "pending": null },
             { "date": "2026-10-23", "state": "planned", "cycle_index": 0 } ],
   "session_ids": { "2026-10-21": ["…"] }
 }
@@ -218,6 +256,9 @@ CREATE INDEX idx_workout_sessions_user_program ON workout_sessions (user_program
   - `today` is the client's local date and must be within ±1 day of the
     server's UTC date. Every real local date satisfies that bound.
   - `DateRange::new` enforces `from ≤ to` and a range of at most 62 days.
+  - `to` must be no later than `today + 366 days` (`PlanError::RangeTooFarAhead`,
+    N9). An adversarial test asks for `from=9999-01-01&to=9999-01-31` and
+    gets `422` at once.
   - Any violation returns `422` with the existing validation error shape.
 - **No current program**, or an `archetype_id` the library does not know,
   returns `200` with `program_id: null`, an empty `cycle`, and `days` built
@@ -228,7 +269,8 @@ CREATE INDEX idx_workout_sessions_user_program ON workout_sessions (user_program
   neither appears in B's response (finding 12).
 
 **`POST /workouts`** gains optional `user_program_id` and `plan_day_index`
-(finding 9):
+(finding 9). The checks run **in this order**, so an error never reveals
+another user's data (second review, N10):
 - They come **both or neither**. A free workout sends neither, so existing
   clients stay compatible. One without the other returns `422`.
 - A `user_program_id` the caller does not own returns `404`, matching
@@ -237,8 +279,13 @@ CREATE INDEX idx_workout_sessions_user_program ON workout_sessions (user_program
   `program_not_current`. This happens when the program changed on another
   device mid-session. The client then saves the session as a free workout
   and says so, so a finished session is never lost.
+- The current program's `archetype_id` is unknown to the library, so it has
+  no cycle: `422` `plan_unavailable`. The client saves the session as free,
+  as it does for a 409.
 - `plan_day_index` must name a `Training` day of the cycle, and
   `performed_on ≥ starts_on`. Otherwise `422`.
+- A test sends a **foreign** `user_program_id` with an out-of-range
+  `plan_day_index`, and gets `404`, not `422`.
 
 **`PUT /workouts/{id}`** (`workout/handlers.rs`, `replace`) keeps the stored
 `user_program_id` and `plan_day_index`, because the body does not carry
@@ -259,7 +306,16 @@ server's UTC date and has the same ±1 day bound.
   back returns to `/home`.
 - `/hub`, `/progress`, `/programs/current` and `/programs/get` are
   removed. They redirect to `/home`, so an old browser URL lands somewhere
-  sane.
+  sane. Those redirects live **only in the `AuthAuthenticated` arm**.
+- **R-0060's recovery routes.** The `recovering` arms that let
+  `/forgot-password` and `/reset-password` through `AuthUnknown` and
+  `AuthUnauthenticated` stay **verbatim**, and `/reset-password` stays
+  reachable while authenticated. Router tests open
+  `/reset-password?token=…` on a cold start and while authenticated, and
+  assert that the token reaches the screen.
+- **A cold start at `/session`.** The session draft lives in the
+  `SessionDriver`'s memory, so a reload has none: `/session` without an
+  active draft redirects to `/home`.
 
 **The `context.go` guard (finding 13).** There are 26 calls today. A
 source-scan test fails on any `context.go(` outside a path allowlist:
@@ -275,6 +331,15 @@ site moves to `context.push`, `showPanel` or a pop.
 Above them is the app bar, with the brand on the left and the profile menu
 on the right. Below them are **+ Comida**, and a floating microphone at
 the bottom.
+
+**What `HomeShell` did, and where it goes (second review, N4).**
+- **The liveness probe.** `MainScreen` watches `profileProvider` exactly as
+  `HomeShell` does (`home_shell.dart:15–28`), so a restored but revoked
+  token still meets a `401` and logs out (SPEC-0007 SAC5).
+- **The onboarding prompt.** `ProfilePrompt` moves **inside the selected-day
+  region**, above the day's content, with its dismiss kept
+  (`onboardingDismissedProvider`). It belongs to the day region, so AC7's
+  list of other controls is unchanged.
 
 The breakpoint is 720 logical px. Below it the layout is a column: the week
 strip, which opens the month on a tap, then the day, then the physics
@@ -320,7 +385,12 @@ Future<T?> showPanel<T>(BuildContext context, {required String title, required W
 - **The nested choose flow.** The Programa panel hosts its choose flow in
   a nested `Navigator` wrapped in `NavigatorPopHandler`. Back and Esc
   then step back *within* the flow and close the panel only from its
-  first page. A test covers this.
+  first page.
+- **A tap outside always closes the whole panel,** from any page of the
+  nested flow, as AC1 asks. The barrier calls the root navigator's `pop`,
+  not `maybePop`, which would only step back (second review, N11).
+- Tests cover both: back steps within the flow, and a barrier tap from its
+  second page closes the panel.
 
 | Panel | Body (moved from) | Notes |
 |-------|-------------------|-------|
@@ -337,13 +407,19 @@ Future<T?> showPanel<T>(BuildContext context, {required String title, required W
 - The `SessionDriver`, `VoiceCoach` and the R-0035 earbud transport are
   untouched. So are the exercise preset picker and `muscle_map.dart`,
   which already live in `live_session_screen.dart`.
-- `SessionDriver.start({int? planDayIndex, DateTime? performedOn})`:
-  - With a plan day, it seeds the exercises from
-    `cycle[planDayIndex].exercises` and sends `user_program_id` and
+- `SessionDriver.start(PlanSeed? seed, {DateTime? performedOn})`, where
+  `PlanSeed { userProgramId, index, exercises }` is a value the caller
+  builds from the schedule it already holds. The driver never reads the
+  schedule itself (second review, N12).
+  - With a seed, it pre-fills the exercises and sends `user_program_id` and
     `plan_day_index` on save.
   - Without one, the session is free, as today.
-  - A `409 program_not_current` saves the session as free and shows a
-    notice (§2.4).
+  - A `409 program_not_current` or a `422 plan_unavailable` saves the
+    session as free and shows a notice (§2.4).
+- **Every way to finish** goes through the driver's `done` state: the
+  Finish button, voice, and the earbud's `finish()`
+  (`earbud_coach.dart:141`). Focus mode listens for `done` and pops, so the
+  earbud path cannot leave the user on a stale screen.
 - **Leaving** with unsaved sets goes through a `PopScope` with
   `canPop: false` and a confirm dialog: "Salir sin guardar".
 - **Finishing** pops back to `/home`, invalidates `scheduleProvider`, and
@@ -364,9 +440,34 @@ R-0032 hands-free conversation:
 
 | Part | Goes to |
 |------|---------|
-| The voice loop (`Sergeant` notifier) | **Kept**, as the engine of the **Dictado** sheet. It is renamed `VoiceLoop` to match the #150 rebrand, and its persona strings move to the l10n catalogues. Its `navigateTo` string becomes a typed effect, `VoiceEffect.openFocusMode`, so "start workout" by voice still reaches focus mode without a route string. |
+| The voice loop (`Sergeant` notifier) | **Kept**, as the engine of the **Dictado** sheet. It is renamed `VoiceLoop` to match the #150 rebrand, and its persona strings move to the l10n catalogues. Every route string becomes a typed `VoiceEffect` (below). |
 | Chat thread | Shown inside the Dictado sheet |
 | Radial ring: Workout, Program, Body match, History, Profile | **Removed** (OQ-B). Each item has a home on the new screen: Workout is *Empezar sesión*, Program is the Programa panel, Body match is inside Programa's choose flow, History is the calendar, and Profile is *Editar perfil* in the Cuenta panel. |
+
+**Route strings become effects (second review, N3).** Today the server
+answers navigation intents with route strings:
+- the keyword parser in `api/src/voice/parse.rs:106–189`;
+- the LLM prompt's `"route":"/session|/home|/programs/current|/programs/get|/onboarding"`
+  at `parse.rs:400`;
+- the local intents in `sergeant.dart:236–257`.
+
+After §2.5 most of those routes redirect to `/home`, so voice would
+silently stop doing anything. The change:
+- The wire field becomes an **effect token**: `open_focus_mode`,
+  `open_program`, `open_onboarding`, `close`. `parse.rs`, its LLM prompt and
+  its tests change to emit tokens. The old `route` field is kept for one
+  release, filled from the token, for clients still in the field.
+- The client maps tokens to a sealed `VoiceEffect`: `OpenFocusMode`,
+  `OpenPanel(PanelKind.programa)`, `OpenOnboarding`, `Close`. The local
+  intents in `sergeant.dart` emit the same values.
+- **"Start workout" by voice does what *Empezar sesión* does.** It builds
+  today's `PlanSeed` from the schedule (`Planned`, or a today `Done`'s
+  `pending`) and opens focus mode with it, so a voice-first user advances
+  the plan. With nothing pending it starts a free session.
+- **Language.** The server's `message` field is English prose, and the
+  client no longer displays or speaks it. The Dictado thread and the TTS
+  use the client's localized string for each intent and effect, spoken in
+  the resolved locale. The field stays on the wire for old clients.
 
 ### 2.9 Localization (AC11)
 
@@ -385,10 +486,16 @@ R-0032 hands-free conversation:
   locale.
 - **Literal-string guard.** A test scans `lib/src/**.dart` for string
   literals passed to `Text(`, `tooltip:`, `label:`, `hintText:`,
-  `labelText:`, `title:` and `semanticLabel:`, and fails with file:line.
+  `labelText:`, `title:` and `semanticLabel:`, and to the voice loop's
+  spoken lines (`_say(`), and fails with file:line.
+  - It matches across line breaks (`Text\(\s*'`), because `dart format`
+    puts a long literal on the line after `Text(` (second review, N13).
   - It has no allowlist, because `Brand.appName` is not a literal.
   - It is a regex smoke test and will miss strings built far from their
     widget. Reviews catch the rest.
+  - During slices 1b–1d it carries a **shrinking allowlist** of folders not
+    yet migrated. Slice 1d leaves it empty, and from then on an entry fails
+    the test.
 - **Focus names:** `focusName(List<MuscleGroup>, AppLocalizations)` joins
   the localized group names: "Pierna", "Hombro y brazo".
 - **Exercise names stay data** in English (§4).
@@ -397,6 +504,14 @@ R-0032 hands-free conversation:
 
 `app_theme.dart` is rewritten around tokens. Its "drill-sergeant green"
 header and palette go away.
+
+> **Pending (OQ-D).** On 2026-10-24 the owner asked for the app to look
+> like the @fisicobuenfisico reels (`~/projects/fisicobuenfisico`): moving
+> figures with force vectors to scale and heat-coloured by tension,
+> dashed lever arms, torque readout panels and live graphs. A design v2
+> on that brand is in progress. If the owner accepts it, R-0061 AC12 is
+> amended, and the token **values** below are replaced. The **mechanism**
+> stays: tokens, the contrast test, bundled fonts and the grid painter.
 
 | Token | Light | Dark | Allowed use |
 |-------|-------|------|-------------|
@@ -434,6 +549,28 @@ panel and focus mode. Each test asserts:
 - no horizontal scrollable wider than the screen;
 - that the primary action's rect is inside the viewport with no scroll.
 
+### 2.12 Slices (second review, N5)
+
+R-0061 §4's first slice, as written, would be thousands of lines: the
+shell, the calendar, more than 158 literals in a client of about 10k
+lines, and the theme. It is cut into slices of roughly 100–400 lines.
+Each merges on its own, with its tests, and each is usable or invisible
+in the beta when it lands.
+
+| Slice | Content | Stack | Depends on |
+|-------|---------|-------|------------|
+| 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
+| 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist | mobile | 1a |
+| 1e | Theme tokens, the contrast test, the bundled numeral font and the grid painter (§2.10, values per OQ-D) | mobile | — |
+| 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
+| 2a | `core::plan` and its tests (§2.2) | backend | — |
+| 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
+| 2c | Migration 00012, `GET /programs/me/schedule`, and the `POST`/`PUT /workouts` and choose changes (§2.3–§2.4) | backend | 2b |
+| 2d | Planned and rest states on the client, the primary and secondary actions, the Progreso target (§2.5, N6) | mobile | 1f, 2c |
+| 3 | Panels: Programa with its nested flow, Medidas, Progreso, Cuenta, Comida, Dictado with `VoiceEffect` and the server tokens (§2.6, §2.8) | both | 1f, 2c |
+| 4 | Physics strip (AC9), when R-0059 is Met | mobile | 1f |
+| 5 | Focus mode with `PlanSeed`, the `done` path and the cold-start redirect (§2.7) | mobile | 2d |
+
 ## 3. Code outline
 
 ```rust
@@ -448,13 +585,15 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate, logs: &BTreeMap<NaiveDat
         let any = logs.get(&d).is_some_and(|l| l.any_session);
         emit(&mut out, d, if any { DayState::Done { completed: vec![] } } else { DayState::Nothing { pending: None } });
     }
-    for d in starts_on.iter_days().take_while(|d| *d <= range.to.max(today)) {
+    range.check_reach(today)?;                                                // RangeTooFarAhead (N9)
+    let last_plan = logs.iter().rev().find(|(_, l)| !l.plan.is_empty()).map(|(d, _)| *d);
+    for d in starts_on.iter_days().take_while(|d| *d <= range.to) {           // stops at range.to (N9)
         let state = match logs.get(&d) {
             Some(l) if !l.plan.is_empty() => { cursor.complete_after(*l.plan.last().unwrap_or(&0)); // rule 2 (non-empty by guard)
-                                               DayState::Done { completed: l.plan.clone() } }
-            Some(l) if l.any_session => { cursor.pass_rest(); DayState::Done { completed: vec![] } } // rule 3
-            _ if d < today => cursor.pass_day_unlogged(),                                            // rule 4
-            _ => cursor.project_one(),                                                               // rule 5
+                                               DayState::Done { completed: l.plan.clone(), pending: None } }
+            Some(l) if l.any_session => DayState::Done { completed: vec![], pending: cursor.pass_free() }, // rule 3 (N1)
+            _ if d < today => cursor.pass_day_unlogged(last_plan.is_some_and(|lp| d < lp)),            // rule 4 (N2)
+            _ => cursor.project_one(),                                                                    // rule 5
         };
         emit(&mut out, d, state);
     }
@@ -470,12 +609,14 @@ review.
 // mobile/lib/src/home/primary_action.dart — pure; every index comes from the server
 sealed class DayAction { const DayAction(); }
 final class StartSession extends DayAction { const StartSession(this.planDayIndex); final int? planDayIndex; }
+final class ViewLogWithPending extends DayAction { const ViewLogWithPending(this.pending); final int pending; } // N1: secondary Empezar sesión
 final class LogLate extends DayAction { const LogLate(this.planDayIndex); final int? planDayIndex; }
 final class ViewLog extends DayAction { const ViewLog(); }
 final class NoAction extends DayAction { const NoAction(); }
 
 DayAction primaryAction({required DateTime day, required DateTime today, required DayState state}) =>
     switch ((day.compareTo(today), state)) {
+      (0, Done(pending: final p?)) => ViewLogWithPending(p),
       (_, Done()) => const ViewLog(),
       (0, Planned(:final cycleIndex)) => StartSession(cycleIndex),
       (0, _) => const StartSession(null),
@@ -498,33 +639,34 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 
 ## 5. Open questions
 
-- **OQ-A. The six cycles and `default_exercises`.** Drafted in
-  [Annex A](0061-cycles.md) for owner approval (§2.1). It does not block
-  accepting this spec.
-- **OQ-B. Removing the radial ring** (§2.8). It is the one piece of today's
-  UI that is deleted rather than moved. Each of its five items has a new
-  home. Is that OK?
-- **OQ-C. The wording of R-0061 AC6.** AC6 says "the next pending
-  **training** day falls on tomorrow". AC4 projects rest days, and the
-  cycle order puts rests after training days. So this spec reads it as the
-  next pending **day** of the sequence, rest included (§2.2). If the owner
-  agrees, AC6 gets a one-word amendment, noted in its changelog.
+- **OQ-A. The six cycles, with exercises per day.** Annex A v2, for owner
+  approval (§2.1). It blocks slice 2b only, not this spec.
+- **OQ-B. Removing the radial ring** (§2.8). *Resolved 2026-10-24 (owner):
+  removed.* Each of its five items has a home on the new screen.
+- **OQ-C. The wording of R-0061 AC6.** *Resolved 2026-10-24 (owner):* the
+  projection follows the next pending **day** of the sequence, rest
+  included (§2.2). R-0061 AC6 is amended by one word, noted in its
+  changelog.
+- **OQ-D. The visual identity of @fisicobuenfisico** (§2.10). The owner
+  asked on 2026-10-24 for the app to look like the channel's reels. A
+  design v2 is in progress. If accepted, R-0061 AC12 is amended and §2.10's
+  values change. It blocks slice 1e only.
 
 ## 6. Acceptance criteria
 
 | R-0061 AC | Verified by |
 |-----------|-------------|
-| AC1 | Widget tests: each panel closes on ✕, Esc, a tap outside and back, with `selectedDayProvider` unchanged. The nested choose flow steps back within itself. The `context.go` allowlist scan. |
-| AC2 | A widget test walks every capability in R-0061 AC2's list from `MainScreen`. Dictating a meal through the Dictado sheet logs it. Saying "start workout" opens focus mode. |
-| AC3 | Existing router tests stay green, and the removed routes redirect to `/home`. |
-| AC4 | `core::plan` unit tests, one per rule in §2.2 and per edge-case row: shift; rest consumed by time; **a free workout consuming a rest day**; days before `starts_on` leaving the cursor alone; a future `starts_on`; a range wholly before `starts_on`; a one-training-day cycle; a future-dated log shown as Done; the late-log case from finding 3. Also a `DayCell` golden test per state, and week and month widget tests. |
-| AC5 | `primaryAction` unit tests over every (day vs today) × state pair, plus the secondary *Empezar sesión* on a today that holds only a free workout. |
-| AC6 | API tests for `GET /programs/me/schedule`: happy path; no program; unknown `archetype_id`; inverted and over-long range; `today` at ±1 day accepted and ±2 rejected; the cross-user adversarial test. `POST /workouts`: both-or-neither; foreign id → 404; own non-current program → 409; rest index or `performed_on < starts_on` → 422. `PUT` keeps the plan fields and re-checks. Choose and synthetic choose: the `starts_on` default, ±1 day accepted, ±2 rejected. The migration test checks the backfill and the default. |
+| AC1 | Widget tests: each panel closes on ✕, Esc, a tap outside and back, with `selectedDayProvider` unchanged. The nested choose flow steps back within itself, and a barrier tap from its second page closes the whole panel (N11). The `context.go` allowlist scan. |
+| AC2 | A widget test walks every capability in R-0061 AC2's list from `MainScreen`. Dictating a meal through the Dictado sheet logs it. Saying "start workout" opens focus mode **with today's `PlanSeed`**, and a voice effect test covers each token (N3). `parse.rs` tests assert tokens, never route strings. `MainScreen` keeps the 401 liveness probe, and shows the onboarding prompt to a user with no profile (N4). |
+| AC3 | Existing router tests stay green, and the removed routes redirect to `/home` only when authenticated. `/reset-password?token=…` reaches its screen on a cold start and while authenticated (R-0060). |
+| AC4 | `core::plan` unit tests, one per rule in §2.2 and per edge-case row: shift; rest consumed by time; **a free workout consuming a rest day**; days before `starts_on` leaving the cursor alone; a future `starts_on`; a range wholly before `starts_on`; a one-training-day cycle; a future-dated log shown as Done; the late-log case from finding 3; **a free workout on a training day leaves it pending** (`Done { pending: Some }`, N1); **an unlogged day before a later plan log offers no pending** (N2); `RangeTooFarAhead`. Also a `DayCell` golden test per state, and week and month widget tests. A seed test checks each cycle's per-muscle weekly frequency against `weekly_frequency_per_muscle` (§2.1, N7). |
+| AC5 | `primaryAction` unit tests over every (day vs today) × state pair, plus `ViewLogWithPending` and its secondary *Empezar sesión* on a today that holds only a free workout, with the server's index (N1). |
+| AC6 | API tests for `GET /programs/me/schedule`: happy path; no program; unknown `archetype_id`; inverted and over-long range; `today` at ±1 day accepted and ±2 rejected; the cross-user adversarial test; `from=9999-01-01` → 422 (N9). `POST /workouts`: both-or-neither; foreign id → 404, **even with an invalid index** (N10); own non-current program → 409; unknown `archetype_id` → 422 `plan_unavailable`; rest index or `performed_on < starts_on` → 422. `PUT` keeps the plan fields and re-checks. Choose and synthetic choose: the `starts_on` default, ±1 day accepted, ±2 rejected. The migration test checks the backfill and the default. |
 | AC7 | A widget test lists exactly the controls on `MainScreen`. |
 | AC8 | Widget tests: each panel opens and holds its body, and choosing a program completes inside the Programa panel. |
 | AC9 | A widget test: the strip is absent while R-0059 is not Met. |
-| AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing returns to the day, shown as done; a 409 saves the session as free and shows a notice. The R-0035 and R-0032 suites stay green. |
-| AC11 | The literal-string guard, the empty untranslated-messages check, and locale resolution tests (`es`, `en`, `fr` → `es`). |
+| AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing by button, by voice and by the earbud's `finish()` returns to the day, shown as done (N12); a 409 or a `plan_unavailable` saves the session as free and shows a notice; a cold start at `/session` lands on `/home`. The R-0035 and R-0032 suites stay green. |
+| AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the empty untranslated-messages check, and locale resolution tests (`es`, `en`, `fr` → `es`). |
 | AC12 | The `ColorScheme`-derived contrast test, and theme golden tests in both modes. |
 | AC13 | Widget tests at 390×844 and 1440×900 (§2.11). |
 
@@ -539,6 +681,12 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | 2026-10-23 | The voice loop (`sergeant.dart`) is **kept and renamed**, not deleted. Only the hub screen's ring is removed. | Architect finding 7: the loop carries R-0032's voice meal logging and the hand-off to hands-free training, so deleting it would break AC2. |
 | 2026-10-23 | In-house calendar grid. `table_calendar` and `google_fonts` were rejected, and `flutter_localizations` and `intl: any` were added. | A small grid does not justify a dependency that fights AC11 and AC12. Fonts are bundled so nothing is fetched at run time. The l10n packages are first-party. |
 | 2026-10-23 | `starts_on` and `today` come from the client, bounded to ±1 day of the server's UTC date. `starts_on` has a column default. | "Today" is the user's local date, and the bound is exactly the span of real time zones. The default keeps an image rollback able to choose programs (architect finding 6). |
+| 2026-10-24 | The radial ring is removed (OQ-B), and AC6 reads "the next pending day of the sequence" (OQ-C). | Owner. |
+| 2026-10-24 | An unlogged past day before the latest plan log offers only a free late log. | Second review N2: otherwise a late log repeats a training day that a later session already completed, which is the very failure "leg day matters" exists to prevent. |
+| 2026-10-24 | Voice navigation is a token on the wire and a typed `VoiceEffect` on the client; the client never shows the server's English prose. | Second review N3: route strings would silently redirect to `/home`, and server prose would break AC11. |
+| 2026-10-24 | Each training day lists its own exercises; the generic per-muscle list is dropped. A seed test checks per-muscle frequency against the record. | Second review N7: a coarse list put triceps work on a biceps day, and several cycles contradicted their record's frequency. |
+| 2026-10-24 | The weekly target comes from the projection, not from `days_per_week`. | Second review N6: `days_per_week` reads 4 for every seed. |
+| 2026-10-24 | The work ships in eleven slices (§2.12). | Second review N5: one first slice would have been thousands of lines. |
 
 ## 8. Architect review — REQUEST CHANGES (2026-10-23), applied
 
@@ -571,6 +719,33 @@ is folded in above.
   (`ort_sys`, ONNX runtime missing). That is an environment gap, not a
   result, so CI is the gate for them.
 
+## 9. Second architect review — REQUEST CHANGES (2026-10-24), applied
+
+None of the findings was blocking. Of the 15 first-review findings, 10 were
+confirmed resolved and 5 partially (5, 7, 10, 13 and 15). The partial ones
+are closed by N1, N3, N11 and the §6 additions. Thirteen new findings: 7
+major and 6 minor.
+
+| # | Severity | Finding | Where it landed |
+|---|----------|---------|-----------------|
+| N1 | Major | `Done` had no `pending`, so the secondary *Empezar sesión* needed a client replay | §2.2 rule 3, §3 `ViewLogWithPending`, §6 AC4/AC5 |
+| N2 | Major | An unlogged day before a later plan log still offered its pending day, so a late log repeated it | §2.2 rule 4, `last_plan` |
+| N3 | Major | Voice route strings would silently redirect to `/home`; server prose broke AC11 | §2.8 tokens and `VoiceEffect` |
+| N4 | Major | `HomeShell`'s liveness probe and onboarding prompt had no home | §2.5 |
+| N5 | Major | No slice plan | §2.12 |
+| N6 | Major | `days_per_week` contradicts the cycles | §2.1 |
+| N7 | Major | Annex A's provenance claim and per-muscle frequency | §2.1, Annex A v2 |
+| N8 | Minor | Eight-argument constructor | §2.1 `with_cycle` |
+| N9 | Minor | Unbounded range walk | §2.2, §2.4, `RangeTooFarAhead` |
+| N10 | Minor | Check order could leak another user's cycle | §2.4 |
+| N11 | Minor | Barrier tap stepped back instead of closing | §2.6 |
+| N12 | Minor | The driver read the schedule; earbud finish and cold start | §2.7, §2.5 |
+| N13 | Minor | The guard missed multi-line literals and spoken lines | §2.9 |
+
+It also confirmed `intl: any` acceptable (the lockfile is tracked, and
+`flutter_localizations` pins `intl` exactly), and asked to close #159, which
+was done with a note on what to salvage.
+
 ## Changelog
 
 - 2026-10-23 — created (Draft).
@@ -579,3 +754,7 @@ is folded in above.
   corrected, OQ-C added.
 - 2026-10-23 — Annex A drafted: the six day cycles and `default_exercises`,
   for owner approval (OQ-A).
+- 2026-10-24 — second architect review (REQUEST CHANGES, 13 findings, none
+  blocking) applied in full. OQ-B and OQ-C resolved by the owner. OQ-D
+  added for the @fisicobuenfisico visual identity. §2.12 slices added.
+  Annex A v2 with exercises per day.
