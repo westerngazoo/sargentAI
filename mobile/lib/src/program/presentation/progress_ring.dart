@@ -16,7 +16,7 @@ class ProgressRing extends StatelessWidget {
     required this.size,
     this.label,
     this.stroke = 8,
-    this.onGradient = false,
+    this.onPrimary = false,
   });
 
   final double ratio;
@@ -27,16 +27,16 @@ class ProgressRing extends StatelessWidget {
   final double stroke;
 
   /// When painted on the brand gradient (hero card), use white ink.
-  final bool onGradient;
+  final bool onPrimary;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final track = onGradient
-        ? Colors.white.withValues(alpha: 0.25)
+    final track = onPrimary
+        ? cs.onPrimary.withValues(alpha: 0.25)
         : cs.surfaceContainerHighest;
-    final sweep = onGradient ? Colors.white : cs.primary;
-    final ink = onGradient ? Colors.white : cs.onSurface;
+    final sweep = onPrimary ? cs.onPrimary : cs.primary;
+    final ink = onPrimary ? cs.onPrimary : cs.onSurface;
     return SizedBox(
       width: size,
       height: size,

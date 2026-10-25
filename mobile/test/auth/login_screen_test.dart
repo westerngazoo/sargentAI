@@ -24,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -50,7 +51,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: LoginScreen()),
+        child: localizedApp(home: const LoginScreen()),
       ),
     );
     await tester.pump();
@@ -145,7 +146,7 @@ void main() {
     when(() => tokenStore.write(any())).thenAnswer((_) async {});
     final container = await pumpLogin(tester);
 
-    await tester.tap(find.text('Use test account'));
+    await tester.tap(find.text(l10n.useTestAccount));
     await tester.pumpAndSettle();
 
     verify(() => repo.login(DevLogin.email, DevLogin.password)).called(1);
@@ -155,7 +156,7 @@ void main() {
   testWidgets('Google button is hidden without GOOGLE_CLIENT_ID dart-define',
       (tester) async {
     await pumpLogin(tester);
-    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.text(l10n.continueWithGoogle), findsNothing);
   });
 
   // R-0060 M1 -> AC7: the login screen offers "Forgot password?" and it
@@ -174,13 +175,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pumpAndSettle();
     expect(router.routerDelegate.currentConfiguration.uri.path, '/login');
 
-    await tester.tap(find.text('Forgot password?'));
+    await tester.tap(find.text(l10n.forgotPassword));
     await tester.pumpAndSettle();
 
     expect(
@@ -188,5 +189,10 @@ void main() {
       '/forgot-password',
     );
     expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+  });
+
+  testWidgets('the brand header speaks the catalogue tagline', (tester) async {
+    await pumpLogin(tester);
+    expect(find.text(l10n.appTagline), findsOneWidget);
   });
 }

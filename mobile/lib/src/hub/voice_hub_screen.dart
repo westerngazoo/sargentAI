@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/brand.dart';
-import '../core/theme/app_theme.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../workout/application/session_driver.dart';
 import 'sergeant.dart';
@@ -322,8 +321,7 @@ class _SpeakButton extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: active ? null : brandGradient(),
-            color: active ? cs.error : null,
+            color: active ? cs.error : cs.primary,
           ),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -334,7 +332,7 @@ class _SpeakButton extends StatelessWidget {
               child: Icon(
                 active ? Icons.stop : Icons.mic,
                 size: 48,
-                color: Colors.white,
+                color: cs.onPrimary,
               ),
             ),
           ),
