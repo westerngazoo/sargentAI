@@ -12,6 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../application/program_providers.dart';
+import '../application/schedule_provider.dart';
 import '../models/program_proposal.dart';
 import '../models/synthetic_match.dart';
 import '../services/program_service.dart';
@@ -49,6 +50,7 @@ class _SyntheticProposalsScreenState
       if (!mounted) return;
       // Invalidate the current-program cache so the main screen picks it up.
       ref.invalidate(currentProgramProvider);
+      ref.invalidate(scheduleProvider); // a new plan, a new projection
       context.go('/programs/current');
     } on ApiException catch (e) {
       if (!mounted) return;

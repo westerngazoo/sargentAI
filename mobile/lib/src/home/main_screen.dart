@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../auth/application/auth_controller.dart';
 import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
+import '../core/dates.dart';
 import '../core/panels/show_panel.dart';
 import '../core/theme/halftone.dart';
 import '../core/theme/tokens.dart';
@@ -14,6 +15,10 @@ import '../measurements/presentation/log_measurement_sheet.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/profile_prompt.dart';
+import '../program/application/schedule_provider.dart';
+import '../program/models/day_state.dart';
+import '../program/models/schedule.dart';
+import '../workout/application/muscle_names.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/workouts_provider.dart';
 import '../workout/presentation/session_list.dart';
@@ -28,6 +33,10 @@ import 'selected_day.dart';
 /// `profileProvider`'s read is the cold-start liveness probe: a restored but
 /// revoked token meets a 401, which the `AuthInterceptor` turns into a
 /// logout (SPEC-0007 SAC5). It moved here from the old `HomeShell`.
+///
+/// The day states come from `scheduleProvider` for the month shown. While
+/// that loads, or when it fails, the logs alone draw the calendar (done or
+/// nothing), so the screen never blanks.
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
@@ -35,9 +44,29 @@ class MainScreen extends ConsumerStatefulWidget {
   ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen>
+    with WidgetsBindingObserver {
   CalendarMode _phoneMode = CalendarMode.week;
   late DateTime _anchor = ref.read(selectedDayProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Coming back to the app re-reads the projection: a day may have passed,
+  /// or another device may have logged (SPEC-0061 §2.5).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) ref.invalidate(scheduleProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,13 +75,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final selected = ref.watch(selectedDayProvider);
     final profile = ref.watch(profileProvider);
     final dismissed = ref.watch(onboardingDismissedProvider);
-    final sessions = ref.watch(workoutsProvider).valueOrNull ?? const [];
+    final workouts = ref.watch(workoutsProvider);
+    final sessions = workouts.valueOrNull ?? const [];
+    final scheduleAsync = ref.watch(scheduleProvider(scheduleWindow(_anchor)));
+    final schedule = scheduleAsync.valueOrNull;
     final wide = MediaQuery.sizeOf(context).width >= panelBreakpoint;
     final mode = wide ? CalendarMode.month : _phoneMode;
 
     final doneDays = {for (final s in sessions) dateOnly(s.performedOn)};
     DayState stateOf(DateTime d) =>
-        doneDays.contains(dateOnly(d)) ? const DoneDay() : const NothingDay();
+        schedule?.stateOn(d) ??
+        (doneDays.contains(dateOnly(d)) ? const DoneDay() : const NothingDay());
 
     final calendar = CalendarView(
       mode: mode,
@@ -94,7 +127,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       day: selected,
       today: today,
       state: stateOf(selected),
-      loading: ref.watch(workoutsProvider).isLoading,
+      schedule: schedule,
+      loading: workouts.isLoading || scheduleAsync.isLoading,
       prompt: prompt,
       onStart: (performedOn) {
         ref
@@ -242,12 +276,16 @@ class _Panel extends StatelessWidget {
 }
 
 /// The selected day: its headline, the onboarding prompt when there is no
-/// profile, one primary action, and what was logged (R-0061 AC5).
+/// profile, one primary action, and what was logged or what the plan puts
+/// there (R-0061 AC5). A planned day is named by its focus and lists its
+/// exercises; a free workout on a plan day keeps that day startable below
+/// the log (SPEC-0061 §2.2, N1).
 class _DayRegion extends StatelessWidget {
   const _DayRegion({
     required this.day,
     required this.today,
     required this.state,
+    required this.schedule,
     required this.loading,
     required this.prompt,
     required this.onStart,
@@ -256,6 +294,10 @@ class _DayRegion extends StatelessWidget {
   final DateTime day;
   final DateTime today;
   final DayState state;
+
+  /// Resolves the state's cycle indices to their training days; null while
+  /// the schedule loads or failed.
+  final Schedule? schedule;
   final bool loading;
   final Widget prompt;
   final ValueChanged<DateTime> onStart;
@@ -269,6 +311,19 @@ class _DayRegion extends StatelessWidget {
     final action = primaryAction(day: day, today: today, state: state);
     final isToday = dateOnly(day) == today;
     final title = capitalizeFirst(DateFormat.MMMMEEEEd(locale).format(day));
+    final planned = switch (state) {
+      PlannedDay(:final cycleIndex) => schedule?.trainingDay(cycleIndex),
+      _ => null,
+    };
+    final pending = switch (action) {
+      ViewLogWithPending(:final pending) => schedule?.trainingDay(pending),
+      _ => null,
+    };
+    void openLog() => showPanel<void>(
+          context,
+          title: title,
+          body: (_) => SessionList(day: day),
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -295,6 +350,10 @@ class _DayRegion extends StatelessWidget {
         Text(
           switch (state) {
             DoneDay() => l10n.dayDoneHeadline,
+            PlannedDay() => planned == null
+                ? l10n.dayFreeHeadline
+                : focusName(planned.focus, l10n),
+            RestDay() => l10n.dayRestHeadline,
             NothingDay() => l10n.dayFreeHeadline,
           },
           style: text.headlineMedium,
@@ -314,18 +373,35 @@ class _DayRegion extends StatelessWidget {
               label: Text(l10n.logLate),
               onPressed: () => onStart(day),
             ),
-          ViewLog() => OutlinedButton.icon(
+          ViewLog() || ViewLogWithPending() => OutlinedButton.icon(
               key: const Key('primary-action'),
               icon: const Icon(Icons.list_alt),
               label: Text(l10n.viewLogged),
-              onPressed: () => showPanel<void>(
-                context,
-                title: title,
-                body: (_) => SessionList(day: day),
-              ),
+              onPressed: openLog,
             ),
           NoAction() => const SizedBox.shrink(),
         },
+        if (action is ViewLogWithPending) ...[
+          const SizedBox(height: 12),
+          if (pending != null)
+            Text(l10n.pendingPlanDay(focusName(pending.focus, l10n)),
+                style: text.bodyMedium?.copyWith(color: t.muted)),
+          const SizedBox(height: 6),
+          FilledButton.icon(
+            key: const Key('secondary-action'),
+            icon: const Icon(Icons.play_arrow),
+            label: Text(l10n.startSession),
+            onPressed: () => onStart(day),
+          ),
+        ],
+        if (planned != null) ...[
+          const SizedBox(height: 12),
+          for (final exercise in planned.exercises)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(exercise, style: text.bodyLarge),
+            ),
+        ],
         if (loading) ...[
           const SizedBox(height: 12),
           const Center(

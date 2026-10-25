@@ -32,6 +32,25 @@ String muscleGroupName(MuscleGroup group, AppLocalizations l10n) =>
       MuscleGroup.core => l10n.muscleCore,
     };
 
+/// A plan day's name from its focus (SPEC-0061 §2.1, §2.9): "Piernas",
+/// "Pecho y brazos". Built on the client from the server's muscle-group
+/// tokens, so the day is never named by a lift and AC11 holds; empty for an
+/// empty focus.
+String focusName(List<MuscleGroup> focus, AppLocalizations l10n) {
+  final names = [
+    for (final (i, g) in focus.indexed)
+      i == 0
+          ? muscleGroupName(g, l10n)
+          : muscleGroupName(g, l10n).toLowerCase(),
+  ];
+  if (names.isEmpty) return '';
+  if (names.length == 1) return names.first;
+  return l10n.listAnd(
+    names.sublist(0, names.length - 1).join(', '),
+    names.last,
+  );
+}
+
 /// The spoken target line for an activation: "chest", "quads and glutes";
 /// empty for an unknown lift.
 String targetLabel(MuscleActivation activation, AppLocalizations l10n) {

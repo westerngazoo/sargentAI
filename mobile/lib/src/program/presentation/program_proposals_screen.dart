@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_exception.dart';
+import '../application/schedule_provider.dart';
 import '../models/program_proposal.dart';
 import '../services/program_service.dart';
 
@@ -75,6 +76,7 @@ class _ProgramProposalsScreenState
           .read(programServiceProvider)
           .chooseProgram(widget.sessionId, proposal.archetypeId);
       if (!mounted) return;
+      ref.invalidate(scheduleProvider); // a new plan, a new projection
       context.go('/programs/current');
     } on ApiException catch (e) {
       if (!mounted) return;

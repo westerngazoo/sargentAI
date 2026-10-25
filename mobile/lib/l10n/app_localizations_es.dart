@@ -502,6 +502,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dayFreeHeadline => 'Sesión libre';
 
   @override
+  String get dayRestHeadline => 'Descanso';
+
+  @override
+  String pendingPlanDay(String focus) {
+    return 'Pendiente del plan: $focus';
+  }
+
+  @override
   String get startSession => 'Empezar sesión';
 
   @override

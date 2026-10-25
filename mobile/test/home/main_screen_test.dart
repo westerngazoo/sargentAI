@@ -89,8 +89,10 @@ void main() {
     whenGetSchedule(programService).thenAnswer((_) async => schedule());
   });
 
+  /// [settle] is false when something on screen never stops animating (the
+  /// loading spinner while a stubbed request never completes).
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
-      {Size size = phone}) async {
+      {Size size = phone, bool settle = true}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -131,7 +133,12 @@ void main() {
       container: container,
       child: localizedRouterApp(router),
     ));
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+    }
     return (container, router);
   }
 
@@ -221,7 +228,7 @@ void main() {
         (tester) async {
       whenGetSchedule(programService)
           .thenAnswer((_) => Completer<Schedule>().future);
-      await pumpMain(tester);
+      await pumpMain(tester, settle: false);
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('mark-done')), findsOneWidget);
       expect(find.byKey(const Key('mark-planned')), findsNothing);

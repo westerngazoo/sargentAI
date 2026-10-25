@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
+import '../../program/application/schedule_provider.dart';
 import '../data/workout_repository.dart';
 import 'workouts_provider.dart';
 
@@ -41,6 +42,7 @@ class SessionListController extends Notifier<SessionListState> {
     try {
       await ref.read(workoutRepositoryProvider).delete(id);
       ref.invalidate(workoutsProvider);
+      ref.invalidate(scheduleProvider); // the projection moved (SPEC-0061)
       state = const SessionListState();
     } on ApiException catch (e) {
       if (e.kind == ApiErrorKind.notFound) {

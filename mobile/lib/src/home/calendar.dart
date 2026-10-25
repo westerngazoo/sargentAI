@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../core/dates.dart';
 import '../core/theme/tokens.dart';
-import 'day_action.dart';
+import '../program/models/day_state.dart';
 
 /// The in-house calendar (R-0061 AC4, SPEC-0061 §2.5): a 7-column grid of
 /// [DayCell]s showing one state per day, with today marked and the selected
@@ -233,6 +234,8 @@ class DayCell extends StatelessWidget {
   }
 }
 
+/// The glyph of a state (SPEC-0061 §2.5): ● done, ○ planned, — rest, and
+/// nothing for an empty day. Every mark is 7 px tall so the cells line up.
 class _Mark extends StatelessWidget {
   const _Mark({required this.state, required this.color});
   final DayState state;
@@ -245,6 +248,26 @@ class _Mark extends StatelessWidget {
             width: 7,
             height: 7,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+        PlannedDay() => Container(
+            key: const Key('mark-planned'),
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 1.5),
+            ),
+          ),
+        RestDay() => SizedBox(
+            height: 7,
+            child: Center(
+              child: Container(
+                key: const Key('mark-rest'),
+                width: 8,
+                height: 2,
+                color: color,
+              ),
+            ),
           ),
         NothingDay() => const SizedBox(height: 7),
       };
