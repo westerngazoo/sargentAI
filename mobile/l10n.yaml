@@ -1,0 +1,8 @@
+# R-0061 AC11 / SPEC-0061 §2.9. Spanish is the template; English is complete.
+arb-dir: lib/l10n
+template-arb-file: app_es.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+# Completeness is checked by test/l10n/catalogue_parity_test.dart, from the
+# ARB files themselves, so it runs in `flutter test` without a build step.

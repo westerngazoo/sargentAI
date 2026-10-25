@@ -10,6 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # R-0061 AC11 (SPEC-0061 §2.9): first-party localization. `intl: any`
+  # follows flutter_localizations' exact pin; the lockfile fixes the version.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_riverpod: ^2.6.1
   go_router: ^14.8.1
   dio: ^5.11.0
@@ -32,6 +37,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # gen-l10n (l10n.yaml) writes lib/l10n/app_localizations*.dart on pub get.
+  generate: true
   assets:
     # The silent loop that holds the earbud foreground service open (R-0035).
     # The file was on disk but undeclared, so it was never bundled;
