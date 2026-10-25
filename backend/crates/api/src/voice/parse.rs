@@ -507,7 +507,7 @@ mod tests {
         // single most common command in the product answered "Standing by."
         match parse_transcript("start workout", today) {
             ParsedAction::Response(r) => {
-                assert_eq!(r.route.as_deref(), Some("/session"));
+                assert_eq!(r.effect, Some(VoiceEffect::OpenFocusMode));
                 assert_eq!(r.status, IntentStatus::Navigate);
             }
             _ => panic!("expected a session navigation"),
@@ -536,7 +536,7 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
         for phrase in ["plank", "stopwatch"] {
             if let ParsedAction::Response(r) = parse_transcript(phrase, today) {
-                assert_ne!(r.route.as_deref(), Some("/programs/current"), "{phrase:?}");
+                assert_ne!(r.effect, Some(VoiceEffect::OpenProgram), "{phrase:?}");
                 assert_ne!(r.message.as_deref(), Some("Standing by."), "{phrase:?}");
             }
         }
@@ -642,5 +642,111 @@ mod tests {
         );
         // Wrong shape → None (caller falls back).
         assert!(extract_llm_text(LlmProvider::Anthropic, &openai).is_none());
+    }
+
+    /// SPEC-0061 §2.8 / R-0061 AC2: every navigation intent answers with an
+    /// effect token, never a route string.
+    #[test]
+    fn every_navigation_intent_emits_an_effect_token() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let cases = [
+            ("start workout", VoiceEffect::OpenFocusMode),
+            ("show my plan", VoiceEffect::OpenProgram),
+            ("open my program", VoiceEffect::OpenProgram),
+            ("find my type", VoiceEffect::OpenProgram),
+            ("open my profile", VoiceEffect::OpenOnboarding),
+            ("show my history", VoiceEffect::Close),
+            ("stop", VoiceEffect::Close),
+        ];
+        for (phrase, effect) in cases {
+            match parse_transcript(phrase, today) {
+                ParsedAction::Response(r) => {
+                    assert_eq!(r.status, IntentStatus::Navigate, "{phrase:?}");
+                    assert_eq!(r.effect, Some(effect), "{phrase:?}");
+                }
+                _ => panic!("expected a navigation for {phrase:?}"),
+            }
+        }
+    }
+
+    /// The deprecated `route` field stays on the wire for one release, filled
+    /// from the token (SPEC-0061 §2.8). This is the one test allowed to name a
+    /// route string.
+    #[test]
+    fn legacy_route_is_filled_from_the_token() {
+        let cases = [
+            (VoiceEffect::OpenFocusMode, "open_focus_mode", "/session"),
+            (
+                VoiceEffect::OpenProgram,
+                "open_program",
+                "/programs/current",
+            ),
+            (
+                VoiceEffect::OpenOnboarding,
+                "open_onboarding",
+                "/onboarding",
+            ),
+            (VoiceEffect::Close, "close", "/home"),
+        ];
+        for (effect, token, route) in cases {
+            let wire = serde_json::to_value(IntentResponse::navigate(effect, "Roger.")).unwrap();
+            assert_eq!(wire["status"], "navigate");
+            assert_eq!(wire["effect"], token);
+            assert_eq!(wire["route"], route);
+        }
+    }
+
+    #[test]
+    fn llm_navigate_reads_the_effect_token() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let v = serde_json::json!({"action": "navigate", "effect": "open_program", "message": "Opening."});
+        match llm_json_to_action(&v, today) {
+            Ok(ParsedAction::Response(r)) => {
+                assert_eq!(r.effect, Some(VoiceEffect::OpenProgram));
+                assert_eq!(r.message.as_deref(), Some("Opening."));
+            }
+            _ => panic!("expected a navigation"),
+        }
+    }
+
+    #[test]
+    fn llm_navigate_maps_a_legacy_route_when_no_effect_is_given() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let cases = [
+            ("/session", VoiceEffect::OpenFocusMode),
+            ("/programs/current", VoiceEffect::OpenProgram),
+            ("/programs/get", VoiceEffect::OpenProgram),
+            ("/onboarding", VoiceEffect::OpenOnboarding),
+            ("/home", VoiceEffect::Close),
+        ];
+        for (route, effect) in cases {
+            let v = serde_json::json!({"action": "navigate", "route": route});
+            match llm_json_to_action(&v, today) {
+                Ok(ParsedAction::Response(r)) => assert_eq!(r.effect, Some(effect), "{route:?}"),
+                _ => panic!("expected a navigation for {route:?}"),
+            }
+        }
+    }
+
+    /// Malformed model output is never a 500: an unknown effect, an unknown
+    /// route, or neither field at all closes the sheet, as `/home` used to.
+    #[test]
+    fn llm_navigate_with_garbage_closes() {
+        let today = NaiveDate::from_ymd_opt(2026, 7, 2).unwrap();
+        let garbage = [
+            serde_json::json!({"action": "navigate", "effect": "fly_to_the_moon"}),
+            serde_json::json!({"action": "navigate", "effect": 42}),
+            serde_json::json!({"action": "navigate", "route": "/nowhere"}),
+            serde_json::json!({"action": "navigate"}),
+        ];
+        for v in garbage {
+            match llm_json_to_action(&v, today) {
+                Ok(ParsedAction::Response(r)) => {
+                    assert_eq!(r.status, IntentStatus::Navigate, "{v}");
+                    assert_eq!(r.effect, Some(VoiceEffect::Close), "{v}");
+                }
+                _ => panic!("expected a navigation for {v}"),
+            }
+        }
     }
 }
