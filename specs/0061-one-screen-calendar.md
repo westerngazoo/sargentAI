@@ -145,9 +145,13 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate,
 
 **The replay.** A cursor `c` points into the cycle and wraps (`c % len`).
 It starts at 0 on `starts_on` and walks every day from `starts_on` to
-`range.to`, and no further: the replay only moves forward, so nothing after
-the range can change what the range shows (second review, N9). Before the
-walk, `last_plan` is the latest date in `logs` that holds a plan session.
+`range.to`, and no further: the replay only moves forward, so no log after
+the range can move the cursor inside it (second review, N9). Before the
+walk, `last_plan` is the latest date in **all** of `logs` that holds a plan
+session, including dates after the range: a later completion is a fact
+about the past, and an unlogged day before it must not offer that day
+again (rule 4, N2). Slice 2a pinned both readings. The range is at most 62
+days, counted inclusively (`to − from + 1`).
 Rules apply in this order:
 
 1. **Days before `starts_on`** never touch the cursor. They are emitted
@@ -602,7 +606,7 @@ pub fn project(cycle: &[PlanDay], starts_on: NaiveDate, logs: &BTreeMap<NaiveDat
         let any = logs.get(&d).is_some_and(|l| l.any_session);
         emit(&mut out, d, if any { DayState::Done { completed: vec![] } } else { DayState::Nothing { pending: None } });
     }
-    range.check_reach(today)?;                                                // RangeTooFarAhead (N9)
+    // DateRange::new(from, to, today) already rejected an inverted, over-long or too-far-ahead range.
     let last_plan = logs.iter().rev().find(|(_, l)| !l.plan.is_empty()).map(|(d, _)| *d);
     for d in starts_on.iter_days().take_while(|d| *d <= range.to) {           // stops at range.to (N9)
         let state = match logs.get(&d) {
@@ -783,3 +787,5 @@ was done with a note on what to salvage.
 - 2026-10-25 — design v2 accepted by the owner. §2.5 regions and
   breakpoints, §2.10 tokens and type, slices 1e and 4, §6 rows for AC7,
   AC9 and AC12 updated. OQ-D resolved. Status → Accepted.
+- 2026-10-25 — slice 2a: `last_plan` reads every log (N2 over N9), the
+  62-day range is inclusive, and range errors live in `DateRange::new`.
