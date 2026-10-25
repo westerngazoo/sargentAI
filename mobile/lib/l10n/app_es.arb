@@ -41,5 +41,7 @@
   "viewLogged": "Ver lo registrado",
   "nothingLogged": "Nada registrado este día.",
   "nutritionToday": "Alimentación · hoy",
-  "addMeal": "+ Comida"
+  "addMeal": "+ Comida",
+  "showMonth": "Ver el mes",
+  "showWeek": "Ver la semana"
 }

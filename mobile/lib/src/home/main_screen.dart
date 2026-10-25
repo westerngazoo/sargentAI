@@ -116,7 +116,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           children: [
             const BrandBadge(size: 30, shadow: false),
             const SizedBox(width: 10),
-            Text(Brand.appName),
+            Flexible(
+              child: Text(
+                Brand.appName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontFamily: AppFonts.headline,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -126,10 +136,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (item) => _open(item, l10n),
             itemBuilder: (_) => [
-              PopupMenuItem(value: _Menu.program, child: Text(l10n.menuProgram)),
               PopupMenuItem(
-                  value: _Menu.measurements, child: Text(l10n.menuMeasurements)),
-              PopupMenuItem(value: _Menu.progress, child: Text(l10n.menuProgress)),
+                  value: _Menu.program, child: Text(l10n.menuProgram)),
+              PopupMenuItem(
+                  value: _Menu.measurements,
+                  child: Text(l10n.menuMeasurements)),
+              PopupMenuItem(
+                  value: _Menu.progress, child: Text(l10n.menuProgress)),
               const PopupMenuDivider(),
               PopupMenuItem(value: _Menu.signOut, child: Text(l10n.signOut)),
             ],
@@ -311,12 +324,17 @@ class _DayRegion extends StatelessWidget {
           for (final s in sessions) _SessionSummary(session: s),
         ] else if (action is! StartSession) ...[
           const SizedBox(height: 12),
-          Text(l10n.nothingLogged, style: text.bodyMedium?.copyWith(color: t.muted)),
+          Text(l10n.nothingLogged,
+              style: text.bodyMedium?.copyWith(color: t.muted)),
         ],
       ],
     );
   }
 }
+
+/// "3 × 5/5/4": the set count and each set's reps.
+String setsSummary(WorkoutExercise e) =>
+    '${e.sets.length} × ${e.sets.map((s) => s.reps).join('/')}';
 
 /// One logged session, as a line per exercise.
 class _SessionSummary extends StatelessWidget {
@@ -336,7 +354,7 @@ class _SessionSummary extends StatelessWidget {
               children: [
                 Expanded(child: Text(e.name, style: text.bodyMedium)),
                 Text(
-                  '${e.sets.length} × ${e.sets.map((s) => s.reps).join('/')}',
+                  setsSummary(e),
                   style: text.labelMedium,
                 ),
               ],
@@ -380,6 +398,9 @@ class _NutritionCard extends StatelessWidget {
         ),
         OutlinedButton(
           key: const Key('add-meal'),
+          // The theme's buttons stretch (Size.fromHeight); in a row they
+          // must not.
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
           onPressed: onAddMeal,
           child: Text(l10n.addMeal),
         ),

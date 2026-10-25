@@ -104,95 +104,6 @@ abstract class AppLocalizations {
   /// **'La física de tu levantamiento: medida, no adivinada.'**
   String get appTagline;
 
-  /// No description provided for @profileMenu.
-  ///
-  /// In es, this message translates to:
-  /// **'Tu perfil'**
-  String get profileMenu;
-
-  /// No description provided for @menuProgram.
-  ///
-  /// In es, this message translates to:
-  /// **'Programa'**
-  String get menuProgram;
-
-  /// No description provided for @menuMeasurements.
-  ///
-  /// In es, this message translates to:
-  /// **'Medidas'**
-  String get menuMeasurements;
-
-  /// No description provided for @menuProgress.
-  ///
-  /// In es, this message translates to:
-  /// **'Progreso'**
-  String get menuProgress;
-
-  /// No description provided for @signOut.
-  ///
-  /// In es, this message translates to:
-  /// **'Cerrar sesión'**
-  String get signOut;
-
-  /// No description provided for @dictate.
-  ///
-  /// In es, this message translates to:
-  /// **'Dictar'**
-  String get dictate;
-
-  /// No description provided for @today.
-  ///
-  /// In es, this message translates to:
-  /// **'Hoy'**
-  String get today;
-
-  /// No description provided for @dayDoneHeadline.
-  ///
-  /// In es, this message translates to:
-  /// **'Entrenaste'**
-  String get dayDoneHeadline;
-
-  /// No description provided for @dayFreeHeadline.
-  ///
-  /// In es, this message translates to:
-  /// **'Sesión libre'**
-  String get dayFreeHeadline;
-
-  /// No description provided for @startSession.
-  ///
-  /// In es, this message translates to:
-  /// **'Empezar sesión'**
-  String get startSession;
-
-  /// No description provided for @logLate.
-  ///
-  /// In es, this message translates to:
-  /// **'Registrar tarde'**
-  String get logLate;
-
-  /// No description provided for @viewLogged.
-  ///
-  /// In es, this message translates to:
-  /// **'Ver lo registrado'**
-  String get viewLogged;
-
-  /// No description provided for @nothingLogged.
-  ///
-  /// In es, this message translates to:
-  /// **'Nada registrado este día.'**
-  String get nothingLogged;
-
-  /// No description provided for @nutritionToday.
-  ///
-  /// In es, this message translates to:
-  /// **'Alimentación · hoy'**
-  String get nutritionToday;
-
-  /// No description provided for @addMeal.
-  ///
-  /// In es, this message translates to:
-  /// **'+ Comida'**
-  String get addMeal;
   /// No description provided for @emailLabel.
   ///
   /// In es, this message translates to:
@@ -330,6 +241,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Pedir otro link'**
   String get requestANewLink;
+
+  /// No description provided for @profileMenu.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil'**
+  String get profileMenu;
+
+  /// No description provided for @menuProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get menuProgram;
+
+  /// No description provided for @menuMeasurements.
+  ///
+  /// In es, this message translates to:
+  /// **'Medidas'**
+  String get menuMeasurements;
+
+  /// No description provided for @menuProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso'**
+  String get menuProgress;
+
+  /// No description provided for @signOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get signOut;
+
+  /// No description provided for @dictate.
+  ///
+  /// In es, this message translates to:
+  /// **'Dictar'**
+  String get dictate;
+
+  /// No description provided for @today.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get today;
+
+  /// No description provided for @dayDoneHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenaste'**
+  String get dayDoneHeadline;
+
+  /// No description provided for @dayFreeHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión libre'**
+  String get dayFreeHeadline;
+
+  /// No description provided for @startSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar sesión'**
+  String get startSession;
+
+  /// No description provided for @logLate.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar tarde'**
+  String get logLate;
+
+  /// No description provided for @viewLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver lo registrado'**
+  String get viewLogged;
+
+  /// No description provided for @nothingLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada registrado este día.'**
+  String get nothingLogged;
+
+  /// No description provided for @nutritionToday.
+  ///
+  /// In es, this message translates to:
+  /// **'Alimentación · hoy'**
+  String get nutritionToday;
+
+  /// No description provided for @addMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'+ Comida'**
+  String get addMeal;
+
+  /// No description provided for @showMonth.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el mes'**
+  String get showMonth;
+
+  /// No description provided for @showWeek.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver la semana'**
+  String get showWeek;
 }
 
 class _AppLocalizationsDelegate

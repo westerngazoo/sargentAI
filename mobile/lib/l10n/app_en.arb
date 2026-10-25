@@ -38,5 +38,7 @@
   "viewLogged": "See what you logged",
   "nothingLogged": "Nothing logged this day.",
   "nutritionToday": "Nutrition · today",
-  "addMeal": "+ Meal"
+  "addMeal": "+ Meal",
+  "showMonth": "Show month",
+  "showWeek": "Show week"
 }

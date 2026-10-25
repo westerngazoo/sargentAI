@@ -13,49 +13,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'La física de tu levantamiento: medida, no adivinada.';
 
   @override
-  String get profileMenu => 'Tu perfil';
-
-  @override
-  String get menuProgram => 'Programa';
-
-  @override
-  String get menuMeasurements => 'Medidas';
-
-  @override
-  String get menuProgress => 'Progreso';
-
-  @override
-  String get signOut => 'Cerrar sesión';
-
-  @override
-  String get dictate => 'Dictar';
-
-  @override
-  String get today => 'Hoy';
-
-  @override
-  String get dayDoneHeadline => 'Entrenaste';
-
-  @override
-  String get dayFreeHeadline => 'Sesión libre';
-
-  @override
-  String get startSession => 'Empezar sesión';
-
-  @override
-  String get logLate => 'Registrar tarde';
-
-  @override
-  String get viewLogged => 'Ver lo registrado';
-
-  @override
-  String get nothingLogged => 'Nada registrado este día.';
-
-  @override
-  String get nutritionToday => 'Alimentación · hoy';
-
-  @override
-  String get addMeal => '+ Comida';
   String get emailLabel => 'Correo';
 
   @override
@@ -126,4 +83,55 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get requestANewLink => 'Pedir otro link';
+
+  @override
+  String get profileMenu => 'Tu perfil';
+
+  @override
+  String get menuProgram => 'Programa';
+
+  @override
+  String get menuMeasurements => 'Medidas';
+
+  @override
+  String get menuProgress => 'Progreso';
+
+  @override
+  String get signOut => 'Cerrar sesión';
+
+  @override
+  String get dictate => 'Dictar';
+
+  @override
+  String get today => 'Hoy';
+
+  @override
+  String get dayDoneHeadline => 'Entrenaste';
+
+  @override
+  String get dayFreeHeadline => 'Sesión libre';
+
+  @override
+  String get startSession => 'Empezar sesión';
+
+  @override
+  String get logLate => 'Registrar tarde';
+
+  @override
+  String get viewLogged => 'Ver lo registrado';
+
+  @override
+  String get nothingLogged => 'Nada registrado este día.';
+
+  @override
+  String get nutritionToday => 'Alimentación · hoy';
+
+  @override
+  String get addMeal => '+ Comida';
+
+  @override
+  String get showMonth => 'Ver el mes';
+
+  @override
+  String get showWeek => 'Ver la semana';
 }

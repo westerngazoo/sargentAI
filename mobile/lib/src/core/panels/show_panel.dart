@@ -49,7 +49,8 @@ Future<T?> showPanel<T>(
         height: double.infinity,
         child: Material(
           color: Theme.of(context).extension<FbfTokens>()?.panel,
-          child: SafeArea(child: _PanelFrame(title: title, child: body(context))),
+          child:
+              SafeArea(child: _PanelFrame(title: title, child: body(context))),
         ),
       ),
     ),

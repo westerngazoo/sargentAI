@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../core/theme/tokens.dart';
 import 'day_action.dart';
 
@@ -71,12 +72,15 @@ class CalendarView extends StatelessWidget {
               onPressed: () => onShift(1),
             ),
             if (onToggleMode != null)
-              TextButton(
+              IconButton(
                 key: const Key('calendar-toggle'),
+                icon: Icon(mode == CalendarMode.week
+                    ? Icons.calendar_view_month
+                    : Icons.view_week),
+                tooltip: mode == CalendarMode.week
+                    ? AppLocalizations.of(context).showMonth
+                    : AppLocalizations.of(context).showWeek,
                 onPressed: onToggleMode,
-                child: Text(mode == CalendarMode.week
-                    ? materialL10n.calendarModeButtonLabel
-                    : materialL10n.collapsedHint),
               ),
           ],
         ),
@@ -96,12 +100,12 @@ class CalendarView extends StatelessWidget {
               ),
             for (final day in days)
               DayCell(
+                key: ValueKey('day-${dateOnly(day).toIso8601String()}'),
                 day: day,
                 state: stateOf(day),
                 isToday: dateOnly(day) == dateOnly(today),
                 isSelected: dateOnly(day) == dateOnly(selected),
-                inMonth: mode == CalendarMode.week ||
-                    day.month == anchor.month,
+                inMonth: mode == CalendarMode.week || day.month == anchor.month,
                 onTap: () => onSelect(dateOnly(day)),
               ),
           ],
@@ -183,7 +187,6 @@ class DayCell extends StatelessWidget {
       label: DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString())
           .format(day),
       child: InkWell(
-        key: ValueKey('day-${dateOnly(day).toIso8601String()}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
@@ -199,7 +202,7 @@ class DayCell extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '${day.day}',
+                day.day.toString(),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: fg,
                       fontWeight: isToday ? FontWeight.w600 : null,

@@ -13,6 +13,7 @@ class HalftoneBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
     return CustomPaint(
+      key: const Key('halftone'),
       painter: HalftonePainter(ink: t.line, paper: t.ground),
       child: child,
     );
