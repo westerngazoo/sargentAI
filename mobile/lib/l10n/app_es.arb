@@ -3,5 +3,20 @@
   "appTagline": "La física de tu levantamiento: medida, no adivinada.",
   "@appTagline": {
     "description": "Brand tagline under the badge on the screens before sign-in."
-  }
+  },
+  "profileMenu": "Tu perfil",
+  "menuProgram": "Programa",
+  "menuMeasurements": "Medidas",
+  "menuProgress": "Progreso",
+  "signOut": "Cerrar sesión",
+  "dictate": "Dictar",
+  "today": "Hoy",
+  "dayDoneHeadline": "Entrenaste",
+  "dayFreeHeadline": "Sesión libre",
+  "startSession": "Empezar sesión",
+  "logLate": "Registrar tarde",
+  "viewLogged": "Ver lo registrado",
+  "nothingLogged": "Nada registrado este día.",
+  "nutritionToday": "Alimentación · hoy",
+  "addMeal": "+ Comida"
 }

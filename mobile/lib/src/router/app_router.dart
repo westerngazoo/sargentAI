@@ -13,8 +13,9 @@ import '../measurements/presentation/progress_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
 import '../program/presentation/body_type_picker_screen.dart';
 import '../program/presentation/program_detail_screen.dart';
-import '../shell/home_shell.dart';
+import '../home/main_screen.dart';
 import '../shell/splash_screen.dart';
+import '../workout/application/session_driver.dart';
 import '../workout/presentation/live_session_screen.dart';
 
 /// The app router with the auth-gate (AC3/AC5/AC6/AC8).
@@ -52,7 +53,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         AuthAuthenticated() => (loc == '/login' ||
                 loc == '/register' ||
                 loc == '/splash' ||
-                loc == '/forgot-password')
+                loc == '/forgot-password' ||
+                // A cold start at /session has no draft: the session lives in
+                // memory, so a reload lands on the day (SPEC-0061 §2.5).
+                (loc == '/session' &&
+                    ref.read(sessionDriverProvider).draft == null))
             ? '/home'
             : null,
       };
@@ -70,7 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             ResetPasswordScreen(token: state.uri.queryParameters['token']),
       ),
-      GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+      GoRoute(path: '/home', builder: (_, __) => const MainScreen()),
       GoRoute(
         path: '/onboarding',
         builder: (_, __) => const OnboardingScreen(),

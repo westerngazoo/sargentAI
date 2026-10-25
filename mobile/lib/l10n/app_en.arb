@@ -1,4 +1,19 @@
 {
   "@@locale": "en",
-  "appTagline": "The physics of your lift — measured, not guessed."
+  "appTagline": "The physics of your lift — measured, not guessed.",
+  "profileMenu": "Your profile",
+  "menuProgram": "Program",
+  "menuMeasurements": "Measurements",
+  "menuProgress": "Progress",
+  "signOut": "Sign out",
+  "dictate": "Dictate",
+  "today": "Today",
+  "dayDoneHeadline": "You trained",
+  "dayFreeHeadline": "Free session",
+  "startSession": "Start session",
+  "logLate": "Log late",
+  "viewLogged": "See what you logged",
+  "nothingLogged": "Nothing logged this day.",
+  "nutritionToday": "Nutrition · today",
+  "addMeal": "+ Meal"
 }

@@ -27,7 +27,6 @@ import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/program/services/program_service.dart';
-import 'package:fitai/src/shell/home_shell.dart';
 import 'package:fitai/src/workout/application/earbud_coach.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/voice_coach.dart';
@@ -148,7 +147,11 @@ void main() {
       final router = GoRouter(
         initialLocation: '/home',
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeShell()),
+          GoRoute(
+            path: '/home',
+            builder: (_, __) =>
+                const Scaffold(body: Center(child: Text('HOME-SENTINEL'))),
+          ),
           GoRoute(
             path: '/session',
             builder: (_, __) => const LiveSessionScreen(),
