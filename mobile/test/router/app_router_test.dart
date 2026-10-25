@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -46,7 +47,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pumpAndSettle();
@@ -111,7 +112,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: localizedRouterApp(router),
         ),
       );
       await tester.pumpAndSettle();
@@ -123,7 +124,7 @@ void main() {
       expect(find.byType(ResetPasswordScreen), findsOneWidget);
       // The token was captured: the form is shown, not the invalid-link
       // message the screen shows when it has no token.
-      expect(find.textContaining('no longer valid'), findsNothing);
+      expect(find.text(l10n.linkNoLongerValid), findsNothing);
       expect(find.byType(TextField), findsNWidgets(2));
       // ...and then dropped from the URL (SPEC-0060 §2.7, finding 12).
       expect(

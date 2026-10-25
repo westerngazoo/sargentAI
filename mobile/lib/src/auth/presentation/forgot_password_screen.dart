@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../../core/network/api_exception.dart';
 import '../data/auth_repository.dart';
 import 'brand_header.dart';
@@ -46,6 +48,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -60,7 +63,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   const BrandHeader(compact: true),
                   const SizedBox(height: 8),
                   Text(
-                    'Reset your password',
+                    l10n.resetYourPassword,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
@@ -81,7 +84,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           enableSuggestions: false,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).emailLabel,
+          ),
         ),
         if (_error != null) ...[
           const SizedBox(height: 12),
@@ -99,25 +104,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   width: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Send reset link'),
+              : Text(AppLocalizations.of(context).sendResetLink),
         ),
         const SizedBox(height: 8),
         TextButton(
           onPressed: _busy ? null : () => context.go('/login'),
-          child: const Text('Back to log in'),
+          child: Text(AppLocalizations.of(context).backToLogIn),
         ),
       ];
 
   List<Widget> _confirmation(BuildContext context) => [
-        const Text(
-          'If that address has an account, a reset link is on its way. '
-          'It is valid for 30 minutes.',
+        Text(
+          AppLocalizations.of(context).resetLinkSent,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => context.go('/login'),
-          child: const Text('Back to log in'),
+          child: Text(AppLocalizations.of(context).backToLogIn),
         ),
       ];
 }

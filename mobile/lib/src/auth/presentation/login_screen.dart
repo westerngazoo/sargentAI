@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 import '../../core/dev_login.dart';
 import '../../core/google_sign_in_config.dart';
 import '../../core/network/api_exception.dart';
@@ -57,6 +59,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -71,25 +74,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const BrandHeader(),
                   const SizedBox(height: 32),
                   AuthForm(
-                    submitLabel: 'Log in',
+                    submitLabel: l10n.logIn,
                     busy: _busy,
                     errorText: _error,
                     onSubmit: _submit,
                     footer: TextButton(
                       onPressed: _busy ? null : () => context.go('/register'),
-                      child: const Text('Create an account'),
+                      child: Text(l10n.createAnAccount),
                     ),
                   ),
                   TextButton(
                     onPressed:
                         _busy ? null : () => context.go('/forgot-password'),
-                    child: const Text('Forgot password?'),
+                    child: Text(l10n.forgotPassword),
                   ),
                   if (GoogleSignInConfig.enabled) ...[
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.login),
-                      label: const Text('Continue with Google'),
+                      label: Text(l10n.continueWithGoogle),
                       onPressed: _busy ? null : _googleSignIn,
                     ),
                   ],
@@ -97,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 4),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.bug_report_outlined, size: 18),
-                      label: const Text('Use test account'),
+                      label: Text(l10n.useTestAccount),
                       onPressed: _busy
                           ? null
                           : () => _submit(DevLogin.email, DevLogin.password),

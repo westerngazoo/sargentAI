@@ -193,6 +193,143 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'+ Comida'**
   String get addMeal;
+  /// No description provided for @emailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo'**
+  String get emailLabel;
+
+  /// No description provided for @passwordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get passwordLabel;
+
+  /// No description provided for @logIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get logIn;
+
+  /// No description provided for @createAnAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear una cuenta'**
+  String get createAnAccount;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidaste tu contraseña?'**
+  String get forgotPassword;
+
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar con Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @useTestAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar cuenta de prueba'**
+  String get useTestAccount;
+
+  /// No description provided for @createYourAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea tu cuenta'**
+  String get createYourAccount;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get createAccount;
+
+  /// No description provided for @backToLogIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get backToLogIn;
+
+  /// No description provided for @emailAlreadyRegistered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese correo ya tiene cuenta. Entra con él.'**
+  String get emailAlreadyRegistered;
+
+  /// No description provided for @resetYourPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablece tu contraseña'**
+  String get resetYourPassword;
+
+  /// No description provided for @sendResetLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar link'**
+  String get sendResetLink;
+
+  /// No description provided for @resetLinkSent.
+  ///
+  /// In es, this message translates to:
+  /// **'Si ese correo tiene cuenta, el link ya va en camino. Vence en 30 minutos.'**
+  String get resetLinkSent;
+
+  /// No description provided for @setANewPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Pon una contraseña nueva'**
+  String get setANewPassword;
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña nueva'**
+  String get newPasswordLabel;
+
+  /// No description provided for @confirmNewPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirma la contraseña nueva'**
+  String get confirmNewPasswordLabel;
+
+  /// No description provided for @setNewPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar contraseña'**
+  String get setNewPassword;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Las contraseñas no coinciden.'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @useAtLeast8Characters.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa al menos 8 caracteres.'**
+  String get useAtLeast8Characters;
+
+  /// No description provided for @passwordUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña actualizada. Entra con ella.'**
+  String get passwordUpdated;
+
+  /// No description provided for @linkNoLongerValid.
+  ///
+  /// In es, this message translates to:
+  /// **'Este link ya no sirve. Los links vencen a los 30 minutos y solo sirven una vez.'**
+  String get linkNoLongerValid;
+
+  /// No description provided for @requestANewLink.
+  ///
+  /// In es, this message translates to:
+  /// **'Pedir otro link'**
+  String get requestANewLink;
 }
 
 class _AppLocalizationsDelegate
