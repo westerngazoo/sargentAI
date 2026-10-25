@@ -3,9 +3,7 @@
 // borders, hard shadows, comic headlines, mono data. One place owns colour,
 // type and shape; the values live in `tokens.dart`.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'tokens.dart';
 
@@ -14,26 +12,9 @@ abstract final class AppTheme {
   static ThemeData dark() => _build(FbfTokens.dark, Brightness.dark);
 
   /// Focus mode (a session in progress) is dark whatever the device theme,
-  /// for legibility in the gym. It paints on the footer-bar tokens.
-  static ThemeData focus() => _build(
-        const FbfTokens(
-          ground: Color(0xFF0B0B0B),
-          panel: Color(0xFF161616),
-          panelAlt: Color(0xFF202020),
-          text: Color(0xFFF2F2F2),
-          muted: Color(0xFFABABAB),
-          line: Color(0xFFD9D9D9),
-          red: Color(0xFFFF4D4D),
-          onRed: Color(0xFF0B0B0B),
-          heat0: Color(0xFF4D4D4D),
-          heat1: Color(0xFF8F8F8F),
-          heat2: Color(0xFFFF4D4D),
-          bar: Color(0xFF0B0B0B),
-          barText: Color(0xFFF2F2F2),
-          barRed: Color(0xFFFF4D4D),
-        ),
-        Brightness.dark,
-      );
+  /// for legibility in the gym. Today that is the dark theme itself; it gets
+  /// its own tokens only if the two ever diverge.
+  static ThemeData focus() => dark();
 
   static ThemeData _build(FbfTokens t, Brightness brightness) {
     final scheme = ColorScheme(
@@ -182,6 +163,9 @@ abstract final class AppTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: t.bar,
         contentTextStyle: text.bodyMedium?.copyWith(color: t.barText),
+        // SnackBarAction paints with inversePrimary, whose fallback is
+        // onPrimary: near-black on the black bar in dark mode. Say red.
+        actionTextColor: t.barRed,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -198,20 +182,4 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(color: t.line, thickness: 1),
     );
   }
-}
-
-/// Registers the bundled faces' licences so they appear in the app's
-/// licence page (SPEC-0061 §2.10). Called once from `main`.
-void registerFontLicences() {
-  LicenseRegistry.addLicense(() async* {
-    for (final (package, file) in const [
-      ('Bangers', 'assets/fonts/OFL-Bangers.txt'),
-      ('Luckiest Guy', 'assets/fonts/LICENSE-LuckiestGuy.txt'),
-      ('IBM Plex Mono', 'assets/fonts/OFL-IBMPlexMono.txt'),
-      ('Archivo', 'assets/fonts/OFL-Archivo.txt'),
-    ]) {
-      yield LicenseEntryWithLineBreaks(
-          [package], await rootBundle.loadString(file));
-    }
-  });
 }

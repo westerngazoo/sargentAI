@@ -27,7 +27,9 @@ class BrandBadge extends StatelessWidget {
               ]
             : null,
       ),
-      child: const CustomPaint(painter: _GoosePainter(color: Colors.white)),
+      child: CustomPaint(
+        painter: _GoosePainter(color: Theme.of(context).colorScheme.onPrimary),
+      ),
     );
   }
 }

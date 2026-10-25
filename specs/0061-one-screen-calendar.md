@@ -575,7 +575,7 @@ in the beta when it lands.
 |-------|---------|-------|------------|
 | 1a | l10n infrastructure: `l10n.yaml`, the two ARB files, the locale rule, and the literal guard with its shrinking allowlist (§2.9) | mobile | — |
 | 1b–1d | Move the strings to the catalogues one feature folder at a time; 1d empties the allowlist | mobile | 1a |
-| 1e | Theme tokens, the contrast test, the four bundled faces and the halftone painter (§2.10) | mobile | — |
+| 1e | Theme tokens, the contrast test and the four bundled faces (§2.10). The halftone painter ships with 1f, its first user | mobile | — |
 | 1f | Router, `MainScreen`, `showPanel`, the calendar from logs only, the liveness probe and the prompt (§2.5–§2.6) | mobile | 1a, 1e |
 | 2a | `core::plan` and its tests (§2.2) | backend | — |
 | 2b | Annex A seeds, `with_cycle`, and the frequency seed test (§2.1) | backend | 2a, OQ-A |
@@ -684,7 +684,7 @@ DayAction primaryAction({required DateTime day, required DateTime today, require
 | AC9 | Widget tests: every exercise shows a Física button; an unmodelled exercise reads *Pronto* and opens nothing; the squat check opens beside the list at 1440 px and below the exercise at 390 px; the worked sum equals the hip panel's value for the current frame; no copy in the check matches a safe/dangerous word list. |
 | AC10 | Widget tests: focus mode is pushed; unsaved sets prompt before leaving; finishing by button, by voice and by the earbud's `finish()` returns to the day, shown as done (N12); a 409 or a `plan_unavailable` saves the session as free and shows a notice; a cold start at `/session` lands on `/home`. The R-0035 and R-0032 suites stay green. |
 | AC11 | The literal-string guard, including multi-line `Text(` and `_say(` (N13), the empty untranslated-messages check, and locale resolution tests (`es`, `en`, `fr` → `es`). |
-| AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, theme golden tests in both modes, focus mode dark in both, and a licence-registry test for the four faces. |
+| AC12 | The `ColorScheme`-derived contrast test over §2.10's pairs, structural theme tests in both modes (token values, primary and surface, the faces; no pixel goldens, which rasterize differently on the Linux runner), focus mode dark in both, and a licence-registry test for the four faces. |
 | AC13 | Widget tests at 390×844 and 1440×900 (§2.11). |
 
 ## 7. Decision log

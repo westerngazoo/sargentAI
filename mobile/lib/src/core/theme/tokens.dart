@@ -107,7 +107,26 @@ class FbfTokens extends ThemeExtension<FbfTokens> {
   FbfTokens copyWith() => this;
 
   @override
-  FbfTokens lerp(FbfTokens? other, double t) => t < 0.5 ? this : other ?? this;
+  FbfTokens lerp(FbfTokens? other, double t) {
+    if (other == null) return this;
+    Color mix(Color a, Color b) => Color.lerp(a, b, t)!;
+    return FbfTokens(
+      ground: mix(ground, other.ground),
+      panel: mix(panel, other.panel),
+      panelAlt: mix(panelAlt, other.panelAlt),
+      text: mix(text, other.text),
+      muted: mix(muted, other.muted),
+      line: mix(line, other.line),
+      red: mix(red, other.red),
+      onRed: mix(onRed, other.onRed),
+      heat0: mix(heat0, other.heat0),
+      heat1: mix(heat1, other.heat1),
+      heat2: mix(heat2, other.heat2),
+      bar: mix(bar, other.bar),
+      barText: mix(barText, other.barText),
+      barRed: mix(barRed, other.barRed),
+    );
+  }
 }
 
 /// The bundled faces (SPEC-0061 §2.10), declared in pubspec.yaml under these

@@ -29,7 +29,6 @@ void main() {
   for (final (name, theme) in [
     ('light', AppTheme.light()),
     ('dark', AppTheme.dark()),
-    ('focus', AppTheme.focus()),
   ]) {
     group('$name theme', () {
       final cs = theme.colorScheme;
@@ -79,6 +78,12 @@ void main() {
       test('the footer bar pairs are legible', () {
         expect(contrast(t.barText, t.bar), greaterThanOrEqualTo(bodyText));
         expect(contrast(t.barRed, t.bar), greaterThanOrEqualTo(bodyText));
+      });
+
+      test('a SnackBar action is legible on the bar', () {
+        final snack = theme.snackBarTheme;
+        expect(contrast(snack.actionTextColor!, snack.backgroundColor!),
+            greaterThanOrEqualTo(bodyText));
       });
 
       test('the hot end of the heat ramp reads as a mark', () {

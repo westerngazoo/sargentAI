@@ -332,7 +332,7 @@ class _SpeakButton extends StatelessWidget {
               child: Icon(
                 active ? Icons.stop : Icons.mic,
                 size: 48,
-                color: Colors.white,
+                color: cs.onPrimary,
               ),
             ),
           ),

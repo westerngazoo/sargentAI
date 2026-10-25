@@ -3,6 +3,7 @@
 // four bundled faces and their licences.
 
 import 'package:fitai/src/core/theme/app_theme.dart';
+import 'package:fitai/src/core/theme/font_licences.dart';
 import 'package:fitai/src/core/theme/tokens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,6 +84,8 @@ void main() {
       final packages = <String>{};
       await for (final entry in LicenseRegistry.licenses) {
         packages.addAll(entry.packages);
+        expect(entry.paragraphs, isNotEmpty,
+            reason: '${entry.packages}: the licence text must have loaded');
       }
       expect(
         packages,
