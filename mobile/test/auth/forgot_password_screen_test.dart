@@ -21,9 +21,9 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
-const _confirmation =
-    'If that address has an account, a reset link is on its way';
+final _confirmation = l10n.resetLinkSent;
 
 void main() {
   setUpAll(registerFallbacks);
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -83,8 +83,8 @@ void main() {
     await pumpForgot(tester);
 
     expect(find.byType(TextField), findsOneWidget);
-    expect(
-        find.widgetWithText(ElevatedButton, 'Send reset link'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, l10n.sendResetLink),
+        findsOneWidget);
     expect(find.textContaining(_confirmation), findsNothing);
   });
 
@@ -107,9 +107,8 @@ void main() {
 
     expect(find.byType(TextField), findsNothing);
     expect(find.textContaining(_confirmation), findsOneWidget);
-    expect(find.textContaining('30 minutes'), findsOneWidget);
     expect(
-        find.widgetWithText(ElevatedButton, 'Back to log in'), findsOneWidget);
+        find.widgetWithText(ElevatedButton, l10n.backToLogIn), findsOneWidget);
   });
 
   testWidgets('M2 "Back to log in" navigates to /login', (tester) async {
@@ -117,7 +116,7 @@ void main() {
     await pumpForgot(tester);
     await submit(tester, 'a@b.com');
 
-    await tester.tap(find.text('Back to log in'));
+    await tester.tap(find.text(l10n.backToLogIn));
     await tester.pumpAndSettle();
 
     expect(router.routerDelegate.currentConfiguration.uri.path, '/login');

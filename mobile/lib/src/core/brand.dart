@@ -1,4 +1,5 @@
 /// Product branding — the single place the *Dart* user-facing name lives.
+/// The tagline is a catalogue string (`appTagline`), not a constant here.
 ///
 /// The repo, the Dart package and the crates stay `fitai`: those are
 /// identifiers no user sees, and renaming them is compiler-checked churn.
@@ -11,5 +12,4 @@
 /// "a one-line change", and describing it as one is how they got missed.
 abstract final class Brand {
   static const appName = 'Goose Fitness Physics';
-  static const tagline = 'The physics of your lift — measured, not guessed.';
 }
