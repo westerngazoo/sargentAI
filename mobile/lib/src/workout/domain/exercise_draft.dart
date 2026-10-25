@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+import 'draft_rejection.dart';
 import 'muscle_group.dart';
 import 'set_draft.dart';
 
-const int _maxNameScalars = 100;
+/// The name bound, mirrored by the rejection message so they cannot drift.
+abstract final class ExerciseLimits {
+  static const int maxNameScalars = 100;
+}
 
 /// One exercise within a session: a name, an optional muscle group, and ordered
 /// sets. `nameError` mirrors `core::workout::ExerciseName::try_new` exactly —
@@ -21,11 +25,11 @@ class ExerciseDraft {
   final MuscleGroup? muscleGroup;
   final List<SetDraft> sets;
 
-  String? nameError() {
+  DraftRejection? nameError() {
     final trimmed = name.trim();
-    if (trimmed.isEmpty) return 'enter an exercise name';
-    if (trimmed.runes.length > _maxNameScalars) {
-      return 'name must be at most $_maxNameScalars characters';
+    if (trimmed.isEmpty) return DraftRejection.nameEmpty;
+    if (trimmed.runes.length > ExerciseLimits.maxNameScalars) {
+      return DraftRejection.nameTooLong;
     }
     return null;
   }

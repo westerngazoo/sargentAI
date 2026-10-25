@@ -254,7 +254,7 @@ void main() {
   // AC9: 404 (no current program) on the detail screen shows a CTA or message.
   testWidgets('AC9 detail_screen_no_program_shows_cta', (tester) async {
     when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
 
     final container = ProviderContainer(
       overrides: [
@@ -388,7 +388,7 @@ void main() {
   testWidgets('AC8 home_no_program_cta_shown_when_no_current_program',
       (tester) async {
     when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
 
     await pumpHome(tester);
     await tester.pumpAndSettle();
@@ -402,7 +402,7 @@ void main() {
   testWidgets('AC8 home_no_program_cta_navigates_to_match_flow',
       (tester) async {
     when(() => programService.getCurrent())
-        .thenThrow(const ApiException('not_found', statusCode: 404));
+        .thenThrow(const ApiException(ApiErrorKind.notFound, statusCode: 404));
 
     final container = ProviderContainer(
       overrides: [

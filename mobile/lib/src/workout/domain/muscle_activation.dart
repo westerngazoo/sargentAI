@@ -24,24 +24,6 @@ enum Region {
   calves,
 }
 
-const Map<Region, String> regionLabels = {
-  Region.neck: 'Neck',
-  Region.traps: 'Traps',
-  Region.shoulders: 'Shoulders',
-  Region.chest: 'Chest',
-  Region.biceps: 'Biceps',
-  Region.triceps: 'Triceps',
-  Region.forearms: 'Forearms',
-  Region.core: 'Core',
-  Region.lats: 'Lats',
-  Region.upperBack: 'Upper back',
-  Region.erectors: 'Lower back',
-  Region.quads: 'Quads',
-  Region.hamstrings: 'Hamstrings',
-  Region.glutes: 'Glutes',
-  Region.calves: 'Calves',
-};
-
 /// Primary movers and secondary assisters for one exercise.
 class MuscleActivation {
   const MuscleActivation({
@@ -53,15 +35,6 @@ class MuscleActivation {
   final Set<Region> secondary;
 
   bool get isEmpty => primary.isEmpty && secondary.isEmpty;
-
-  /// Spoken/displayed target line, e.g. "chest" or "quads and glutes".
-  String get targetLabel {
-    final names = primary.map((r) => regionLabels[r]!.toLowerCase()).toList();
-    if (names.isEmpty) return '';
-    if (names.length == 1) return names.first;
-    return '${names.sublist(0, names.length - 1).join(', ')} '
-        'and ${names.last}';
-  }
 }
 
 /// Curated activations for the preset/program lifts (source: the

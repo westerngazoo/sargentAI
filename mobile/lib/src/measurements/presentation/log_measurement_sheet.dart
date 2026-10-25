@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../services/measurement_service.dart';
 
@@ -41,6 +43,7 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
   bool get _valid => _w != null && _w! > 0;
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _saving = true;
       _error = null;
@@ -59,11 +62,11 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Measurement logged')),
+        SnackBar(content: Text(l10n.measurementLogged)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message);
+      setState(() => _error = apiErrorText(e, l10n));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -71,6 +74,7 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -82,11 +86,11 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Log measurement',
+          Text(l10n.logMeasurement,
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Weigh in — body fat % is optional but powers the trend.',
+            l10n.weighInHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -99,7 +103,7 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
                   controller: _weight,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Weight (kg)'),
+                  decoration: InputDecoration(labelText: l10n.weightKgLabel),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
@@ -109,7 +113,8 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
                   controller: _fat,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Body fat (%)'),
+                  decoration:
+                      InputDecoration(labelText: l10n.bodyFatPercentInputLabel),
                 ),
               ),
             ],
@@ -128,7 +133,7 @@ class _LogMeasurementSheetState extends ConsumerState<LogMeasurementSheet> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save measurement'),
+                : Text(l10n.saveMeasurement),
           ),
         ],
       ),

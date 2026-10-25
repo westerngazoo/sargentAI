@@ -7,12 +7,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../l10n/app_localizations_provider.dart';
+import '../nutrition/domain/preset_meals.dart';
+import '../nutrition/models/food_info.dart';
 import '../nutrition/services/nutrition_service.dart';
 import '../program/application/program_providers.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/voice_coach.dart';
-import '../nutrition/domain/preset_meals.dart';
-import '../nutrition/models/food_info.dart';
 import 'speech_input.dart';
 import 'voice_intent.dart';
 import 'voice_intent_service.dart';
@@ -84,19 +86,20 @@ class Sergeant extends Notifier<SergeantState> {
   @override
   SergeantState build() => const SergeantState();
 
+  /// The lines are spoken from here, outside the widget tree (R-0061 AC11).
+  AppLocalizations get _l10n => ref.read(appLocalizationsProvider);
+
   /// Opens the conversation: prompt → listen → act → re-listen.
   Future<void> start() async {
     final speech = ref.read(speechInputProvider);
     await ref.read(voiceOutputProvider).initialize();
     if (!await speech.initialize()) {
-      state = state.copyWith(
-          line: 'Voice input is not available here — tap an option instead.');
+      state = state.copyWith(line: _l10n.sergeantVoiceUnavailable);
       return;
     }
     _idleRounds = 0;
     state = state.copyWith(conversing: true, awaitingMacros: false);
-    await _say('Sergeant here. Say: start workout, plan workout, '
-        'log a meal. Finish every command with over.');
+    await _say(_l10n.sergeantGreeting);
     await _listenOnce();
   }
 
@@ -148,7 +151,7 @@ class Sergeant extends Notifier<SergeantState> {
 
   Future<bool> _handle(String transcript) async {
     if (isOut(transcript)) {
-      await _say('Roger. Out.');
+      await _say(_l10n.sergeantRogerOut);
       state = state.copyWith(conversing: false);
       return false;
     }
@@ -169,16 +172,16 @@ class Sergeant extends Notifier<SergeantState> {
   Future<bool> _handleBackendResult(VoiceIntentResult result) async {
     _idleRounds = 0;
     if (result.isLoggedNutrition || result.isLoggedWorkout) {
-      await _say(result.message ?? 'Logged.');
+      await _say(result.message ?? _l10n.sergeantLogged);
       return true;
     }
     if (result.isClarify) {
       state = state.copyWith(awaitingMacros: true);
-      await _say(result.prompt ?? 'Tell me more.');
+      await _say(result.prompt ?? _l10n.sergeantTellMeMore);
       return true;
     }
     if (result.isNavigate && result.route != null) {
-      await _say(result.message ?? 'Roger.');
+      await _say(result.message ?? _l10n.sergeantRoger);
       state = state.copyWith(conversing: false, navigateTo: result.route);
       if (result.route == '/session') {
         ref.read(sessionDriverProvider.notifier).start();
@@ -186,7 +189,7 @@ class Sergeant extends Notifier<SergeantState> {
       }
       return false;
     }
-    await _say(result.message ?? 'Did not catch that.');
+    await _say(result.message ?? _l10n.sergeantDidNotCatch);
     return true;
   }
 
@@ -204,7 +207,7 @@ class Sergeant extends Notifier<SergeantState> {
 
     switch (parseVoiceIntent(transcript)) {
       case StopIntent():
-        await _say('Standing by.');
+        await _say(_l10n.sergeantStandingBy);
         state = state.copyWith(conversing: false);
         return false;
       case LogMealIntent(:final proteinG, :final carbsG, :final fatG):
@@ -220,12 +223,10 @@ class Sergeant extends Notifier<SergeantState> {
               label: preset.name);
         }
         state = state.copyWith(awaitingMacros: true);
-        await _say('Tell me the grams of protein, carbs, and fat — '
-            'a portion like 200 grams of chicken breast — or a preset, '
-            'like protein shake.');
+        await _say(_l10n.sergeantAskMacros);
         return true;
       case LogWorkoutIntent():
-        await _say('Starting your session.');
+        await _say(_l10n.sergeantStartingSession);
         ref.read(sessionDriverProvider.notifier).start();
         state = state.copyWith(conversing: false, navigateTo: '/session');
         // Fire-and-forget: the coach announces the plan; push-to-talk —
@@ -239,21 +240,21 @@ class Sergeant extends Notifier<SergeantState> {
           state = state.copyWith(
               conversing: false, navigateTo: '/programs/current');
         } else {
-          await _say('No plan yet — let us find your body match.');
+          await _say(_l10n.sergeantNoPlanYet);
           state =
               state.copyWith(conversing: false, navigateTo: '/programs/get');
         }
         return false;
       case BodyMatchIntent():
-        await _say('Opening the body match.');
+        await _say(_l10n.sergeantOpeningBodyMatch);
         state = state.copyWith(conversing: false, navigateTo: '/programs/get');
         return false;
       case ShowHistoryIntent():
-        await _say('Your recent activity.');
+        await _say(_l10n.sergeantRecentActivity);
         state = state.copyWith(conversing: false, navigateTo: '/home');
         return false;
       case ShowProfileIntent():
-        await _say('Opening your profile.');
+        await _say(_l10n.sergeantOpeningProfile);
         state = state.copyWith(conversing: false, navigateTo: '/onboarding');
         return false;
       case UnknownIntent(:final transcript):
@@ -263,9 +264,8 @@ class Sergeant extends Notifier<SergeantState> {
           return false;
         }
         await _say(transcript.isEmpty
-            ? 'Say: start workout, plan workout, or log a meal.'
-            : 'Did not get "$transcript" — say start workout, '
-                'plan workout, or log a meal.');
+            ? _l10n.sergeantSayOptions
+            : _l10n.sergeantDidNotGet(transcript));
         return true;
     }
   }
@@ -290,8 +290,7 @@ class Sergeant extends Notifier<SergeantState> {
         state = state.copyWith(conversing: false, awaitingMacros: false);
         return false;
       }
-      await _say('Grams of protein, carbs, and fat — for example: '
-          '40 protein, 60 carbs, 20 fat.');
+      await _say(_l10n.sergeantMacrosExample);
       return true;
     }
     state = state.copyWith(awaitingMacros: false);
@@ -307,19 +306,21 @@ class Sergeant extends Notifier<SergeantState> {
       final log = await ref
           .read(nutritionServiceProvider)
           .create(performedOn: iso, proteinG: p, carbsG: c, fatG: f);
-      final what = label == null ? 'Meal logged' : 'Logged $label';
-      await _say('$what: ${_g(p)} protein, ${_g(c)} carbs, '
-          '${_g(f)} fat — ${log.calories.round()} calories. What else?');
+      final what = label == null
+          ? _l10n.sergeantMealLogged
+          : _l10n.sergeantLoggedLabel(label);
+      await _say(_l10n.sergeantMealSummary(
+          what, _g(p), _g(c), _g(f), log.calories.round()));
       return true;
     } catch (_) {
-      await _say('Could not save the meal — try again in a moment.');
+      await _say(_l10n.sergeantCouldNotSaveMeal);
       return true;
     }
   }
 
   /// Nutrient lookup: "`<grams>` grams of `<food>`" → USDA macros → meal.
   Future<bool> _logFood(String food, double grams) async {
-    await _say('Looking up $food.');
+    await _say(_l10n.sergeantLookingUp(food));
     List<FoodInfo> matches;
     try {
       matches = await ref.read(nutritionServiceProvider).searchFoods(food);
@@ -329,8 +330,7 @@ class Sergeant extends Notifier<SergeantState> {
     final match = matches.where((f) => f.hasData).firstOrNull;
     if (match == null) {
       state = state.copyWith(awaitingMacros: true);
-      await _say('Could not find $food — tell me the grams of protein, '
-          'carbs, and fat instead.');
+      await _say(_l10n.sergeantCouldNotFind(food));
       return true;
     }
     final factor = grams / 100.0;
@@ -338,7 +338,7 @@ class Sergeant extends Notifier<SergeantState> {
       double.parse((match.proteinGPer100g * factor).toStringAsFixed(1)),
       double.parse((match.carbsGPer100g * factor).toStringAsFixed(1)),
       double.parse((match.fatGPer100g * factor).toStringAsFixed(1)),
-      label: '${_g(grams)} grams of $food',
+      label: _l10n.sergeantGramsOf(_g(grams), food),
     );
   }
 
@@ -346,9 +346,11 @@ class Sergeant extends Notifier<SergeantState> {
     try {
       final program = await ref.read(currentProgramProvider.future);
       if (program == null) return null;
-      return 'Your plan: ${program.program.split}. '
-          '${program.program.daysPerWeek} days a week, '
-          '${program.diet.estimatedKcal} calories.';
+      return _l10n.sergeantPlanSummary(
+        program.program.split,
+        program.program.daysPerWeek,
+        program.diet.estimatedKcal,
+      );
     } catch (_) {
       return null;
     }

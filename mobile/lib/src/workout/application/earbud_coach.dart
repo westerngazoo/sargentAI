@@ -4,7 +4,9 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'dart:async';
 import 'session_driver.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../audio/tts_scripts.dart';
+import '../../l10n/app_localizations_provider.dart';
 import 'audio_service_handler.dart';
 import 'voice_coach.dart';
 
@@ -147,7 +149,7 @@ class EarbudCoach {
         _ref.read(sessionDriverProvider.notifier).logSet(exercise.sets.last);
       } else {
         // Must not fabricate data. Require the first set to be logged on-screen.
-        _speak(TtsScripts.seedFirstSet);
+        _speak(TtsScripts.seedFirstSet(_l10n));
       }
     }
   }
@@ -155,7 +157,7 @@ class EarbudCoach {
   void _onSessionStateChanged(
       SessionDriverState? previous, SessionDriverState current) async {
     if (current.done) {
-      await _speak(TtsScripts.workoutDone);
+      await _speak(TtsScripts.workoutDone(_l10n));
       return;
     }
 
@@ -172,22 +174,25 @@ class EarbudCoach {
       _lastSetCount = currentSetCount;
 
       // Use null for sets/reps targets for now (free-form logic)
-      await _speak(TtsScripts.exerciseStart(exercise.name, null, null, null));
+      await _speak(
+          TtsScripts.exerciseStart(_l10n, exercise.name, null, null, null));
       await _tts.awaitSpeakCompletion(true);
       if (_isActive) {
-        await _speak(TtsScripts.setStart(1, null, null, null));
+        await _speak(TtsScripts.setStart(_l10n, 1, null, null, null));
       }
     } else if (currentSetCount > _lastSetCount) {
       // A set was logged
       _lastSetCount = currentSetCount;
-      await _speak(TtsScripts.rest);
+      await _speak(TtsScripts.rest(_l10n));
       await _tts.awaitSpeakCompletion(true);
       if (_isActive && currentSetCount < 3) {
         await _speak(
-            TtsScripts.setStart(currentSetCount + 1, null, null, null));
+            TtsScripts.setStart(_l10n, currentSetCount + 1, null, null, null));
       }
     }
   }
+
+  AppLocalizations get _l10n => _ref.read(appLocalizationsProvider);
 
   Future<void> _speak(String text) async {
     try {

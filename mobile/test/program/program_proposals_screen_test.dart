@@ -319,7 +319,8 @@ void main() {
     // A loading indicator must be visible.
     expect(find.byType(CircularProgressIndicator), findsAtLeastNWidgets(1));
 
-    gate.completeError(const ApiException('cancelled', statusCode: 409));
+    gate.completeError(
+        const ApiException(ApiErrorKind.conflict, statusCode: 409));
     await tester.pumpAndSettle();
   });
 
@@ -328,7 +329,7 @@ void main() {
     when(() => programService.getProposals(any()))
         .thenAnswer((_) async => sampleProposals());
     when(() => programService.chooseProgram(any(), any())).thenThrow(
-      const ApiException('archetype_not_in_proposals', statusCode: 409),
+      const ApiException(ApiErrorKind.conflict, statusCode: 409),
     );
 
     await pumpProposals(tester);
@@ -364,7 +365,7 @@ void main() {
   testWidgets('AC10 proposals_screen_error_shows_friendly_message',
       (tester) async {
     when(() => programService.getProposals(any())).thenThrow(
-      const ApiException("can't reach the server — retry"),
+      const ApiException(ApiErrorKind.transport),
     );
 
     await pumpProposals(tester);

@@ -180,7 +180,7 @@ void main() {
           token: any(named: 'token'),
           password: any(named: 'password'),
         ),
-      ).thenThrow(const ApiException("can't reach the server — retry"));
+      ).thenThrow(const ApiException(ApiErrorKind.transport));
       await pumpReset(tester, at: '/reset-password?token=abc');
 
       await submit(tester,
@@ -188,7 +188,7 @@ void main() {
 
       expect(find.byType(TextField), findsNWidgets(2));
       expect(find.textContaining(_invalidLink), findsNothing);
-      expect(find.textContaining('retry'), findsOneWidget);
+      expect(find.text(l10n.apiErrorTransport), findsOneWidget);
       expect(find.textContaining('Exception'), findsNothing);
       expect(currentUri().path, '/reset-password');
     });
@@ -203,7 +203,8 @@ void main() {
           token: any(named: 'token'),
           password: any(named: 'password'),
         ),
-      ).thenThrow(const ApiException('unauthorized', statusCode: 401));
+      ).thenThrow(
+          const ApiException(ApiErrorKind.unauthorized, statusCode: 401));
       await pumpReset(tester, at: '/reset-password?token=abc');
 
       await submit(tester,
@@ -223,7 +224,8 @@ void main() {
           token: any(named: 'token'),
           password: any(named: 'password'),
         ),
-      ).thenThrow(const ApiException('unauthorized', statusCode: 401));
+      ).thenThrow(
+          const ApiException(ApiErrorKind.unauthorized, statusCode: 401));
       await pumpReset(tester, at: '/reset-password?token=abc');
       await submit(tester,
           password: 'newpassword1', confirmation: 'newpassword1');

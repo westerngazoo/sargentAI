@@ -22,6 +22,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
 import '../support/voice_fakes.dart';
@@ -88,12 +89,13 @@ void main() {
         workoutRepositoryProvider.overrideWithValue(workoutRepo),
         speechInputProvider.overrideWithValue(speech),
         voiceOutputProvider.overrideWithValue(voiceOut),
+        l10nOverride,
       ],
     );
     addTearDown(container.dispose);
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: router),
+      child: localizedRouterApp(router),
     );
   }
 
@@ -102,12 +104,12 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final label in [
-      'Workout',
-      'Meal',
-      'Program',
-      'Body match',
-      'History',
-      'Profile',
+      l10n.hubWorkout,
+      l10n.hubMeal,
+      l10n.hubProgram,
+      l10n.hubBodyMatch,
+      l10n.hubHistory,
+      l10n.hubProfile,
     ]) {
       expect(find.text(label), findsOneWidget);
     }
@@ -118,7 +120,7 @@ void main() {
     await tester.pumpWidget(app(ScriptedSpeechInput([])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Program'));
+    await tester.tap(find.text(l10n.hubProgram));
     await tester.pumpAndSettle();
 
     expect(find.text('program-sentinel'), findsOneWidget);
@@ -128,7 +130,7 @@ void main() {
     await tester.pumpWidget(app(ScriptedSpeechInput([])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Body match'));
+    await tester.tap(find.text(l10n.hubBodyMatch));
     await tester.pumpAndSettle();
 
     expect(find.text('picker-sentinel'), findsOneWidget);
@@ -138,11 +140,11 @@ void main() {
     await tester.pumpWidget(app(ScriptedSpeechInput([])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Meal'));
+    await tester.tap(find.text(l10n.hubMeal));
     await tester.pumpAndSettle();
 
-    expect(find.text('Log a meal'), findsOneWidget);
-    expect(find.text('Save meal'), findsOneWidget);
+    expect(find.text(l10n.logAMeal), findsOneWidget);
+    expect(find.text(l10n.saveMeal), findsOneWidget);
   });
 
   testWidgets('saying "show my program" speaks the summary and navigates',
@@ -154,7 +156,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('program-sentinel'), findsOneWidget);
-    expect(voiceOut.spoken.join(' '), contains('Your plan'));
+    expect(voiceOut.spoken.join(' '),
+        contains(l10n.sergeantPlanSummary('', 0, 0).split(':').first));
   });
 
   testWidgets('a dictated meal with macros logs directly — no sheet',
@@ -172,8 +175,8 @@ void main() {
           carbsG: 60,
           fatG: 20,
         )).called(1);
-    expect(find.text('Log a meal'), findsNothing); // no sheet
-    expect(find.textContaining('Meal logged'), findsOneWidget);
+    expect(find.text(l10n.logAMeal), findsNothing); // no sheet
+    expect(find.textContaining(l10n.sergeantMealLogged), findsOneWidget);
   });
 
   testWidgets('"log a meal" without macros asks, then logs the follow-up',
@@ -185,7 +188,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
-    expect(voiceOut.spoken.join(' '), contains('grams of protein'));
+    expect(voiceOut.spoken.join(' '), contains(l10n.sergeantAskMacros));
     verify(() => nutritionService.create(
           performedOn: any(named: 'performedOn'),
           proteinG: 45,
@@ -220,7 +223,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('not available'), findsOneWidget);
+    expect(find.text(l10n.sergeantVoiceUnavailable), findsOneWidget);
   });
 
   testWidgets('unknown dictation shows a hint and stands by', (tester) async {
@@ -255,7 +258,8 @@ void main() {
           carbsG: 0,
           fatG: 7,
         )).called(1);
-    expect(voiceOut.spoken.join(' '), contains('chicken breast'));
+    expect(voiceOut.spoken.join(' '),
+        contains(l10n.sergeantLookingUp('chicken breast')));
   });
 
   testWidgets('"over and out" ends the conversation', (tester) async {
@@ -265,7 +269,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.mic));
     await tester.pumpAndSettle();
 
-    expect(voiceOut.spoken.join(' '), contains('Roger. Out.'));
+    expect(voiceOut.spoken.join(' '), contains(l10n.sergeantRogerOut));
     expect(container.read(sergeantProvider).conversing, isFalse);
   });
 

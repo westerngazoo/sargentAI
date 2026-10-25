@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../auth/application/auth_controller.dart';
 import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
@@ -27,6 +28,7 @@ class HomeShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
     final dismissed = ref.watch(onboardingDismissedProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -42,26 +44,26 @@ class HomeShell extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.insights),
-            tooltip: 'Progress',
+            tooltip: l10n.progress,
             onPressed: () => context.go('/progress'),
           ),
           // Meal logging was previously reachable ONLY from the voice hub, so
           // a user who never opened the mic had no way to log food at all.
           IconButton.filledTonal(
             icon: const Icon(Icons.restaurant),
-            tooltip: 'Log meal',
+            tooltip: l10n.logMeal,
             onPressed: () => showMealQuickLogSheet(context),
           ),
           const SizedBox(width: 4),
           IconButton.filledTonal(
             icon: const Icon(Icons.mic),
-            tooltip: 'Voice hub',
+            tooltip: l10n.voiceHub,
             onPressed: () => context.go('/hub'),
           ),
           const SizedBox(width: 4),
           TextButton(
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-            child: const Text('Logout'),
+            child: Text(l10n.logout),
           ),
           const SizedBox(width: 8),
         ],
@@ -72,7 +74,7 @@ class HomeShell extends ConsumerWidget {
           context.go('/session');
         },
         icon: const Icon(Icons.fitness_center),
-        label: const Text('Start workout'),
+        label: Text(l10n.startWorkout),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -97,7 +99,7 @@ class HomeShell extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
             child: Text(
-              'Recent activity',
+              l10n.recentActivity,
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -112,26 +114,27 @@ class HomeShell extends ConsumerWidget {
 class _GreetingHeader extends StatelessWidget {
   const _GreetingHeader();
 
-  static String _greeting(int hour) => switch (hour) {
-        >= 5 && < 12 => 'Good morning',
-        >= 12 && < 18 => 'Good afternoon',
-        _ => 'Good evening',
+  static String _greeting(int hour, AppLocalizations l10n) => switch (hour) {
+        >= 5 && < 12 => l10n.goodMorning,
+        >= 12 && < 18 => l10n.goodAfternoon,
+        _ => l10n.goodEvening,
       };
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _greeting(TimeOfDay.now().hour),
+            _greeting(TimeOfDay.now().hour, l10n),
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 2),
           Text(
-            'Ready to train?',
+            l10n.readyToTrain,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

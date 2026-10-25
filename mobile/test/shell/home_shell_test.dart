@@ -130,7 +130,7 @@ void main() {
     await pumpShell(tester);
 
     expect(find.widgetWithText(AppBar, Brand.appName), findsOneWidget);
-    expect(find.textContaining('Logout'), findsOneWidget);
+    expect(find.text(l10n.logout), findsOneWidget);
     for (final feature in const ['Workout', 'Nutrition', 'Photo']) {
       expect(find.textContaining(feature), findsNothing);
     }

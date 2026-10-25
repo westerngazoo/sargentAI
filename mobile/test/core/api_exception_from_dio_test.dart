@@ -22,7 +22,7 @@ void main() {
       );
       expect(e.statusCode, 400);
       expect(e.field, 'height_cm', reason: 'reads data["field"], not nested');
-      expect(e.message, isNotEmpty);
+      expect(e.kind, ApiErrorKind.badRequest);
     });
 
     test('a 400 with no field leaves field null but keeps the status', () {
@@ -38,6 +38,7 @@ void main() {
         dioErrorFlat(401, path: '/profile/me', error: 'unauthorized'),
       );
       expect(e.statusCode, 401);
+      expect(e.kind, ApiErrorKind.unauthorized);
       expect(e.field, isNull);
     });
 
@@ -46,14 +47,26 @@ void main() {
         dioErrorFlat(404, error: 'not_found'),
       );
       expect(e.statusCode, 404);
+      expect(e.kind, ApiErrorKind.notFound);
+    });
+
+    test('a 409 is a conflict; an unmapped status is unknown', () {
+      expect(
+        ApiException.fromDio(dioErrorFlat(409, error: 'already_exists')).kind,
+        ApiErrorKind.conflict,
+      );
+      expect(
+        ApiException.fromDio(dioErrorFlat(500, error: 'internal')).kind,
+        ApiErrorKind.unknown,
+      );
     });
 
     test('a transport/timeout (null response) -> retryable, null statusCode',
         () {
       final e = ApiException.fromDio(dioTransport());
       expect(e.statusCode, isNull, reason: 'no HTTP response = transport');
+      expect(e.kind, ApiErrorKind.transport);
       expect(e.field, isNull);
-      expect(e.message, isNotEmpty);
     });
 
     test('does NOT read a nested {"error":{"field":...}} body (regression)',

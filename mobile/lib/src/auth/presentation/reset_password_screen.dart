@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../data/auth_repository.dart';
 import 'brand_header.dart';
@@ -79,12 +80,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        if (e.statusCode == 401) {
+        if (e.kind == ApiErrorKind.unauthorized) {
           _linkInvalid = true;
         } else if (e.field == 'password') {
           _error = l10n.useAtLeast8Characters;
         } else {
-          _error = e.message;
+          _error = apiErrorText(e, l10n);
         }
       });
     } finally {

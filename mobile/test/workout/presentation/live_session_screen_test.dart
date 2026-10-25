@@ -5,9 +5,9 @@
 // session_driver_test.dart).
 //
 // Pinned user-facing affordances (the contract the implementation renders):
-//   'Start workout' (home), 'Add exercise', 'Add' (sheet confirm), a 'Reps'
-//   text field, 'Log set', 'Repeat last set', 'Finish', and the abandon
-//   dialog's 'Cancel' / 'Discard'.
+//   startWorkout (home), addExercise, add (sheet confirm), a repsLabel text
+//   field, logSet, repeatLastSet, finish, and the abandon dialog's cancel /
+//   discard — named by catalogue key (R-0061 AC11).
 //
 // Harness rules (the R-0007 lessons):
 //   * never `await Future.delayed` before a pump — timers run on the fake
@@ -32,7 +32,9 @@ import 'package:fitai/src/workout/application/earbud_coach.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
+import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
+import 'package:fitai/src/workout/presentation/draft_rejection_text.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:fitai/src/workout/presentation/live_session_screen.dart';
 import 'package:fitai/src/workout/domain/preset_exercises.dart';
@@ -82,6 +84,7 @@ void main() {
         programServiceProvider.overrideWithValue(programService),
         speechInputProvider.overrideWithValue(ScriptedSpeechInput([])),
         voiceOutputProvider.overrideWithValue(RecordingVoiceOutput()),
+        l10nOverride,
       ],
     );
     addTearDown(container.dispose);
@@ -104,7 +107,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pump();
@@ -116,8 +119,8 @@ void main() {
         (tester) async {
       await pumpSession(tester);
 
-      expect(find.text('Add exercise'), findsWidgets);
-      expect(find.text('Finish'), findsWidgets);
+      expect(find.text(l10n.addExercise), findsWidgets);
+      expect(find.text(l10n.finish), findsWidgets);
       // AC1: the user never types a date — no calendar affordance exists.
       expect(find.byIcon(Icons.calendar_today), findsNothing);
       expect(find.byIcon(Icons.edit_calendar), findsNothing);
@@ -166,7 +169,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(find.text('Start workout'));
+      await tester.tap(find.text(l10n.startWorkout));
       await tester.pump();
       await tester.pump();
 
@@ -183,7 +186,7 @@ void main() {
       final (container, _) = await pumpSession(tester);
       final preset = presetExercises.first;
 
-      await tester.tap(find.text('Add exercise').first);
+      await tester.tap(find.text(l10n.addExercise).first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400)); // sheet animation
 
@@ -192,7 +195,7 @@ void main() {
       expect(find.widgetWithText(TextField, preset.name), findsOneWidget,
           reason: 'the preset pre-fills the free-text name field');
 
-      await tester.tap(find.text('Add'));
+      await tester.tap(find.text(l10n.add));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -202,12 +205,12 @@ void main() {
     testWidgets('typed free text adds an (untagged) exercise', (tester) async {
       final (container, _) = await pumpSession(tester);
 
-      await tester.tap(find.text('Add exercise').first);
+      await tester.tap(find.text(l10n.addExercise).first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
       await tester.enterText(find.byType(TextField).first, 'Cable crossover');
-      await tester.tap(find.text('Add'));
+      await tester.tap(find.text(l10n.add));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -224,8 +227,9 @@ void main() {
       driverOf(container).addExercise('Bench press');
       await tester.pump();
 
-      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '5');
-      await tester.tap(find.text('Log set'));
+      await tester.enterText(
+          find.widgetWithText(TextField, l10n.repsLabel), '5');
+      await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 
       final sets = stateOf(container).draft!.exercises.single.sets;
@@ -240,11 +244,12 @@ void main() {
       driverOf(container).addExercise('Bench press');
       await tester.pump();
 
-      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '0');
-      await tester.tap(find.text('Log set'));
+      await tester.enterText(
+          find.widgetWithText(TextField, l10n.repsLabel), '0');
+      await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 
-      final message = const SetDraft(reps: 0).repsError()!;
+      final message = draftRejectionText(DraftRejection.repsOutOfRange, l10n);
       expect(find.textContaining(message), findsWidgets,
           reason: 'the driver-returned reason is shown inline');
       expect(stateOf(container).draft!.exercises.single.sets, isEmpty,
@@ -260,9 +265,9 @@ void main() {
         ..logSet(const SetDraft(reps: 8, weightKg: 80, rpe: 8.5));
       await tester.pump();
 
-      await tester.tap(find.text('Repeat last set'));
+      await tester.tap(find.text(l10n.repeatLastSet));
       await tester.pump();
-      await tester.tap(find.text('Log set'));
+      await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 
       final sets = stateOf(container).draft!.exercises.single.sets;
@@ -305,7 +310,7 @@ void main() {
       driverOf(container).addExercise('Bench press'); // no sets yet
       await tester.pump();
 
-      await tester.tap(find.text('Finish').first, warnIfMissed: false);
+      await tester.tap(find.text(l10n.finish).first, warnIfMissed: false);
       await tester.pump();
       await tester.pump();
 
@@ -323,7 +328,7 @@ void main() {
         ..logSet(const SetDraft(reps: 8));
       await tester.pump();
 
-      await tester.tap(find.text('Finish').first);
+      await tester.tap(find.text(l10n.finish).first);
       await tester.pump();
       await tester.pump();
       await tester.pump();
@@ -345,7 +350,7 @@ void main() {
         ..logSet(const SetDraft(reps: 8));
       await tester.pump();
 
-      await tester.tap(find.text('Finish').first);
+      await tester.tap(find.text(l10n.finish).first);
       await tester.pump();
 
       expect(stateOf(container).submitting, isTrue,
@@ -364,7 +369,7 @@ void main() {
     testWidgets('a 400{field} stays put, shows the message, keeps the draft',
         (tester) async {
       when(() => repo.create(any())).thenThrow(
-        const ApiException('please check your details',
+        const ApiException(ApiErrorKind.badRequest,
             statusCode: 400, field: 'rpe'),
       );
       final (container, router) = await pumpSession(tester);
@@ -373,12 +378,12 @@ void main() {
         ..logSet(const SetDraft(reps: 8, rpe: 8.5));
       await tester.pump();
 
-      await tester.tap(find.text('Finish').first);
+      await tester.tap(find.text(l10n.finish).first);
       await tester.pump();
       await tester.pump();
 
       expect(locationOf(router), '/session', reason: 'no navigation on error');
-      expect(find.textContaining('check your details'), findsWidgets);
+      expect(find.textContaining(l10n.apiErrorBadRequest), findsWidgets);
       expect(find.textContaining('Bench press'), findsWidgets,
           reason: 'the session is still rendered — nothing was lost');
       expect(stateOf(container).draft, isNotNull);
@@ -388,23 +393,23 @@ void main() {
         'a transport error shows a retryable message; retrying '
         're-submits and succeeds', (tester) async {
       when(() => repo.create(any()))
-          .thenThrow(const ApiException("can't reach the server — retry"));
+          .thenThrow(const ApiException(ApiErrorKind.transport));
       final (container, router) = await pumpSession(tester);
       driverOf(container)
         ..addExercise('Bench press')
         ..logSet(const SetDraft(reps: 8));
       await tester.pump();
 
-      await tester.tap(find.text('Finish').first);
+      await tester.tap(find.text(l10n.finish).first);
       await tester.pump();
       await tester.pump();
 
       expect(locationOf(router), '/session');
-      expect(find.textContaining('retry'), findsWidgets);
+      expect(find.textContaining(l10n.apiErrorTransport), findsWidgets);
 
       when(() => repo.create(any())).thenAnswer((_) async => sampleSession());
       when(() => repo.list()).thenAnswer((_) async => [sampleSession()]);
-      await tester.tap(find.text('Finish').first);
+      await tester.tap(find.text(l10n.finish).first);
       await tester.pump();
       await tester.pump();
       await tester.pump();
@@ -423,10 +428,10 @@ void main() {
 
       await tester.binding.handlePopRoute();
       await tester.pump();
-      expect(find.text('Cancel'), findsOneWidget,
+      expect(find.text(l10n.cancel), findsOneWidget,
           reason: 'a confirm dialog intercepts the pop');
 
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.text(l10n.cancel));
       await tester.pump();
       await tester.pump();
 
@@ -445,7 +450,7 @@ void main() {
 
       await tester.binding.handlePopRoute();
       await tester.pump();
-      await tester.tap(find.text('Discard'));
+      await tester.tap(find.text(l10n.discard));
       await tester.pump();
       await tester.pump();
 
@@ -518,8 +523,9 @@ void main() {
       await tester.pump();
 
       // First, log an initial set on-screen (button requires one set to exist now)
-      await tester.enterText(find.widgetWithText(TextField, 'Reps'), '5');
-      await tester.tap(find.text('Log set'));
+      await tester.enterText(
+          find.widgetWithText(TextField, l10n.repsLabel), '5');
+      await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 
       final exerciseBefore = stateOf(container).draft!.exercises.single;
@@ -535,9 +541,9 @@ void main() {
       expect(exerciseAfter.sets, hasLength(2));
 
       // Simulate on-screen 'Repeat last set' and then 'Log set' for parity
-      await tester.tap(find.text('Repeat last set'));
+      await tester.tap(find.text(l10n.repeatLastSet));
       await tester.pump();
-      await tester.tap(find.text('Log set'));
+      await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 
       final exerciseAfterScreen = stateOf(container).draft!.exercises.single;

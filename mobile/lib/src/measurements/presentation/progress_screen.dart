@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../workout/application/workouts_provider.dart';
 import '../../workout/domain/muscle_group.dart';
 import '../../workout/domain/workout_session.dart';
+import '../../workout/presentation/muscle_names.dart';
 import '../application/strength_trend.dart';
 import '../models/measurement.dart';
 import '../services/measurement_service.dart';
@@ -22,22 +24,23 @@ class ProgressScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final measurements = ref.watch(measurementsProvider);
     final workouts = ref.watch(workoutsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Progress'),
+        title: Text(l10n.progress),
         leading: BackButton(onPressed: () => context.go('/home')),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showLogMeasurementSheet(context),
         icon: const Icon(Icons.straighten),
-        label: const Text('Log measurement'),
+        label: Text(l10n.logMeasurement),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           const CoachCard(),
-          Text('Body composition',
+          Text(l10n.bodyComposition,
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           measurements.when(
@@ -47,7 +50,7 @@ class ProgressScreen extends ConsumerWidget {
             data: (list) => _BodyComposition(measurements: list),
           ),
           const SizedBox(height: 24),
-          Text('Strength', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.strength, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           workouts.when(
             loading: () =>
@@ -64,7 +67,7 @@ class ProgressScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Training balance',
+                    Text(l10n.trainingBalance,
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _MuscleBalance(balance: balance),
@@ -90,10 +93,10 @@ class _Loading extends StatelessWidget {
 class _ErrorCard extends StatelessWidget {
   const _ErrorCard();
   @override
-  Widget build(BuildContext context) => const Card(
+  Widget build(BuildContext context) => Card(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Could not load — pull to retry.'),
+          padding: const EdgeInsets.all(24),
+          child: Text(AppLocalizations.of(context).couldNotLoadPullToRetry),
         ),
       );
 }
@@ -114,6 +117,7 @@ class _BodyCompositionState extends State<_BodyComposition> {
   @override
   Widget build(BuildContext context) {
     final m = widget.measurements;
+    final l10n = AppLocalizations.of(context);
     if (m.length < 2) {
       return Card(
         child: Padding(
@@ -124,8 +128,8 @@ class _BodyCompositionState extends State<_BodyComposition> {
                   size: 48,
                   color: Theme.of(context).colorScheme.outlineVariant),
               const SizedBox(height: 10),
-              const Text(
-                'Log a couple of measurements to see your trend.',
+              Text(
+                l10n.logACoupleOfMeasurements,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -148,17 +152,17 @@ class _BodyCompositionState extends State<_BodyComposition> {
 
     final selectedSeries = switch (_selected) {
       _Metric.fat => ChartSeries(
-          label: 'Body fat %',
+          label: l10n.bodyFatPercentLabel,
           color: colorFat,
           values: fat.whereType<double>().toList(),
           unit: '%'),
       _Metric.lean => ChartSeries(
-          label: 'Lean mass',
+          label: l10n.leanMass,
           color: colorLean,
           values: lean.whereType<double>().toList(),
           unit: 'kg'),
       _Metric.weight => ChartSeries(
-          label: 'Weight', color: colorWeight, values: weight, unit: 'kg'),
+          label: l10n.weight, color: colorWeight, values: weight, unit: 'kg'),
     };
 
     return Card(
@@ -171,7 +175,7 @@ class _BodyCompositionState extends State<_BodyComposition> {
               children: [
                 if (hasFat)
                   _MetricTile(
-                    label: 'Body fat',
+                    label: l10n.bodyFat,
                     values: fat.whereType<double>().toList(),
                     unit: '%',
                     color: colorFat,
@@ -181,7 +185,7 @@ class _BodyCompositionState extends State<_BodyComposition> {
                   ),
                 if (hasLean)
                   _MetricTile(
-                    label: 'Lean mass',
+                    label: l10n.leanMass,
                     values: lean.whereType<double>().toList(),
                     unit: 'kg',
                     color: colorLean,
@@ -190,7 +194,7 @@ class _BodyCompositionState extends State<_BodyComposition> {
                     onTap: () => setState(() => _selected = _Metric.lean),
                   ),
                 _MetricTile(
-                  label: 'Weight',
+                  label: l10n.weight,
                   values: weight,
                   unit: 'kg',
                   color: colorWeight,
@@ -211,7 +215,7 @@ class _BodyCompositionState extends State<_BodyComposition> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '${selectedSeries.label} over time',
+                  l10n.overTime(selectedSeries.label),
                   style: Theme.of(context).textTheme.labelMedium,
                 ),
               ],
@@ -258,6 +262,7 @@ class _MetricTile extends StatelessWidget {
         goodWhenDown == null ? null : (goodWhenDown! ? delta < 0 : delta > 0);
     final deltaColor =
         good == null ? cs.onSurfaceVariant : (good ? cs.primary : cs.error);
+    final l10n = AppLocalizations.of(context);
 
     return Expanded(
       child: InkWell(
@@ -279,7 +284,7 @@ class _MetricTile extends StatelessWidget {
                       )),
               const SizedBox(height: 4),
               Text(
-                '${_fmt(current)}$unit',
+                l10n.valueWithUnit(_fmt(current), unit),
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -291,7 +296,7 @@ class _MetricTile extends StatelessWidget {
                   Icon(up ? Icons.arrow_upward : Icons.arrow_downward,
                       size: 12, color: deltaColor),
                   Text(
-                    '${_fmt(delta.abs())}$unit',
+                    l10n.valueWithUnit(_fmt(delta.abs()), unit),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: deltaColor, fontWeight: FontWeight.w700),
                   ),
@@ -325,6 +330,7 @@ class _StrengthCardState extends State<_StrengthCard> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final overall = computeStrengthTrend(widget.workouts);
     final lifts = computePerLiftTrends(widget.workouts);
 
@@ -336,8 +342,8 @@ class _StrengthCardState extends State<_StrengthCard> {
             children: [
               Icon(Icons.fitness_center, size: 48, color: cs.outlineVariant),
               const SizedBox(height: 10),
-              const Text(
-                'Log a few weighted sessions to see your strength climb.',
+              Text(
+                l10n.logAFewWeightedSessions,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -352,8 +358,8 @@ class _StrengthCardState extends State<_StrengthCard> {
         (selected?.best1rm ?? overall.best1rm).map((p) => p.value).toList();
     final vol = overall.volume.map((p) => p.value).toList();
     final title = selected == null
-        ? 'Estimated 1RM · all lifts'
-        : 'Estimated 1RM · ${selected.name}';
+        ? l10n.estimatedOneRmAllLifts
+        : l10n.estimatedOneRm(selected.name);
 
     return Card(
       child: Padding(
@@ -367,7 +373,7 @@ class _StrengthCardState extends State<_StrengthCard> {
                 child: Row(
                   children: [
                     _LiftChip(
-                      label: 'All lifts',
+                      label: l10n.allLifts,
                       selected: _lift == null,
                       onTap: () => setState(() => _lift = null),
                     ),
@@ -394,7 +400,7 @@ class _StrengthCardState extends State<_StrengthCard> {
                   ),
                   if (selected?.isPr ?? false) _PrBadge(cs: cs),
                   const SizedBox(width: 8),
-                  Text('${e1rm.last.round()} kg',
+                  Text(l10n.kg('${e1rm.last.round()}'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: cs.primary,
@@ -404,8 +410,8 @@ class _StrengthCardState extends State<_StrengthCard> {
               if (selected != null && selected.gain != 0) ...[
                 const SizedBox(height: 2),
                 Text(
-                  '${selected.gain > 0 ? '+' : ''}${selected.gain.round()} kg '
-                  'since you started tracking it',
+                  l10n.gainSinceTracking(
+                      '${selected.gain > 0 ? '+' : ''}${selected.gain.round()}'),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: selected.gain > 0 ? cs.primary : cs.error,
                         fontWeight: FontWeight.w700,
@@ -415,7 +421,10 @@ class _StrengthCardState extends State<_StrengthCard> {
               const SizedBox(height: 8),
               TrendChart(series: [
                 ChartSeries(
-                    label: 'e1RM', color: cs.primary, values: e1rm, unit: 'kg')
+                    label: l10n.e1rmLabel,
+                    color: cs.primary,
+                    values: e1rm,
+                    unit: 'kg')
               ]),
             ],
             if (_lift == null && vol.length >= 2) ...[
@@ -424,10 +433,10 @@ class _StrengthCardState extends State<_StrengthCard> {
                 children: [
                   Icon(Icons.stacked_bar_chart, size: 16, color: cs.tertiary),
                   const SizedBox(width: 6),
-                  Text('Session volume',
+                  Text(l10n.sessionVolume,
                       style: Theme.of(context).textTheme.labelMedium),
                   const Spacer(),
-                  Text('${vol.last.round()} kg',
+                  Text(l10n.kg('${vol.last.round()}'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: cs.tertiary,
@@ -439,7 +448,7 @@ class _StrengthCardState extends State<_StrengthCard> {
                 height: 120,
                 series: [
                   ChartSeries(
-                      label: 'Volume',
+                      label: l10n.volume,
                       color: cs.tertiary,
                       values: vol,
                       unit: 'kg')
@@ -507,7 +516,7 @@ class _PrBadge extends StatelessWidget {
         children: [
           Icon(Icons.emoji_events, size: 12, color: cs.tertiary),
           const SizedBox(width: 3),
-          Text('PR',
+          Text(AppLocalizations.of(context).prBadge,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: cs.tertiary,
                     fontWeight: FontWeight.w800,
@@ -523,18 +532,10 @@ class _MuscleBalance extends StatelessWidget {
   const _MuscleBalance({required this.balance});
   final List<({MuscleGroup group, double volume})> balance;
 
-  static const _labels = {
-    MuscleGroup.chest: 'Chest',
-    MuscleGroup.back: 'Back',
-    MuscleGroup.shoulders: 'Shoulders',
-    MuscleGroup.arms: 'Arms',
-    MuscleGroup.legs: 'Legs',
-    MuscleGroup.core: 'Core',
-  };
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final max = balance.first.volume;
     return Card(
       child: Padding(
@@ -547,7 +548,7 @@ class _MuscleBalance extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 78,
-                    child: Text(_labels[b.group] ?? b.group.wire,
+                    child: Text(muscleGroupName(b.group, l10n),
                         style: Theme.of(context).textTheme.labelMedium),
                   ),
                   Expanded(
@@ -564,7 +565,7 @@ class _MuscleBalance extends StatelessWidget {
                   const SizedBox(width: 10),
                   SizedBox(
                     width: 62,
-                    child: Text('${b.volume.round()} kg',
+                    child: Text(l10n.kg('${b.volume.round()}'),
                         textAlign: TextAlign.right,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: cs.onSurfaceVariant,

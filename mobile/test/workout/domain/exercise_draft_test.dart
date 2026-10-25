@@ -7,6 +7,7 @@
 // RED until package:fitai/src/workout/domain/exercise_draft.dart defines
 // ExerciseDraft{name, muscleGroup?, sets} with nameError().
 
+import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/domain/exercise_draft.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
@@ -19,13 +20,14 @@ void main() {
     });
 
     test('empty and whitespace-only names are rejected', () {
-      expect(ExerciseDraft(name: '').nameError(), isNotNull);
-      expect(ExerciseDraft(name: '   ').nameError(), isNotNull);
+      expect(ExerciseDraft(name: '').nameError(), DraftRejection.nameEmpty);
+      expect(ExerciseDraft(name: '   ').nameError(), DraftRejection.nameEmpty);
     });
 
     test('length boundary: 100 chars accepted, 101 rejected', () {
       expect(ExerciseDraft(name: 'a' * 100).nameError(), isNull);
-      expect(ExerciseDraft(name: 'a' * 101).nameError(), isNotNull);
+      expect(ExerciseDraft(name: 'a' * 101).nameError(),
+          DraftRejection.nameTooLong);
     });
 
     test('the name is trimmed BEFORE counting (backend order)', () {

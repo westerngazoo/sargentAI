@@ -263,5 +263,420 @@
   },
   "chooseThisProgram": "Elegir este programa",
   "selectionNoLongerAvailable": "Esa opción ya no está disponible. Vuelve a cargar.",
-  "couldNotChooseProgram": "No se pudo elegir el programa. Inténtalo de nuevo."
+  "couldNotChooseProgram": "No se pudo elegir el programa. Inténtalo de nuevo.",
+  "apiErrorTransport": "No hay conexión con el servidor. Inténtalo de nuevo.",
+  "@apiErrorTransport": {
+    "description": "Fallback for a timeout or no-network failure on any API call."
+  },
+  "apiErrorBadRequest": "Revisa tus datos.",
+  "apiErrorUnauthorized": "Correo o contraseña incorrectos.",
+  "apiErrorNotFound": "Eso ya no existe.",
+  "apiErrorConflict": "Eso ya existe.",
+  "apiErrorUnknown": "Algo salió mal. Inténtalo de nuevo.",
+  "regionNeck": "Cuello",
+  "regionTraps": "Trapecios",
+  "regionShoulders": "Hombros",
+  "regionChest": "Pecho",
+  "regionBiceps": "Bíceps",
+  "regionTriceps": "Tríceps",
+  "regionForearms": "Antebrazos",
+  "regionCore": "Core",
+  "regionLats": "Dorsales",
+  "regionUpperBack": "Espalda alta",
+  "regionLowerBack": "Lumbares",
+  "regionQuads": "Cuádriceps",
+  "regionHamstrings": "Isquios",
+  "regionGlutes": "Glúteos",
+  "regionCalves": "Pantorrillas",
+  "muscleChest": "Pecho",
+  "muscleBack": "Espalda",
+  "muscleShoulders": "Hombros",
+  "muscleArms": "Brazos",
+  "muscleLegs": "Piernas",
+  "muscleCore": "Core",
+  "listAnd": "{head} y {last}",
+  "@listAnd": {
+    "description": "Joins the last item of a spoken list to the rest: 'quads and glutes'.",
+    "placeholders": {
+      "head": {"type": "String"},
+      "last": {"type": "String"}
+    }
+  },
+  "rejectStartWorkoutFirst": "Primero empieza un entrenamiento.",
+  "rejectAddExerciseFirst": "Primero agrega un ejercicio.",
+  "rejectEnterExerciseName": "Escribe el nombre del ejercicio.",
+  "rejectNameTooLong": "El nombre puede tener hasta {max} caracteres.",
+  "@rejectNameTooLong": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "rejectEnterReps": "Pon las repeticiones.",
+  "rejectRepsOutOfRange": "Las repeticiones van de {min} a {max}.",
+  "@rejectRepsOutOfRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "rejectWeightOutOfRange": "El peso debe ser mayor que 0 y máximo {max} kg.",
+  "@rejectWeightOutOfRange": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "rejectRpeOutOfRange": "El RPE va de {min} a {max}, en pasos de 0.5.",
+  "@rejectRpeOutOfRange": {
+    "placeholders": {
+      "min": {"type": "double"},
+      "max": {"type": "double"}
+    }
+  },
+  "fieldAreaSets": "tus series",
+  "fieldAreaExercise": "el ejercicio",
+  "fieldAreaWorkout": "el entrenamiento",
+  "errorCheckArea": "{error} Revisa {area}.",
+  "@errorCheckArea": {
+    "description": "A finish failure that names the part of the screen to check.",
+    "placeholders": {
+      "error": {"type": "String"},
+      "area": {"type": "String"}
+    }
+  },
+  "discardThisWorkout": "¿Descartar este entrenamiento?",
+  "yourLoggedSetsWillBeLost": "Se perderán las series que registraste.",
+  "cancel": "Cancelar",
+  "discard": "Descartar",
+  "workout": "Entrenamiento",
+  "earbudCoachOn": "Activar coach en audífonos",
+  "earbudCoachOff": "Apagar coach en audífonos",
+  "voiceCoachOn": "Activar coach de voz",
+  "voiceCoachOff": "Apagar coach de voz",
+  "addExercise": "Agregar ejercicio",
+  "targetMusclesCaps": "MÚSCULOS OBJETIVO — {name}",
+  "@targetMusclesCaps": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "stopListening": "Dejar de escuchar",
+  "dictateASet": "Dictar una serie",
+  "listening": "Escuchando…",
+  "coachIdleHint": "Toca el micrófono y di \"listo\": te pregunto repeticiones y kilos. Termina cada respuesta con \"cambio\".",
+  "setLine": "Serie {n}: {label}",
+  "@setLine": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "label": {"type": "String"}
+    }
+  },
+  "repsCount": "{n} reps",
+  "@repsCount": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "kg": "{value} kg",
+  "@kg": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "rpeValue": "RPE {value}",
+  "@rpeValue": {
+    "placeholders": {
+      "value": {"type": "String"}
+    }
+  },
+  "repsLabel": "Reps",
+  "rpeLabel": "RPE",
+  "repeatLastSet": "Repetir última serie",
+  "logSet": "Registrar serie",
+  "newExercise": "Nuevo ejercicio",
+  "add": "Agregar",
+  "exerciseNameLabel": "Nombre del ejercicio",
+  "commonLifts": "Ejercicios comunes",
+  "muscleGroupOptional": "Grupo muscular (opcional)",
+  "exerciseWithGroup": "{name} · {group}",
+  "@exerciseWithGroup": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "group": {"type": "String"}
+    }
+  },
+  "noWorkoutsYet": "Aún no hay entrenamientos. Toca Empezar para registrar el primero.",
+  "sessionSummary": "{exercises} ejercicios · {sets} series",
+  "@sessionSummary": {
+    "placeholders": {
+      "exercises": {"type": "int"},
+      "sets": {"type": "int"}
+    }
+  },
+  "delete": "Borrar",
+  "deleteThisWorkout": "¿Borrar este entrenamiento?",
+  "today": "Hoy",
+  "yesterday": "Ayer",
+  "workoutNoLongerExists": "Ese entrenamiento ya no existe.",
+  "startWorkout": "Empezar entrenamiento",
+  "coachSayDoneHandsFree": "Di listo cuando termines la serie.",
+  "coachSayDoneKeyMic": "Activa el micrófono y di listo cuando termines la serie.",
+  "coachTargetSuffix": " — objetivo {label}",
+  "@coachTargetSuffix": {
+    "description": "Appended to an exercise name when its target muscles are known.",
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "coachPlanLoaded": "Plan cargado: {count} ejercicios. Primero: {first}. {prompt}",
+  "@coachPlanLoaded": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "first": {"type": "String"},
+      "prompt": {"type": "String"}
+    }
+  },
+  "coachNoPlan": "Coach de voz activo. No hay plan: agrega un ejercicio y dicta tus series.",
+  "coachOnCurrent": "Coach de voz activo. Ejercicio actual: {name}. {prompt}",
+  "@coachOnCurrent": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "prompt": {"type": "String"}
+    }
+  },
+  "coachNoCurrentExercise": "ninguno",
+  "voiceInputUnavailable": "Aquí no hay entrada de voz.",
+  "coachHowManyReps": "¿Cuántas repeticiones?",
+  "coachHowManyKilos": "¿Cuántos kilos? O di peso corporal.",
+  "coachLoggedRestUp": "Registrado: {logged}. Descansa.",
+  "@coachLoggedRestUp": {
+    "placeholders": {
+      "logged": {"type": "String"}
+    }
+  },
+  "coachAtKilos": "con {weight} kilos",
+  "@coachAtKilos": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
+  "coachNextUp": "Sigue: {next}.",
+  "@coachNextUp": {
+    "placeholders": {
+      "next": {"type": "String"}
+    }
+  },
+  "coachLastExercise": "Ese era el último ejercicio. Di terminar entrenamiento para guardar.",
+  "coachSaving": "Guardando tu entrenamiento.",
+  "coachSaved": "Entrenamiento guardado. ¡Listo!",
+  "coachGoodHowManyReps": "Bien. ¿Cuántas repeticiones?",
+  "coachStandingBy": "En espera. Toca el micrófono cuando estés listo.",
+  "coachDidNotCatch": "No te entendí. Di por ejemplo: diez repeticiones con sesenta kilos.",
+  "coachJustReps": "Solo el número de repeticiones.",
+  "coachKilosAsNumber": "Los kilos en número, o di peso corporal.",
+  "coachLoggedNextSet": "Registrado: {logged}. Descansa y di listo cuando termines la siguiente serie.",
+  "@coachLoggedNextSet": {
+    "placeholders": {
+      "logged": {"type": "String"}
+    }
+  },
+  "ttsNext": "Sigue: {name}.",
+  "@ttsNext": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "ttsNextSets": "Sigue: {name}. {sets} series de {reps} repeticiones.",
+  "@ttsNextSets": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "sets": {"type": "int"},
+      "reps": {"type": "int"}
+    }
+  },
+  "ttsNextSetsWeight": "Sigue: {name}. {sets} series de {reps} repeticiones con {weight} kg.",
+  "@ttsNextSetsWeight": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "sets": {"type": "int"},
+      "reps": {"type": "int"},
+      "weight": {"type": "String"}
+    }
+  },
+  "ttsSetGo": "Serie {n}. Vamos.",
+  "@ttsSetGo": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "ttsSetOfGo": "Serie {n} de {total}. {reps} repeticiones. Vamos.",
+  "@ttsSetOfGo": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "total": {"type": "int"},
+      "reps": {"type": "int"}
+    }
+  },
+  "ttsSetOfWeightGo": "Serie {n} de {total}. {reps} repeticiones con {weight} kg. Vamos.",
+  "@ttsSetOfWeightGo": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "total": {"type": "int"},
+      "reps": {"type": "int"},
+      "weight": {"type": "String"}
+    }
+  },
+  "ttsRest": "Descansa.",
+  "ttsWorkoutDone": "Entrenamiento terminado.",
+  "ttsSeedFirstSet": "Registra tu primera serie en pantalla.",
+  "sergeantVoiceUnavailable": "Aquí no hay entrada de voz. Toca una opción.",
+  "sergeantGreeting": "Aquí el sargento. Di: empezar entrenamiento, ver plan, registrar comida. Termina cada orden con cambio.",
+  "sergeantRogerOut": "Recibido. Corto.",
+  "sergeantLogged": "Registrado.",
+  "sergeantTellMeMore": "Dime más.",
+  "sergeantRoger": "Recibido.",
+  "sergeantDidNotCatch": "No te entendí.",
+  "sergeantStandingBy": "En espera.",
+  "sergeantAskMacros": "Dime los gramos de proteína, carbos y grasa, una porción como 200 gramos de pechuga de pollo, o un preset, como protein shake.",
+  "sergeantStartingSession": "Empezando tu sesión.",
+  "sergeantNoPlanYet": "Aún no hay plan. Vamos a buscar tu tipo de cuerpo.",
+  "sergeantOpeningBodyMatch": "Abriendo el tipo de cuerpo.",
+  "sergeantRecentActivity": "Tu actividad reciente.",
+  "sergeantOpeningProfile": "Abriendo tu perfil.",
+  "sergeantSayOptions": "Di: empezar entrenamiento, ver plan o registrar comida.",
+  "sergeantDidNotGet": "No entendí \"{transcript}\". Di empezar entrenamiento, ver plan o registrar comida.",
+  "@sergeantDidNotGet": {
+    "placeholders": {
+      "transcript": {"type": "String"}
+    }
+  },
+  "sergeantMacrosExample": "Gramos de proteína, carbos y grasa. Por ejemplo: 40 de proteína, 60 de carbos, 20 de grasa.",
+  "sergeantMealLogged": "Comida registrada",
+  "sergeantLoggedLabel": "Registré {label}",
+  "@sergeantLoggedLabel": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "sergeantMealSummary": "{what}: {protein} de proteína, {carbs} de carbos, {fat} de grasa. {kcal} calorías. ¿Qué más?",
+  "@sergeantMealSummary": {
+    "placeholders": {
+      "what": {"type": "String"},
+      "protein": {"type": "String"},
+      "carbs": {"type": "String"},
+      "fat": {"type": "String"},
+      "kcal": {"type": "int"}
+    }
+  },
+  "sergeantCouldNotSaveMeal": "No pude guardar la comida. Inténtalo en un momento.",
+  "sergeantLookingUp": "Buscando {food}.",
+  "@sergeantLookingUp": {
+    "placeholders": {
+      "food": {"type": "String"}
+    }
+  },
+  "sergeantCouldNotFind": "No encontré {food}. Dime los gramos de proteína, carbos y grasa.",
+  "@sergeantCouldNotFind": {
+    "placeholders": {
+      "food": {"type": "String"}
+    }
+  },
+  "sergeantGramsOf": "{grams} gramos de {food}",
+  "@sergeantGramsOf": {
+    "placeholders": {
+      "grams": {"type": "String"},
+      "food": {"type": "String"}
+    }
+  },
+  "sergeantPlanSummary": "Tu plan: {split}. {days} días a la semana, {kcal} calorías.",
+  "@sergeantPlanSummary": {
+    "placeholders": {
+      "split": {"type": "String"},
+      "days": {"type": "int"},
+      "kcal": {"type": "int"}
+    }
+  },
+  "hubWorkout": "Entrenar",
+  "hubMeal": "Comida",
+  "hubProgram": "Programa",
+  "hubBodyMatch": "Tipo de cuerpo",
+  "hubHistory": "Historial",
+  "hubProfile": "Perfil",
+  "hubIdleHint": "Toca el micrófono y habla. Termina cada orden con \"cambio\".",
+  "progress": "Progreso",
+  "logMeal": "Registrar comida",
+  "voiceHub": "Centro de voz",
+  "logout": "Salir",
+  "recentActivity": "Actividad reciente",
+  "goodMorning": "Buenos días",
+  "goodAfternoon": "Buenas tardes",
+  "goodEvening": "Buenas noches",
+  "readyToTrain": "¿Listo para entrenar?",
+  "logMeasurement": "Registrar medida",
+  "bodyComposition": "Composición corporal",
+  "strength": "Fuerza",
+  "trainingBalance": "Balance de entrenamiento",
+  "couldNotLoadPullToRetry": "No se pudo cargar. Desliza para reintentar.",
+  "logACoupleOfMeasurements": "Registra un par de medidas para ver tu tendencia.",
+  "bodyFatPercentLabel": "% de grasa",
+  "leanMass": "Masa magra",
+  "weight": "Peso",
+  "bodyFat": "Grasa corporal",
+  "overTime": "{label} en el tiempo",
+  "@overTime": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "logAFewWeightedSessions": "Registra unas sesiones con peso para ver subir tu fuerza.",
+  "estimatedOneRmAllLifts": "1RM estimado · todos los ejercicios",
+  "estimatedOneRm": "1RM estimado · {name}",
+  "@estimatedOneRm": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "allLifts": "Todos",
+  "gainSinceTracking": "{gain} kg desde que lo registras",
+  "@gainSinceTracking": {
+    "placeholders": {
+      "gain": {"type": "String"}
+    }
+  },
+  "e1rmLabel": "1RM est.",
+  "sessionVolume": "Volumen por sesión",
+  "volume": "Volumen",
+  "prBadge": "PR",
+  "coachSuggestions": "Sugerencias del coach",
+  "lastWeeks": "últimas {n} sem",
+  "@lastWeeks": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "onTrack": "Vas bien. Sigue igual.",
+  "actionCaps": "ACCIÓN",
+  "measurementLogged": "Medida registrada",
+  "weighInHint": "Pésate. El % de grasa es opcional, pero alimenta la tendencia.",
+  "bodyFatPercentInputLabel": "Grasa (%)",
+  "saveMeasurement": "Guardar medida",
+  "mealLogged": "Comida registrada",
+  "logAMeal": "Registrar una comida",
+  "proteinGramsLabel": "Proteína (g)",
+  "carbsGramsLabel": "Carbos (g)",
+  "fatGramsLabel": "Grasa (g)",
+  "kcalLoggedForToday": "≈ {kcal} kcal · se registra hoy",
+  "@kcalLoggedForToday": {
+    "placeholders": {
+      "kcal": {"type": "String"}
+    }
+  },
+  "saveMeal": "Guardar comida",
+  "valueWithUnit": "{value}{unit}",
+  "@valueWithUnit": {
+    "description": "A metric tile's number and its unit, e.g. 82kg or 18%.",
+    "placeholders": {
+      "value": {"type": "String"},
+      "unit": {"type": "String"}
+    }
+  }
 }

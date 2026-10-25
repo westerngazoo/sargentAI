@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../data/auth_repository.dart';
 import 'brand_header.dart';
@@ -32,6 +33,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -40,7 +42,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       await ref.read(authRepositoryProvider).forgotPassword(_email.text.trim());
       if (mounted) setState(() => _sent = true);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = apiErrorText(e, l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

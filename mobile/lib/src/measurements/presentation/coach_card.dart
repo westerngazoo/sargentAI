@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../models/coach_suggestion.dart';
 import '../services/adjustment_service.dart';
@@ -33,6 +34,7 @@ class _CoachBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Container(
       // Bottom margin lives here so the gap collapses when the card is hidden.
       margin: const EdgeInsets.only(bottom: 24),
@@ -61,14 +63,14 @@ class _CoachBody extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Coach suggestions',
+                l10n.coachSuggestions,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
               ),
               const Spacer(),
               Text(
-                'last ${advice.windowWeeks} wks',
+                l10n.lastWeeks(advice.windowWeeks),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -83,7 +85,7 @@ class _CoachBody extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "On track — keep doing what you're doing.",
+                    l10n.onTrack,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -136,7 +138,7 @@ class _SuggestionTile extends StatelessWidget {
               children: [
                 if (suggestion.isAction)
                   Text(
-                    'ACTION',
+                    AppLocalizations.of(context).actionCaps,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.1,
                           fontWeight: FontWeight.w700,

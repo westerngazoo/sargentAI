@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../application/onboarding_controller.dart';
 import 'steps/body_stats_step.dart';
 import 'steps/goals_step.dart';
@@ -26,10 +27,10 @@ class OnboardingScreen extends ConsumerWidget {
 
     final state = ref.watch(onboardingControllerProvider);
     final ctrl = ref.read(onboardingControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar:
-          AppBar(title: Text(AppLocalizations.of(context).setUpYourProfile)),
+      appBar: AppBar(title: Text(l10n.setUpYourProfile)),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,7 +54,7 @@ class OnboardingScreen extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
-                              state.error!,
+                              apiErrorText(state.error!, l10n),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.error,
                               ),

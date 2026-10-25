@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 
 import '../../core/dev_login.dart';
 import '../../core/google_sign_in_config.dart';
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../application/auth_controller.dart';
 import '../data/google_sign_in_seam.dart';
@@ -27,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _error;
 
   Future<void> _submit(String email, String password) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -34,13 +36,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref.read(authControllerProvider.notifier).login(email, password);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = apiErrorText(e, l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _googleSignIn() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -51,7 +54,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (idToken == null) return;
       await ref.read(authControllerProvider.notifier).loginWithGoogle(idToken);
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) setState(() => _error = apiErrorText(e, l10n));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

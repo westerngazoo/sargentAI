@@ -7,13 +7,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
 import '../../hub/speech_input.dart';
 import '../../hub/voice_protocol.dart';
 import '../../hub/voice_output.dart';
+import '../../l10n/app_localizations_provider.dart';
 import '../../program/application/program_providers.dart';
 import '../domain/muscle_activation.dart';
 import '../domain/preset_exercises.dart';
 import '../domain/set_draft.dart';
+import '../presentation/draft_rejection_text.dart';
+import '../presentation/muscle_names.dart';
 import 'session_driver.dart';
 import 'session_voice_intent.dart';
 
@@ -75,6 +80,9 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
   SessionDriver get _driver => ref.read(sessionDriverProvider.notifier);
   SessionDriverState get _session => ref.read(sessionDriverProvider);
 
+  /// The lines are spoken from here, outside the widget tree (R-0061 AC11).
+  AppLocalizations get _l10n => ref.read(appLocalizationsProvider);
+
   /// Turns the coach on: initializes TTS, preloads the active program's
   /// exercises into an empty session, and announces what's first. With
   /// [handsFree] the coach re-listens automatically after every response —
@@ -84,9 +92,8 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
     state = state.copyWith(enabled: true, handsFree: handsFree);
 
     final exercises = _session.draft?.exercises ?? const [];
-    final prompt = handsFree
-        ? 'Say done when your set is in.'
-        : 'Key the mic and say done when your set is in.';
+    final prompt =
+        handsFree ? _l10n.coachSayDoneHandsFree : _l10n.coachSayDoneKeyMic;
     if (exercises.isEmpty) {
       final planned = await _loadPlan();
       if (planned.isNotEmpty) {
@@ -97,15 +104,16 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
           _driver.addExercise(name, group: presetGroupFor(name));
         }
         _driver.selectExercise(0);
-        await _say('Plan loaded — ${planned.length} exercises. First up: '
-            '${planned.first}${_target(planned.first)}. $prompt');
+        await _say(_l10n.coachPlanLoaded(
+          planned.length,
+          '${planned.first}${_target(planned.first)}',
+          prompt,
+        ));
       } else {
-        await _say('Voice coach on. No plan found — add an exercise, '
-            'then dictate your sets.');
+        await _say(_l10n.coachNoPlan);
       }
     } else {
-      await _say(
-          'Voice coach on. Current exercise: ${_currentName()}. $prompt');
+      await _say(_l10n.coachOnCurrent(_currentName(), prompt));
     }
     if (handsFree) await _listenLoop();
   }
@@ -119,8 +127,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
   }
 
   /// One dictation round: listen → parse → apply to the driver → speak the
-  /// outcome. Driver rejection strings are spoken verbatim (they are the
-  /// user-safe reasons by contract). In hands-free mode the loop re-arms
+  /// outcome. Driver rejections are spoken through the catalogue. In hands-free mode the loop re-arms
   /// itself after every response until paused, finished, or silent too long.
   Future<void> dictate() async {
     final speech = ref.read(speechInputProvider);
@@ -141,7 +148,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
   Future<void> _listenOnce() async {
     final speech = ref.read(speechInputProvider);
     if (!await speech.initialize()) {
-      await _say('Voice input is not available here.');
+      await _say(_l10n.voiceInputUnavailable);
       return;
     }
     state = state.copyWith(listening: true, transcript: '');
@@ -187,27 +194,22 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         if (reps == null && weightKg != null) {
           _draftWeight = weightKg;
           _pending = _Pending.reps;
-          await _say('How many reps?');
+          await _say(_l10n.coachHowManyReps);
           return true;
         }
         if (reps != null && weightKg == null && rpe == null) {
           _draftReps = reps;
           _pending = _Pending.weight;
-          await _say('How many kilos? Or say bodyweight.');
+          await _say(_l10n.coachHowManyKilos);
           return true;
         }
         final rejection =
             _driver.logSet(SetDraft(reps: reps, weightKg: weightKg, rpe: rpe));
         if (rejection != null) {
-          await _say(rejection);
+          await _say(draftRejectionText(rejection, _l10n));
           return true;
         }
-        final sets = _session.lastSet;
-        final logged = [
-          if (sets?.reps != null) '${sets!.reps} reps',
-          if (sets?.weightKg != null) 'at ${_trim(sets!.weightKg!)} kilos',
-        ].join(' ');
-        await _say('Logged $logged. Rest up.');
+        await _say(_l10n.coachLoggedRestUp(_loggedLine(_session.lastSet)));
         return true;
       case NextExerciseIntent():
         final i = _session.currentExercise;
@@ -215,33 +217,31 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         if (i + 1 < exercises.length) {
           _driver.selectExercise(i + 1);
           final next = exercises[i + 1];
-          await _say('Next up: ${next.name}${_target(next.name)}.');
+          await _say(_l10n.coachNextUp('${next.name}${_target(next.name)}'));
         } else {
-          await _say('That was the last exercise. '
-              'Say finish workout to save.');
+          await _say(_l10n.coachLastExercise);
         }
         return true;
       case FinishSessionIntent():
-        await _say('Saving your workout.');
+        await _say(_l10n.coachSaving);
         await _driver.finish();
         final after = _session;
         if (after.done) {
-          await _say('Workout saved. Dismissed!');
+          await _say(_l10n.coachSaved);
         } else if (after.error != null) {
-          await _say(after.error!);
+          await _say(apiErrorText(after.error!, _l10n));
           return true;
         }
         return false;
       case SetDoneIntent():
         _pending = _Pending.reps;
-        await _say('Good. How many reps?');
+        await _say(_l10n.coachGoodHowManyReps);
         return true;
       case PauseSessionIntent():
-        await _say('Standing by. Tap the mic when you are ready.');
+        await _say(_l10n.coachStandingBy);
         return false;
       case UnknownSessionIntent():
-        await _say('Did not catch that. Say for example: '
-            'ten reps at sixty kilos.');
+        await _say(_l10n.coachDidNotCatch);
         return true;
     }
   }
@@ -252,20 +252,20 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
     final t = command.toLowerCase().trim();
     if (isOut(t) || t.contains('cancel') || t.contains('pause')) {
       _resetPending();
-      await _say('Standing by. Tap the mic when you are ready.');
+      await _say(_l10n.coachStandingBy);
       return false;
     }
     switch (_pending) {
       case _Pending.reps:
         final reps = _firstInt(t);
         if (reps == null) {
-          await _say('Just the number of reps.');
+          await _say(_l10n.coachJustReps);
           return true;
         }
         _draftReps = reps;
         if (_draftWeight != null) return _logGuidedSet();
         _pending = _Pending.weight;
-        await _say('How many kilos? Or say bodyweight.');
+        await _say(_l10n.coachHowManyKilos);
         return true;
       case _Pending.weight:
         final bodyweight =
@@ -273,7 +273,7 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         if (!bodyweight) {
           final w = _firstDouble(t);
           if (w == null) {
-            await _say('Kilos as a number — or say bodyweight.');
+            await _say(_l10n.coachKilosAsNumber);
             return true;
           }
           _draftWeight = w;
@@ -289,17 +289,18 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
         _driver.logSet(SetDraft(reps: _draftReps, weightKg: _draftWeight));
     _resetPending();
     if (rejection != null) {
-      await _say(rejection);
+      await _say(draftRejectionText(rejection, _l10n));
       return false;
     }
-    final logged = _session.lastSet;
-    final parts = [
-      if (logged?.reps != null) '${logged!.reps} reps',
-      if (logged?.weightKg != null) 'at ${_trim(logged!.weightKg!)} kilos',
-    ].join(' ');
-    await _say('Logged $parts. Rest up — say done when the next set is in.');
+    await _say(_l10n.coachLoggedNextSet(_loggedLine(_session.lastSet)));
     return false;
   }
+
+  /// "10 reps at 100 kilos" for the set just logged.
+  String _loggedLine(SetDraft? set) => [
+        if (set?.reps != null) _l10n.repsCount(set!.reps!),
+        if (set?.weightKg != null) _l10n.coachAtKilos(_trim(set!.weightKg!)),
+      ].join(' ');
 
   void _resetPending() {
     _pending = _Pending.none;
@@ -318,14 +319,16 @@ class VoiceCoach extends Notifier<VoiceCoachState> {
 
   /// " — target chest" (empty for unknown lifts).
   String _target(String exerciseName) {
-    final label = activationFor(exerciseName).targetLabel;
-    return label.isEmpty ? '' : ' — target $label';
+    final label = targetLabel(activationFor(exerciseName), _l10n);
+    return label.isEmpty ? '' : _l10n.coachTargetSuffix(label);
   }
 
   String _currentName() {
     final exercises = _session.draft?.exercises ?? const [];
     final i = _session.currentExercise;
-    return (i >= 0 && i < exercises.length) ? exercises[i].name : 'none';
+    return (i >= 0 && i < exercises.length)
+        ? exercises[i].name
+        : _l10n.coachNoCurrentExercise;
   }
 
   Future<void> _say(String line) async {

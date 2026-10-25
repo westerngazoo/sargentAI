@@ -943,6 +943,1117 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo elegir el programa. Inténtalo de nuevo.'**
   String get couldNotChooseProgram;
+
+  /// Fallback for a timeout or no-network failure on any API call.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conexión con el servidor. Inténtalo de nuevo.'**
+  String get apiErrorTransport;
+
+  /// No description provided for @apiErrorBadRequest.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa tus datos.'**
+  String get apiErrorBadRequest;
+
+  /// No description provided for @apiErrorUnauthorized.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo o contraseña incorrectos.'**
+  String get apiErrorUnauthorized;
+
+  /// No description provided for @apiErrorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'Eso ya no existe.'**
+  String get apiErrorNotFound;
+
+  /// No description provided for @apiErrorConflict.
+  ///
+  /// In es, this message translates to:
+  /// **'Eso ya existe.'**
+  String get apiErrorConflict;
+
+  /// No description provided for @apiErrorUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal. Inténtalo de nuevo.'**
+  String get apiErrorUnknown;
+
+  /// No description provided for @regionNeck.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuello'**
+  String get regionNeck;
+
+  /// No description provided for @regionTraps.
+  ///
+  /// In es, this message translates to:
+  /// **'Trapecios'**
+  String get regionTraps;
+
+  /// No description provided for @regionShoulders.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombros'**
+  String get regionShoulders;
+
+  /// No description provided for @regionChest.
+  ///
+  /// In es, this message translates to:
+  /// **'Pecho'**
+  String get regionChest;
+
+  /// No description provided for @regionBiceps.
+  ///
+  /// In es, this message translates to:
+  /// **'Bíceps'**
+  String get regionBiceps;
+
+  /// No description provided for @regionTriceps.
+  ///
+  /// In es, this message translates to:
+  /// **'Tríceps'**
+  String get regionTriceps;
+
+  /// No description provided for @regionForearms.
+  ///
+  /// In es, this message translates to:
+  /// **'Antebrazos'**
+  String get regionForearms;
+
+  /// No description provided for @regionCore.
+  ///
+  /// In es, this message translates to:
+  /// **'Core'**
+  String get regionCore;
+
+  /// No description provided for @regionLats.
+  ///
+  /// In es, this message translates to:
+  /// **'Dorsales'**
+  String get regionLats;
+
+  /// No description provided for @regionUpperBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Espalda alta'**
+  String get regionUpperBack;
+
+  /// No description provided for @regionLowerBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Lumbares'**
+  String get regionLowerBack;
+
+  /// No description provided for @regionQuads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuádriceps'**
+  String get regionQuads;
+
+  /// No description provided for @regionHamstrings.
+  ///
+  /// In es, this message translates to:
+  /// **'Isquios'**
+  String get regionHamstrings;
+
+  /// No description provided for @regionGlutes.
+  ///
+  /// In es, this message translates to:
+  /// **'Glúteos'**
+  String get regionGlutes;
+
+  /// No description provided for @regionCalves.
+  ///
+  /// In es, this message translates to:
+  /// **'Pantorrillas'**
+  String get regionCalves;
+
+  /// No description provided for @muscleChest.
+  ///
+  /// In es, this message translates to:
+  /// **'Pecho'**
+  String get muscleChest;
+
+  /// No description provided for @muscleBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Espalda'**
+  String get muscleBack;
+
+  /// No description provided for @muscleShoulders.
+  ///
+  /// In es, this message translates to:
+  /// **'Hombros'**
+  String get muscleShoulders;
+
+  /// No description provided for @muscleArms.
+  ///
+  /// In es, this message translates to:
+  /// **'Brazos'**
+  String get muscleArms;
+
+  /// No description provided for @muscleLegs.
+  ///
+  /// In es, this message translates to:
+  /// **'Piernas'**
+  String get muscleLegs;
+
+  /// No description provided for @muscleCore.
+  ///
+  /// In es, this message translates to:
+  /// **'Core'**
+  String get muscleCore;
+
+  /// Joins the last item of a spoken list to the rest: 'quads and glutes'.
+  ///
+  /// In es, this message translates to:
+  /// **'{head} y {last}'**
+  String listAnd(String head, String last);
+
+  /// No description provided for @rejectStartWorkoutFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Primero empieza un entrenamiento.'**
+  String get rejectStartWorkoutFirst;
+
+  /// No description provided for @rejectAddExerciseFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Primero agrega un ejercicio.'**
+  String get rejectAddExerciseFirst;
+
+  /// No description provided for @rejectEnterExerciseName.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el nombre del ejercicio.'**
+  String get rejectEnterExerciseName;
+
+  /// No description provided for @rejectNameTooLong.
+  ///
+  /// In es, this message translates to:
+  /// **'El nombre puede tener hasta {max} caracteres.'**
+  String rejectNameTooLong(int max);
+
+  /// No description provided for @rejectEnterReps.
+  ///
+  /// In es, this message translates to:
+  /// **'Pon las repeticiones.'**
+  String get rejectEnterReps;
+
+  /// No description provided for @rejectRepsOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'Las repeticiones van de {min} a {max}.'**
+  String rejectRepsOutOfRange(int min, int max);
+
+  /// No description provided for @rejectWeightOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'El peso debe ser mayor que 0 y máximo {max} kg.'**
+  String rejectWeightOutOfRange(int max);
+
+  /// No description provided for @rejectRpeOutOfRange.
+  ///
+  /// In es, this message translates to:
+  /// **'El RPE va de {min} a {max}, en pasos de 0.5.'**
+  String rejectRpeOutOfRange(double min, double max);
+
+  /// No description provided for @fieldAreaSets.
+  ///
+  /// In es, this message translates to:
+  /// **'tus series'**
+  String get fieldAreaSets;
+
+  /// No description provided for @fieldAreaExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'el ejercicio'**
+  String get fieldAreaExercise;
+
+  /// No description provided for @fieldAreaWorkout.
+  ///
+  /// In es, this message translates to:
+  /// **'el entrenamiento'**
+  String get fieldAreaWorkout;
+
+  /// A finish failure that names the part of the screen to check.
+  ///
+  /// In es, this message translates to:
+  /// **'{error} Revisa {area}.'**
+  String errorCheckArea(String error, String area);
+
+  /// No description provided for @discardThisWorkout.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar este entrenamiento?'**
+  String get discardThisWorkout;
+
+  /// No description provided for @yourLoggedSetsWillBeLost.
+  ///
+  /// In es, this message translates to:
+  /// **'Se perderán las series que registraste.'**
+  String get yourLoggedSetsWillBeLost;
+
+  /// No description provided for @cancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get cancel;
+
+  /// No description provided for @discard.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get discard;
+
+  /// No description provided for @workout.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento'**
+  String get workout;
+
+  /// No description provided for @earbudCoachOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar coach en audífonos'**
+  String get earbudCoachOn;
+
+  /// No description provided for @earbudCoachOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagar coach en audífonos'**
+  String get earbudCoachOff;
+
+  /// No description provided for @voiceCoachOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar coach de voz'**
+  String get voiceCoachOn;
+
+  /// No description provided for @voiceCoachOff.
+  ///
+  /// In es, this message translates to:
+  /// **'Apagar coach de voz'**
+  String get voiceCoachOff;
+
+  /// No description provided for @addExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar ejercicio'**
+  String get addExercise;
+
+  /// No description provided for @targetMusclesCaps.
+  ///
+  /// In es, this message translates to:
+  /// **'MÚSCULOS OBJETIVO — {name}'**
+  String targetMusclesCaps(String name);
+
+  /// No description provided for @stopListening.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar de escuchar'**
+  String get stopListening;
+
+  /// No description provided for @dictateASet.
+  ///
+  /// In es, this message translates to:
+  /// **'Dictar una serie'**
+  String get dictateASet;
+
+  /// No description provided for @listening.
+  ///
+  /// In es, this message translates to:
+  /// **'Escuchando…'**
+  String get listening;
+
+  /// No description provided for @coachIdleHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca el micrófono y di \"listo\": te pregunto repeticiones y kilos. Termina cada respuesta con \"cambio\".'**
+  String get coachIdleHint;
+
+  /// No description provided for @setLine.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {n}: {label}'**
+  String setLine(int n, String label);
+
+  /// No description provided for @repsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} reps'**
+  String repsCount(int n);
+
+  /// No description provided for @kg.
+  ///
+  /// In es, this message translates to:
+  /// **'{value} kg'**
+  String kg(String value);
+
+  /// No description provided for @rpeValue.
+  ///
+  /// In es, this message translates to:
+  /// **'RPE {value}'**
+  String rpeValue(String value);
+
+  /// No description provided for @repsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Reps'**
+  String get repsLabel;
+
+  /// No description provided for @rpeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'RPE'**
+  String get rpeLabel;
+
+  /// No description provided for @repeatLastSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Repetir última serie'**
+  String get repeatLastSet;
+
+  /// No description provided for @logSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar serie'**
+  String get logSet;
+
+  /// No description provided for @newExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo ejercicio'**
+  String get newExercise;
+
+  /// No description provided for @add.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar'**
+  String get add;
+
+  /// No description provided for @exerciseNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del ejercicio'**
+  String get exerciseNameLabel;
+
+  /// No description provided for @commonLifts.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicios comunes'**
+  String get commonLifts;
+
+  /// No description provided for @muscleGroupOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo muscular (opcional)'**
+  String get muscleGroupOptional;
+
+  /// No description provided for @exerciseWithGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} · {group}'**
+  String exerciseWithGroup(String name, String group);
+
+  /// No description provided for @noWorkoutsYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay entrenamientos. Toca Empezar para registrar el primero.'**
+  String get noWorkoutsYet;
+
+  /// No description provided for @sessionSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{exercises} ejercicios · {sets} series'**
+  String sessionSummary(int exercises, int sets);
+
+  /// No description provided for @delete.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar'**
+  String get delete;
+
+  /// No description provided for @deleteThisWorkout.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar este entrenamiento?'**
+  String get deleteThisWorkout;
+
+  /// No description provided for @today.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy'**
+  String get today;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In es, this message translates to:
+  /// **'Ayer'**
+  String get yesterday;
+
+  /// No description provided for @workoutNoLongerExists.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese entrenamiento ya no existe.'**
+  String get workoutNoLongerExists;
+
+  /// No description provided for @startWorkout.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar entrenamiento'**
+  String get startWorkout;
+
+  /// No description provided for @coachSayDoneHandsFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Di listo cuando termines la serie.'**
+  String get coachSayDoneHandsFree;
+
+  /// No description provided for @coachSayDoneKeyMic.
+  ///
+  /// In es, this message translates to:
+  /// **'Activa el micrófono y di listo cuando termines la serie.'**
+  String get coachSayDoneKeyMic;
+
+  /// Appended to an exercise name when its target muscles are known.
+  ///
+  /// In es, this message translates to:
+  /// **' — objetivo {label}'**
+  String coachTargetSuffix(String label);
+
+  /// No description provided for @coachPlanLoaded.
+  ///
+  /// In es, this message translates to:
+  /// **'Plan cargado: {count} ejercicios. Primero: {first}. {prompt}'**
+  String coachPlanLoaded(int count, String first, String prompt);
+
+  /// No description provided for @coachNoPlan.
+  ///
+  /// In es, this message translates to:
+  /// **'Coach de voz activo. No hay plan: agrega un ejercicio y dicta tus series.'**
+  String get coachNoPlan;
+
+  /// No description provided for @coachOnCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'Coach de voz activo. Ejercicio actual: {name}. {prompt}'**
+  String coachOnCurrent(String name, String prompt);
+
+  /// No description provided for @coachNoCurrentExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'ninguno'**
+  String get coachNoCurrentExercise;
+
+  /// No description provided for @voiceInputUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Aquí no hay entrada de voz.'**
+  String get voiceInputUnavailable;
+
+  /// No description provided for @coachHowManyReps.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuántas repeticiones?'**
+  String get coachHowManyReps;
+
+  /// No description provided for @coachHowManyKilos.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cuántos kilos? O di peso corporal.'**
+  String get coachHowManyKilos;
+
+  /// No description provided for @coachLoggedRestUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrado: {logged}. Descansa.'**
+  String coachLoggedRestUp(String logged);
+
+  /// No description provided for @coachAtKilos.
+  ///
+  /// In es, this message translates to:
+  /// **'con {weight} kilos'**
+  String coachAtKilos(String weight);
+
+  /// No description provided for @coachNextUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue: {next}.'**
+  String coachNextUp(String next);
+
+  /// No description provided for @coachLastExercise.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese era el último ejercicio. Di terminar entrenamiento para guardar.'**
+  String get coachLastExercise;
+
+  /// No description provided for @coachSaving.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardando tu entrenamiento.'**
+  String get coachSaving;
+
+  /// No description provided for @coachSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento guardado. ¡Listo!'**
+  String get coachSaved;
+
+  /// No description provided for @coachGoodHowManyReps.
+  ///
+  /// In es, this message translates to:
+  /// **'Bien. ¿Cuántas repeticiones?'**
+  String get coachGoodHowManyReps;
+
+  /// No description provided for @coachStandingBy.
+  ///
+  /// In es, this message translates to:
+  /// **'En espera. Toca el micrófono cuando estés listo.'**
+  String get coachStandingBy;
+
+  /// No description provided for @coachDidNotCatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No te entendí. Di por ejemplo: diez repeticiones con sesenta kilos.'**
+  String get coachDidNotCatch;
+
+  /// No description provided for @coachJustReps.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo el número de repeticiones.'**
+  String get coachJustReps;
+
+  /// No description provided for @coachKilosAsNumber.
+  ///
+  /// In es, this message translates to:
+  /// **'Los kilos en número, o di peso corporal.'**
+  String get coachKilosAsNumber;
+
+  /// No description provided for @coachLoggedNextSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrado: {logged}. Descansa y di listo cuando termines la siguiente serie.'**
+  String coachLoggedNextSet(String logged);
+
+  /// No description provided for @ttsNext.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue: {name}.'**
+  String ttsNext(String name);
+
+  /// No description provided for @ttsNextSets.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue: {name}. {sets} series de {reps} repeticiones.'**
+  String ttsNextSets(String name, int sets, int reps);
+
+  /// No description provided for @ttsNextSetsWeight.
+  ///
+  /// In es, this message translates to:
+  /// **'Sigue: {name}. {sets} series de {reps} repeticiones con {weight} kg.'**
+  String ttsNextSetsWeight(String name, int sets, int reps, String weight);
+
+  /// No description provided for @ttsSetGo.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {n}. Vamos.'**
+  String ttsSetGo(int n);
+
+  /// No description provided for @ttsSetOfGo.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {n} de {total}. {reps} repeticiones. Vamos.'**
+  String ttsSetOfGo(int n, int total, int reps);
+
+  /// No description provided for @ttsSetOfWeightGo.
+  ///
+  /// In es, this message translates to:
+  /// **'Serie {n} de {total}. {reps} repeticiones con {weight} kg. Vamos.'**
+  String ttsSetOfWeightGo(int n, int total, int reps, String weight);
+
+  /// No description provided for @ttsRest.
+  ///
+  /// In es, this message translates to:
+  /// **'Descansa.'**
+  String get ttsRest;
+
+  /// No description provided for @ttsWorkoutDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenamiento terminado.'**
+  String get ttsWorkoutDone;
+
+  /// No description provided for @ttsSeedFirstSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra tu primera serie en pantalla.'**
+  String get ttsSeedFirstSet;
+
+  /// No description provided for @sergeantVoiceUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Aquí no hay entrada de voz. Toca una opción.'**
+  String get sergeantVoiceUnavailable;
+
+  /// No description provided for @sergeantGreeting.
+  ///
+  /// In es, this message translates to:
+  /// **'Aquí el sargento. Di: empezar entrenamiento, ver plan, registrar comida. Termina cada orden con cambio.'**
+  String get sergeantGreeting;
+
+  /// No description provided for @sergeantRogerOut.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido. Corto.'**
+  String get sergeantRogerOut;
+
+  /// No description provided for @sergeantLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrado.'**
+  String get sergeantLogged;
+
+  /// No description provided for @sergeantTellMeMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Dime más.'**
+  String get sergeantTellMeMore;
+
+  /// No description provided for @sergeantRoger.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibido.'**
+  String get sergeantRoger;
+
+  /// No description provided for @sergeantDidNotCatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No te entendí.'**
+  String get sergeantDidNotCatch;
+
+  /// No description provided for @sergeantStandingBy.
+  ///
+  /// In es, this message translates to:
+  /// **'En espera.'**
+  String get sergeantStandingBy;
+
+  /// No description provided for @sergeantAskMacros.
+  ///
+  /// In es, this message translates to:
+  /// **'Dime los gramos de proteína, carbos y grasa, una porción como 200 gramos de pechuga de pollo, o un preset, como protein shake.'**
+  String get sergeantAskMacros;
+
+  /// No description provided for @sergeantStartingSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezando tu sesión.'**
+  String get sergeantStartingSession;
+
+  /// No description provided for @sergeantNoPlanYet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay plan. Vamos a buscar tu tipo de cuerpo.'**
+  String get sergeantNoPlanYet;
+
+  /// No description provided for @sergeantOpeningBodyMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo el tipo de cuerpo.'**
+  String get sergeantOpeningBodyMatch;
+
+  /// No description provided for @sergeantRecentActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu actividad reciente.'**
+  String get sergeantRecentActivity;
+
+  /// No description provided for @sergeantOpeningProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo tu perfil.'**
+  String get sergeantOpeningProfile;
+
+  /// No description provided for @sergeantSayOptions.
+  ///
+  /// In es, this message translates to:
+  /// **'Di: empezar entrenamiento, ver plan o registrar comida.'**
+  String get sergeantSayOptions;
+
+  /// No description provided for @sergeantDidNotGet.
+  ///
+  /// In es, this message translates to:
+  /// **'No entendí \"{transcript}\". Di empezar entrenamiento, ver plan o registrar comida.'**
+  String sergeantDidNotGet(String transcript);
+
+  /// No description provided for @sergeantMacrosExample.
+  ///
+  /// In es, this message translates to:
+  /// **'Gramos de proteína, carbos y grasa. Por ejemplo: 40 de proteína, 60 de carbos, 20 de grasa.'**
+  String get sergeantMacrosExample;
+
+  /// No description provided for @sergeantMealLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Comida registrada'**
+  String get sergeantMealLogged;
+
+  /// No description provided for @sergeantLoggedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Registré {label}'**
+  String sergeantLoggedLabel(String label);
+
+  /// No description provided for @sergeantMealSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{what}: {protein} de proteína, {carbs} de carbos, {fat} de grasa. {kcal} calorías. ¿Qué más?'**
+  String sergeantMealSummary(
+      String what, String protein, String carbs, String fat, int kcal);
+
+  /// No description provided for @sergeantCouldNotSaveMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'No pude guardar la comida. Inténtalo en un momento.'**
+  String get sergeantCouldNotSaveMeal;
+
+  /// No description provided for @sergeantLookingUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando {food}.'**
+  String sergeantLookingUp(String food);
+
+  /// No description provided for @sergeantCouldNotFind.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontré {food}. Dime los gramos de proteína, carbos y grasa.'**
+  String sergeantCouldNotFind(String food);
+
+  /// No description provided for @sergeantGramsOf.
+  ///
+  /// In es, this message translates to:
+  /// **'{grams} gramos de {food}'**
+  String sergeantGramsOf(String grams, String food);
+
+  /// No description provided for @sergeantPlanSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu plan: {split}. {days} días a la semana, {kcal} calorías.'**
+  String sergeantPlanSummary(String split, int days, int kcal);
+
+  /// No description provided for @hubWorkout.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrenar'**
+  String get hubWorkout;
+
+  /// No description provided for @hubMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'Comida'**
+  String get hubMeal;
+
+  /// No description provided for @hubProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Programa'**
+  String get hubProgram;
+
+  /// No description provided for @hubBodyMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de cuerpo'**
+  String get hubBodyMatch;
+
+  /// No description provided for @hubHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get hubHistory;
+
+  /// No description provided for @hubProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil'**
+  String get hubProfile;
+
+  /// No description provided for @hubIdleHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Toca el micrófono y habla. Termina cada orden con \"cambio\".'**
+  String get hubIdleHint;
+
+  /// No description provided for @progress.
+  ///
+  /// In es, this message translates to:
+  /// **'Progreso'**
+  String get progress;
+
+  /// No description provided for @logMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar comida'**
+  String get logMeal;
+
+  /// No description provided for @voiceHub.
+  ///
+  /// In es, this message translates to:
+  /// **'Centro de voz'**
+  String get voiceHub;
+
+  /// No description provided for @logout.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir'**
+  String get logout;
+
+  /// No description provided for @recentActivity.
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad reciente'**
+  String get recentActivity;
+
+  /// No description provided for @goodMorning.
+  ///
+  /// In es, this message translates to:
+  /// **'Buenos días'**
+  String get goodMorning;
+
+  /// No description provided for @goodAfternoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Buenas tardes'**
+  String get goodAfternoon;
+
+  /// No description provided for @goodEvening.
+  ///
+  /// In es, this message translates to:
+  /// **'Buenas noches'**
+  String get goodEvening;
+
+  /// No description provided for @readyToTrain.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Listo para entrenar?'**
+  String get readyToTrain;
+
+  /// No description provided for @logMeasurement.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar medida'**
+  String get logMeasurement;
+
+  /// No description provided for @bodyComposition.
+  ///
+  /// In es, this message translates to:
+  /// **'Composición corporal'**
+  String get bodyComposition;
+
+  /// No description provided for @strength.
+  ///
+  /// In es, this message translates to:
+  /// **'Fuerza'**
+  String get strength;
+
+  /// No description provided for @trainingBalance.
+  ///
+  /// In es, this message translates to:
+  /// **'Balance de entrenamiento'**
+  String get trainingBalance;
+
+  /// No description provided for @couldNotLoadPullToRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar. Desliza para reintentar.'**
+  String get couldNotLoadPullToRetry;
+
+  /// No description provided for @logACoupleOfMeasurements.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra un par de medidas para ver tu tendencia.'**
+  String get logACoupleOfMeasurements;
+
+  /// No description provided for @bodyFatPercentLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'% de grasa'**
+  String get bodyFatPercentLabel;
+
+  /// No description provided for @leanMass.
+  ///
+  /// In es, this message translates to:
+  /// **'Masa magra'**
+  String get leanMass;
+
+  /// No description provided for @weight.
+  ///
+  /// In es, this message translates to:
+  /// **'Peso'**
+  String get weight;
+
+  /// No description provided for @bodyFat.
+  ///
+  /// In es, this message translates to:
+  /// **'Grasa corporal'**
+  String get bodyFat;
+
+  /// No description provided for @overTime.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} en el tiempo'**
+  String overTime(String label);
+
+  /// No description provided for @logAFewWeightedSessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra unas sesiones con peso para ver subir tu fuerza.'**
+  String get logAFewWeightedSessions;
+
+  /// No description provided for @estimatedOneRmAllLifts.
+  ///
+  /// In es, this message translates to:
+  /// **'1RM estimado · todos los ejercicios'**
+  String get estimatedOneRmAllLifts;
+
+  /// No description provided for @estimatedOneRm.
+  ///
+  /// In es, this message translates to:
+  /// **'1RM estimado · {name}'**
+  String estimatedOneRm(String name);
+
+  /// No description provided for @allLifts.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get allLifts;
+
+  /// No description provided for @gainSinceTracking.
+  ///
+  /// In es, this message translates to:
+  /// **'{gain} kg desde que lo registras'**
+  String gainSinceTracking(String gain);
+
+  /// No description provided for @e1rmLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'1RM est.'**
+  String get e1rmLabel;
+
+  /// No description provided for @sessionVolume.
+  ///
+  /// In es, this message translates to:
+  /// **'Volumen por sesión'**
+  String get sessionVolume;
+
+  /// No description provided for @volume.
+  ///
+  /// In es, this message translates to:
+  /// **'Volumen'**
+  String get volume;
+
+  /// No description provided for @prBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'PR'**
+  String get prBadge;
+
+  /// No description provided for @coachSuggestions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sugerencias del coach'**
+  String get coachSuggestions;
+
+  /// No description provided for @lastWeeks.
+  ///
+  /// In es, this message translates to:
+  /// **'últimas {n} sem'**
+  String lastWeeks(int n);
+
+  /// No description provided for @onTrack.
+  ///
+  /// In es, this message translates to:
+  /// **'Vas bien. Sigue igual.'**
+  String get onTrack;
+
+  /// No description provided for @actionCaps.
+  ///
+  /// In es, this message translates to:
+  /// **'ACCIÓN'**
+  String get actionCaps;
+
+  /// No description provided for @measurementLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Medida registrada'**
+  String get measurementLogged;
+
+  /// No description provided for @weighInHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pésate. El % de grasa es opcional, pero alimenta la tendencia.'**
+  String get weighInHint;
+
+  /// No description provided for @bodyFatPercentInputLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Grasa (%)'**
+  String get bodyFatPercentInputLabel;
+
+  /// No description provided for @saveMeasurement.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar medida'**
+  String get saveMeasurement;
+
+  /// No description provided for @mealLogged.
+  ///
+  /// In es, this message translates to:
+  /// **'Comida registrada'**
+  String get mealLogged;
+
+  /// No description provided for @logAMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar una comida'**
+  String get logAMeal;
+
+  /// No description provided for @proteinGramsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Proteína (g)'**
+  String get proteinGramsLabel;
+
+  /// No description provided for @carbsGramsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Carbos (g)'**
+  String get carbsGramsLabel;
+
+  /// No description provided for @fatGramsLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Grasa (g)'**
+  String get fatGramsLabel;
+
+  /// No description provided for @kcalLoggedForToday.
+  ///
+  /// In es, this message translates to:
+  /// **'≈ {kcal} kcal · se registra hoy'**
+  String kcalLoggedForToday(String kcal);
+
+  /// No description provided for @saveMeal.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar comida'**
+  String get saveMeal;
+
+  /// A metric tile's number and its unit, e.g. 82kg or 18%.
+  ///
+  /// In es, this message translates to:
+  /// **'{value}{unit}'**
+  String valueWithUnit(String value, String unit);
 }
 
 class _AppLocalizationsDelegate
