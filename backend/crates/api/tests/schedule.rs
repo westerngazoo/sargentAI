@@ -278,6 +278,32 @@ async fn schedule_bounds_today_to_a_day_of_the_server_date(pool: PgPool) {
     }
 }
 
+/// The client's `today` drives the projection, not the server's clock: with
+/// `today` one day ahead, the server's date is already a past day with no log
+/// (`nothing`, the pending index shifted) and the client's day is the one
+/// `planned`.
+#[sqlx::test(migrations = "../../migrations")]
+async fn schedule_projects_from_the_clients_today(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (user_id, token) = register_and_token(&app, "sched-client@b.com", "8charsmin").await;
+    seed_program(&pool, &user_id, ARCHETYPE, day(0), true).await;
+
+    let resp = schedule(&app, &token, day(0), day(1), day(1)).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let days = body_json(resp).await["days"].clone();
+
+    assert_eq!(
+        state_of(&days, day(0)),
+        json!({ "state": "nothing", "pending": 0 }),
+        "the server's date is yesterday to the client"
+    );
+    assert_eq!(
+        state_of(&days, day(1)),
+        json!({ "state": "planned", "cycle_index": 0 }),
+        "the client's today holds the shifted first training day"
+    );
+}
+
 /// N9: a range ending more than 366 days after today is refused before any
 /// walk happens.
 #[sqlx::test(migrations = "../../migrations")]

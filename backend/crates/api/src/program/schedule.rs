@@ -59,7 +59,7 @@ pub(crate) fn day_logs(
     for row in rows {
         let log = logs.entry(row.performed_on).or_default();
         log.any_session = true;
-        if row.user_program_id.is_some() && row.user_program_id == current {
+        if current.is_some_and(|c| row.user_program_id == Some(c)) {
             // A negative stored index cannot pass the handler's validation;
             // if one ever appears, the session counts as free rather than
             // breaking the whole calendar.
