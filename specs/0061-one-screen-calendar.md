@@ -541,7 +541,7 @@ reels.
   (`google_fonts` rejected, as before). Each licence is registered with
   `LicenseRegistry`.
   - **Bangers** (OFL): headlines, short and sparing.
-  - **Luckiest Guy** (OFL): the big numbers in readout panels. The reels
+  - **Luckiest Guy** (Apache 2.0): the big numbers in readout panels. The reels
     use it because Bangers draws 1 and 7 alike.
   - **IBM Plex Mono** (OFL): data, setup lines, the formula bar.
   - **Archivo** (OFL): UI text.
