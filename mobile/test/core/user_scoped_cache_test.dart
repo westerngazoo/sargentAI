@@ -85,14 +85,22 @@ void main() {
   test('scheduleProvider refetches when the user changes', () async {
     whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule());
     final range = DateRange(DateTime(2026, 10, 1), DateTime(2026, 10, 31));
+    // A listener, as the screen is one: the schedule watches the workout
+    // list and the program, and re-reads on its own when they change.
+    final sub = container.listen(scheduleProvider(range), (_, __) {});
+    addTearDown(sub.close);
     await container.read(scheduleProvider(range).future);
+    clearInteractions(programService);
+
     container.read(userId.notifier).state = 'user-b';
+    await container.read(workoutsProvider.future);
+    await container.read(currentProgramProvider.future);
     await container.read(scheduleProvider(range).future);
     verify(() => programService.getSchedule(
           from: any(named: 'from'),
           to: any(named: 'to'),
           today: any(named: 'today'),
-        )).called(2);
+        )).called(greaterThanOrEqualTo(1));
   });
 
   test('same user does NOT refetch (cache preserved)', () async {

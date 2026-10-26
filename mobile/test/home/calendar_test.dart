@@ -10,7 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/l10n.dart';
 
 void main() {
-  Future<void> pumpCell(WidgetTester tester, DayState state) async {
+  Future<void> pumpCell(WidgetTester tester, DayState state,
+      {String? label}) async {
     await tester.pumpWidget(localizedApp(
       home: Scaffold(
         body: Center(
@@ -20,6 +21,7 @@ void main() {
             child: DayCell(
               day: DateTime(2026, 10, 22),
               state: state,
+              label: label,
               isToday: false,
               isSelected: false,
               inMonth: true,
@@ -32,6 +34,24 @@ void main() {
   }
 
   const marks = ['mark-done', 'mark-planned', 'mark-rest'];
+
+  testWidgets(
+      'a planned cell carries its name: read with the date, and as '
+      'a tooltip on the mark (AC4)', (tester) async {
+    await pumpCell(tester, const PlannedDay(0), label: 'Piernas');
+    final semantics = tester.getSemantics(find.byType(DayCell));
+    expect(semantics.label, contains('Piernas'));
+    expect(semantics.label, contains('2026'), reason: 'the date stays');
+    expect(find.byType(Tooltip), findsOneWidget);
+    expect(tester.widget<Tooltip>(find.byType(Tooltip)).message, 'Piernas');
+    expect(find.text('Piernas'), findsNothing, reason: 'never drawn');
+  });
+
+  testWidgets('a cell without a name reads the date alone', (tester) async {
+    await pumpCell(tester, const PlannedDay(0));
+    expect(find.byType(Tooltip), findsNothing);
+    expect(tester.getSemantics(find.byType(DayCell)).label, contains('2026'));
+  });
 
   for (final (state, mark) in <(DayState, String?)>[
     (const DoneDay(completed: [0]), 'mark-done'),

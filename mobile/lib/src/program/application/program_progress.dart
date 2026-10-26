@@ -51,13 +51,11 @@ WeeklyProgress computeWeeklyProgress({
   required DateTime now,
   DateTime? programChosenAt,
 }) {
-  final today = DateTime(now.year, now.month, now.day);
-  final weekStart = today.subtract(Duration(days: now.weekday - 1));
-  DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+  final weekStart = mondayOf(now);
 
   final daysDone = workouts
-      .where((w) => !dayOf(w.performedOn).isBefore(weekStart))
-      .map((w) => dayOf(w.performedOn))
+      .map((w) => dateOnly(w.performedOn))
+      .where((d) => !d.isBefore(weekStart))
       .toSet()
       .length;
 
@@ -78,9 +76,7 @@ WeeklyProgress computeWeeklyProgress({
 /// done with a plan session. A rest day, a free workout and an empty day do
 /// not count.
 int weeklyTrainingTarget({required Schedule schedule, required DateTime now}) {
-  final today = dateOnly(now);
-  final weekStart =
-      DateTime(today.year, today.month, today.day - (today.weekday - 1));
+  final weekStart = mondayOf(now);
   final weekEnd = DateTime(weekStart.year, weekStart.month, weekStart.day + 6);
   bool inWeek(DateTime d) => !d.isBefore(weekStart) && !d.isAfter(weekEnd);
   bool isTraining(DayState s) => switch (s) {

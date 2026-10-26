@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/api_exception.dart';
-import '../../program/application/schedule_provider.dart';
 import '../data/workout_repository.dart';
 import '../domain/draft_rejection.dart';
 import '../domain/exercise_draft.dart';
@@ -137,7 +136,6 @@ class SessionDriver extends Notifier<SessionDriverState> {
     try {
       await ref.read(workoutRepositoryProvider).create(req);
       ref.invalidate(workoutsProvider);
-      ref.invalidate(scheduleProvider); // the projection moved (SPEC-0061)
       await ref.read(workoutsProvider.future);
       state = const SessionDriverState(done: true); // draft cleared
     } on ApiException catch (e) {

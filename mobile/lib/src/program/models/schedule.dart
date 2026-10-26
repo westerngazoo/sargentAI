@@ -30,7 +30,11 @@ sealed class PlanDay {
 /// its exercises as curated English data (§4).
 final class TrainingPlanDay extends PlanDay {
   const TrainingPlanDay({required this.focus, required this.exercises});
+
+  /// The muscle groups the day trains, in the record's order; never empty.
   final List<MuscleGroup> focus;
+
+  /// The day's exercises by name, in the record's order; never empty.
   final List<String> exercises;
 }
 
@@ -62,6 +66,12 @@ class Schedule {
   /// The workout ids logged on each date that has any.
   final Map<DateTime, List<String>> sessionIds;
 
+  /// Parses the `GET /programs/me/schedule` body.
+  ///
+  /// Throws a [FormatException] on a `kind` or `state` token the client does
+  /// not know, like [DayState.fromJson]; a missing field throws a
+  /// [TypeError], and an unknown muscle-group token a [StateError], as every
+  /// wire model here does.
   factory Schedule.fromJson(Map<String, dynamic> json) {
     final startsOn = json['starts_on'] as String?;
     return Schedule(

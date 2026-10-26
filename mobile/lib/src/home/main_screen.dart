@@ -86,6 +86,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
     DayState stateOf(DateTime d) =>
         schedule?.stateOn(d) ??
         (doneDays.contains(dateOnly(d)) ? const DoneDay() : const NothingDay());
+    String? labelOf(DateTime d) => switch (stateOf(d)) {
+          PlannedDay(:final cycleIndex) => switch (
+                schedule?.trainingDay(cycleIndex)) {
+              null => null,
+              final planned => focusName(planned.focus, l10n),
+            },
+          _ => null,
+        };
 
     final calendar = CalendarView(
       mode: mode,
@@ -93,6 +101,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       today: today,
       selected: selected,
       stateOf: stateOf,
+      labelOf: labelOf,
       onSelect: (d) => ref.read(selectedDayProvider.notifier).state = d,
       onShift: (n) => setState(() {
         _anchor = mode == CalendarMode.week

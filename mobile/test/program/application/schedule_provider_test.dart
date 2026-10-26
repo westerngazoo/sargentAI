@@ -4,10 +4,12 @@
 // grid, and the cache drops when a workout is saved or deleted.
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
+import 'package:fitai/src/program/application/program_providers.dart';
 import 'package:fitai/src/program/application/schedule_provider.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/session_list_controller.dart';
+import 'package:fitai/src/workout/application/workouts_provider.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +82,7 @@ void main() {
       programService = MockProgramService();
       workoutRepo = MockWorkoutRepository();
       whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule());
+      when(() => programService.getCurrent()).thenAnswer((_) async => null);
       when(() => workoutRepo.list()).thenAnswer((_) async => []);
       when(() => workoutRepo.create(any()))
           .thenAnswer((_) async => sampleSession());
@@ -92,8 +95,16 @@ void main() {
       addTearDown(container.dispose);
     });
 
+    /// The sources the schedule watches, loaded first so a test counts only
+    /// the schedule's own reads.
+    Future<void> loadSources() async {
+      await container.read(workoutsProvider.future);
+      await container.read(currentProgramProvider.future);
+    }
+
     test('asks the service for the range, with today as the local date',
         () async {
+      await loadSources();
       await container.read(scheduleProvider(range).future);
       final now = DateTime.now();
       verify(() => programService.getSchedule(
@@ -105,6 +116,7 @@ void main() {
 
     test('the same range is one request; an equal range object hits the cache',
         () async {
+      await loadSources();
       await container.read(scheduleProvider(range).future);
       await container.read(scheduleProvider(
               DateRange(DateTime(2026, 10, 1), DateTime(2026, 10, 31)))
@@ -116,13 +128,15 @@ void main() {
           )).called(1);
     });
 
-    test('a saved workout drops the cache', () async {
+    test('a saved workout re-reads the schedule: it watches the list',
+        () async {
+      await loadSources();
       await container.read(scheduleProvider(range).future);
       final driver = container.read(sessionDriverProvider.notifier);
       driver.start();
       driver.addExercise('Bench press');
       driver.logSet(const SetDraft(reps: 5));
-      await driver.finish();
+      await driver.finish(); // re-reads the workouts list
       await container.read(scheduleProvider(range).future);
       verify(() => programService.getSchedule(
             from: any(named: 'from'),
@@ -131,15 +145,52 @@ void main() {
           )).called(2);
     });
 
-    test('a deleted workout drops the cache', () async {
+    test('a deleted workout re-reads the schedule: it watches the list',
+        () async {
+      await loadSources();
       await container.read(scheduleProvider(range).future);
       await container.read(sessionListControllerProvider.notifier).delete('s');
+      await container.read(workoutsProvider.future); // the list re-read
       await container.read(scheduleProvider(range).future);
       verify(() => programService.getSchedule(
             from: any(named: 'from'),
             to: any(named: 'to'),
             today: any(named: 'today'),
           )).called(2);
+    });
+
+    test('a program change re-reads the schedule: it watches the program id',
+        () async {
+      await loadSources();
+      await container.read(scheduleProvider(range).future);
+      when(() => programService.getCurrent())
+          .thenAnswer((_) async => sampleUserProgram(id: 'prog-2'));
+      container.invalidate(currentProgramProvider);
+      await container.read(currentProgramProvider.future);
+      await container.read(scheduleProvider(range).future);
+      verify(() => programService.getSchedule(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            today: any(named: 'today'),
+          )).called(2);
+    });
+
+    test(
+        'a list re-read with the same program leaves the cache alone when '
+        'nothing changed', () async {
+      // The list is a new object on every read, so a re-read counts as a
+      // change; the program id is a value, so re-reading the same program
+      // does not.
+      await loadSources();
+      await container.read(scheduleProvider(range).future);
+      container.invalidate(currentProgramProvider);
+      await container.read(currentProgramProvider.future);
+      await container.read(scheduleProvider(range).future);
+      verify(() => programService.getSchedule(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            today: any(named: 'today'),
+          )).called(1);
     });
   });
 }

@@ -87,6 +87,7 @@ void main() {
     when(() => workoutRepo.list())
         .thenAnswer((_) async => [session(yesterday)]);
     whenGetSchedule(programService).thenAnswer((_) async => schedule());
+    when(() => programService.getCurrent()).thenAnswer((_) async => null);
   });
 
   /// [settle] is false when something on screen never stops animating (the
@@ -249,8 +250,20 @@ void main() {
       expect(find.text(l10n.viewLogged), findsOneWidget);
     });
 
+    testWidgets('a planned cell is named by its focus for a screen reader',
+        (tester) async {
+      await pumpMain(tester);
+      final cell = tester
+          .getSemantics(find.byKey(ValueKey('day-${today.toIso8601String()}')));
+      expect(cell.label, contains(l10n.muscleLegs));
+      final other = tester.getSemantics(
+          find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+      expect(other.label, isNot(contains(l10n.muscleLegs)));
+    });
+
     testWidgets('app resume re-reads the schedule', (tester) async {
       await pumpMain(tester);
+      clearInteractions(programService); // the reads that built the screen
       // The lifecycle arrives from the engine on its channel, as it would
       // when the user comes back to the app.
       for (final state in ['paused', 'resumed']) {
@@ -265,7 +278,7 @@ void main() {
             from: any(named: 'from'),
             to: any(named: 'to'),
             today: any(named: 'today'),
-          )).called(2);
+          )).called(1);
     });
 
     testWidgets('a phone shows the week and can open the month',

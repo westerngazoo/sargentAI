@@ -43,12 +43,17 @@ final class DoneDay extends DayState {
 /// A training day of the plan projected onto today or later.
 final class PlannedDay extends DayState {
   const PlannedDay(this.cycleIndex);
+
+  /// The cycle entry projected here, a training day; today's *Empezar
+  /// sesión* starts it.
   final int cycleIndex;
 }
 
 /// A rest day of the plan projected onto today or later.
 final class RestDay extends DayState {
   const RestDay(this.cycleIndex);
+
+  /// The cycle entry projected here, a rest day.
   final int cycleIndex;
 }
 
