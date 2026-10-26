@@ -18,6 +18,15 @@ final authUserIdProvider = Provider<String?>(
   },
 );
 
+/// The account's email from `GET /auth/me` (SPEC-0061 §2.6, slice 3c), for
+/// the Cuenta panel. Keyed on the session's user id, so an account switch
+/// re-reads it instead of showing the previous user's address.
+final accountEmailProvider = FutureProvider<String>((ref) async {
+  ref.watch(authUserIdProvider);
+  final me = await ref.read(authRepositoryProvider).me();
+  return me.email;
+});
+
 /// The session state machine and the single source of truth for "am I logged
 /// in?" (SPEC-0007 §2.5, AC8). `build` starts in [AuthUnknown] and kicks off a
 /// restore from secure storage; the token is also cached in memory for the

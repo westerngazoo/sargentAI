@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/api_exception.dart';
 import '../../core/storage/token_store.dart';
+import '../domain/me.dart';
 
 /// Typed client over the R-0002 auth endpoints (SPEC-0007 §3.2). Every
 /// `DioException` is translated to an [ApiException] so no transport error ever
@@ -88,12 +89,16 @@ class AuthApi {
     }
   }
 
-  /// `GET /auth/me` → 200 `{user_id}` (requires a Bearer token).
-  Future<String> me() async {
+  /// `GET /auth/me` → 200 `{user_id,email}` (requires a Bearer token).
+  /// 401 → [ApiException].
+  Future<Me> me() async {
     try {
       final res = await _dio.get<dynamic>('/auth/me');
       final body = res.data as Map<String, dynamic>;
-      return body['user_id'] as String;
+      return Me(
+        userId: body['user_id'] as String,
+        email: body['email'] as String,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

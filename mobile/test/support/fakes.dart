@@ -16,6 +16,7 @@
 import 'package:dio/dio.dart';
 import 'package:fitai/src/auth/data/auth_api.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
+import 'package:fitai/src/auth/domain/me.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +45,10 @@ AuthToken sampleToken({
       userId: userId,
       expiresAt: expiresAt ?? DateTime.utc(2099, 1, 1),
     );
+
+/// A canned `GET /auth/me` answer for the restored session.
+Me sampleMe({String userId = 'u-1', String email = 'u-1@b.com'}) =>
+    Me(userId: userId, email: email);
 
 /// A 401 DioException with the optional backend `{"error":{...}}` body.
 DioException dioError(

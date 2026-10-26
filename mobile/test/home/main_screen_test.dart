@@ -118,7 +118,7 @@ void main() {
     when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
-    when(() => repo.me()).thenAnswer((_) async => 'u-1');
+    when(() => repo.me()).thenAnswer((_) async => sampleMe());
     when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
     when(() => workoutRepo.list()).thenAnswer((_) async => [session(doneDay)]);
     whenGetSchedule(programService).thenAnswer((_) async => schedule());
@@ -558,11 +558,18 @@ void main() {
       });
     }
 
-    testWidgets('Cuenta shows the profile and Editar perfil opens onboarding',
-        (tester) async {
+    testWidgets(
+        'Cuenta shows the email and the profile, and Editar perfil opens '
+        'onboarding', (tester) async {
       await pumpMain(tester);
       await openMenuItem(tester, l10n.menuAccount);
-      expect(find.text(l10n.accountProfileSummary(180, 82.5)), findsOneWidget);
+      expect(find.text('u-1@b.com'), findsOneWidget,
+          reason: 'the email comes from GET /auth/me (slice 3c)');
+      final email = tester.getTopLeft(find.text('u-1@b.com'));
+      final summary =
+          tester.getTopLeft(find.text(l10n.accountProfileSummary(180, 82.5)));
+      expect(email.dy, lessThan(summary.dy),
+          reason: 'the email sits above the summary line');
 
       await tester.tap(find.byKey(const Key('edit-profile')));
       await tester.pumpAndSettle();
