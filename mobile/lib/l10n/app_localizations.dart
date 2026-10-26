@@ -1709,7 +1709,7 @@ abstract class AppLocalizations {
   /// No description provided for @sergeantVoiceUnavailable.
   ///
   /// In es, this message translates to:
-  /// **'Aquí no hay entrada de voz. Toca una opción.'**
+  /// **'Aquí no hay entrada de voz.'**
   String get sergeantVoiceUnavailable;
 
   /// No description provided for @sergeantGreeting.
@@ -1729,12 +1729,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registrado.'**
   String get sergeantLogged;
-
-  /// No description provided for @sergeantTellMeMore.
-  ///
-  /// In es, this message translates to:
-  /// **'Dime más.'**
-  String get sergeantTellMeMore;
 
   /// No description provided for @sergeantRoger.
   ///
@@ -1789,6 +1783,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Abriendo tu perfil.'**
   String get sergeantOpeningProfile;
+
+  /// No description provided for @sergeantOpeningProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Abriendo tu programa.'**
+  String get sergeantOpeningProgram;
 
   /// No description provided for @sergeantSayOptions.
   ///
@@ -1857,47 +1857,17 @@ abstract class AppLocalizations {
   /// **'Tu plan: {split}. {days} días a la semana, {kcal} calorías.'**
   String sergeantPlanSummary(String split, int days, int kcal);
 
-  /// No description provided for @hubWorkout.
-  ///
-  /// In es, this message translates to:
-  /// **'Entrenar'**
-  String get hubWorkout;
-
-  /// No description provided for @hubMeal.
-  ///
-  /// In es, this message translates to:
-  /// **'Comida'**
-  String get hubMeal;
-
-  /// No description provided for @hubProgram.
-  ///
-  /// In es, this message translates to:
-  /// **'Programa'**
-  String get hubProgram;
-
-  /// No description provided for @hubBodyMatch.
-  ///
-  /// In es, this message translates to:
-  /// **'Tipo de cuerpo'**
-  String get hubBodyMatch;
-
-  /// No description provided for @hubHistory.
-  ///
-  /// In es, this message translates to:
-  /// **'Historial'**
-  String get hubHistory;
-
-  /// No description provided for @hubProfile.
-  ///
-  /// In es, this message translates to:
-  /// **'Perfil'**
-  String get hubProfile;
-
   /// No description provided for @hubIdleHint.
   ///
   /// In es, this message translates to:
   /// **'Toca el micrófono y habla. Termina cada orden con \"cambio\".'**
   String get hubIdleHint;
+
+  /// No description provided for @dictationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Dictado'**
+  String get dictationTitle;
 
   /// No description provided for @progress.
   ///

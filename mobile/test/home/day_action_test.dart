@@ -1,6 +1,10 @@
 // R-0061 AC5 -> SPEC-0061 §3 (slice 2d): the one primary action of the
 // selected day, as a pure function of (day vs today, state), over every
 // (tense × state) pair. Every index comes from the server.
+//
+// R-0061 AC2 -> SPEC-0061 §2.8 (slice 3b): "start workout" by voice starts
+// what Empezar sesión would: the planned day, or the day still pending
+// behind a free workout, else a free session.
 
 import 'package:fitai/src/home/day_action.dart';
 import 'package:fitai/src/program/models/day_state.dart';
@@ -79,6 +83,26 @@ void main() {
       expect(act(tomorrow, const DoneDay(completed: [])), isA<ViewLog>());
       expect(act(tomorrow, const DoneDay(completed: [], pending: 0)),
           isA<ViewLog>());
+    });
+  });
+
+  group('startIndexToday (voice)', () {
+    test('a planned day: its index', () {
+      expect(startIndexToday(const PlannedDay(3), today: today), 3);
+    });
+
+    test('done with only a free workout: the pending day (N1)', () {
+      expect(
+          startIndexToday(const DoneDay(completed: [], pending: 0),
+              today: today),
+          0);
+    });
+
+    test('done with a plan session, rest or nothing: a free session', () {
+      expect(
+          startIndexToday(const DoneDay(completed: [1]), today: today), isNull);
+      expect(startIndexToday(const RestDay(2), today: today), isNull);
+      expect(startIndexToday(const NothingDay(), today: today), isNull);
     });
   });
 }

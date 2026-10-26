@@ -932,8 +932,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsSeedFirstSet => 'Log your first set on screen.';
 
   @override
-  String get sergeantVoiceUnavailable =>
-      'Voice input is not available here — tap an option instead.';
+  String get sergeantVoiceUnavailable => 'Voice input is not available here.';
 
   @override
   String get sergeantGreeting =>
@@ -944,9 +943,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sergeantLogged => 'Logged.';
-
-  @override
-  String get sergeantTellMeMore => 'Tell me more.';
 
   @override
   String get sergeantRoger => 'Roger.';
@@ -975,6 +971,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sergeantOpeningProfile => 'Opening your profile.';
+
+  @override
+  String get sergeantOpeningProgram => 'Opening your program.';
 
   @override
   String get sergeantSayOptions =>
@@ -1028,26 +1027,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get hubWorkout => 'Workout';
-
-  @override
-  String get hubMeal => 'Meal';
-
-  @override
-  String get hubProgram => 'Program';
-
-  @override
-  String get hubBodyMatch => 'Body match';
-
-  @override
-  String get hubHistory => 'History';
-
-  @override
-  String get hubProfile => 'Profile';
-
-  @override
   String get hubIdleHint =>
       'Tap the mic and speak — finish every command with \"over\".';
+
+  @override
+  String get dictationTitle => 'Dictation';
 
   @override
   String get progress => 'Progress';

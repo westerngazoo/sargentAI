@@ -938,8 +938,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ttsSeedFirstSet => 'Registra tu primera serie en pantalla.';
 
   @override
-  String get sergeantVoiceUnavailable =>
-      'Aquí no hay entrada de voz. Toca una opción.';
+  String get sergeantVoiceUnavailable => 'Aquí no hay entrada de voz.';
 
   @override
   String get sergeantGreeting =>
@@ -950,9 +949,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sergeantLogged => 'Registrado.';
-
-  @override
-  String get sergeantTellMeMore => 'Dime más.';
 
   @override
   String get sergeantRoger => 'Recibido.';
@@ -982,6 +978,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sergeantOpeningProfile => 'Abriendo tu perfil.';
+
+  @override
+  String get sergeantOpeningProgram => 'Abriendo tu programa.';
 
   @override
   String get sergeantSayOptions =>
@@ -1035,26 +1034,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get hubWorkout => 'Entrenar';
-
-  @override
-  String get hubMeal => 'Comida';
-
-  @override
-  String get hubProgram => 'Programa';
-
-  @override
-  String get hubBodyMatch => 'Tipo de cuerpo';
-
-  @override
-  String get hubHistory => 'Historial';
-
-  @override
-  String get hubProfile => 'Perfil';
-
-  @override
   String get hubIdleHint =>
       'Toca el micrófono y habla. Termina cada orden con \"cambio\".';
+
+  @override
+  String get dictationTitle => 'Dictado';
 
   @override
   String get progress => 'Progreso';

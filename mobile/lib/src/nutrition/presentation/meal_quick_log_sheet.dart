@@ -1,7 +1,6 @@
 // R-0032 (slice 1) — minimal meal quick-log sheet over POST /nutrition.
 //
-// Opened from + Comida and from the voice hub (tap or voice, macros prefilled
-// when dictated). Full nutrition logger UI remains R-0010 scope.
+// Opened from + Comida. Full nutrition logger UI remains R-0010 scope.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

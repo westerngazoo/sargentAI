@@ -10,6 +10,8 @@ import '../core/dates.dart';
 import '../core/panels/show_panel.dart';
 import '../core/theme/halftone.dart';
 import '../core/theme/tokens.dart';
+import '../hub/dictation_sheet.dart';
+import '../hub/voice_effect.dart';
 import '../measurements/presentation/measurements_panel.dart';
 import '../measurements/presentation/progress_panel.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
@@ -23,6 +25,7 @@ import '../program/presentation/program_panel.dart';
 import '../workout/application/muscle_names.dart';
 import '../workout/application/save_notice_text.dart';
 import '../workout/application/session_driver.dart';
+import '../workout/application/voice_coach.dart';
 import '../workout/application/workouts_provider.dart';
 import '../workout/presentation/session_list.dart';
 import 'calendar.dart';
@@ -215,7 +218,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       floatingActionButton: FloatingActionButton(
         key: const Key('mic'),
         tooltip: l10n.dictate,
-        onPressed: () => context.push('/hub'),
+        onPressed: _dictate,
         child: const Icon(Icons.mic),
       ),
       body: HalftoneBackground(
@@ -265,6 +268,51 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ),
       ),
     );
+  }
+
+  /// The mic opens the Dictado sheet (SPEC-0061 §2.8). What the loop asked
+  /// for happens here, once the sheet has closed, so a voice-started session
+  /// returns to this screen like one started by hand.
+  Future<void> _dictate() async {
+    final effect = await showDictationSheet(context);
+    if (!mounted) return;
+    switch (effect) {
+      case OpenFocusMode():
+        await _startTodayByVoice();
+      case OpenPanel(panel: PanelKind.programa):
+        _open(_Menu.program);
+      case OpenOnboarding():
+        context.push('/onboarding');
+      case Close() || null:
+        break;
+    }
+  }
+
+  /// "Start workout" by voice does what *Empezar sesión* does (SPEC-0061
+  /// §2.8): today's plan day from the schedule — planned, or still pending
+  /// behind a free workout — seeds the session; with nothing pending, or no
+  /// schedule, it is free. The hands-free coach then takes over, push-to-talk,
+  /// as it did from the hub (R-0032).
+  Future<void> _startTodayByVoice() async {
+    final today = dateOnly(DateTime.now());
+    Schedule? schedule;
+    try {
+      schedule = await ref.read(scheduleProvider(scheduleWindow(today)).future);
+    } catch (_) {
+      schedule = null;
+    }
+    final index = startIndexToday(
+      schedule?.stateOn(today) ?? const NothingDay(),
+      today: today,
+    );
+    ref.read(sessionDriverProvider.notifier).start(
+          seed: index == null ? null : schedule?.planSeed(index),
+        );
+    // Fire-and-forget: the coach announces the plan; push-to-talk — the
+    // user keys the mic (later: earbud/watch button) per command.
+    ref.read(voiceCoachProvider.notifier).enable();
+    if (!mounted) return;
+    context.push('/session');
   }
 
   /// The menu opens panels, never routes (R-0061 AC1, AC8; SPEC-0061 §2.6).
