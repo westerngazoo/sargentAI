@@ -7,22 +7,29 @@ import '../../auth/application/auth_controller.dart';
 import '../application/profile_providers.dart';
 
 /// The Cuenta panel's body (SPEC-0061 §2.6): what the app knows of the
-/// account — the profile's height and weight — then *Editar perfil*, which
-/// opens the onboarding wizard as the hub's Profile did, and sign-out, moved
-/// here from the profile menu. Without a profile it offers to set one up.
-///
-/// No name or email: no endpoint returns them (`GET /auth/me` carries the id
-/// only), so they wait on the backend.
+/// account — the email from `GET /auth/me`, then the profile's height and
+/// weight — then *Editar perfil*, which opens the onboarding wizard as the
+/// hub's Profile did, and sign-out, moved here from the profile menu. Without
+/// a profile it offers to set one up.
 class AccountPanel extends ConsumerWidget {
   const AccountPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final email = ref.watch(accountEmailProvider).valueOrNull;
     final profile = ref.watch(profileProvider).valueOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (email != null) ...[
+          Text(
+            email,
+            key: const Key('account-email'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+        ],
         if (profile != null) ...[
           Text(
             l10n.accountProfileSummary(profile.heightCm, profile.weightKg),
