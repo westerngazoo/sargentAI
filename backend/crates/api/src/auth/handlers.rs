@@ -65,6 +65,8 @@ pub(crate) struct LoginResponse {
 #[derive(Debug, Serialize)]
 pub(crate) struct MeResponse {
     user_id: UserId,
+    /// The account's normalized address (SPEC-0061 §2.6, Cuenta panel).
+    email: String,
 }
 
 /// # Errors
@@ -124,10 +126,22 @@ pub(crate) async fn login(
     }))
 }
 
-pub(crate) async fn me(user: AuthenticatedUser) -> Json<MeResponse> {
-    Json(MeResponse {
-        user_id: user.user_id,
-    })
+/// `GET /auth/me` — the caller's own id and email.
+///
+/// # Errors
+/// 401 when the token's user no longer exists (the extractor's convention for
+/// a vanished account), 500 on a database failure or a corrupt stored email.
+pub(crate) async fn me(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+) -> ApiResult<Json<MeResponse>> {
+    let account = db::find_user_by_id(&state.pool, user.user_id)
+        .await?
+        .ok_or(ApiError::Unauthorized)?;
+    Ok(Json(MeResponse {
+        user_id: account.id,
+        email: account.email.as_str().to_owned(),
+    }))
 }
 
 /// `POST /auth/google` — verify ID token, find-or-create by email, issue JWT.
