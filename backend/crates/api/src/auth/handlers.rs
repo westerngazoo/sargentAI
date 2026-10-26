@@ -66,7 +66,7 @@ pub(crate) struct LoginResponse {
 pub(crate) struct MeResponse {
     user_id: UserId,
     /// The account's normalized address (SPEC-0061 §2.6, Cuenta panel).
-    email: String,
+    email: Email,
 }
 
 /// # Errors
@@ -140,7 +140,7 @@ pub(crate) async fn me(
         .ok_or(ApiError::Unauthorized)?;
     Ok(Json(MeResponse {
         user_id: account.id,
-        email: account.email.as_str().to_owned(),
+        email: account.email,
     }))
 }
 
