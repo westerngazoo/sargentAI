@@ -52,14 +52,20 @@ void main() {
 
   final today =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-  final yesterday = today.subtract(const Duration(days: 1));
   final tomorrow = DateTime(today.year, today.month, today.day + 1);
 
-  /// The cycle is [chest+arms, legs, rest] (`scheduleJson`). Yesterday
+  /// The done day must sit in the week strip a phone shows, which starts on
+  /// Monday in `es`: doneDay, unless today is Monday, then the day after
+  /// tomorrow.
+  final doneDay = today.weekday == DateTime.monday
+      ? DateTime(today.year, today.month, today.day + 2)
+      : DateTime(today.year, today.month, today.day - 1);
+
+  /// The cycle is [chest+arms, legs, rest] (`scheduleJson`). The done day
   /// completed day 0, today is legs, tomorrow rests; every other day is
   /// absent, so the screen falls back to the logs for it.
   Schedule schedule() => sampleSchedule(days: [
-        dayJson(isoDate(yesterday), state: 'done', completed: [0]),
+        dayJson(isoDate(doneDay), state: 'done', completed: [0]),
         dayJson(isoDate(today), state: 'planned', cycleIndex: 1),
         dayJson(isoDate(tomorrow), state: 'rest', cycleIndex: 2),
       ]);
@@ -84,8 +90,7 @@ void main() {
     when(() => repo.clear()).thenAnswer((_) async {});
     when(() => repo.me()).thenAnswer((_) async => 'u-1');
     when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
-    when(() => workoutRepo.list())
-        .thenAnswer((_) async => [session(yesterday)]);
+    when(() => workoutRepo.list()).thenAnswer((_) async => [session(doneDay)]);
     whenGetSchedule(programService).thenAnswer((_) async => schedule());
     when(() => programService.getCurrent()).thenAnswer((_) async => null);
   });
@@ -245,7 +250,7 @@ void main() {
       expect(find.byKey(const Key('mark-done')), findsOneWidget);
       expect(find.text(l10n.startSession), findsOneWidget);
       await tester
-          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+          .tap(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
       await tester.pumpAndSettle();
       expect(find.text(l10n.viewLogged), findsOneWidget);
     });
@@ -257,7 +262,7 @@ void main() {
           .getSemantics(find.byKey(ValueKey('day-${today.toIso8601String()}')));
       expect(cell.label, contains(l10n.muscleLegs));
       final other = tester.getSemantics(
-          find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+          find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
       expect(other.label, isNot(contains(l10n.muscleLegs)));
     });
 
@@ -295,11 +300,11 @@ void main() {
       final (container, _) = await pumpMain(tester);
       await tester.tap(find.byKey(const Key('calendar-toggle')));
       await tester.pumpAndSettle();
-      container.read(selectedDayProvider.notifier).state = yesterday;
+      container.read(selectedDayProvider.notifier).state = doneDay;
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('calendar-toggle')));
       await tester.pumpAndSettle();
-      expect(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')),
+      expect(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')),
           findsOneWidget);
     });
 
@@ -336,7 +341,7 @@ void main() {
     testWidgets('a done day offers Ver lo registrado', (tester) async {
       await pumpMain(tester);
       await tester
-          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+          .tap(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
       await tester.pumpAndSettle();
       expect(find.text(l10n.viewLogged), findsOneWidget);
     });
@@ -429,7 +434,7 @@ void main() {
         (tester) async {
       await pumpMain(tester);
       await tester
-          .tap(find.byKey(ValueKey('day-${yesterday.toIso8601String()}')));
+          .tap(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('secondary-action')), findsNothing);
     });
@@ -439,7 +444,7 @@ void main() {
     testWidgets('opening and closing a panel leaves the day selected',
         (tester) async {
       final (container, _) = await pumpMain(tester);
-      container.read(selectedDayProvider.notifier).state = yesterday;
+      container.read(selectedDayProvider.notifier).state = doneDay;
       await tester.pumpAndSettle();
 
       // Ver lo registrado opens the day's sessions in a panel.
@@ -449,7 +454,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('panel-close')));
       await tester.pumpAndSettle();
-      expect(container.read(selectedDayProvider), yesterday);
+      expect(container.read(selectedDayProvider), doneDay);
       expect(find.byType(MainScreen), findsOneWidget);
     });
   });
