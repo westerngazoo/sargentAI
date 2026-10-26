@@ -126,8 +126,7 @@ void main() {
       ),
     );
     router.push('/session');
-    await tester.pump();
-    await tester.pump();
+    await tester.pumpAndSettle(); // the push transition
     return (container, router);
   }
 
@@ -517,7 +516,8 @@ void main() {
 
       expect(find.text(l10n.leaveWithoutSaving), findsNothing);
       expect(locationOf(router), '/home');
-      expect(stateOf(container).draft, isNull);
+      expect(stateOf(container).draft, isNotNull,
+          reason: 'nothing dropped: the draft survives in-app navigation');
       verifyNever(() => repo.create(any()));
     });
   });

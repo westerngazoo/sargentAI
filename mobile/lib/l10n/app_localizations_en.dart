@@ -552,6 +552,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get apiErrorUnknown => 'something went wrong — please try again';
 
   @override
+  String get noticeProgramNotCurrent =>
+      'Your program changed. The session was saved as a free workout.';
+
+  @override
+  String get noticePlanUnavailable =>
+      'Your plan is unavailable. The session was saved as a free workout.';
+
+  @override
   String get regionNeck => 'Neck';
 
   @override
@@ -666,7 +674,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get discardThisWorkout => 'Discard this workout?';
+  String get leaveWithoutSaving => 'Leave without saving';
 
   @override
   String get yourLoggedSetsWillBeLost => 'Your logged sets will be lost.';

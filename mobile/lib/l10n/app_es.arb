@@ -325,6 +325,14 @@
   "apiErrorNotFound": "Eso ya no existe.",
   "apiErrorConflict": "Eso ya existe.",
   "apiErrorUnknown": "Algo salió mal. Inténtalo de nuevo.",
+  "noticeProgramNotCurrent": "Tu programa cambió. La sesión se guardó como entrenamiento libre.",
+  "@noticeProgramNotCurrent": {
+    "description": "Snackbar after a 409 program_not_current on save: the session was kept as a free workout (SPEC-0061 §2.4)."
+  },
+  "noticePlanUnavailable": "Tu plan no está disponible. La sesión se guardó como entrenamiento libre.",
+  "@noticePlanUnavailable": {
+    "description": "Snackbar after a 422 plan_unavailable on save: the session was kept as a free workout (SPEC-0061 §2.4)."
+  },
   "regionNeck": "Cuello",
   "regionTraps": "Trapecios",
   "regionShoulders": "Hombros",
@@ -415,7 +423,10 @@
       }
     }
   },
-  "discardThisWorkout": "¿Descartar este entrenamiento?",
+  "leaveWithoutSaving": "Salir sin guardar",
+  "@leaveWithoutSaving": {
+    "description": "Title of the confirm dialog when leaving focus mode with logged sets (SPEC-0061 §2.7)."
+  },
   "yourLoggedSetsWillBeLost": "Se perderán las series que registraste.",
   "cancel": "Cancelar",
   "discard": "Descartar",

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/dates.dart';
 import '../../workout/domain/muscle_group.dart';
+import '../../workout/domain/plan_seed.dart';
 import 'day_state.dart';
 
 /// One entry of the program's day cycle. Mirrors `core::plan::PlanDay`,
@@ -101,5 +102,19 @@ class Schedule {
     if (index < 0 || index >= cycle.length) return null;
     final entry = cycle[index];
     return entry is TrainingPlanDay ? entry : null;
+  }
+
+  /// The seed of a plan session for the training day at [index]
+  /// (SPEC-0061 §2.7), or null when there is no program or [index] names no
+  /// training day: the session is then free.
+  PlanSeed? planSeed(int index) {
+    final programId = this.programId;
+    final day = trainingDay(index);
+    if (programId == null || day == null) return null;
+    return PlanSeed(
+      userProgramId: programId,
+      index: index,
+      exercises: day.exercises,
+    );
   }
 }

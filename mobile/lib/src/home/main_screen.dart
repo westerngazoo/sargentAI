@@ -19,6 +19,7 @@ import '../program/application/schedule_provider.dart';
 import '../program/models/day_state.dart';
 import '../program/models/schedule.dart';
 import '../workout/application/muscle_names.dart';
+import '../workout/application/save_notice_text.dart';
 import '../workout/application/session_driver.dart';
 import '../workout/application/workouts_provider.dart';
 import '../workout/presentation/session_list.dart';
@@ -72,6 +73,18 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final today = dateOnly(DateTime.now());
+    // A finished session lands on its day (SPEC-0061 §2.7); the schedule
+    // re-reads on its own, since it watches the workout list. Saved as free
+    // after a refused plan link, it says so.
+    ref.listen<SessionDriverState>(sessionDriverProvider, (previous, next) {
+      if (!next.done || (previous?.done ?? false)) return;
+      ref.read(selectedDayProvider.notifier).state = next.performedOn ?? today;
+      final notice = next.notice;
+      if (notice == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(saveNoticeText(notice, l10n))),
+      );
+    });
     final selected = ref.watch(selectedDayProvider);
     final profile = ref.watch(profileProvider);
     final dismissed = ref.watch(onboardingDismissedProvider);
@@ -139,10 +152,13 @@ class _MainScreenState extends ConsumerState<MainScreen>
       schedule: schedule,
       loading: workouts.isLoading || scheduleAsync.isLoading,
       prompt: prompt,
-      onStart: (performedOn) {
-        ref
-            .read(sessionDriverProvider.notifier)
-            .start(performedOn: performedOn == today ? null : performedOn);
+      onStart: (day, planDayIndex) {
+        ref.read(sessionDriverProvider.notifier).start(
+              seed: planDayIndex == null
+                  ? null
+                  : schedule?.planSeed(planDayIndex),
+              performedOn: day == today ? null : day,
+            );
         context.push('/session');
       },
     );
@@ -309,7 +325,10 @@ class _DayRegion extends StatelessWidget {
   final Schedule? schedule;
   final bool loading;
   final Widget prompt;
-  final ValueChanged<DateTime> onStart;
+
+  /// Starts a session on the day, for the plan day at the index when the
+  /// server named one (SPEC-0061 §2.7).
+  final void Function(DateTime day, int? planDayIndex) onStart;
 
   @override
   Widget build(BuildContext context) {
@@ -370,17 +389,17 @@ class _DayRegion extends StatelessWidget {
         prompt,
         const SizedBox(height: 12),
         switch (action) {
-          StartSession() => FilledButton.icon(
+          StartSession(:final planDayIndex) => FilledButton.icon(
               key: const Key('primary-action'),
               icon: const Icon(Icons.play_arrow),
               label: Text(l10n.startSession),
-              onPressed: () => onStart(day),
+              onPressed: () => onStart(day, planDayIndex),
             ),
-          LogLate() => FilledButton.icon(
+          LogLate(:final planDayIndex) => FilledButton.icon(
               key: const Key('primary-action'),
               icon: const Icon(Icons.history),
               label: Text(l10n.logLate),
-              onPressed: () => onStart(day),
+              onPressed: () => onStart(day, planDayIndex),
             ),
           ViewLog() || ViewLogWithPending() => OutlinedButton.icon(
               key: const Key('primary-action'),
@@ -390,7 +409,7 @@ class _DayRegion extends StatelessWidget {
             ),
           NoAction() => const SizedBox.shrink(),
         },
-        if (action is ViewLogWithPending) ...[
+        if (action case ViewLogWithPending(pending: final pendingIndex)) ...[
           const SizedBox(height: 12),
           if (pending != null)
             Text(l10n.pendingPlanDay(focusName(pending.focus, l10n)),
@@ -400,7 +419,7 @@ class _DayRegion extends StatelessWidget {
             key: const Key('secondary-action'),
             icon: const Icon(Icons.play_arrow),
             label: Text(l10n.startSession),
-            onPressed: () => onStart(day),
+            onPressed: () => onStart(day, pendingIndex),
           ),
         ],
         if (planned != null) ...[

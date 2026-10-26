@@ -556,6 +556,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get apiErrorUnknown => 'Algo salió mal. Inténtalo de nuevo.';
 
   @override
+  String get noticeProgramNotCurrent =>
+      'Tu programa cambió. La sesión se guardó como entrenamiento libre.';
+
+  @override
+  String get noticePlanUnavailable =>
+      'Tu plan no está disponible. La sesión se guardó como entrenamiento libre.';
+
+  @override
   String get regionNeck => 'Cuello';
 
   @override
@@ -670,7 +678,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get discardThisWorkout => '¿Descartar este entrenamiento?';
+  String get leaveWithoutSaving => 'Salir sin guardar';
 
   @override
   String get yourLoggedSetsWillBeLost =>

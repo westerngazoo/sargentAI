@@ -18,36 +18,41 @@ import '../application/draft_rejection_text.dart';
 import 'muscle_map.dart';
 import '../application/muscle_names.dart';
 
-/// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
-/// business logic (validation, the state machine) is driver-side; this widget
-/// holds no `try/catch`. A `null` draft (deep link or post-finish) redirects
-/// home: the driver state, not the route, owns "a session is in progress".
+/// Focus mode (SPEC-0061 §2.7): the live in-gym screen, pushed over the day
+/// — a THIN renderer over [sessionDriverProvider]. All business logic
+/// (validation, the state machine) is driver-side; this widget holds no
+/// `try/catch`. It pops itself when the driver reaches `done`, whichever way
+/// the session was finished (button, voice, earbud), so no path leaves the
+/// user on a stale screen. A `null` draft before `done` is a cold start the
+/// router redirects home: the driver state, not the route, owns "a session
+/// is in progress".
 class LiveSessionScreen extends ConsumerWidget {
   const LiveSessionScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<SessionDriverState>(sessionDriverProvider, (previous, next) {
+      if (next.done && !(previous?.done ?? false)) context.pop();
+    });
     final state = ref.watch(sessionDriverProvider);
     final driver = ref.read(sessionDriverProvider.notifier);
     final coach = ref.watch(voiceCoachProvider);
     final draft = state.draft;
     final l10n = AppLocalizations.of(context);
 
-    if (draft == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.go('/home');
-      });
-      return const Scaffold(body: SizedBox.shrink());
-    }
+    if (draft == null) return const Scaffold(body: SizedBox.shrink());
 
     return PopScope(
-      canPop: false,
+      // Leaving with logged sets asks first; with none there is nothing to
+      // lose and back just leaves. The draft stays in memory either way,
+      // so an in-app return finds it (SAC4); only Discard drops it.
+      canPop: !draft.hasSets,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final discard = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: Text(l10n.discardThisWorkout),
+            title: Text(l10n.leaveWithoutSaving),
             content: Text(l10n.yourLoggedSetsWillBeLost),
             actions: [
               TextButton(
@@ -61,7 +66,9 @@ class LiveSessionScreen extends ConsumerWidget {
             ],
           ),
         );
-        if (discard ?? false) driver.abandon();
+        if (!(discard ?? false)) return;
+        driver.abandon();
+        if (context.mounted) context.pop();
       },
       child: Scaffold(
         appBar: AppBar(

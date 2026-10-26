@@ -1070,6 +1070,18 @@ abstract class AppLocalizations {
   /// **'Algo salió mal. Inténtalo de nuevo.'**
   String get apiErrorUnknown;
 
+  /// Snackbar after a 409 program_not_current on save: the session was kept as a free workout (SPEC-0061 §2.4).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu programa cambió. La sesión se guardó como entrenamiento libre.'**
+  String get noticeProgramNotCurrent;
+
+  /// Snackbar after a 422 plan_unavailable on save: the session was kept as a free workout (SPEC-0061 §2.4).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu plan no está disponible. La sesión se guardó como entrenamiento libre.'**
+  String get noticePlanUnavailable;
+
   /// No description provided for @regionNeck.
   ///
   /// In es, this message translates to:
@@ -1274,11 +1286,11 @@ abstract class AppLocalizations {
   /// **'{error} Revisa {area}.'**
   String errorCheckArea(String error, String area);
 
-  /// No description provided for @discardThisWorkout.
+  /// Title of the confirm dialog when leaving focus mode with logged sets (SPEC-0061 §2.7).
   ///
   /// In es, this message translates to:
-  /// **'¿Descartar este entrenamiento?'**
-  String get discardThisWorkout;
+  /// **'Salir sin guardar'**
+  String get leaveWithoutSaving;
 
   /// No description provided for @yourLoggedSetsWillBeLost.
   ///
