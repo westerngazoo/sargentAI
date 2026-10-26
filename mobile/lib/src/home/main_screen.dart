@@ -217,12 +217,15 @@ class _MainScreenState extends ConsumerState<MainScreen>
       ),
       body: HalftoneBackground(
         child: SafeArea(
-          child: Center(
+          // Top-aligned, never centred: a short window must scroll, and the
+          // bottom padding keeps the last card clear of the mic (AC13).
+          child: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1200),
               child: wide
                   ? SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

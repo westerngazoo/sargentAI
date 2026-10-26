@@ -489,6 +489,27 @@ void main() {
   });
 
   group('AC13 sizes', () {
+    testWidgets('a wide window starts at the top, not centred', (tester) async {
+      await pumpMain(tester, size: desktop);
+      final title = tester.getRect(find.byKey(const Key('calendar-title')));
+      expect(title.top, lessThan(140),
+          reason: 'the calendar sits under the app bar, not mid-screen');
+    });
+
+    testWidgets('a short laptop window scrolls the rail clear of the mic',
+        (tester) async {
+      const short = Size(1280, 480);
+      await pumpMain(tester, size: short);
+      expect(tester.takeException(), isNull);
+      await tester.drag(
+          find.byType(SingleChildScrollView).first, const Offset(0, -2000));
+      await tester.pumpAndSettle();
+      final meal = tester.getRect(find.byKey(const Key('add-meal')));
+      final mic = tester.getRect(find.byKey(const Key('mic')));
+      expect(meal.bottom, lessThanOrEqualTo(mic.top),
+          reason: 'the last card scrolls above the floating mic');
+    });
+
     for (final (name, size) in [('phone', phone), ('desktop', desktop)]) {
       testWidgets('$name: no overflow and the action is on screen',
           (tester) async {
