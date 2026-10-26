@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/dates.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../services/measurement_service.dart';
@@ -43,12 +44,8 @@ class _LogMeasurementFormState extends ConsumerState<LogMeasurementForm> {
       _error = null;
     });
     try {
-      final today = DateTime.now();
-      final iso = '${today.year.toString().padLeft(4, '0')}-'
-          '${today.month.toString().padLeft(2, '0')}-'
-          '${today.day.toString().padLeft(2, '0')}';
       await ref.read(measurementServiceProvider).create(
-            measuredOn: iso,
+            measuredOn: isoDate(DateTime.now()),
             weightKg: _w!,
             bodyFatPercentage: _bf,
           );

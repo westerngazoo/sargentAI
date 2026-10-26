@@ -40,9 +40,13 @@ class MealQuickLogForm extends ConsumerStatefulWidget {
     this.initialFatG,
   });
 
-  /// Macros to prefill, as dictated; null leaves the field empty.
+  /// Protein to prefill, as dictated; null leaves the field empty.
   final double? initialProteinG;
+
+  /// Carbs to prefill, as dictated; null leaves the field empty.
   final double? initialCarbsG;
+
+  /// Fat to prefill, as dictated; null leaves the field empty.
   final double? initialFatG;
 
   @override

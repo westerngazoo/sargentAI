@@ -34,11 +34,13 @@ class _PanelFlowState extends State<PanelFlow> {
 
 /// The route of every page in a [PanelFlow].
 ///
-/// Esc is answered by the nearest route's `DismissIntent` action, and a page
-/// route ignores it. So each page handles the intent itself, as the panel
-/// does: `maybePop` on the root navigator, which steps back within the flow
-/// or closes the panel from its first page. The page keeps focus inside, so
-/// that handler is the one found.
+/// `Actions.maybeInvoke` stops at the first `Actions` scope mapping the
+/// intent's type and drops a disabled action; a page route's own
+/// `DismissIntent` action is disabled, so Esc would end there. Each page
+/// therefore maps `DismissIntent` itself, below the focused subtree, so its
+/// scope is found first: `maybePop` on the root navigator, which steps back
+/// within the flow or closes the panel from its first page. The page keeps
+/// focus inside with its own `FocusScope`.
 class PanelFlowRoute<T> extends MaterialPageRoute<T> {
   PanelFlowRoute({required WidgetBuilder builder})
       : super(

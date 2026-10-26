@@ -88,11 +88,11 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     expect(find.byType(ProgramDetailPage), findsOneWidget);
-    expect(find.text(l10n.noProgramYet), findsOneWidget);
   }
 
   /// From the detail's empty state into the picker, still inside the panel.
   Future<void> toPicker(WidgetTester tester) async {
+    expect(find.text(l10n.noProgramYet), findsOneWidget);
     await tester.tap(find.byKey(const Key('get-program')));
     await tester.pumpAndSettle();
     expect(find.byType(BodyTypePickerPage), findsOneWidget);
@@ -210,39 +210,7 @@ void main() {
         (tester) async {
       when(() => programService.getCurrent())
           .thenAnswer((_) async => sampleUserProgram());
-      tester.view.physicalSize = desktop;
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-      final container = ProviderContainer(
-        overrides: [
-          tokenStoreProvider.overrideWithValue(tokenStore),
-          authRepositoryProvider.overrideWithValue(repo),
-          programServiceProvider.overrideWithValue(programService),
-        ],
-      );
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: localizedApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () => showPanel<void>(
-                    context,
-                    title: l10n.yourProgram,
-                    scrolls: false,
-                    body: (_) => const ProgramPanel(),
-                  ),
-                  child: const Text('open'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
+      await pumpPanel(tester, desktop);
       expect(find.text('Heavy Duty Mass'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('change-program')));

@@ -28,8 +28,10 @@ class SyntheticProposalsPage extends ConsumerStatefulWidget {
   /// The proposals, ranked best first.
   final List<ProgramProposal> proposals;
 
-  /// The picker's choices, sent back with the chosen archetype.
+  /// The picker's shape, sent back with the chosen archetype.
   final BodyShape shape;
+
+  /// The picker's fat band, sent back with the chosen archetype.
   final FatBand fatBand;
 
   @override

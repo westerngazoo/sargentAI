@@ -93,7 +93,16 @@ Future<T?> showPanel<T>(
 /// The barrier both panel routes share: a tap on it pops the panel route.
 /// The default barrier calls `maybePop`, which a nested flow's
 /// `NavigatorPopHandler` turns into a step back (SPEC-0061 §2.6, N11).
-Widget _wholePanelBarrier(ModalRoute<Object?> route, Color color) =>
+///
+/// It reproduces `ModalBottomSheetRoute.buildModalBarrier` (the colour
+/// tween, the semantics and the on-tap hint) with `onDismiss` set. The
+/// sheet's `clipDetailsNotifier` is framework-private, so it cannot be
+/// forwarded: the scrim's semantics are not clipped to the sheet.
+Widget _wholePanelBarrier(
+  ModalRoute<Object?> route,
+  Color color, {
+  String? onTapHint,
+}) =>
     AnimatedModalBarrier(
       color: route.animation!.drive(
         ColorTween(begin: color.withValues(alpha: 0), end: color)
@@ -102,6 +111,7 @@ Widget _wholePanelBarrier(ModalRoute<Object?> route, Color color) =>
       dismissible: true,
       semanticsLabel: route.barrierLabel,
       barrierSemanticsDismissible: route.semanticsDismissible,
+      semanticsOnTapHint: onTapHint,
       onDismiss: () {
         if (route.isCurrent) route.navigator?.pop();
       },
@@ -133,7 +143,8 @@ class _SheetPanelRoute<T> extends ModalBottomSheetRoute<T> {
   }) : super(isScrollControlled: true, useSafeArea: true);
 
   @override
-  Widget buildModalBarrier() => _wholePanelBarrier(this, barrierColor);
+  Widget buildModalBarrier() =>
+      _wholePanelBarrier(this, barrierColor, onTapHint: barrierOnTapHint);
 }
 
 /// Title row with the ✕, then the body: in its own scroll view, or filling
