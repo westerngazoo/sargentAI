@@ -489,8 +489,7 @@ void main() {
   });
 
   group('AC13 sizes', () {
-    testWidgets('a wide window starts at the top, not centred',
-        (tester) async {
+    testWidgets('a wide window starts at the top, not centred', (tester) async {
       await pumpMain(tester, size: desktop);
       final title = tester.getRect(find.byKey(const Key('calendar-title')));
       expect(title.top, lessThan(140),
