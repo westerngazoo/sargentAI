@@ -52,7 +52,6 @@ class VoiceIntentResult {
   bool get isLoggedNutrition => status == 'logged_nutrition';
   bool get isLoggedWorkout => status == 'logged_workout';
   bool get isClarify => status == 'clarify';
-  bool get isNavigate => status == 'navigate';
 }
 
 class VoiceIntentService {

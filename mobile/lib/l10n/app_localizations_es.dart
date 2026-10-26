@@ -951,9 +951,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sergeantLogged => 'Registrado.';
 
   @override
-  String get sergeantTellMeMore => 'Dime más.';
-
-  @override
   String get sergeantRoger => 'Recibido.';
 
   @override

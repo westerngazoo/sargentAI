@@ -1730,12 +1730,6 @@ abstract class AppLocalizations {
   /// **'Registrado.'**
   String get sergeantLogged;
 
-  /// No description provided for @sergeantTellMeMore.
-  ///
-  /// In es, this message translates to:
-  /// **'Dime más.'**
-  String get sergeantTellMeMore;
-
   /// No description provided for @sergeantRoger.
   ///
   /// In es, this message translates to:

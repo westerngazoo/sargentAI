@@ -699,7 +699,6 @@
   "sergeantGreeting": "Aquí el sargento. Di: empezar entrenamiento, ver plan, registrar comida. Termina cada orden con cambio.",
   "sergeantRogerOut": "Recibido. Corto.",
   "sergeantLogged": "Registrado.",
-  "sergeantTellMeMore": "Dime más.",
   "sergeantRoger": "Recibido.",
   "sergeantDidNotCatch": "No te entendí.",
   "sergeantStandingBy": "En espera.",
