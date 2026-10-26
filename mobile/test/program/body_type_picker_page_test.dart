@@ -1,4 +1,5 @@
-// R-0030 (amended, R-0057) widget tests — BodyTypePickerScreen.
+// R-0030 (amended, R-0057) widget tests — BodyTypePickerPage, a page of the
+// Programa panel's flow since R-0061 slice 3a (SPEC-0061 §2.6).
 //
 // AC-coverage (amended as-built acceptance criteria):
 // - AC2  grid renders the 3 body-shape cards (Material-icon shapes)
@@ -7,7 +8,8 @@
 // - AC9  Confirm ("Find my program") is disabled until BOTH a shape and a band
 //        are selected
 // - AC6/AC8 confirming calls syntheticMatch with the selected shape+band
-//        (the entry into the existing rank()/proposals flow)
+//        (the entry into the existing rank()/proposals flow), and a result
+//        pushes the synthetic proposals page
 //
 // Backfilled under R-0057 — the feature shipped (PR #30) with no tests.
 
@@ -15,7 +17,8 @@ import 'dart:async';
 
 import 'package:fitai/src/program/models/synthetic_match.dart';
 import 'package:fitai/src/program/presentation/body_type_names.dart';
-import 'package:fitai/src/program/presentation/body_type_picker_screen.dart';
+import 'package:fitai/src/program/presentation/body_type_picker_page.dart';
+import 'package:fitai/src/program/presentation/synthetic_proposals_page.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,15 +41,17 @@ void main() {
         overrides: [
           programServiceProvider.overrideWithValue(programService),
         ],
-        child: localizedApp(home: const BodyTypePickerScreen()),
+        child: localizedApp(home: const Scaffold(body: BodyTypePickerPage())),
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  // AC2 — the grid shows all three shapes.
+  // AC2 — the grid shows all three shapes, under the page's own header.
   testWidgets('grid renders all three body-shape cards', (tester) async {
     await pumpPicker(tester);
+
+    expect(find.text(l10n.chooseYourBodyType), findsOneWidget);
 
     for (final shape in BodyShape.values) {
       expect(find.text(bodyShapeName(shape, l10n)), findsOneWidget);
@@ -132,5 +137,28 @@ void main() {
           BodyShape.endomorph,
           FatBand.bulky,
         )).called(1);
+  });
+
+  // R-0061 AC8: the whole choose flow happens inside the panel — a result
+  // pushes the proposals page on the same navigator.
+  testWidgets('a result pushes the synthetic proposals page', (tester) async {
+    when(() => programService.syntheticMatch(
+          BodyShape.mesomorph,
+          FatBand.moderate,
+        )).thenAnswer((_) async => sampleSyntheticMatch());
+
+    await pumpPicker(tester);
+    await tester.tap(find.text(bodyShapeName(BodyShape.mesomorph, l10n)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(fatBandName(FatBand.moderate, l10n)));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SyntheticProposalsPage), findsOneWidget);
+    expect(find.text(l10n.chooseYourProgram), findsOneWidget);
+    expect(find.text('Low-Volume Mass Builder'), findsOneWidget);
   });
 }

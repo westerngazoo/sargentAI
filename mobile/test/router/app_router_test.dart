@@ -57,6 +57,29 @@ void main() {
   String currentLocation(GoRouter router) =>
       router.routerDelegate.currentConfiguration.uri.path;
 
+  /// Mirrors the browser opening the app at [location]: the router sees the
+  /// link while auth is still AuthUnknown (restore is a pending microtask),
+  /// then auth resolves from the token store.
+  Future<GoRouter> coldStartAt(WidgetTester tester, String location) async {
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokenStore),
+        authRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+    final router = container.read(routerProvider);
+    router.go(location);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: localizedRouterApp(router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return router;
+  }
+
   testWidgets('SAC3 a present token lands on /home (no login flash)',
       (tester) async {
     when(() => tokenStore.read())
@@ -96,29 +119,6 @@ void main() {
   // is always a cold start, so the AuthUnknown arm must pass /reset-password
   // through with its query intact instead of sending it to /splash.
   group('R-0060 M6 cold start on the reset link', () {
-    /// Mirrors the browser opening the app at [location]: the router sees the
-    /// link while auth is still AuthUnknown (restore is a pending microtask),
-    /// then auth resolves from the token store.
-    Future<GoRouter> coldStartAt(WidgetTester tester, String location) async {
-      final container = ProviderContainer(
-        overrides: [
-          tokenStoreProvider.overrideWithValue(tokenStore),
-          authRepositoryProvider.overrideWithValue(repo),
-        ],
-      );
-      addTearDown(container.dispose);
-      final router = container.read(routerProvider);
-      router.go(location);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: localizedRouterApp(router),
-        ),
-      );
-      await tester.pumpAndSettle();
-      return router;
-    }
-
     void expectResetScreenWithToken(GoRouter router) {
       expect(currentLocation(router), '/reset-password');
       expect(find.byType(ResetPasswordScreen), findsOneWidget);
@@ -187,5 +187,27 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(currentLocation(router), '/home');
+  });
+
+  // SPEC-0061 §2.5 (slice 3a): the screens that became panels lost their
+  // routes. An old URL lands on the day, and only when authenticated — the
+  // other arms keep sending it to /splash and /login as before.
+  group('SPEC-0061 removed routes', () {
+    for (final removed in ['/progress', '/programs/current', '/programs/get']) {
+      testWidgets('authenticated: $removed redirects to /home', (tester) async {
+        when(() => tokenStore.read())
+            .thenAnswer((_) async => sampleToken(userId: 'u-1'));
+        final router = await coldStartAt(tester, removed);
+        expect(currentLocation(router), '/home');
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('unauthenticated: $removed goes to /login like any other',
+          (tester) async {
+        when(() => tokenStore.read()).thenAnswer((_) async => null);
+        final router = await coldStartAt(tester, removed);
+        expect(currentLocation(router), '/login');
+      });
+    }
   });
 }

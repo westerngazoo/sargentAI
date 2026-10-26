@@ -8,19 +8,37 @@
 // from the schedule it holds and pushes focus mode; a finished session
 // selects its day, re-reads the schedule, and a session saved as free says
 // so.
+//
+// R-0061 AC1, AC2, AC8 -> SPEC-0061 §2.6 (slice 3a): the profile menu opens
+// the panels — Programa, Medidas, Progreso, Cuenta — and + Comida its sheet,
+// all on `showPanel`; each holds its body, closes four ways with the day
+// kept, and every capability of AC2's list is walked from here.
 
 import 'dart:async';
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
+import 'package:fitai/src/auth/domain/auth_state.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/home/calendar.dart';
 import 'package:fitai/src/home/main_screen.dart';
 import 'package:fitai/src/home/selected_day.dart';
+import 'package:fitai/src/measurements/models/coach_suggestion.dart';
+import 'package:fitai/src/measurements/presentation/measurements_panel.dart';
+import 'package:fitai/src/measurements/presentation/progress_panel.dart';
+import 'package:fitai/src/measurements/services/adjustment_service.dart';
+import 'package:fitai/src/measurements/services/measurement_service.dart';
+import 'package:fitai/src/nutrition/presentation/meal_quick_log_sheet.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
+import 'package:fitai/src/profile/presentation/account_panel.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
 import 'package:fitai/src/program/models/schedule.dart';
+import 'package:fitai/src/program/models/synthetic_match.dart';
+import 'package:fitai/src/program/presentation/body_type_names.dart';
+import 'package:fitai/src/program/presentation/body_type_picker_page.dart';
+import 'package:fitai/src/program/presentation/program_panel.dart';
+import 'package:fitai/src/program/presentation/synthetic_proposals_page.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
@@ -37,6 +55,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
 import '../support/l10n.dart';
+import '../support/measurement_fakes.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
 import '../support/workout_fakes.dart';
@@ -57,6 +76,7 @@ void main() {
   late MockProfileRepository profileRepo;
   late MockWorkoutRepository workoutRepo;
   late MockProgramService programService;
+  late MockMeasurementService measurementService;
 
   final today =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
@@ -93,6 +113,8 @@ void main() {
     profileRepo = MockProfileRepository();
     workoutRepo = MockWorkoutRepository();
     programService = MockProgramService();
+    measurementService = MockMeasurementService();
+    when(() => measurementService.list()).thenAnswer((_) async => const []);
     when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
@@ -116,6 +138,9 @@ void main() {
       profileRepositoryProvider.overrideWithValue(profileRepo),
       workoutRepositoryProvider.overrideWithValue(workoutRepo),
       programServiceProvider.overrideWithValue(programService),
+      measurementServiceProvider.overrideWithValue(measurementService),
+      coachAdviceProvider.overrideWith(
+          (ref) async => const CoachAdvice(windowWeeks: 8, suggestions: [])),
     ]);
     addTearDown(container.dispose);
     // A stored token restores the session, as a cold start does.
@@ -134,13 +159,6 @@ void main() {
             path: '/onboarding',
             builder: (_, __) =>
                 const Scaffold(body: Text('ONBOARDING-SENTINEL'))),
-        GoRoute(
-            path: '/programs/current',
-            builder: (_, __) => const Scaffold(body: Text('PROGRAM-SENTINEL'))),
-        GoRoute(
-            path: '/progress',
-            builder: (_, __) =>
-                const Scaffold(body: Text('PROGRESS-SENTINEL'))),
       ],
     );
     await tester.pumpWidget(UncontrolledProviderScope(
@@ -154,6 +172,19 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     }
     return (container, router);
+  }
+
+  Future<void> openMenuItem(WidgetTester tester, String item) async {
+    await tester.tap(find.byKey(const Key('profile-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(item));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> systemBack(WidgetTester tester) async {
+    final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
+    await widgetsAppState.didPopRoute();
+    await tester.pumpAndSettle();
   }
 
   group('AC7 few controls', () {
@@ -172,8 +203,8 @@ void main() {
     });
 
     testWidgets(
-        'the profile menu lists program, measurements, progress and sign out',
-        (tester) async {
+        'the profile menu lists program, measurements, progress and account; '
+        'sign out moved into Cuenta', (tester) async {
       await pumpMain(tester);
       await tester.tap(find.byKey(const Key('profile-menu')));
       await tester.pumpAndSettle();
@@ -181,28 +212,86 @@ void main() {
         l10n.menuProgram,
         l10n.menuMeasurements,
         l10n.menuProgress,
-        l10n.signOut,
+        l10n.menuAccount,
       ]) {
         expect(find.text(s), findsOneWidget);
       }
+      expect(find.text(l10n.signOut), findsNothing);
     });
   });
 
-  group('AC2 nothing is lost: the menu reaches the old screens', () {
-    for (final (item, sentinel) in [
-      (l10n.menuProgram, 'PROGRAM-SENTINEL'),
-      (l10n.menuProgress, 'PROGRESS-SENTINEL'),
-    ]) {
-      testWidgets('$item pushes its screen with no exception', (tester) async {
-        await pumpMain(tester);
-        await tester.tap(find.byKey(const Key('profile-menu')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(item));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
-        expect(find.text(sentinel), findsOneWidget);
-      });
-    }
+  // R-0061 AC2: every capability reachable before the one screen is reached
+  // from it. Voice dictation is slice 3b's (the Dictado sheet): until then
+  // the mic pushes the hub, checked here as the interim.
+  group('AC2 nothing is lost', () {
+    testWidgets('start a workout', (tester) async {
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+      expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+      expect(container.read(sessionDriverProvider).draft, isNotNull);
+    });
+
+    testWidgets('log a meal', (tester) async {
+      await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('add-meal')));
+      await tester.pumpAndSettle();
+      expect(find.byType(MealQuickLogForm), findsOneWidget);
+      expect(find.text(l10n.saveMeal), findsOneWidget);
+    });
+
+    testWidgets('voice dictation: the mic, the hub until 3b', (tester) async {
+      await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('mic')));
+      await tester.pumpAndSettle();
+      expect(find.text('HUB-SENTINEL'), findsOneWidget);
+    });
+
+    testWidgets('progress', (tester) async {
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuProgress);
+      expect(find.byType(ProgressPanel), findsOneWidget);
+      expect(find.text(l10n.bodyComposition), findsOneWidget);
+      expect(find.text(l10n.strength), findsOneWidget);
+    });
+
+    testWidgets('view and change the current program', (tester) async {
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuProgram);
+      expect(find.byType(ProgramPanel), findsOneWidget);
+      expect(find.text(l10n.noProgramYet), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('get-program')));
+      await tester.pumpAndSettle();
+      expect(find.byType(BodyTypePickerPage), findsOneWidget);
+      expect(find.byType(ProgramPanel), findsOneWidget,
+          reason: 'the choose flow stays inside the panel');
+    });
+
+    testWidgets('measurements', (tester) async {
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuMeasurements);
+      expect(find.byType(MeasurementsPanel), findsOneWidget);
+      expect(find.text(l10n.saveMeasurement), findsOneWidget);
+    });
+
+    testWidgets('onboarding, for a user without a profile', (tester) async {
+      when(() => profileRepo.getMe()).thenAnswer((_) async => null);
+      await pumpMain(tester);
+      await tester.tap(find.text(l10n.getStarted));
+      await tester.pumpAndSettle();
+      expect(find.text('ONBOARDING-SENTINEL'), findsOneWidget);
+    });
+
+    testWidgets('sign out, from Cuenta', (tester) async {
+      final (container, _) = await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuAccount);
+      await tester.tap(find.byKey(const Key('sign-out')));
+      await tester.pumpAndSettle();
+      expect(
+          container.read(authControllerProvider), isA<AuthUnauthenticated>());
+      verify(() => repo.clear()).called(1);
+    });
   });
 
   group('AC4 the calendar from the schedule', () {
@@ -450,7 +539,154 @@ void main() {
     });
   });
 
+  group('AC8 panels over the screen', () {
+    for (final (item, type, body) in [
+      (l10n.menuProgram, ProgramPanel, l10n.noProgramYet),
+      (l10n.menuMeasurements, MeasurementsPanel, l10n.saveMeasurement),
+      (l10n.menuProgress, ProgressPanel, l10n.bodyComposition),
+      (l10n.menuAccount, AccountPanel, l10n.editProfile),
+    ]) {
+      testWidgets('$item opens its panel and holds its body', (tester) async {
+        await pumpMain(tester);
+        await openMenuItem(tester, item);
+        expect(find.byType(type), findsOneWidget);
+        expect(find.text(body), findsOneWidget);
+        expect(find.byKey(const Key('panel-close')), findsOneWidget);
+        expect(find.byType(MainScreen), findsOneWidget,
+            reason: 'a panel never replaces the screen');
+      });
+    }
+
+    testWidgets('Cuenta shows the profile and Editar perfil opens onboarding',
+        (tester) async {
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuAccount);
+      expect(find.text(l10n.accountProfileSummary(180, 82.5)), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('edit-profile')));
+      await tester.pumpAndSettle();
+      expect(find.text('ONBOARDING-SENTINEL'), findsOneWidget);
+      expect(find.byType(AccountPanel), findsNothing,
+          reason: 'the panel closes first, so back lands on the day');
+    });
+
+    testWidgets('Cuenta without a profile offers to set it up', (tester) async {
+      when(() => profileRepo.getMe()).thenAnswer((_) async => null);
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuAccount);
+      expect(find.text(l10n.completeYourProfilePrompt), findsOneWidget);
+      expect(find.text(l10n.setUpYourProfile), findsOneWidget);
+      expect(find.text(l10n.editProfile), findsNothing);
+    });
+
+    testWidgets(
+        'choosing a program completes inside the Programa panel, and the '
+        'schedule follows the new program', (tester) async {
+      when(() => programService.syntheticMatch(any(), any()))
+          .thenAnswer((_) async => sampleSyntheticMatch());
+      when(() => programService.chooseSyntheticProgram(any(), any(), any(),
+              startsOn: any(named: 'startsOn')))
+          .thenAnswer((_) async => sampleUserProgram());
+      await pumpMain(tester);
+      await openMenuItem(tester, l10n.menuProgram);
+      await tester.tap(find.byKey(const Key('get-program')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(bodyShapeName(BodyShape.mesomorph, l10n)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(fatBandName(FatBand.moderate, l10n)));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(l10n.findMyProgram));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.findMyProgram));
+      await tester.pumpAndSettle();
+      expect(find.byType(SyntheticProposalsPage), findsOneWidget);
+
+      when(() => programService.getCurrent())
+          .thenAnswer((_) async => sampleUserProgram());
+      clearInteractions(programService);
+      await tester.tap(find.text('Low-Volume Mass Builder'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.chooseThisProgram));
+      await tester.pumpAndSettle();
+
+      verify(() => programService.chooseSyntheticProgram(
+            'heavy-duty-mass',
+            BodyShape.mesomorph,
+            FatBand.moderate,
+            startsOn: today,
+          )).called(1);
+      expect(find.byType(ProgramPanel), findsOneWidget);
+      expect(find.byType(SyntheticProposalsPage), findsNothing);
+      expect(find.text('Heavy Duty Mass'), findsOneWidget);
+      expect(find.byKey(const Key('change-program')), findsOneWidget);
+      // The schedule watches the current program: a new id re-reads it.
+      verify(() => programService.getSchedule(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            today: any(named: 'today'),
+          )).called(greaterThanOrEqualTo(1));
+    });
+  });
+
   group('AC1 panels keep the selected day', () {
+    final openers = <(String, Future<void> Function(WidgetTester))>[
+      (l10n.menuProgram, (t) => openMenuItem(t, l10n.menuProgram)),
+      (l10n.menuMeasurements, (t) => openMenuItem(t, l10n.menuMeasurements)),
+      (l10n.menuProgress, (t) => openMenuItem(t, l10n.menuProgress)),
+      (l10n.menuAccount, (t) => openMenuItem(t, l10n.menuAccount)),
+      (
+        l10n.addMeal,
+        (t) async {
+          await t.tap(find.byKey(const Key('add-meal')));
+          await t.pumpAndSettle();
+        }
+      ),
+    ];
+    final closers = <(String, Future<void> Function(WidgetTester))>[
+      (
+        '✕',
+        (t) async {
+          await t.tap(find.byKey(const Key('panel-close')));
+          await t.pumpAndSettle();
+        }
+      ),
+      (
+        'Esc',
+        (t) async {
+          await t.sendKeyEvent(LogicalKeyboardKey.escape);
+          await t.pumpAndSettle();
+        }
+      ),
+      (
+        'a tap outside',
+        (t) async {
+          await t.tapAt(const Offset(8, 8));
+          await t.pumpAndSettle();
+        }
+      ),
+      ('back', systemBack),
+    ];
+    for (final (panel, open) in openers) {
+      for (final (closer, close) in closers) {
+        testWidgets('$panel closes on $closer with the day kept',
+            (tester) async {
+          final (container, _) = await pumpMain(tester);
+          container.read(selectedDayProvider.notifier).state = doneDay;
+          await tester.pumpAndSettle();
+
+          await open(tester);
+          expect(find.byKey(const Key('panel-close')), findsOneWidget);
+
+          await close(tester);
+          expect(find.byKey(const Key('panel-close')), findsNothing);
+          expect(container.read(selectedDayProvider), doneDay);
+          expect(find.byType(MainScreen), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
     testWidgets('opening and closing a panel leaves the day selected',
         (tester) async {
       final (container, _) = await pumpMain(tester);

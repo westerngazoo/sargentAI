@@ -1,41 +1,27 @@
-// R-0014 Flutter widget tests — ProgramProposalsScreen (SPEC-0014 §3.3).
+// R-0014 Flutter widget tests — ProgramProposalsPage (SPEC-0014 §3.3), the
+// photo path's proposals, a page of the Programa panel's flow since R-0061
+// slice 3a (SPEC-0061 §2.6).
 //
 // AC-coverage:
-// - AC8  (proposals screen: three cards, score label, program + diet summary,
+// - AC8  (proposals page: three cards, score label, program + diet summary,
 //         tap-to-expand, exclusive expansion, "Choose this program" button)
-// - AC9  (choose button navigates to ProgramDetailScreen)
+// - AC9  (choose sends the client's local date as `starts_on` and returns
+//         the flow to its first page, where the detail re-reads the program)
 // - AC10 (Flutter widget tests)
-//
-// Targeted production symbols (all under package:fitai/src/program/...):
-//   presentation/program_proposals_screen.dart
-//     -> ProgramProposalsScreen(sessionId: String)
-//   presentation/program_detail_screen.dart
-//     -> ProgramDetailScreen
-//   services/program_service.dart
-//     -> ProgramService, programServiceProvider
-//   models/program_proposal.dart
-//     -> ProposalsResponse
-//   models/user_program.dart
-//     -> UserProgram
-//   application/program_providers.dart
-//     -> currentProgramProvider
-//
-// RED until step-5 implementation creates all of the above. No edits to this
-// file should be needed to make it GREEN.
 
 import 'dart:async';
 
 import 'package:fitai/src/auth/data/auth_repository.dart';
+import 'package:fitai/src/core/dates.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
+import 'package:fitai/src/core/panels/panel_flow.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/program/models/user_program.dart';
-import 'package:fitai/src/program/presentation/program_detail_screen.dart';
-import 'package:fitai/src/program/presentation/program_proposals_screen.dart';
+import 'package:fitai/src/program/presentation/program_proposals_page.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
@@ -60,10 +46,7 @@ void main() {
     when(() => repo.clear()).thenAnswer((_) async {});
   });
 
-  /// Pumps [ProgramProposalsScreen] with the test overrides.
-  ///
-  /// Uses a simple [MaterialApp] + [Navigator] wrapping instead of the full
-  /// GoRouter so navigation assertions are predictable and router-agnostic.
+  /// Pumps [ProgramProposalsPage] with the test overrides.
   Future<void> pumpProposals(
     WidgetTester tester, {
     String sessionId = 'sess-001',
@@ -80,7 +63,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: localizedApp(
-          home: ProgramProposalsScreen(sessionId: sessionId),
+          home: Scaffold(body: ProgramProposalsPage(sessionId: sessionId)),
         ),
       ),
     );
@@ -233,19 +216,18 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // AC9: "Choose this program" navigates to ProgramDetailScreen on success
+  // AC9: "Choose this program" completes inside the flow
   // -------------------------------------------------------------------------
 
-  // AC9: tapping "Choose this program" calls ProgramService.chooseProgram and
-  // navigates to ProgramDetailScreen on success.
-  testWidgets('AC9 proposals_screen_choose_button_navigates_to_detail',
+  // AC9: "Choose this program" calls ProgramService.chooseProgram with the
+  // client's local date and returns the flow to its first page (R-0061 AC8:
+  // the whole choose flow happens inside the panel).
+  testWidgets('AC9 proposals_page_choose_button_returns_to_the_flow_start',
       (tester) async {
     when(() => programService.getProposals(any()))
         .thenAnswer((_) async => sampleProposals());
-    when(() => programService.chooseProgram(any(), any()))
-        .thenAnswer((_) async => sampleUserProgram());
-    // getCurrent is needed by ProgramDetailScreen when it loads.
-    when(() => programService.getCurrent())
+    when(() => programService.chooseProgram(any(), any(),
+            startsOn: any(named: 'startsOn')))
         .thenAnswer((_) async => sampleUserProgram());
 
     final container = ProviderContainer(
@@ -257,30 +239,30 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    // Use GoRouter so context.go('/programs/current') resolves correctly.
-    final router = GoRouter(
-      initialLocation: '/proposals',
-      routes: [
-        GoRoute(
-          path: '/proposals',
-          builder: (_, __) =>
-              const ProgramProposalsScreen(sessionId: 'sess-001'),
-        ),
-        GoRoute(
-          path: '/programs/current',
-          builder: (_, __) => const ProgramDetailScreen(),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedRouterApp(router),
+        child: localizedApp(
+          home: Scaffold(
+            body: PanelFlow(
+              initialPage: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    PanelFlowRoute<void>(
+                      builder: (_) =>
+                          const ProgramProposalsPage(sessionId: 'sess-001'),
+                    ),
+                  ),
+                  child: const Text('flow-start'),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('flow-start'));
     await tester.pumpAndSettle();
 
     // Expand card 1.
@@ -291,11 +273,12 @@ void main() {
     await tester.tap(find.text(l10n.chooseThisProgram));
     await tester.pumpAndSettle();
 
-    // ProgramDetailScreen must now be on screen.
-    expect(find.byType(ProgramDetailScreen), findsOneWidget);
+    // Back on the flow's first page.
+    expect(find.text('flow-start'), findsOneWidget);
+    expect(find.byType(ProgramProposalsPage), findsNothing);
 
-    verify(() => programService.chooseProgram('sess-001', 'heavy-duty-mass'))
-        .called(1);
+    verify(() => programService.chooseProgram('sess-001', 'heavy-duty-mass',
+        startsOn: dateOnly(DateTime.now()))).called(1);
   });
 
   // AC9: while the choose call is in-flight the button shows a loading
@@ -304,8 +287,8 @@ void main() {
     final gate = Completer<UserProgram>();
     when(() => programService.getProposals(any()))
         .thenAnswer((_) async => sampleProposals());
-    when(() => programService.chooseProgram(any(), any()))
-        .thenAnswer((_) => gate.future);
+    when(() => programService.chooseProgram(any(), any(),
+        startsOn: any(named: 'startsOn'))).thenAnswer((_) => gate.future);
 
     await pumpProposals(tester);
     await tester.pumpAndSettle();
@@ -328,7 +311,8 @@ void main() {
   testWidgets('AC8 choose_409_shows_snackbar_refresh_message', (tester) async {
     when(() => programService.getProposals(any()))
         .thenAnswer((_) async => sampleProposals());
-    when(() => programService.chooseProgram(any(), any())).thenThrow(
+    when(() => programService.chooseProgram(any(), any(),
+        startsOn: any(named: 'startsOn'))).thenThrow(
       const ApiException(ApiErrorKind.conflict, statusCode: 409),
     );
 
