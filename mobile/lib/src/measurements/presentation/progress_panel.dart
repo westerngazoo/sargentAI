@@ -1,9 +1,8 @@
-// The Progress screen — body-composition and strength trends over time.
+// The Progreso panel — body-composition and strength trends over time.
 // "Fat down, muscle up, strength up" made visible.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../workout/application/workouts_provider.dart';
@@ -13,12 +12,13 @@ import '../../workout/application/muscle_names.dart';
 import '../application/strength_trend.dart';
 import '../models/measurement.dart';
 import '../services/measurement_service.dart';
-import 'coach_card.dart';
-import 'log_measurement_sheet.dart';
 import 'trend_chart.dart';
 
-class ProgressScreen extends ConsumerWidget {
-  const ProgressScreen({super.key});
+/// The Progreso panel's body (SPEC-0061 §2.6, OQ-5): R-0011's trends — body
+/// composition, strength, and the training balance. Logging a measurement
+/// lives in the Medidas panel.
+class ProgressPanel extends ConsumerWidget {
+  const ProgressPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,59 +26,47 @@ class ProgressScreen extends ConsumerWidget {
     final workouts = ref.watch(workoutsProvider);
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.progress),
-        leading: BackButton(onPressed: () => context.go('/home')),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLogMeasurementSheet(context),
-        icon: const Icon(Icons.straighten),
-        label: Text(l10n.logMeasurement),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          const CoachCard(),
-          Text(l10n.bodyComposition,
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          measurements.when(
-            loading: () =>
-                const Card(child: SizedBox(height: 180, child: _Loading())),
-            error: (_, __) => const _ErrorCard(),
-            data: (list) => _BodyComposition(measurements: list),
-          ),
-          const SizedBox(height: 24),
-          Text(l10n.strength, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          workouts.when(
-            loading: () =>
-                const Card(child: SizedBox(height: 180, child: _Loading())),
-            error: (_, __) => const _ErrorCard(),
-            data: (list) => _StrengthCard(workouts: list),
-          ),
-          workouts.maybeWhen(
-            data: (list) {
-              final balance = computeMuscleVolume(list);
-              if (balance.isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.trainingBalance,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    _MuscleBalance(balance: balance),
-                  ],
-                ),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.bodyComposition,
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        measurements.when(
+          loading: () =>
+              const Card(child: SizedBox(height: 180, child: _Loading())),
+          error: (_, __) => const _ErrorCard(),
+          data: (list) => _BodyComposition(measurements: list),
+        ),
+        const SizedBox(height: 24),
+        Text(l10n.strength, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        workouts.when(
+          loading: () =>
+              const Card(child: SizedBox(height: 180, child: _Loading())),
+          error: (_, __) => const _ErrorCard(),
+          data: (list) => _StrengthCard(workouts: list),
+        ),
+        workouts.maybeWhen(
+          data: (list) {
+            final balance = computeMuscleVolume(list);
+            if (balance.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.trainingBalance,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  _MuscleBalance(balance: balance),
+                ],
+              ),
+            );
+          },
+          orElse: () => const SizedBox.shrink(),
+        ),
+      ],
     );
   }
 }

@@ -493,6 +493,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dictate => 'Dictar';
 
   @override
+  String get menuAccount => 'Cuenta';
+
+  @override
+  String get editProfile => 'Editar perfil';
+
+  @override
+  String get changeProgram => 'Cambiar programa';
+
+  @override
+  String accountProfileSummary(int heightCm, double weightKg) {
+    return '$heightCm cm · $weightKg kg';
+  }
+
+  @override
   String get today => 'Hoy';
 
   @override
@@ -800,9 +814,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get workoutNoLongerExists => 'Ese entrenamiento ya no existe.';
 
   @override
-  String get startWorkout => 'Empezar entrenamiento';
-
-  @override
   String get coachSayDoneHandsFree => 'Di listo cuando termines la serie.';
 
   @override
@@ -1047,9 +1058,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get progress => 'Progreso';
-
-  @override
-  String get logout => 'Salir';
 
   @override
   String get logMeasurement => 'Registrar medida';

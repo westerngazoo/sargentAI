@@ -1,9 +1,11 @@
 // SPEC-0061 §2.4 (slice 2d): ProgramService.getSchedule maps
 // `GET /programs/me/schedule?from&to&today` over the shared Dio. Dates go
 // on the wire as `YYYY-MM-DD`; every failure is an ApiException.
+// Slice 3a: both choose calls send the client's local date as `starts_on`.
 
 import 'package:dio/dio.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
+import 'package:fitai/src/program/models/synthetic_match.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -92,6 +94,62 @@ void main() {
         ),
         throwsA(isA<ApiException>()
             .having((e) => e.kind, 'kind', ApiErrorKind.transport)),
+      );
+    });
+  });
+
+  group('choose sends starts_on', () {
+    Map<String, dynamic> postedTo(String path) =>
+        verify(() => dio.post<Map<String, dynamic>>(
+              path,
+              data: captureAny(named: 'data'),
+            )).captured.single as Map<String, dynamic>;
+
+    test('chooseProgram posts the date as YYYY-MM-DD', () async {
+      when(() => dio.post<Map<String, dynamic>>('/programs',
+              data: any(named: 'data')))
+          .thenAnswer((_) async => _resp('/programs', 201, userProgramJson()));
+
+      final program = await service.chooseProgram('sess-001', 'heavy-duty-mass',
+          startsOn: DateTime(2026, 3, 5, 23, 59));
+
+      expect(program.id, 'prog-uuid-001');
+      expect(postedTo('/programs'), {
+        'photo_session_id': 'sess-001',
+        'archetype_id': 'heavy-duty-mass',
+        'starts_on': '2026-03-05',
+      });
+    });
+
+    test('chooseSyntheticProgram posts the date as YYYY-MM-DD', () async {
+      when(() =>
+          dio.post<Map<String, dynamic>>('/programs/synthetic',
+              data: any(named: 'data'))).thenAnswer(
+          (_) async => _resp('/programs/synthetic', 201, userProgramJson()));
+
+      await service.chooseSyntheticProgram(
+          'heavy-duty-mass', BodyShape.mesomorph, FatBand.moderate,
+          startsOn: DateTime(2026, 3, 5));
+
+      expect(postedTo('/programs/synthetic'), {
+        'archetype_id': 'heavy-duty-mass',
+        'shape': 'mesomorph',
+        'fat_band': 'moderate',
+        'starts_on': '2026-03-05',
+      });
+    });
+
+    test('a failed choose is an ApiException', () async {
+      when(() =>
+          dio.post<Map<String, dynamic>>('/programs/synthetic',
+              data: any(named: 'data'))).thenThrow(
+          dioErrorFlat(409, path: '/programs/synthetic', error: 'conflict'));
+
+      expect(
+        () => service.chooseSyntheticProgram(
+            'heavy-duty-mass', BodyShape.mesomorph, FatBand.moderate,
+            startsOn: DateTime(2026, 3, 5)),
+        throwsA(isApiExceptionWithStatus(409)),
       );
     });
   });

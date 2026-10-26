@@ -9,10 +9,7 @@ import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
 import '../auth/presentation/reset_password_screen.dart';
 import '../hub/voice_hub_screen.dart';
-import '../measurements/presentation/progress_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
-import '../program/presentation/body_type_picker_screen.dart';
-import '../program/presentation/program_detail_screen.dart';
 import '../home/main_screen.dart';
 import '../shell/splash_screen.dart';
 import '../workout/application/session_driver.dart';
@@ -54,6 +51,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 loc == '/register' ||
                 loc == '/splash' ||
                 loc == '/forgot-password' ||
+                // The screens that became panels (SPEC-0061 §2.5): an old
+                // URL lands on the day.
+                loc == '/progress' ||
+                loc == '/programs/current' ||
+                loc == '/programs/get' ||
                 // A cold start at /session has no draft: the session lives in
                 // memory, so a reload lands on the day (SPEC-0061 §2.5).
                 (loc == '/session' &&
@@ -84,16 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/session',
         builder: (_, __) => const LiveSessionScreen(),
       ),
-      GoRoute(
-        path: '/programs/current',
-        builder: (_, __) => const ProgramDetailScreen(),
-      ),
-      GoRoute(
-        path: '/programs/get',
-        builder: (_, __) => const BodyTypePickerScreen(),
-      ),
       GoRoute(path: '/hub', builder: (_, __) => const VoiceHubScreen()),
-      GoRoute(path: '/progress', builder: (_, __) => const ProgressScreen()),
     ],
   );
 });

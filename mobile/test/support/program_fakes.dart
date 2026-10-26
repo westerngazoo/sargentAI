@@ -16,6 +16,7 @@
 
 import 'package:fitai/src/program/models/program_proposal.dart';
 import 'package:fitai/src/program/models/schedule.dart';
+import 'package:fitai/src/program/models/synthetic_match.dart';
 import 'package:fitai/src/program/models/user_program.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -244,5 +245,14 @@ When<Future<Schedule>> whenGetSchedule(MockProgramService service) =>
 /// Registers mocktail fallbacks for non-primitive types used in `when()`/
 /// `thenAnswer()` calls in the program test suite.
 void registerProgramFallbacks() {
-  registerFallbackValue(DateTime(2000)); // getSchedule's named date args
+  registerFallbackValue(DateTime(2000)); // getSchedule's and choose's dates
+  registerFallbackValue(BodyShape.mesomorph); // the synthetic choose
+  registerFallbackValue(FatBand.moderate);
 }
+
+/// A one-proposal synthetic match, for the picker's confirm.
+SyntheticMatchResponse sampleSyntheticMatch() => SyntheticMatchResponse(
+      shape: 'mesomorph',
+      fatBand: 'moderate',
+      proposals: [ProgramProposal.fromJson(proposalJson())],
+    );

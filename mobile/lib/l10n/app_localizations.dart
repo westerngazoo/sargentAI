@@ -950,6 +950,30 @@ abstract class AppLocalizations {
   /// **'Dictar'**
   String get dictate;
 
+  /// No description provided for @menuAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get menuAccount;
+
+  /// No description provided for @editProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar perfil'**
+  String get editProfile;
+
+  /// No description provided for @changeProgram.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar programa'**
+  String get changeProgram;
+
+  /// No description provided for @accountProfileSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{heightCm} cm · {weightKg} kg'**
+  String accountProfileSummary(int heightCm, double weightKg);
+
   /// No description provided for @today.
   ///
   /// In es, this message translates to:
@@ -1496,12 +1520,6 @@ abstract class AppLocalizations {
   /// **'Ese entrenamiento ya no existe.'**
   String get workoutNoLongerExists;
 
-  /// No description provided for @startWorkout.
-  ///
-  /// In es, this message translates to:
-  /// **'Empezar entrenamiento'**
-  String get startWorkout;
-
   /// No description provided for @coachSayDoneHandsFree.
   ///
   /// In es, this message translates to:
@@ -1886,12 +1904,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Progreso'**
   String get progress;
-
-  /// No description provided for @logout.
-  ///
-  /// In es, this message translates to:
-  /// **'Salir'**
-  String get logout;
 
   /// No description provided for @logMeasurement.
   ///

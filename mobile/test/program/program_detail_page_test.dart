@@ -1,29 +1,20 @@
-// R-0014 Flutter widget tests — ProgramDetailScreen and home shortcut
-// (SPEC-0014 §3.3 / §2.5.4).
+// R-0014 Flutter widget tests — ProgramDetailPage (SPEC-0014 §3.3 / §2.5.4),
+// the first page of the Programa panel's flow since R-0061 slice 3a
+// (SPEC-0061 §2.6).
 //
 // AC-coverage:
-// - AC9  (detail screen: full program + diet displayed; reached from proposals
-//         and from the named route /programs/current)
-// - AC8  (home shortcut: CurrentProgramCard — active program → detail,
-//         no program → "Get your program" CTA → match flow)
+// - AC9  (detail page: full program + diet displayed)
+// - AC8  (no program → "Find your program" opens the match flow; with one,
+//         "Change program" does, R-0061 AC8)
 // - AC10 (Flutter widget tests all gates green)
-//
-// Targeted production symbols:
-//   program/presentation/program_detail_screen.dart -> ProgramDetailScreen
-//   program/application/program_providers.dart      -> currentProgramProvider
-//   program/services/program_service.dart           -> ProgramService,
-//                                                     programServiceProvider
-//   program/models/user_program.dart                -> UserProgram
-//
-// RED until step-5 creates the above. These tests must compile and fail at
-// runtime because the production widgets do not exist.
 
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/program/models/user_program.dart';
-import 'package:fitai/src/program/presentation/program_detail_screen.dart';
+import 'package:fitai/src/program/presentation/body_type_picker_page.dart';
+import 'package:fitai/src/program/presentation/program_detail_page.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,10 +48,10 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // AC9 — ProgramDetailScreen renders program + diet
+  // AC9 — ProgramDetailPage renders program + diet
   // -------------------------------------------------------------------------
 
-  /// Pumps [ProgramDetailScreen] backed by a fake [currentProgramProvider].
+  /// Pumps [ProgramDetailPage] backed by a fake [currentProgramProvider].
   Future<void> pumpDetail(WidgetTester tester) async {
     when(() => programService.getCurrent())
         .thenAnswer((_) async => sampleUserProgram());
@@ -76,7 +67,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedApp(home: const ProgramDetailScreen()),
+        child: localizedApp(home: const Scaffold(body: ProgramDetailPage())),
       ),
     );
     await tester.pump();
@@ -117,7 +108,6 @@ void main() {
   testWidgets('program_detail_screen_speaks_the_catalogue', (tester) async {
     await pumpDetail(tester);
 
-    expect(find.text(l10n.yourProgram), findsOneWidget);
     // The section header and the days-per-week row label share the key.
     expect(find.text(l10n.training), findsNWidgets(2));
     expect(find.text(l10n.split), findsOneWidget);
@@ -189,7 +179,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedApp(home: const ProgramDetailScreen()),
+        child: localizedApp(home: const Scaffold(body: ProgramDetailPage())),
       ),
     );
     await tester.pumpAndSettle();
@@ -205,41 +195,6 @@ void main() {
               (w.data ?? '').contains('Mass Builder')),
     );
     expect(hasIdentifier, findsAtLeastNWidgets(1));
-  });
-
-  // AC9: detail screen is also reachable via named route /programs/current.
-  testWidgets('AC9 detail_screen_reachable_via_named_route', (tester) async {
-    when(() => programService.getCurrent())
-        .thenAnswer((_) async => sampleUserProgram());
-
-    final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(tokenStore),
-        authRepositoryProvider.overrideWithValue(repo),
-        programServiceProvider.overrideWithValue(programService),
-      ],
-    );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: localizedApp(
-          initialRoute: '/',
-          routes: {
-            '/': (_) => const Scaffold(body: Text('home')),
-            '/programs/current': (_) => const ProgramDetailScreen(),
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Navigate to /programs/current.
-    final context = tester.element(find.text('home'));
-    Navigator.of(context).pushNamed('/programs/current');
-    await tester.pumpAndSettle();
-
-    expect(find.byType(ProgramDetailScreen), findsOneWidget);
   });
 
   // AC9: 404 (no current program) on the detail screen shows a CTA or message.
@@ -258,7 +213,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedApp(home: const ProgramDetailScreen()),
+        child: localizedApp(home: const Scaffold(body: ProgramDetailPage())),
       ),
     );
     await tester.pumpAndSettle();
@@ -295,7 +250,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedApp(home: const ProgramDetailScreen()),
+        child: localizedApp(home: const Scaffold(body: ProgramDetailPage())),
       ),
     );
     await tester.pumpAndSettle();
@@ -304,6 +259,45 @@ void main() {
     // getCurrent).
     verify(() => programService.getCurrent()).called(1);
     // The screen is present (not errored).
-    expect(find.byType(ProgramDetailScreen), findsOneWidget);
+    expect(find.byType(ProgramDetailPage), findsOneWidget);
+  });
+
+  // R-0061 AC8: the panel lets the user choose a different program.
+  testWidgets('with a program, Cambiar programa opens the body-type picker',
+      (tester) async {
+    await pumpDetail(tester);
+
+    await tester.tap(find.byKey(const Key('change-program')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BodyTypePickerPage), findsOneWidget);
+    expect(find.text(l10n.chooseYourBodyType), findsOneWidget);
+  });
+
+  // R-0061 AC8: with no program the empty state opens the same flow.
+  testWidgets('with no program, Encuentra tu programa opens the picker',
+      (tester) async {
+    when(() => programService.getCurrent()).thenAnswer((_) async => null);
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokenStore),
+        authRepositoryProvider.overrideWithValue(repo),
+        programServiceProvider.overrideWithValue(programService),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: localizedApp(home: const Scaffold(body: ProgramDetailPage())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.noProgramYet), findsOneWidget);
+    expect(find.byKey(const Key('change-program')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('get-program')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BodyTypePickerPage), findsOneWidget);
   });
 }

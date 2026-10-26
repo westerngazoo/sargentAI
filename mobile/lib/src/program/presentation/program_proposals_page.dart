@@ -1,31 +1,37 @@
-// R-0014 / SPEC-0014 §2.5.2 — ProgramProposalsScreen.
+// R-0014 / SPEC-0014 §2.5.2 — the photo path's proposals.
 //
 // Renders the top-3 archetype proposals. Cards are exclusively expandable —
 // tapping one collapses any currently-expanded card. The "Choose this program"
 // button is only visible in the expanded card; tapping it calls
-// [ProgramService.chooseProgram] and navigates to [ProgramDetailScreen].
+// [ProgramService.chooseProgram].
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/dates.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/panels/panel_page_header.dart';
+import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../services/program_service.dart';
 
-class ProgramProposalsScreen extends ConsumerStatefulWidget {
-  const ProgramProposalsScreen({super.key, required this.sessionId});
+/// A page of the Programa panel's flow (SPEC-0061 §2.6): the proposals of a
+/// photo session. Choosing one calls `POST /programs` with today as
+/// `starts_on` and returns the flow to its first page. The mobile app has no
+/// photo capture yet, so nothing pushes it today.
+class ProgramProposalsPage extends ConsumerStatefulWidget {
+  const ProgramProposalsPage({super.key, required this.sessionId});
 
+  /// The photo session whose proposals to show.
   final String sessionId;
 
   @override
-  ConsumerState<ProgramProposalsScreen> createState() =>
-      _ProgramProposalsScreenState();
+  ConsumerState<ProgramProposalsPage> createState() =>
+      _ProgramProposalsPageState();
 }
 
-class _ProgramProposalsScreenState
-    extends ConsumerState<ProgramProposalsScreen> {
+class _ProgramProposalsPageState extends ConsumerState<ProgramProposalsPage> {
   // Async state
   ProposalsResponse? _proposals;
   Object? _error;
@@ -71,11 +77,16 @@ class _ProgramProposalsScreenState
     final l10n = AppLocalizations.of(context);
     setState(() => _choosingIndex = index);
     try {
-      await ref
-          .read(programServiceProvider)
-          .chooseProgram(widget.sessionId, proposal.archetypeId);
+      await ref.read(programServiceProvider).chooseProgram(
+            widget.sessionId,
+            proposal.archetypeId,
+            startsOn: dateOnly(DateTime.now()),
+          );
       if (!mounted) return;
-      context.go('/programs/current');
+      // The detail page, first in the flow, re-reads the program; the
+      // schedule follows through its watch on it (SPEC-0061 §2.6).
+      ref.invalidate(currentProgramProvider);
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
       final msg = e.kind == ApiErrorKind.conflict
@@ -89,10 +100,12 @@ class _ProgramProposalsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar:
-          AppBar(title: Text(AppLocalizations.of(context).chooseYourProgram)),
-      body: _buildBody(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PanelPageHeader(title: AppLocalizations.of(context).chooseYourProgram),
+        Expanded(child: _buildBody()),
+      ],
     );
   }
 

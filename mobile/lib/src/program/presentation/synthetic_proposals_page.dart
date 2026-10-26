@@ -1,40 +1,46 @@
-// R-0030 — Proposals screen for the synthetic (no-photo) path.
-//
-// Receives pre-loaded proposals from [BodyTypePickerScreen] and calls
-// `POST /programs/synthetic` when the user chooses. Navigates to
-// `/programs/current` on success.
+// R-0030 — Proposals for the synthetic (no-photo) path.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/dates.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/panels/panel_page_header.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../models/synthetic_match.dart';
 import '../services/program_service.dart';
 
-class SyntheticProposalsScreen extends ConsumerStatefulWidget {
-  const SyntheticProposalsScreen({
+/// The last page of the Programa panel's flow (SPEC-0061 §2.6): the
+/// proposals [BodyTypePickerPage] got for [shape] and [fatBand]. Choosing
+/// one calls `POST /programs/synthetic` with today as `starts_on` and returns
+/// the flow to its first page.
+class SyntheticProposalsPage extends ConsumerStatefulWidget {
+  const SyntheticProposalsPage({
     super.key,
     required this.proposals,
     required this.shape,
     required this.fatBand,
   });
 
+  /// The proposals, ranked best first.
   final List<ProgramProposal> proposals;
+
+  /// The picker's shape, sent back with the chosen archetype.
   final BodyShape shape;
+
+  /// The picker's fat band, sent back with the chosen archetype.
   final FatBand fatBand;
 
   @override
-  ConsumerState<SyntheticProposalsScreen> createState() =>
-      _SyntheticProposalsScreenState();
+  ConsumerState<SyntheticProposalsPage> createState() =>
+      _SyntheticProposalsPageState();
 }
 
-class _SyntheticProposalsScreenState
-    extends ConsumerState<SyntheticProposalsScreen> {
+class _SyntheticProposalsPageState
+    extends ConsumerState<SyntheticProposalsPage> {
   int? _expandedIndex;
   int? _choosingIndex;
 
@@ -45,11 +51,13 @@ class _SyntheticProposalsScreenState
             proposal.archetypeId,
             widget.shape,
             widget.fatBand,
+            startsOn: dateOnly(DateTime.now()),
           );
       if (!mounted) return;
-      // Invalidate the current-program cache so the main screen picks it up.
+      // The detail page, first in the flow, re-reads the program; the
+      // schedule follows through its watch on it (SPEC-0061 §2.6).
       ref.invalidate(currentProgramProvider);
-      context.go('/programs/current');
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -61,26 +69,30 @@ class _SyntheticProposalsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar:
-          AppBar(title: Text(AppLocalizations.of(context).chooseYourProgram)),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: widget.proposals.length,
-        itemBuilder: (context, i) {
-          final p = widget.proposals[i];
-          return _ProposalCard(
-            proposal: p,
-            rank: i + 1,
-            expanded: _expandedIndex == i,
-            choosing: _choosingIndex == i,
-            onTap: () => setState(() {
-              _expandedIndex = _expandedIndex == i ? null : i;
-            }),
-            onChoose: () => _choose(i, p),
-          );
-        },
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PanelPageHeader(title: AppLocalizations.of(context).chooseYourProgram),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: widget.proposals.length,
+            itemBuilder: (context, i) {
+              final p = widget.proposals[i];
+              return _ProposalCard(
+                proposal: p,
+                rank: i + 1,
+                expanded: _expandedIndex == i,
+                choosing: _choosingIndex == i,
+                onTap: () => setState(() {
+                  _expandedIndex = _expandedIndex == i ? null : i;
+                }),
+                onChoose: () => _choose(i, p),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
