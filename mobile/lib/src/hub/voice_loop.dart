@@ -1,8 +1,9 @@
-// The hands-free wizard (R-0032): a conversation loop over the hub. The
-// sergeant prompts, listens, acts, and re-listens — meals log by voice alone,
-// "start workout" hands off to the [VoiceCoach]'s own hands-free loop, and
-// navigation is surfaced as a state effect the screen consumes (notifiers
-// hold no BuildContext).
+// The hands-free voice loop (R-0032; SPEC-0061 §2.8), the engine of the
+// Dictado sheet. It prompts, listens, acts, and re-listens — meals log by
+// voice alone, and anything that leaves the sheet is surfaced as a typed
+// [VoiceEffect] the screen performs once the sheet has closed (notifiers
+// hold no BuildContext). Every line is the client's own, in its language;
+// the server's wording never reaches the user (R-0061 AC11).
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,27 +14,29 @@ import '../nutrition/domain/preset_meals.dart';
 import '../nutrition/models/food_info.dart';
 import '../nutrition/services/nutrition_service.dart';
 import '../program/application/program_providers.dart';
-import '../workout/application/session_driver.dart';
-import '../workout/application/voice_coach.dart';
+import 'effect_lines.dart';
 import 'speech_input.dart';
+import 'voice_effect.dart';
 import 'voice_intent.dart';
 import 'voice_intent_service.dart';
 import 'voice_protocol.dart';
 import 'voice_output.dart';
 
-/// One bubble in the hub's chat thread.
+/// One bubble in the Dictado thread.
 typedef ChatTurn = ({bool fromUser, String text});
 
+/// What the Dictado sheet draws: the conversation and whether the loop is
+/// talking or listening.
 @immutable
-class SergeantState {
-  const SergeantState({
+class VoiceLoopState {
+  const VoiceLoopState({
     this.conversing = false,
     this.listening = false,
     this.transcript = '',
     this.line = '',
     this.history = const [],
     this.awaitingMacros = false,
-    this.navigateTo,
+    this.effect,
   });
 
   final bool conversing;
@@ -42,7 +45,7 @@ class SergeantState {
   /// The user's last (or in-flight) dictation.
   final String transcript;
 
-  /// The sergeant's last spoken line — also rendered in the hub pill.
+  /// The loop's last spoken line — also rendered in the idle pill.
   final String line;
 
   /// The conversation so far, oldest first (capped), for the chat thread.
@@ -51,40 +54,43 @@ class SergeantState {
   /// A meal was requested without macros; the next dictation answers them.
   final bool awaitingMacros;
 
-  /// Navigation effect for the screen to consume (notifiers have no context).
-  final String? navigateTo;
+  /// What the loop asks the screen to do; the sheet closes with it and the
+  /// screen performs it (notifiers have no context).
+  final VoiceEffect? effect;
 
-  SergeantState copyWith({
+  VoiceLoopState copyWith({
     bool? conversing,
     bool? listening,
     String? transcript,
     String? line,
     List<ChatTurn>? history,
     bool? awaitingMacros,
-    String? navigateTo,
-    bool clearNavigation = false,
+    VoiceEffect? effect,
+    bool clearEffect = false,
   }) =>
-      SergeantState(
+      VoiceLoopState(
         conversing: conversing ?? this.conversing,
         listening: listening ?? this.listening,
         transcript: transcript ?? this.transcript,
         line: line ?? this.line,
         history: history ?? this.history,
         awaitingMacros: awaitingMacros ?? this.awaitingMacros,
-        navigateTo: clearNavigation ? null : (navigateTo ?? this.navigateTo),
+        effect: clearEffect ? null : (effect ?? this.effect),
       );
 }
 
-final sergeantProvider =
-    NotifierProvider<Sergeant, SergeantState>(Sergeant.new);
+final voiceLoopProvider =
+    NotifierProvider<VoiceLoop, VoiceLoopState>(VoiceLoop.new);
 
-class Sergeant extends Notifier<SergeantState> {
+/// The conversation: [start] opens it, [stop] ends it, and the sheet
+/// consumes each [VoiceLoopState.effect] with [consumeEffect].
+class VoiceLoop extends Notifier<VoiceLoopState> {
   /// Fruitless rounds (silence or unknown) tolerated before standing by.
   static const _maxIdleRounds = 3;
   int _idleRounds = 0;
 
   @override
-  SergeantState build() => const SergeantState();
+  VoiceLoopState build() => const VoiceLoopState();
 
   /// The lines are spoken from here, outside the widget tree (R-0061 AC11).
   AppLocalizations get _l10n => ref.read(appLocalizationsProvider);
@@ -103,15 +109,20 @@ class Sergeant extends Notifier<SergeantState> {
     await _listenOnce();
   }
 
-  /// Ends the conversation and stops both audio directions.
+  /// Ends the conversation and clears the thread. The audio engines are
+  /// stopped only while they run: after an effect the loop has already said
+  /// its line and stopped listening, and a stop then could cut into what the
+  /// screen says next (the coach's first line).
   Future<void> stop() async {
-    await ref.read(speechInputProvider).stop();
-    await ref.read(voiceOutputProvider).stop();
-    state = const SergeantState();
+    if (state.conversing || state.listening) {
+      await ref.read(speechInputProvider).stop();
+      await ref.read(voiceOutputProvider).stop();
+    }
+    state = const VoiceLoopState();
   }
 
-  /// The screen calls this after performing [SergeantState.navigateTo].
-  void consumeNavigation() => state = state.copyWith(clearNavigation: true);
+  /// The sheet calls this as it closes with [VoiceLoopState.effect].
+  void consumeEffect() => state = state.copyWith(clearEffect: true);
 
   Future<void> _listenOnce() async {
     final speech = ref.read(speechInputProvider);
@@ -152,8 +163,7 @@ class Sergeant extends Notifier<SergeantState> {
   Future<bool> _handle(String transcript) async {
     if (isOut(transcript)) {
       await _say(_l10n.sergeantRogerOut);
-      state = state.copyWith(conversing: false);
-      return false;
+      return _emit(const Close());
     }
     if (state.awaitingMacros) return _handleMacros(transcript);
 
@@ -163,33 +173,31 @@ class Sergeant extends Notifier<SergeantState> {
           await ref.read(voiceIntentServiceProvider).parse(transcript);
       return _handleBackendResult(result);
     } catch (_) {
-      // Offline / upstream failure — local keyword parser keeps the hub usable.
+      // Offline / upstream failure — the local parser keeps the sheet usable.
     }
 
     return _handleLocal(transcript);
   }
 
+  /// The server's answer, acknowledged in the client's words: its `message`
+  /// and `prompt` are English prose and stay unspoken (SPEC-0061 §2.8).
   Future<bool> _handleBackendResult(VoiceIntentResult result) async {
     _idleRounds = 0;
     if (result.isLoggedNutrition || result.isLoggedWorkout) {
-      await _say(result.message ?? _l10n.sergeantLogged);
+      await _say(_l10n.sergeantLogged);
       return true;
     }
     if (result.isClarify) {
       state = state.copyWith(awaitingMacros: true);
-      await _say(result.prompt ?? _l10n.sergeantTellMeMore);
+      await _say(_l10n.sergeantAskMacros);
       return true;
     }
-    if (result.isNavigate && result.route != null) {
-      await _say(result.message ?? _l10n.sergeantRoger);
-      state = state.copyWith(conversing: false, navigateTo: result.route);
-      if (result.route == '/session') {
-        ref.read(sessionDriverProvider.notifier).start();
-        ref.read(voiceCoachProvider.notifier).enable();
-      }
-      return false;
+    final effect = result.effect;
+    if (effect != null) {
+      await _say(lineForEffect(effect, _l10n));
+      return _emit(effect);
     }
-    await _say(result.message ?? _l10n.sergeantDidNotCatch);
+    await _say(_l10n.sergeantDidNotCatch);
     return true;
   }
 
@@ -208,8 +216,7 @@ class Sergeant extends Notifier<SergeantState> {
     switch (parseVoiceIntent(transcript)) {
       case StopIntent():
         await _say(_l10n.sergeantStandingBy);
-        state = state.copyWith(conversing: false);
-        return false;
+        return _emit(const Close());
       case LogMealIntent(:final proteinG, :final carbsG, :final fatG):
         _idleRounds = 0;
         if (proteinG != null && carbsG != null && fatG != null) {
@@ -226,37 +233,25 @@ class Sergeant extends Notifier<SergeantState> {
         await _say(_l10n.sergeantAskMacros);
         return true;
       case LogWorkoutIntent():
+        // The screen seeds and starts the session, and hands it to the
+        // coach, once the sheet has closed (SPEC-0061 §2.8).
         await _say(_l10n.sergeantStartingSession);
-        ref.read(sessionDriverProvider.notifier).start();
-        state = state.copyWith(conversing: false, navigateTo: '/session');
-        // Fire-and-forget: the coach announces the plan; push-to-talk —
-        // the user keys the mic (later: earbud/watch button) per command.
-        ref.read(voiceCoachProvider.notifier).enable();
-        return false;
+        return _emit(const OpenFocusMode());
       case ShowProgramIntent():
-        final summary = await _programSummary();
-        if (summary != null) {
-          await _say(summary);
-          state = state.copyWith(
-              conversing: false, navigateTo: '/programs/current');
-        } else {
-          await _say(_l10n.sergeantNoPlanYet);
-          state =
-              state.copyWith(conversing: false, navigateTo: '/programs/get');
-        }
-        return false;
+        // With no plan yet, Programa opens on its choose flow.
+        await _say(await _programSummary() ?? _l10n.sergeantNoPlanYet);
+        return _emit(const OpenPanel(PanelKind.programa));
       case BodyMatchIntent():
+        // The body match lives inside Programa's choose flow.
         await _say(_l10n.sergeantOpeningBodyMatch);
-        state = state.copyWith(conversing: false, navigateTo: '/programs/get');
-        return false;
+        return _emit(const OpenPanel(PanelKind.programa));
       case ShowHistoryIntent():
+        // The calendar is the screen behind the sheet.
         await _say(_l10n.sergeantRecentActivity);
-        state = state.copyWith(conversing: false, navigateTo: '/home');
-        return false;
+        return _emit(const Close());
       case ShowProfileIntent():
         await _say(_l10n.sergeantOpeningProfile);
-        state = state.copyWith(conversing: false, navigateTo: '/onboarding');
-        return false;
+        return _emit(const OpenOnboarding());
       case UnknownIntent(:final transcript):
         _idleRounds += 1;
         if (_idleRounds >= _maxIdleRounds) {
@@ -356,7 +351,19 @@ class Sergeant extends Notifier<SergeantState> {
     }
   }
 
+  /// Ends the conversation with [effect] for the sheet to close with. A
+  /// conversation already stopped by hand emits nothing: the sheet is gone.
+  bool _emit(VoiceEffect effect) {
+    if (state.conversing) {
+      state = state.copyWith(conversing: false, effect: effect);
+    }
+    return false;
+  }
+
+  /// Speaks [line] and adds it to the thread, unless the conversation was
+  /// stopped by hand meanwhile.
   Future<void> _say(String line) async {
+    if (!state.conversing) return;
     state = state.copyWith(
         line: line, history: _appended(fromUser: false, text: line));
     await ref.read(voiceOutputProvider).speak(line);

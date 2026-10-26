@@ -60,3 +60,13 @@ DayAction primaryAction({
     _ => const NoAction(),
   };
 }
+
+/// The plan day *Empezar sesión* starts on [today], given its [state]
+/// (SPEC-0061 §2.8, "start workout" by voice): the planned day, or the day
+/// still pending behind a free workout; null when the session is free.
+int? startIndexToday(DayState state, {required DateTime today}) =>
+    switch (primaryAction(day: today, today: today, state: state)) {
+      StartSession(:final planDayIndex) => planDayIndex,
+      ViewLogWithPending(:final pending) => pending,
+      _ => null,
+    };

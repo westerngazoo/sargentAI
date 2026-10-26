@@ -8,7 +8,6 @@ import '../auth/presentation/forgot_password_screen.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
 import '../auth/presentation/reset_password_screen.dart';
-import '../hub/voice_hub_screen.dart';
 import '../profile/presentation/onboarding_screen.dart';
 import '../home/main_screen.dart';
 import '../shell/splash_screen.dart';
@@ -51,8 +50,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 loc == '/register' ||
                 loc == '/splash' ||
                 loc == '/forgot-password' ||
-                // The screens that became panels (SPEC-0061 §2.5): an old
-                // URL lands on the day.
+                // The screens that became panels, and the hub that became
+                // the Dictado sheet (SPEC-0061 §2.5, §2.8): an old URL lands
+                // on the day.
+                loc == '/hub' ||
                 loc == '/progress' ||
                 loc == '/programs/current' ||
                 loc == '/programs/get' ||
@@ -86,7 +87,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/session',
         builder: (_, __) => const LiveSessionScreen(),
       ),
-      GoRoute(path: '/hub', builder: (_, __) => const VoiceHubScreen()),
     ],
   );
 });

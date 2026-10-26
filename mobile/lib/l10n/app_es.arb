@@ -695,7 +695,7 @@
   "ttsRest": "Descansa.",
   "ttsWorkoutDone": "Entrenamiento terminado.",
   "ttsSeedFirstSet": "Registra tu primera serie en pantalla.",
-  "sergeantVoiceUnavailable": "Aquí no hay entrada de voz. Toca una opción.",
+  "sergeantVoiceUnavailable": "Aquí no hay entrada de voz.",
   "sergeantGreeting": "Aquí el sargento. Di: empezar entrenamiento, ver plan, registrar comida. Termina cada orden con cambio.",
   "sergeantRogerOut": "Recibido. Corto.",
   "sergeantLogged": "Registrado.",
@@ -709,6 +709,7 @@
   "sergeantOpeningBodyMatch": "Abriendo el tipo de cuerpo.",
   "sergeantRecentActivity": "Tu actividad reciente.",
   "sergeantOpeningProfile": "Abriendo tu perfil.",
+  "sergeantOpeningProgram": "Abriendo tu programa.",
   "sergeantSayOptions": "Di: empezar entrenamiento, ver plan o registrar comida.",
   "sergeantDidNotGet": "No entendí \"{transcript}\". Di empezar entrenamiento, ver plan o registrar comida.",
   "@sergeantDidNotGet": {
@@ -790,13 +791,8 @@
       }
     }
   },
-  "hubWorkout": "Entrenar",
-  "hubMeal": "Comida",
-  "hubProgram": "Programa",
-  "hubBodyMatch": "Tipo de cuerpo",
-  "hubHistory": "Historial",
-  "hubProfile": "Perfil",
   "hubIdleHint": "Toca el micrófono y habla. Termina cada orden con \"cambio\".",
+  "dictationTitle": "Dictado",
   "progress": "Progreso",
   "logMeasurement": "Registrar medida",
   "bodyComposition": "Composición corporal",
