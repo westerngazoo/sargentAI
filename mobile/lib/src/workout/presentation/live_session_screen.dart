@@ -44,8 +44,8 @@ class LiveSessionScreen extends ConsumerWidget {
 
     return PopScope(
       // Leaving with logged sets asks first; with none there is nothing to
-      // lose and back just leaves. The draft stays in memory either way,
-      // so an in-app return finds it (SAC4); only Discard drops it.
+      // lose and back just leaves. Nothing is dropped on the way out; only
+      // Discard calls abandon().
       canPop: !draft.hasSets,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;

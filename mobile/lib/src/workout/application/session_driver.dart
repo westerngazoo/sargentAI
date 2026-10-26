@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/dates.dart';
 import '../../core/network/api_exception.dart';
 import '../data/workout_repository.dart';
 import '../domain/draft_rejection.dart';
@@ -174,11 +175,7 @@ class SessionDriver extends Notifier<SessionDriverState> {
       await ref.read(workoutsProvider.future);
       state = SessionDriverState(
         done: true, // draft cleared
-        performedOn: DateTime(
-          performedOn.year,
-          performedOn.month,
-          performedOn.day,
-        ),
+        performedOn: dateOnly(performedOn),
         notice: notice,
       );
     } on ApiException catch (e) {
