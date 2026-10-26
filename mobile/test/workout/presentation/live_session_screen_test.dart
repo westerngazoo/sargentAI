@@ -177,7 +177,7 @@ void main() {
       when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
       when(() => tokenStore.clear()).thenAnswer((_) async {});
       when(() => authRepo.clear()).thenAnswer((_) async {});
-      when(() => authRepo.me()).thenAnswer((_) async => 'u-1');
+      when(() => authRepo.me()).thenAnswer((_) async => sampleMe());
       when(() => profileRepo.getMe()).thenAnswer((_) async => sampleProfile());
       when(() => programService.getCurrent()).thenAnswer((_) async => null);
       final container = ProviderContainer(

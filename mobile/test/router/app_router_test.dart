@@ -32,7 +32,7 @@ void main() {
     repo = MockAuthRepository();
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
-    when(() => repo.me()).thenAnswer((_) async => 'u-1');
+    when(() => repo.me()).thenAnswer((_) async => sampleMe());
   });
 
   Future<(ProviderContainer, GoRouter)> pumpApp(WidgetTester tester) async {
