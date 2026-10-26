@@ -145,6 +145,8 @@
   "today": "Today",
   "dayDoneHeadline": "You trained",
   "dayFreeHeadline": "Free session",
+  "dayRestHeadline": "Rest",
+  "pendingPlanDay": "Still pending: {focus}",
   "startSession": "Start session",
   "logLate": "Log late",
   "viewLogged": "See what you logged",

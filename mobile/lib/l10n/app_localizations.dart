@@ -968,6 +968,18 @@ abstract class AppLocalizations {
   /// **'Sesión libre'**
   String get dayFreeHeadline;
 
+  /// No description provided for @dayRestHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Descanso'**
+  String get dayRestHeadline;
+
+  /// Above today's secondary Empezar sesión when only a free workout was logged: the plan day still pending, named by its focus.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente del plan: {focus}'**
+  String pendingPlanDay(String focus);
+
   /// No description provided for @startSession.
   ///
   /// In es, this message translates to:

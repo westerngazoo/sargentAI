@@ -8,6 +8,7 @@
 import 'package:fitai/src/auth/application/auth_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/program/application/program_providers.dart';
+import 'package:fitai/src/program/application/schedule_provider.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/workouts_provider.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
@@ -79,6 +80,27 @@ void main() {
     container.read(userId.notifier).state = 'user-b';
     await container.read(profileProvider.future);
     verify(() => profileRepo.getMe()).called(1);
+  });
+
+  test('scheduleProvider refetches when the user changes', () async {
+    whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule());
+    final range = DateRange(DateTime(2026, 10, 1), DateTime(2026, 10, 31));
+    // A listener, as the screen is one: the schedule watches the workout
+    // list and the program, and re-reads on its own when they change.
+    final sub = container.listen(scheduleProvider(range), (_, __) {});
+    addTearDown(sub.close);
+    await container.read(scheduleProvider(range).future);
+    clearInteractions(programService);
+
+    container.read(userId.notifier).state = 'user-b';
+    await container.read(workoutsProvider.future);
+    await container.read(currentProgramProvider.future);
+    await container.read(scheduleProvider(range).future);
+    verify(() => programService.getSchedule(
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+          today: any(named: 'today'),
+        )).called(greaterThanOrEqualTo(1));
   });
 
   test('same user does NOT refetch (cache preserved)', () async {

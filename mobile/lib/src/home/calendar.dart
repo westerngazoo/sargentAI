@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../core/dates.dart';
 import '../core/theme/tokens.dart';
-import 'day_action.dart';
+import '../program/models/day_state.dart';
 
 /// The in-house calendar (R-0061 AC4, SPEC-0061 §2.5): a 7-column grid of
 /// [DayCell]s showing one state per day, with today marked and the selected
@@ -19,6 +20,7 @@ class CalendarView extends StatelessWidget {
     required this.stateOf,
     required this.onSelect,
     required this.onShift,
+    this.labelOf,
     this.onToggleMode,
   });
 
@@ -29,6 +31,10 @@ class CalendarView extends StatelessWidget {
   final DateTime today;
   final DateTime selected;
   final DayState Function(DateTime day) stateOf;
+
+  /// The name of a planned day (its focus, R-0061 AC4), or null when the day
+  /// has none; the cell carries it as a tooltip and in its semantics.
+  final String? Function(DateTime day)? labelOf;
   final ValueChanged<DateTime> onSelect;
 
   /// Move one week or one month: `-1` or `+1`.
@@ -103,6 +109,7 @@ class CalendarView extends StatelessWidget {
                 key: ValueKey('day-${dateOnly(day).toIso8601String()}'),
                 day: day,
                 state: stateOf(day),
+                label: labelOf?.call(day),
                 isToday: dateOnly(day) == dateOnly(today),
                 isSelected: dateOnly(day) == dateOnly(selected),
                 inMonth: mode == CalendarMode.week || day.month == anchor.month,
@@ -175,6 +182,7 @@ class DayCell extends StatelessWidget {
     super.key,
     required this.day,
     required this.state,
+    this.label,
     required this.isToday,
     required this.isSelected,
     required this.inMonth,
@@ -183,6 +191,11 @@ class DayCell extends StatelessWidget {
 
   final DateTime day;
   final DayState state;
+
+  /// The day's name, when the plan gives it one: "Piernas". Shown as a
+  /// tooltip on the mark and read with the date, never drawn in the cell,
+  /// which has no room for it on a phone.
+  final String? label;
   final bool isToday;
   final bool isSelected;
   final bool inMonth;
@@ -196,11 +209,13 @@ class DayCell extends StatelessWidget {
         : inMonth
             ? t.text
             : t.muted;
+    final date =
+        DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString())
+            .format(day);
     return Semantics(
       button: true,
       selected: isSelected,
-      label: DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString())
-          .format(day),
+      label: label == null ? date : '$date, $label',
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
@@ -224,7 +239,7 @@ class DayCell extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 3),
-              _Mark(state: state, color: fg),
+              _Mark(state: state, color: fg, label: label),
             ],
           ),
         ),
@@ -233,10 +248,14 @@ class DayCell extends StatelessWidget {
   }
 }
 
+/// The glyph of a state (SPEC-0061 §2.5): ● done, ○ planned with its name
+/// as a tooltip, — rest, and nothing for an empty day. Every mark is 7 px
+/// tall so the cells line up.
 class _Mark extends StatelessWidget {
-  const _Mark({required this.state, required this.color});
+  const _Mark({required this.state, required this.color, this.label});
   final DayState state;
   final Color color;
+  final String? label;
 
   @override
   Widget build(BuildContext context) => switch (state) {
@@ -246,6 +265,34 @@ class _Mark extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
+        PlannedDay() => _withTooltip(
+            Container(
+              key: const Key('mark-planned'),
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 1.5),
+              ),
+            ),
+          ),
+        RestDay() => SizedBox(
+            height: 7,
+            child: Center(
+              child: Container(
+                key: const Key('mark-rest'),
+                width: 8,
+                height: 2,
+                color: color,
+              ),
+            ),
+          ),
         NothingDay() => const SizedBox(height: 7),
+      };
+
+  /// The cell's semantics already read the name, so the tooltip adds none.
+  Widget _withTooltip(Widget mark) => switch (label) {
+        null => mark,
+        final l => Tooltip(message: l, excludeFromSemantics: true, child: mark),
       };
 }

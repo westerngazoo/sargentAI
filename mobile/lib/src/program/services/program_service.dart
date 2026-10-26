@@ -3,9 +3,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/dates.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/dio_provider.dart';
 import '../models/program_proposal.dart';
+import '../models/schedule.dart';
 import '../models/synthetic_match.dart';
 import '../models/user_program.dart';
 
@@ -83,6 +85,31 @@ class ProgramService {
         },
       );
       return UserProgram.fromJson(res.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// `GET /programs/me/schedule?from&to&today` → the projection over
+  /// `[from, to]` (SPEC-0061 §2.4). Dates travel as `YYYY-MM-DD`; [today] is
+  /// the client's local date. A range the server rejects (inverted, over 62
+  /// days, more than a year ahead) is a 422 and surfaces as an
+  /// [ApiException], like every other failure.
+  Future<Schedule> getSchedule({
+    required DateTime from,
+    required DateTime to,
+    required DateTime today,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/programs/me/schedule',
+        queryParameters: {
+          'from': isoDate(from),
+          'to': isoDate(to),
+          'today': isoDate(today),
+        },
+      );
+      return Schedule.fromJson(res.data!);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

@@ -499,6 +499,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dayFreeHeadline => 'Free session';
 
   @override
+  String get dayRestHeadline => 'Rest';
+
+  @override
+  String pendingPlanDay(String focus) {
+    return 'Still pending: $focus';
+  }
+
+  @override
   String get startSession => 'Start session';
 
   @override

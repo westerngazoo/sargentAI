@@ -1,7 +1,9 @@
-// R-0061 AC5 -> SPEC-0061 §2.5: the one primary action of the selected day,
-// as a pure function of (day vs today, state). Slice 1f knows two states.
+// R-0061 AC5 -> SPEC-0061 §3 (slice 2d): the one primary action of the
+// selected day, as a pure function of (day vs today, state), over every
+// (tense × state) pair. Every index comes from the server.
 
 import 'package:fitai/src/home/day_action.dart';
+import 'package:fitai/src/program/models/day_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -9,33 +11,74 @@ void main() {
   final yesterday = DateTime(2026, 10, 21);
   final tomorrow = DateTime(2026, 10, 23);
 
-  test('today with nothing logged starts a free session', () {
-    final a = primaryAction(
-        day: DateTime(2026, 10, 22), today: today, state: const NothingDay());
-    expect(a, isA<StartSession>());
-    expect((a as StartSession).planDayIndex, isNull);
+  DayAction act(DateTime day, DayState state) =>
+      primaryAction(day: day, today: today, state: state);
+
+  group('today', () {
+    final day = DateTime(2026, 10, 22);
+
+    test('planned: start that cycle day', () {
+      final a = act(day, const PlannedDay(3)) as StartSession;
+      expect(a.planDayIndex, 3);
+    });
+
+    test('rest: start a free session', () {
+      final a = act(day, const RestDay(1)) as StartSession;
+      expect(a.planDayIndex, isNull);
+    });
+
+    test('nothing (no program): start a free session', () {
+      final a = act(day, const NothingDay()) as StartSession;
+      expect(a.planDayIndex, isNull);
+    });
+
+    test('done with a plan session: see what was logged', () {
+      expect(act(day, const DoneDay(completed: [0])), isA<ViewLog>());
+    });
+
+    test(
+        'done with only a free workout: see the log, and the pending day '
+        'stays startable (N1)', () {
+      final a = act(day, const DoneDay(completed: [], pending: 2))
+          as ViewLogWithPending;
+      expect(a.pending, 2);
+    });
   });
 
-  test('a past day with nothing logged is logged late', () {
-    final a =
-        primaryAction(day: yesterday, today: today, state: const NothingDay());
-    expect(a, isA<LogLate>());
-  });
+  group('a past day', () {
+    test('nothing with a pending day: log it late with that index', () {
+      final a = act(yesterday, const NothingDay(pending: 1)) as LogLate;
+      expect(a.planDayIndex, 1);
+    });
 
-  test('a done day, whatever its tense, shows what was logged', () {
-    for (final d in [yesterday, today, tomorrow]) {
-      expect(primaryAction(day: d, today: today, state: const DoneDay()),
+    test('nothing before a later plan log: log a free session late (N2)', () {
+      final a = act(yesterday, const NothingDay()) as LogLate;
+      expect(a.planDayIndex, isNull);
+    });
+
+    test('done, with or without a pending index: see what was logged', () {
+      expect(act(yesterday, const DoneDay(completed: [0])), isA<ViewLog>());
+      expect(act(yesterday, const DoneDay(completed: [], pending: 1)),
           isA<ViewLog>());
-    }
+    });
+
+    test('planned or rest cannot be past; they offer nothing', () {
+      expect(act(yesterday, const PlannedDay(0)), isA<NoAction>());
+      expect(act(yesterday, const RestDay(0)), isA<NoAction>());
+    });
   });
 
-  test('a future day offers nothing', () {
-    expect(
-        primaryAction(day: tomorrow, today: today, state: const NothingDay()),
-        isA<NoAction>());
-  });
+  group('a future day', () {
+    test('planned, rest or nothing: its projection and no action', () {
+      expect(act(tomorrow, const PlannedDay(0)), isA<NoAction>());
+      expect(act(tomorrow, const RestDay(0)), isA<NoAction>());
+      expect(act(tomorrow, const NothingDay()), isA<NoAction>());
+    });
 
-  test('dateOnly drops the time of day', () {
-    expect(dateOnly(today), DateTime(2026, 10, 22));
+    test('done (a future-dated log): see what was logged', () {
+      expect(act(tomorrow, const DoneDay(completed: [])), isA<ViewLog>());
+      expect(act(tomorrow, const DoneDay(completed: [], pending: 0)),
+          isA<ViewLog>());
+    });
   });
 }

@@ -297,6 +297,16 @@
   "today": "Hoy",
   "dayDoneHeadline": "Entrenaste",
   "dayFreeHeadline": "Sesión libre",
+  "dayRestHeadline": "Descanso",
+  "pendingPlanDay": "Pendiente del plan: {focus}",
+  "@pendingPlanDay": {
+    "description": "Above today's secondary Empezar sesión when only a free workout was logged: the plan day still pending, named by its focus.",
+    "placeholders": {
+      "focus": {
+        "type": "String"
+      }
+    }
+  },
   "startSession": "Empezar sesión",
   "logLate": "Registrar tarde",
   "viewLogged": "Ver lo registrado",

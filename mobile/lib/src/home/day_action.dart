@@ -1,38 +1,33 @@
 /// What the selected day offers (R-0061 AC5), as a pure function of the day,
 /// today and the day's state. Every index it needs comes from the server, so
-/// the client never replays the plan (SPEC-0061 §2.5).
-///
-/// Slice 1f knows two states, from the logs alone: a day with sessions and a
-/// day without. Slice 2d adds the planned and rest states and the indices.
+/// the client never replays the plan (SPEC-0061 §2.5, §3).
 library;
 
-/// A calendar day's state as the client shows it.
-sealed class DayState {
-  const DayState();
-}
-
-/// At least one workout is logged that day.
-final class DoneDay extends DayState {
-  const DoneDay();
-}
-
-/// Nothing is logged that day, and no plan is projected onto it yet.
-final class NothingDay extends DayState {
-  const NothingDay();
-}
+import '../core/dates.dart';
+import '../program/models/day_state.dart';
 
 /// The one primary action of the selected day.
 sealed class DayAction {
   const DayAction();
 }
 
-/// Today: start a session. A null index starts a free session.
+/// Today: start a session. The cycle index of a planned day, or null for a
+/// free session (no program, or a rest day).
 final class StartSession extends DayAction {
   const StartSession(this.planDayIndex);
   final int? planDayIndex;
 }
 
-/// A past day with nothing logged: log it late.
+/// Today, with only a free workout logged: the primary action shows the
+/// log, and a secondary *Empezar sesión* starts the plan day still
+/// [pending] (SPEC-0061 §2.2, N1).
+final class ViewLogWithPending extends DayAction {
+  const ViewLogWithPending(this.pending);
+  final int pending;
+}
+
+/// A past day with nothing logged: log it late. The training day that log
+/// completes, or null for a free late log (N2).
 final class LogLate extends DayAction {
   const LogLate(this.planDayIndex);
   final int? planDayIndex;
@@ -48,9 +43,8 @@ final class NoAction extends DayAction {
   const NoAction();
 }
 
-/// Strips the time, so two `DateTime`s on the same calendar day compare equal.
-DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
+/// The primary action of [day] seen from [today], given its [state]. The
+/// time of day never matters.
 DayAction primaryAction({
   required DateTime day,
   required DateTime today,
@@ -58,9 +52,11 @@ DayAction primaryAction({
 }) {
   final cmp = dateOnly(day).compareTo(dateOnly(today));
   return switch ((cmp, state)) {
+    (0, DoneDay(pending: final p?)) => ViewLogWithPending(p),
     (_, DoneDay()) => const ViewLog(),
-    (0, NothingDay()) => const StartSession(null),
-    (< 0, NothingDay()) => const LogLate(null),
+    (0, PlannedDay(:final cycleIndex)) => StartSession(cycleIndex),
+    (0, _) => const StartSession(null),
+    (< 0, NothingDay(:final pending)) => LogLate(pending),
     _ => const NoAction(),
   };
 }
