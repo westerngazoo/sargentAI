@@ -6,8 +6,13 @@
 //
 // Pinned user-facing affordances (the contract the implementation renders):
 //   startWorkout (home), addExercise, add (sheet confirm), a repsLabel text
-//   field, logSet, repeatLastSet, finish, and the abandon dialog's cancel /
-//   discard — named by catalogue key (R-0061 AC11).
+//   field, logSet, repeatLastSet, finish, and the leave dialog's
+//   leaveWithoutSaving / cancel / discard — named by catalogue key (R-0061
+//   AC11).
+//
+// R-0061 AC10 -> SPEC-0061 §2.7 (slice 5): focus mode is pushed over the day
+// and pops itself when the driver reaches `done`, whichever way the session
+// was finished (button, voice, earbud); a seed pre-fills the exercises.
 //
 // Harness rules (the R-0007 lessons):
 //   * never `await Future.delayed` before a pump — timers run on the fake
@@ -32,6 +37,7 @@ import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/draft_rejection.dart';
+import 'package:fitai/src/workout/domain/plan_seed.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/application/draft_rejection_text.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
@@ -65,20 +71,25 @@ void main() {
     when(() => repo.list()).thenAnswer((_) async => []);
   });
 
+  /// The screen on top: a push keeps the base uri, so the last match says
+  /// where the user is.
   String locationOf(GoRouter r) =>
-      r.routerDelegate.currentConfiguration.uri.path;
+      r.routerDelegate.currentConfiguration.last.matchedLocation;
 
   SessionDriver driverOf(ProviderContainer c) =>
       c.read(sessionDriverProvider.notifier);
   SessionDriverState stateOf(ProviderContainer c) =>
       c.read(sessionDriverProvider);
 
-  // Hosts the LiveSessionScreen under a minimal router so navigation is
-  // observable; /home is a sentinel. `started` controls whether a session is
-  // in progress before the first pump (the null-draft case is OQ-F5).
+  // Hosts the LiveSessionScreen pushed over a /home sentinel, as the app
+  // does (SPEC-0061 §2.5), so a pop is observable. `started` controls whether
+  // a session is in progress before the first pump; [seed] starts a plan
+  // session; [transcripts] script the voice coach's dictations.
   Future<(ProviderContainer, GoRouter)> pumpSession(
     WidgetTester tester, {
     bool started = true,
+    PlanSeed? seed,
+    List<String> transcripts = const [],
   }) async {
     final programService = MockProgramService();
     when(() => programService.getCurrent()).thenAnswer((_) async => null);
@@ -86,16 +97,16 @@ void main() {
       overrides: [
         workoutRepositoryProvider.overrideWithValue(repo),
         programServiceProvider.overrideWithValue(programService),
-        speechInputProvider.overrideWithValue(ScriptedSpeechInput([])),
+        speechInputProvider.overrideWithValue(ScriptedSpeechInput(transcripts)),
         voiceOutputProvider.overrideWithValue(RecordingVoiceOutput()),
         l10nOverride,
       ],
     );
     addTearDown(container.dispose);
-    if (started) driverOf(container).start();
+    if (started) driverOf(container).start(seed: seed);
 
     final router = GoRouter(
-      initialLocation: '/session',
+      initialLocation: '/home',
       routes: [
         GoRoute(
           path: '/session',
@@ -114,7 +125,8 @@ void main() {
         child: localizedRouterApp(router),
       ),
     );
-    await tester.pump();
+    router.push('/session');
+    await tester.pumpAndSettle(); // the push transition
     return (container, router);
   }
 
@@ -130,12 +142,29 @@ void main() {
       expect(find.byIcon(Icons.edit_calendar), findsNothing);
     });
 
-    testWidgets('/session with no draft immediately redirects home (OQ-F5)',
-        (tester) async {
-      final (_, router) = await pumpSession(tester, started: false);
+    testWidgets(
+        '/session with no draft renders nothing and throws nothing (the '
+        'router redirects a cold start, SPEC-0061 §2.5)', (tester) async {
+      await pumpSession(tester, started: false);
       await tester.pump();
 
-      expect(locationOf(router), '/home');
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.finish), findsNothing);
+    });
+
+    testWidgets('a PlanSeed pre-fills the plan day\'s exercises (AC10)',
+        (tester) async {
+      await pumpSession(
+        tester,
+        seed: const PlanSeed(
+          userProgramId: 'prog-1',
+          index: 1,
+          exercises: ['Back Squat', 'Leg Press'],
+        ),
+      );
+
+      expect(find.textContaining('Back Squat'), findsWidgets);
+      expect(find.textContaining('Leg Press'), findsWidgets);
     });
 
     testWidgets(
@@ -432,17 +461,21 @@ void main() {
     });
   });
 
-  group('SAC7 abandon asks for confirmation', () {
-    testWidgets('back with a draft asks; Cancel keeps the draft and stays',
-        (tester) async {
+  group('SAC7 / AC10 leaving with unsaved sets asks for confirmation', () {
+    testWidgets(
+        'back with logged sets asks "Salir sin guardar"; Cancel keeps the '
+        'draft and stays', (tester) async {
       final (container, router) = await pumpSession(tester);
-      driverOf(container).addExercise('Bench press');
+      driverOf(container)
+        ..addExercise('Bench press')
+        ..logSet(const SetDraft(reps: 8));
       await tester.pump();
 
       await tester.binding.handlePopRoute();
       await tester.pump();
-      expect(find.text(l10n.cancel), findsOneWidget,
+      expect(find.text(l10n.leaveWithoutSaving), findsOneWidget,
           reason: 'a confirm dialog intercepts the pop');
+      expect(find.text(l10n.cancel), findsOneWidget);
 
       await tester.tap(find.text(l10n.cancel));
       await tester.pump();
@@ -470,6 +503,86 @@ void main() {
       expect(stateOf(container).draft, isNull);
       expect(locationOf(router), '/home');
       verifyNever(() => repo.create(any()));
+    });
+
+    testWidgets('back with no logged set leaves at once, nothing to lose',
+        (tester) async {
+      final (container, router) = await pumpSession(tester);
+      driverOf(container).addExercise('Bench press'); // no sets
+      await tester.pump();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.leaveWithoutSaving), findsNothing);
+      expect(locationOf(router), '/home');
+      expect(stateOf(container).draft, isNotNull,
+          reason: 'nothing dropped: the draft survives in-app navigation');
+      verifyNever(() => repo.create(any()));
+    });
+  });
+
+  group('AC10 every way to finish goes through done and pops', () {
+    testWidgets('the Finish button pops back to the day', (tester) async {
+      when(() => repo.create(any())).thenAnswer((_) async => sampleSession());
+      when(() => repo.list()).thenAnswer((_) async => [sampleSession()]);
+      final (container, router) = await pumpSession(tester);
+      driverOf(container)
+        ..addExercise('Bench press')
+        ..logSet(const SetDraft(reps: 8));
+      await tester.pump();
+
+      await tester.tap(find.text(l10n.finish).first);
+      await tester.pumpAndSettle();
+
+      expect(stateOf(container).done, isTrue);
+      expect(locationOf(router), '/home');
+      expect(find.byType(LiveSessionScreen), findsNothing);
+    });
+
+    testWidgets('"finish workout" by voice pops back to the day',
+        (tester) async {
+      when(() => repo.create(any())).thenAnswer((_) async => sampleSession());
+      when(() => repo.list()).thenAnswer((_) async => [sampleSession()]);
+      final (container, router) =
+          await pumpSession(tester, transcripts: ['finish workout']);
+      driverOf(container)
+        ..addExercise('Bench press')
+        ..logSet(const SetDraft(reps: 8));
+      await tester.pump();
+
+      final coach = container.read(voiceCoachProvider.notifier);
+      await coach.enable();
+      await tester.pump();
+      await coach.dictate();
+      await tester.pumpAndSettle();
+
+      expect(stateOf(container).done, isTrue);
+      verify(() => repo.create(any())).called(1);
+      expect(locationOf(router), '/home');
+      expect(find.byType(LiveSessionScreen), findsNothing);
+    });
+
+    testWidgets('the earbud\'s finish() pops back to the day (R-0035)',
+        (tester) async {
+      when(() => repo.create(any())).thenAnswer((_) async => sampleSession());
+      when(() => repo.list()).thenAnswer((_) async => [sampleSession()]);
+      final (container, router) = await pumpSession(tester);
+      // Three sets on the last exercise: the next media press finishes.
+      driverOf(container)
+        ..addExercise('Bench press')
+        ..logSet(const SetDraft(reps: 8))
+        ..logSet(const SetDraft(reps: 8))
+        ..logSet(const SetDraft(reps: 8));
+      await tester.pump();
+
+      container.read(earbudCoachProvider).handleMediaButton();
+      await tester.pumpAndSettle();
+
+      expect(stateOf(container).done, isTrue);
+      verify(() => repo.create(any())).called(1);
+      expect(locationOf(router), '/home');
+      expect(find.byType(LiveSessionScreen), findsNothing);
     });
   });
 

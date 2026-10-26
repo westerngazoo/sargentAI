@@ -33,6 +33,8 @@ import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/domain/draft_rejection.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
+import 'package:fitai/src/workout/domain/plan_seed.dart';
+import 'package:fitai/src/workout/domain/save_notice.dart';
 import 'package:fitai/src/workout/domain/session_draft.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
@@ -533,6 +535,247 @@ void main() {
             reason: line);
         expect(line, isNot(contains('presentation/')), reason: line);
       }
+    });
+  });
+
+  // SPEC-0061 §2.7 (slice 5): a plan session starts from a PlanSeed the
+  // caller built; the driver never reads the schedule (N12).
+  const seed = PlanSeed(
+    userProgramId: 'prog-1',
+    index: 1,
+    exercises: ['Back Squat', 'Leg Press'],
+  );
+
+  /// Logs one set on every seeded exercise, so the session is finishable.
+  void logEverySeededSet(SessionDriver d) {
+    d.selectExercise(0);
+    d.logSet(const SetDraft(reps: 5));
+    d.selectExercise(1);
+    d.logSet(const SetDraft(reps: 10));
+  }
+
+  /// Rejects the plan link with [e] and accepts the free retry.
+  void stubPlanRejected(ApiException e) {
+    when(() => repo.create(any())).thenAnswer((inv) async {
+      final req = inv.positionalArguments.single as SessionRequest;
+      if (req.toJson().containsKey('user_program_id')) throw e;
+      return sampleSession();
+    });
+    when(() => repo.list()).thenAnswer((_) async => [sampleSession()]);
+  }
+
+  group('SPEC-0061 §2.7 start with a PlanSeed', () {
+    test('the seed pre-fills the exercises by name, with no sets', () {
+      final c = makeContainer();
+      driverOf(c).start(seed: seed);
+      final s = stateOf(c);
+      expect(
+          s.draft!.exercises.map((e) => e.name), ['Back Squat', 'Leg Press']);
+      expect(s.draft!.exercises.every((e) => e.sets.isEmpty), isTrue,
+          reason: 'the plan names the lifts; the user logs the sets');
+      expect(s.currentExercise, 0);
+      expect(s.canFinish, isFalse);
+      expect(s.seed, seed);
+    });
+
+    test('a seeded exercise takes its group from the preset catalogue', () {
+      final c = makeContainer();
+      driverOf(c).start(seed: seed);
+      final exercises = stateOf(c).draft!.exercises;
+      expect(exercises[1].muscleGroup, MuscleGroup.legs,
+          reason: 'Leg Press is a preset, so per-muscle volume sees it');
+      expect(exercises[0].muscleGroup, isNull,
+          reason: 'Back Squat is not a preset: no group is invented');
+    });
+
+    test('without a seed the session is free, as before', () {
+      final c = makeContainer();
+      driverOf(c).start();
+      expect(stateOf(c).draft!.exercises, isEmpty);
+      expect(stateOf(c).seed, isNull);
+    });
+
+    test('abandon() drops the seed with the draft', () {
+      final c = makeContainer();
+      driverOf(c).start(seed: seed);
+      driverOf(c).abandon();
+      expect(stateOf(c).seed, isNull);
+    });
+  });
+
+  group('SPEC-0061 §2.4 finish sends the plan link, both fields or neither',
+      () {
+    test('a seeded session sends user_program_id and plan_day_index', () async {
+      stubHappyNetwork();
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start(seed: seed);
+      logEverySeededSet(d);
+
+      await d.finish();
+
+      final req = verify(() => repo.create(captureAny())).captured.single
+          as SessionRequest;
+      final json = req.toJson();
+      expect(json['user_program_id'], 'prog-1');
+      expect(json['plan_day_index'], 1);
+      expect(stateOf(c).done, isTrue);
+      expect(stateOf(c).notice, isNull);
+    });
+
+    test('a free session sends neither field', () async {
+      stubHappyNetwork();
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start();
+      d.addExercise('Squat');
+      d.logSet(const SetDraft(reps: 5));
+
+      await d.finish();
+
+      final req = verify(() => repo.create(captureAny())).captured.single
+          as SessionRequest;
+      expect(req.toJson().containsKey('user_program_id'), isFalse);
+      expect(req.toJson().containsKey('plan_day_index'), isFalse);
+    });
+  });
+
+  group('SPEC-0061 §2.4 a refused plan link saves the session as free', () {
+    const programNotCurrent = ApiException(ApiErrorKind.conflict,
+        statusCode: 409, reason: 'program_not_current');
+    const planUnavailable = ApiException(ApiErrorKind.unknown,
+        statusCode: 422, reason: 'plan_unavailable');
+
+    for (final (name, rejection, notice) in [
+      (
+        '409 program_not_current',
+        programNotCurrent,
+        SaveNotice.programNotCurrent
+      ),
+      ('422 plan_unavailable', planUnavailable, SaveNotice.planUnavailable),
+    ]) {
+      test('a $name retries as free, finishes done, and notes why', () async {
+        stubPlanRejected(rejection);
+        final c = makeContainer();
+        final d = driverOf(c);
+        d.start(seed: seed);
+        logEverySeededSet(d);
+
+        await d.finish();
+
+        final sent = verify(() => repo.create(captureAny()))
+            .captured
+            .cast<SessionRequest>();
+        expect(sent, hasLength(2));
+        expect(sent[0].toJson()['user_program_id'], 'prog-1');
+        expect(sent[1].toJson().containsKey('user_program_id'), isFalse);
+        expect(sent[1].toJson().containsKey('plan_day_index'), isFalse);
+        expect(
+          jsonEncode(sent[1].toJson()['exercises']),
+          jsonEncode(sent[0].toJson()['exercises']),
+          reason: 'the same logged content, only the link dropped',
+        );
+        expect(
+            sent[1].toJson()['performed_on'], sent[0].toJson()['performed_on']);
+        final s = stateOf(c);
+        expect(s.done, isTrue, reason: 'a finished session is never lost');
+        expect(s.draft, isNull);
+        expect(s.error, isNull);
+        expect(s.notice, notice);
+      });
+    }
+
+    test('any other failure stays as today: no retry, the draft intact',
+        () async {
+      when(() => repo.create(any())).thenThrow(const ApiException(
+          ApiErrorKind.conflict,
+          statusCode: 409,
+          reason: 'already_exists'));
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start(seed: seed);
+      logEverySeededSet(d);
+
+      await d.finish();
+
+      verify(() => repo.create(any())).called(1);
+      final s = stateOf(c);
+      expect(s.done, isFalse);
+      expect(s.notice, isNull);
+      expect(s.error?.statusCode, 409);
+      expect(s.draft, isNotNull);
+    });
+
+    test('a free session is never retried', () async {
+      when(() => repo.create(any())).thenThrow(programNotCurrent);
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start();
+      d.addExercise('Squat');
+      d.logSet(const SetDraft(reps: 5));
+
+      await d.finish();
+
+      verify(() => repo.create(any())).called(1);
+      expect(stateOf(c).done, isFalse);
+      expect(stateOf(c).error, programNotCurrent);
+    });
+
+    test('a failed free retry surfaces that failure, the draft intact',
+        () async {
+      var calls = 0;
+      when(() => repo.create(any())).thenAnswer((_) async {
+        calls += 1;
+        throw calls == 1
+            ? programNotCurrent
+            : const ApiException(ApiErrorKind.transport);
+      });
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start(seed: seed);
+      logEverySeededSet(d);
+
+      await d.finish();
+
+      expect(calls, 2);
+      final s = stateOf(c);
+      expect(s.done, isFalse);
+      expect(s.error?.kind, ApiErrorKind.transport);
+      expect(s.draft, isNotNull);
+      expect(s.seed, seed, reason: 'a retry by hand sends the link again');
+    });
+  });
+
+  group('SPEC-0061 §2.7 the done state names the day', () {
+    test('a late log is done on its day', () async {
+      stubHappyNetwork();
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start(performedOn: DateTime(2026, 6, 1));
+      d.addExercise('Squat');
+      d.logSet(const SetDraft(reps: 5));
+
+      await d.finish();
+
+      expect(stateOf(c).done, isTrue);
+      expect(stateOf(c).performedOn, DateTime(2026, 6, 1));
+    });
+
+    test('a session started today is done on today', () async {
+      stubHappyNetwork();
+      final c = makeContainer();
+      final d = driverOf(c);
+      d.start();
+      d.addExercise('Squat');
+      d.logSet(const SetDraft(reps: 5));
+
+      final before = DateTime.now();
+      await d.finish();
+      final after = DateTime.now();
+
+      final on = stateOf(c).performedOn!;
+      expect([isoDate(before), isoDate(after)], contains(isoDate(on)));
+      expect(on, DateTime(on.year, on.month, on.day), reason: 'date only');
     });
   });
 }

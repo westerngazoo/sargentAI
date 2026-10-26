@@ -165,6 +165,14 @@
   "apiErrorNotFound": "that no longer exists",
   "apiErrorConflict": "that already exists",
   "apiErrorUnknown": "something went wrong — please try again",
+  "noticeProgramNotCurrent": "Your program changed. The session was saved as a free workout.",
+  "@noticeProgramNotCurrent": {
+    "description": "Snackbar after a 409 program_not_current on save: the session was kept as a free workout (SPEC-0061 §2.4)."
+  },
+  "noticePlanUnavailable": "Your plan is unavailable. The session was saved as a free workout.",
+  "@noticePlanUnavailable": {
+    "description": "Snackbar after a 422 plan_unavailable on save: the session was kept as a free workout (SPEC-0061 §2.4)."
+  },
   "regionNeck": "Neck",
   "regionTraps": "Traps",
   "regionShoulders": "Shoulders",
@@ -255,7 +263,10 @@
       }
     }
   },
-  "discardThisWorkout": "Discard this workout?",
+  "leaveWithoutSaving": "Leave without saving",
+  "@leaveWithoutSaving": {
+    "description": "Title of the confirm dialog when leaving focus mode with logged sets (SPEC-0061 §2.7)."
+  },
   "yourLoggedSetsWillBeLost": "Your logged sets will be lost.",
   "cancel": "Cancel",
   "discard": "Discard",

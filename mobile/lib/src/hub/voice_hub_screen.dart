@@ -53,8 +53,13 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
 
   void _startWorkout() {
     ref.read(sessionDriverProvider.notifier).start();
-    context.go('/session');
+    _navigate('/session');
   }
+
+  /// Focus mode is pushed, so finishing pops back (SPEC-0061 §2.7); the
+  /// other targets replace the hub until slice 3 turns it into a panel.
+  void _navigate(String target) =>
+      target == '/session' ? context.push(target) : context.go(target);
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +70,7 @@ class _VoiceHubScreenState extends ConsumerState<VoiceHubScreen>
       if (next.navigateTo != null) {
         final target = next.navigateTo!;
         ref.read(sergeantProvider.notifier).consumeNavigation();
-        context.go(target);
+        _navigate(target);
       }
       if ((prev?.listening ?? false) != next.listening) {
         next.listening ? _pulse.repeat() : _pulse.stop();

@@ -35,9 +35,12 @@ enum ApiErrorKind {
 ///   (diagnostics only: `kind` drives every decision);
 /// * [field] names the offending request field when the backend reports one —
 ///   read from the backend's **flat** body `{"error":"<kind>","field":"<name>"}`
-///   (`backend/crates/api/src/error.rs`, SPEC-0008 §2.7).
+///   (`backend/crates/api/src/error.rs`, SPEC-0008 §2.7);
+/// * [reason] is the fixed token a 409 or 422 carries beside the kind
+///   (`{"error":"conflict","reason":"program_not_current"}`), for the few
+///   callers that act on one (SPEC-0061 §2.4).
 class ApiException implements Exception {
-  const ApiException(this.kind, {this.statusCode, this.field});
+  const ApiException(this.kind, {this.statusCode, this.field, this.reason});
 
   /// Translate a [DioException] into the user-safe shape. The single
   /// error-parsing authority shared by every data-layer client (auth, profile,
@@ -49,16 +52,19 @@ class ApiException implements Exception {
     if (response == null) return const ApiException(ApiErrorKind.transport);
     final data = response.data;
     final field = data is Map ? data['field'] as String? : null;
+    final reason = data is Map ? data['reason'] as String? : null;
     return ApiException(
       _kindOf(response.statusCode),
       statusCode: response.statusCode,
       field: field,
+      reason: reason,
     );
   }
 
   final ApiErrorKind kind;
   final int? statusCode;
   final String? field;
+  final String? reason;
 
   /// The same codes are raised by every endpoint, so the kinds are generic;
   /// anything endpoint-specific is the screen's call (register's 409 reads
@@ -72,5 +78,5 @@ class ApiException implements Exception {
       };
 
   @override
-  String toString() => 'ApiException($kind, $statusCode, $field)';
+  String toString() => 'ApiException($kind, $statusCode, $field, $reason)';
 }
