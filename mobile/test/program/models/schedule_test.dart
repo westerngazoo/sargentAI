@@ -80,6 +80,18 @@ void main() {
       expect(s.trainingDay(7), isNull, reason: 'out of range');
       expect(s.trainingDay(-1), isNull);
     });
+
+    test('planSeed seeds a session from a training day, or nothing (§2.7)', () {
+      final s = sampleSchedule(); // prog-uuid-001, [chest+arms, legs, rest]
+      final seed = s.planSeed(1);
+      expect(seed?.userProgramId, 'prog-uuid-001');
+      expect(seed?.index, 1);
+      expect(seed?.exercises, ['Back Squat', 'Leg Press']);
+      expect(s.planSeed(2), isNull, reason: 'a rest day seeds nothing');
+      expect(s.planSeed(7), isNull, reason: 'out of range');
+      expect(sampleSchedule(programId: null).planSeed(0), isNull,
+          reason: 'no program, no plan session');
+    });
   });
 
   group('DayState.fromJson', () {

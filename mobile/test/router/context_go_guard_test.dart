@@ -3,9 +3,9 @@
 // screens before sign-in and onboarding it is a trap. A source scan fails on
 // any other call site.
 //
-// The allowlist of folders that still use it shrinks with slices 3 and 5
-// (panels and focus mode); a folder that no longer calls it must be removed,
-// or the second test fails.
+// The allowlist of folders that still use it shrinks with slice 3 (panels);
+// slice 5 took focus mode off it. A folder that no longer calls it must be
+// removed, or the second test fails.
 
 import 'dart:io';
 
@@ -18,8 +18,8 @@ const allowed = <String>{
   'lib/src/profile/presentation/onboarding_screen.dart',
 };
 
-/// Feature folders slices 3 and 5 have not migrated to push/pop/showPanel.
-const notYetMigrated = <String>{'hub', 'program', 'measurements', 'workout'};
+/// Feature folders slice 3 has not migrated to push/pop/showPanel.
+const notYetMigrated = <String>{'hub', 'program', 'measurements'};
 
 String _folderOf(String path) {
   final parts = path.split('/');

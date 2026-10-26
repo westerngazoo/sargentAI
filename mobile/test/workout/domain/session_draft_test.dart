@@ -13,6 +13,7 @@
 
 import 'package:fitai/src/workout/domain/exercise_draft.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
+import 'package:fitai/src/workout/domain/plan_seed.dart';
 import 'package:fitai/src/workout/domain/session_draft.dart';
 import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +101,36 @@ void main() {
       ]);
       final json = draft.toRequest(DateTime(2026, 1, 5))!.toJson();
       expect(json['performed_on'], '2026-01-05');
+    });
+  });
+
+  group('SPEC-0061 §2.4 the plan link — both fields or neither', () {
+    final finishable = SessionDraft(exercises: [
+      ExerciseDraft(name: 'Squat', sets: const [SetDraft(reps: 5)]),
+    ]);
+    const seed =
+        PlanSeed(userProgramId: 'prog-1', index: 1, exercises: ['Squat']);
+
+    test('a seeded request carries user_program_id and plan_day_index', () {
+      final json =
+          finishable.toRequest(DateTime(2026, 6, 10), plan: seed)!.toJson();
+      expect(json['user_program_id'], 'prog-1');
+      expect(json['plan_day_index'], 1);
+    });
+
+    test('a free request has neither key (existing clients unchanged)', () {
+      final json = finishable.toRequest(DateTime(2026, 6, 10))!.toJson();
+      expect(json.containsKey('user_program_id'), isFalse);
+      expect(json.containsKey('plan_day_index'), isFalse);
+    });
+
+    test('asFree drops the link and keeps everything else', () {
+      final req = finishable.toRequest(DateTime(2026, 6, 10), plan: seed)!;
+      final free = req.asFree().toJson();
+      expect(free.containsKey('user_program_id'), isFalse);
+      expect(free.containsKey('plan_day_index'), isFalse);
+      expect(free['performed_on'], '2026-06-10');
+      expect(free['exercises'], req.toJson()['exercises']);
     });
   });
 }

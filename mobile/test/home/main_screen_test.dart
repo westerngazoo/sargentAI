@@ -3,6 +3,11 @@
 // the schedule loads or fails), the selected day's one action and its
 // secondary one, the few controls, the liveness probe and the onboarding
 // prompt that moved here from HomeShell, and the two sizes.
+//
+// R-0061 AC10 -> SPEC-0061 §2.7 (slice 5): the screen builds the PlanSeed
+// from the schedule it holds and pushes focus mode; a finished session
+// selects its day, re-reads the schedule, and a session saved as free says
+// so.
 
 import 'dart:async';
 
@@ -19,6 +24,9 @@ import 'package:fitai/src/program/models/schedule.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
+import 'package:fitai/src/workout/domain/plan_seed.dart';
+import 'package:fitai/src/workout/domain/session_draft.dart';
+import 'package:fitai/src/workout/domain/set_draft.dart';
 import 'package:fitai/src/workout/domain/workout_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -357,6 +365,8 @@ void main() {
       await tester.tap(find.byKey(const Key('primary-action')));
       await tester.pumpAndSettle();
       expect(container.read(sessionDriverProvider).performedOn, twoDaysAgo);
+      expect(container.read(sessionDriverProvider).seed, isNull,
+          reason: 'the server offered no pending day: a free late log');
     });
 
     testWidgets('today\'s session carries no date: finish logs today',
@@ -498,6 +508,157 @@ void main() {
             expect(r.width, lessThanOrEqualTo(size.width));
           }
         }
+      });
+    }
+  });
+
+  group('AC10 focus mode', () {
+    final twoDaysAgo = DateTime(today.year, today.month, today.day - 2);
+
+    PlanSeed? seedOf(ProviderContainer c) => c.read(sessionDriverProvider).seed;
+
+    testWidgets('Empezar sesión seeds today\'s plan day and pushes focus mode',
+        (tester) async {
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+      final seed = seedOf(container);
+      expect(seed?.userProgramId, 'prog-uuid-001');
+      expect(seed?.index, 1);
+      expect(seed?.exercises, ['Back Squat', 'Leg Press']);
+      expect(
+        container
+            .read(sessionDriverProvider)
+            .draft!
+            .exercises
+            .map((e) => e.name),
+        ['Back Squat', 'Leg Press'],
+      );
+    });
+
+    testWidgets('the secondary Empezar sesión seeds the pending day (N1)',
+        (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [
+              dayJson(isoDate(today), state: 'done', completed: [], pending: 0),
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('secondary-action')));
+      await tester.pumpAndSettle();
+
+      expect(seedOf(container)?.index, 0);
+      expect(seedOf(container)?.exercises, ['Bench Press', 'Barbell Curl']);
+      expect(container.read(sessionDriverProvider).performedOn, isNull);
+    });
+
+    testWidgets(
+        'Registrar tarde seeds that day\'s pending training day, dated '
+        'that day', (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [
+              dayJson(isoDate(twoDaysAgo), state: 'nothing', pending: 0),
+              dayJson(isoDate(today), state: 'planned', cycleIndex: 1),
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      container.read(selectedDayProvider.notifier).state = twoDaysAgo;
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+      expect(container.read(sessionDriverProvider).performedOn, twoDaysAgo);
+      expect(seedOf(container)?.index, 0);
+      expect(seedOf(container)?.exercises, ['Bench Press', 'Barbell Curl']);
+    });
+
+    testWidgets('with no program the session is free', (tester) async {
+      whenGetSchedule(programService)
+          .thenAnswer((_) async => sampleSchedule(programId: null));
+      final (container, _) = await pumpMain(tester);
+      await tester.tap(find.byKey(const Key('primary-action')));
+      await tester.pumpAndSettle();
+
+      expect(seedOf(container), isNull);
+      expect(container.read(sessionDriverProvider).draft!.exercises, isEmpty);
+    });
+
+    testWidgets(
+        'a finished session selects its day, shown as done, and the '
+        'schedule is re-read', (tester) async {
+      when(() => workoutRepo.create(any()))
+          .thenAnswer((_) async => sampleSession());
+      final (container, _) = await pumpMain(tester);
+      when(() => workoutRepo.list())
+          .thenAnswer((_) async => [session(doneDay), session(twoDaysAgo)]);
+      clearInteractions(programService);
+
+      final driver = container.read(sessionDriverProvider.notifier);
+      driver
+        ..start(performedOn: twoDaysAgo)
+        ..addExercise('Squat')
+        ..logSet(const SetDraft(reps: 5));
+      await driver.finish();
+      await tester.pumpAndSettle();
+
+      expect(container.read(selectedDayProvider), twoDaysAgo);
+      expect(find.text(l10n.dayDoneHeadline), findsOneWidget);
+      expect(find.text(l10n.viewLogged), findsOneWidget);
+      verify(() => programService.getSchedule(
+            from: any(named: 'from'),
+            to: any(named: 'to'),
+            today: any(named: 'today'),
+          )).called(1);
+    });
+
+    for (final (name, status, reason, notice) in [
+      (
+        '409 program_not_current',
+        409,
+        'program_not_current',
+        l10n.noticeProgramNotCurrent
+      ),
+      (
+        '422 plan_unavailable',
+        422,
+        'plan_unavailable',
+        l10n.noticePlanUnavailable
+      ),
+    ]) {
+      testWidgets('a $name saves the session as free and shows the notice',
+          (tester) async {
+        when(() => workoutRepo.create(any())).thenAnswer((inv) async {
+          final req = inv.positionalArguments.single as SessionRequest;
+          if (req.toJson().containsKey('user_program_id')) {
+            throw ApiException(ApiErrorKind.unknown,
+                statusCode: status, reason: reason);
+          }
+          return sampleSession();
+        });
+        final (container, _) = await pumpMain(tester);
+        await tester.tap(find.byKey(const Key('primary-action')));
+        await tester.pumpAndSettle();
+
+        final driver = container.read(sessionDriverProvider.notifier);
+        driver
+          ..selectExercise(0)
+          ..logSet(const SetDraft(reps: 5))
+          ..selectExercise(1)
+          ..logSet(const SetDraft(reps: 5));
+        await driver.finish();
+        await tester.pump();
+
+        expect(container.read(sessionDriverProvider).done, isTrue);
+        expect(find.text(notice), findsOneWidget);
+        final sent = verify(() => workoutRepo.create(captureAny()))
+            .captured
+            .cast<SessionRequest>();
+        expect(sent, hasLength(2));
+        expect(sent.last.toJson().containsKey('user_program_id'), isFalse);
       });
     }
   });

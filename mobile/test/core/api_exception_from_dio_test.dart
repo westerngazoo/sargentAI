@@ -61,6 +61,16 @@ void main() {
       );
     });
 
+    test('a 409/422 reason token is read from the flat body (SPEC-0061 §2.4)',
+        () {
+      final e = ApiException.fromDio(
+        dioErrorFlat(409, error: 'conflict', reason: 'program_not_current'),
+      );
+      expect(e.kind, ApiErrorKind.conflict);
+      expect(e.reason, 'program_not_current');
+      expect(ApiException.fromDio(dioErrorFlat(400)).reason, isNull);
+    });
+
     test('a transport/timeout (null response) -> retryable, null statusCode',
         () {
       final e = ApiException.fromDio(dioTransport());
