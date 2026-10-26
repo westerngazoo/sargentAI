@@ -13,6 +13,11 @@
 // the panels — Programa, Medidas, Progreso, Cuenta — and + Comida its sheet,
 // all on `showPanel`; each holds its body, closes four ways with the day
 // kept, and every capability of AC2's list is walked from here.
+//
+// R-0061 AC2 -> SPEC-0061 §2.8 (slice 3b): the mic opens the Dictado sheet.
+// A dictated meal logs; "start workout" by voice closes the sheet and opens
+// focus mode with today's PlanSeed, like Empezar sesión; the other effects
+// open their panel or screen; the sheet closes four ways like any panel.
 
 import 'dart:async';
 
@@ -24,12 +29,17 @@ import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:fitai/src/home/calendar.dart';
 import 'package:fitai/src/home/main_screen.dart';
 import 'package:fitai/src/home/selected_day.dart';
+import 'package:fitai/src/hub/dictation_sheet.dart';
+import 'package:fitai/src/hub/speech_input.dart';
+import 'package:fitai/src/hub/voice_intent_service.dart';
+import 'package:fitai/src/hub/voice_output.dart';
 import 'package:fitai/src/measurements/models/coach_suggestion.dart';
 import 'package:fitai/src/measurements/presentation/measurements_panel.dart';
 import 'package:fitai/src/measurements/presentation/progress_panel.dart';
 import 'package:fitai/src/measurements/services/adjustment_service.dart';
 import 'package:fitai/src/measurements/services/measurement_service.dart';
 import 'package:fitai/src/nutrition/presentation/meal_quick_log_sheet.dart';
+import 'package:fitai/src/nutrition/services/nutrition_service.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/account_panel.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
@@ -41,6 +51,7 @@ import 'package:fitai/src/program/presentation/program_panel.dart';
 import 'package:fitai/src/program/presentation/synthetic_proposals_page.dart';
 import 'package:fitai/src/program/services/program_service.dart';
 import 'package:fitai/src/workout/application/session_driver.dart';
+import 'package:fitai/src/workout/application/voice_coach.dart';
 import 'package:fitai/src/workout/data/workout_repository.dart';
 import 'package:fitai/src/workout/domain/plan_seed.dart';
 import 'package:fitai/src/workout/domain/session_draft.dart';
@@ -58,6 +69,7 @@ import '../support/l10n.dart';
 import '../support/measurement_fakes.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
+import '../support/voice_fakes.dart';
 import '../support/workout_fakes.dart';
 
 const phone = Size(390, 844);
@@ -77,6 +89,9 @@ void main() {
   late MockWorkoutRepository workoutRepo;
   late MockProgramService programService;
   late MockMeasurementService measurementService;
+  late MockNutritionService nutritionService;
+  late MockVoiceIntentService voiceIntent;
+  late RecordingVoiceOutput voiceOut;
 
   final today =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
@@ -114,7 +129,20 @@ void main() {
     workoutRepo = MockWorkoutRepository();
     programService = MockProgramService();
     measurementService = MockMeasurementService();
+    nutritionService = MockNutritionService();
+    voiceIntent = MockVoiceIntentService();
+    voiceOut = RecordingVoiceOutput();
     when(() => measurementService.list()).thenAnswer((_) async => const []);
+    when(() => nutritionService.create(
+          performedOn: any(named: 'performedOn'),
+          proteinG: any(named: 'proteinG'),
+          carbsG: any(named: 'carbsG'),
+          fatG: any(named: 'fatG'),
+        )).thenAnswer((_) async => sampleNutritionLog());
+    when(() => nutritionService.searchFoods(any()))
+        .thenAnswer((_) async => const []);
+    // Offline: the loop's local parser carries the dictation.
+    when(() => voiceIntent.parse(any())).thenThrow(Exception('offline'));
     when(() => tokenStore.read()).thenAnswer((_) async => sampleToken());
     when(() => tokenStore.clear()).thenAnswer((_) async {});
     when(() => repo.clear()).thenAnswer((_) async {});
@@ -126,9 +154,12 @@ void main() {
   });
 
   /// [settle] is false when something on screen never stops animating (the
-  /// loading spinner while a stubbed request never completes).
+  /// loading spinner while a stubbed request never completes). [dictation]
+  /// is what the speech engine hears, one transcript per listen.
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
-      {Size size = phone, bool settle = true}) async {
+      {Size size = phone,
+      bool settle = true,
+      List<String> dictation = const []}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -141,6 +172,11 @@ void main() {
       measurementServiceProvider.overrideWithValue(measurementService),
       coachAdviceProvider.overrideWith(
           (ref) async => const CoachAdvice(windowWeeks: 8, suggestions: [])),
+      nutritionServiceProvider.overrideWithValue(nutritionService),
+      voiceIntentServiceProvider.overrideWithValue(voiceIntent),
+      speechInputProvider.overrideWithValue(ScriptedSpeechInput(dictation)),
+      voiceOutputProvider.overrideWithValue(voiceOut),
+      l10nOverride,
     ]);
     addTearDown(container.dispose);
     // A stored token restores the session, as a cold start does.
@@ -152,9 +188,6 @@ void main() {
         GoRoute(
             path: '/session',
             builder: (_, __) => const Scaffold(body: Text('SESSION-SENTINEL'))),
-        GoRoute(
-            path: '/hub',
-            builder: (_, __) => const Scaffold(body: Text('HUB-SENTINEL'))),
         GoRoute(
             path: '/onboarding',
             builder: (_, __) =>
@@ -178,6 +211,15 @@ void main() {
     await tester.tap(find.byKey(const Key('profile-menu')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(item));
+    await tester.pumpAndSettle();
+  }
+
+  /// Opens the Dictado sheet from the mic and speaks what [pumpMain] queued.
+  Future<void> dictate(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('mic')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DictationSheet), findsOneWidget);
+    await tester.tap(find.byKey(const Key('dictation-mic')));
     await tester.pumpAndSettle();
   }
 
@@ -222,8 +264,7 @@ void main() {
   });
 
   // R-0061 AC2: every capability reachable before the one screen is reached
-  // from it. Voice dictation is slice 3b's (the Dictado sheet): until then
-  // the mic pushes the hub, checked here as the interim.
+  // from it.
   group('AC2 nothing is lost', () {
     testWidgets('start a workout', (tester) async {
       final (container, _) = await pumpMain(tester);
@@ -241,11 +282,50 @@ void main() {
       expect(find.text(l10n.saveMeal), findsOneWidget);
     });
 
-    testWidgets('voice dictation: the mic, the hub until 3b', (tester) async {
-      await pumpMain(tester);
-      await tester.tap(find.byKey(const Key('mic')));
-      await tester.pumpAndSettle();
-      expect(find.text('HUB-SENTINEL'), findsOneWidget);
+    testWidgets('voice dictation: a meal dictated through the Dictado sheet',
+        (tester) async {
+      await pumpMain(tester, dictation: [
+        'log a meal with 40 grams of protein 60 carbs and 20 fat'
+      ]);
+      await dictate(tester);
+
+      verify(() => nutritionService.create(
+            performedOn: any(named: 'performedOn'),
+            proteinG: 40,
+            carbsG: 60,
+            fatG: 20,
+          )).called(1);
+      expect(find.textContaining(l10n.sergeantMealLogged), findsOneWidget);
+      expect(find.byType(DictationSheet), findsOneWidget);
+    });
+
+    testWidgets('"show my program" by voice opens the Programa panel',
+        (tester) async {
+      await pumpMain(tester, dictation: ['show my program']);
+      await dictate(tester);
+
+      expect(find.byType(DictationSheet), findsNothing);
+      expect(find.byType(ProgramPanel), findsOneWidget);
+      expect(find.byType(MainScreen), findsOneWidget);
+    });
+
+    testWidgets('"my profile" by voice opens onboarding', (tester) async {
+      await pumpMain(tester, dictation: ['open my profile']);
+      await dictate(tester);
+
+      expect(find.byType(DictationSheet), findsNothing);
+      expect(find.text('ONBOARDING-SENTINEL'), findsOneWidget);
+    });
+
+    testWidgets('"stop" by voice closes the sheet and nothing else',
+        (tester) async {
+      final (container, _) = await pumpMain(tester, dictation: ['stop']);
+      await dictate(tester);
+
+      expect(find.byType(DictationSheet), findsNothing);
+      expect(find.byType(MainScreen), findsOneWidget);
+      expect(find.byKey(const Key('panel-close')), findsNothing);
+      expect(container.read(sessionDriverProvider).draft, isNull);
     });
 
     testWidgets('progress', (tester) async {
@@ -649,6 +729,13 @@ void main() {
           await t.pumpAndSettle();
         }
       ),
+      (
+        l10n.dictationTitle,
+        (t) async {
+          await t.tap(find.byKey(const Key('mic')));
+          await t.pumpAndSettle();
+        }
+      ),
     ];
     final closers = <(String, Future<void> Function(WidgetTester))>[
       (
@@ -849,6 +936,68 @@ void main() {
 
       expect(seedOf(container), isNull);
       expect(container.read(sessionDriverProvider).draft!.exercises, isEmpty);
+    });
+
+    // SPEC-0061 §2.8: "start workout" by voice does what Empezar sesión does.
+    group('by voice', () {
+      testWidgets(
+          '"start workout" closes the sheet and opens focus mode with '
+          'today\'s PlanSeed', (tester) async {
+        final (container, router) =
+            await pumpMain(tester, dictation: ['start workout']);
+        await dictate(tester);
+
+        expect(find.byType(DictationSheet), findsNothing);
+        expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+        final seed = seedOf(container);
+        expect(seed?.userProgramId, 'prog-uuid-001');
+        expect(seed?.index, 1);
+        expect(seed?.exercises, ['Back Squat', 'Leg Press']);
+        expect(container.read(sessionDriverProvider).performedOn, isNull);
+        // The hands-free coach takes over, push-to-talk as before (R-0032).
+        final coach = container.read(voiceCoachProvider);
+        expect(coach.enabled, isTrue);
+        expect(coach.handsFree, isFalse);
+
+        // The sheet closed before the push, so the session returns to the
+        // day, not to the sheet.
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(MainScreen), findsOneWidget);
+        expect(find.byType(DictationSheet), findsNothing);
+      });
+
+      testWidgets('it seeds the day still pending behind a free workout (N1)',
+          (tester) async {
+        whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+              days: [
+                dayJson(isoDate(today),
+                    state: 'done', completed: [], pending: 0),
+              ],
+            ));
+        final (container, _) =
+            await pumpMain(tester, dictation: ['start workout']);
+        await dictate(tester);
+
+        expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+        expect(seedOf(container)?.index, 0);
+        expect(seedOf(container)?.exercises, ['Bench Press', 'Barbell Curl']);
+      });
+
+      testWidgets('with nothing pending the session is free', (tester) async {
+        whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+              days: [
+                dayJson(isoDate(today), state: 'done', completed: [1]),
+              ],
+            ));
+        final (container, _) =
+            await pumpMain(tester, dictation: ['start workout']);
+        await dictate(tester);
+
+        expect(find.text('SESSION-SENTINEL'), findsOneWidget);
+        expect(seedOf(container), isNull);
+        expect(container.read(sessionDriverProvider).draft, isNotNull);
+      });
     });
 
     testWidgets(

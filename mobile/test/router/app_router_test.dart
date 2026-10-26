@@ -189,11 +189,17 @@ void main() {
     expect(currentLocation(router), '/home');
   });
 
-  // SPEC-0061 §2.5 (slice 3a): the screens that became panels lost their
-  // routes. An old URL lands on the day, and only when authenticated — the
-  // other arms keep sending it to /splash and /login as before.
+  // SPEC-0061 §2.5 (slices 3a and 3b): the screens that became panels, and
+  // the hub that became the Dictado sheet, lost their routes. An old URL
+  // lands on the day, and only when authenticated — the other arms keep
+  // sending it to /splash and /login as before.
   group('SPEC-0061 removed routes', () {
-    for (final removed in ['/progress', '/programs/current', '/programs/get']) {
+    for (final removed in [
+      '/progress',
+      '/programs/current',
+      '/programs/get',
+      '/hub',
+    ]) {
       testWidgets('authenticated: $removed redirects to /home', (tester) async {
         when(() => tokenStore.read())
             .thenAnswer((_) async => sampleToken(userId: 'u-1'));
