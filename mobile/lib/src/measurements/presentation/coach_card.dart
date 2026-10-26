@@ -59,13 +59,17 @@ class _CoachBody extends StatelessWidget {
                     size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
-              Text(
-                l10n.coachSuggestions,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+              // Expanded, not a Spacer: in the Medidas panel the row is
+              // narrower than the screen it was drawn for.
+              Expanded(
+                child: Text(
+                  l10n.coachSuggestions,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 l10n.lastWeeks(advice.windowWeeks),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(

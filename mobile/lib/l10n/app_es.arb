@@ -294,6 +294,20 @@
   "menuProgress": "Progreso",
   "signOut": "Cerrar sesión",
   "dictate": "Dictar",
+  "menuAccount": "Cuenta",
+  "editProfile": "Editar perfil",
+  "changeProgram": "Cambiar programa",
+  "accountProfileSummary": "{heightCm} cm · {weightKg} kg",
+  "@accountProfileSummary": {
+    "placeholders": {
+      "heightCm": {
+        "type": "int"
+      },
+      "weightKg": {
+        "type": "double"
+      }
+    }
+  },
   "today": "Hoy",
   "dayDoneHeadline": "Entrenaste",
   "dayFreeHeadline": "Sesión libre",
@@ -519,7 +533,6 @@
   "deleteThisWorkout": "¿Borrar este entrenamiento?",
   "yesterday": "Ayer",
   "workoutNoLongerExists": "Ese entrenamiento ya no existe.",
-  "startWorkout": "Empezar entrenamiento",
   "coachSayDoneHandsFree": "Di listo cuando termines la serie.",
   "coachSayDoneKeyMic": "Activa el micrófono y di listo cuando termines la serie.",
   "coachTargetSuffix": " — objetivo {label}",
@@ -785,7 +798,6 @@
   "hubProfile": "Perfil",
   "hubIdleHint": "Toca el micrófono y habla. Termina cada orden con \"cambio\".",
   "progress": "Progreso",
-  "logout": "Salir",
   "logMeasurement": "Registrar medida",
   "bodyComposition": "Composición corporal",
   "strength": "Fuerza",

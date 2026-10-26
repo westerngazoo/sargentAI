@@ -490,6 +490,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dictate => 'Dictate';
 
   @override
+  String get menuAccount => 'Account';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String get changeProgram => 'Change program';
+
+  @override
+  String accountProfileSummary(int heightCm, double weightKg) {
+    return '$heightCm cm · $weightKg kg';
+  }
+
+  @override
   String get today => 'Today';
 
   @override
@@ -795,9 +809,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutNoLongerExists => 'that workout no longer exists';
 
   @override
-  String get startWorkout => 'Start workout';
-
-  @override
   String get coachSayDoneHandsFree => 'Say done when your set is in.';
 
   @override
@@ -1040,9 +1051,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progress => 'Progress';
-
-  @override
-  String get logout => 'Logout';
 
   @override
   String get logMeasurement => 'Log measurement';

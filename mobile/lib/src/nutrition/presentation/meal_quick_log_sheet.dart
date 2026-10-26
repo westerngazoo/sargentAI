@@ -1,7 +1,7 @@
-// R-0032 (slice 1) — minimal meal quick-log bottom sheet over POST /nutrition.
+// R-0032 (slice 1) — minimal meal quick-log sheet over POST /nutrition.
 //
-// Opened from the voice hub (tap or voice, macros prefilled when dictated).
-// Full nutrition logger UI remains R-0010 scope.
+// Opened from + Comida and from the voice hub (tap or voice, macros prefilled
+// when dictated). Full nutrition logger UI remains R-0010 scope.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,43 +9,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/panels/show_panel.dart';
 import '../domain/preset_meals.dart';
 import '../services/nutrition_service.dart';
 
-/// Opens the quick-log sheet; resolves once dismissed.
+/// Opens the Comida panel (SPEC-0061 §2.6); resolves once dismissed.
 Future<void> showMealQuickLogSheet(
   BuildContext context, {
   double? proteinG,
   double? carbsG,
   double? fatG,
 }) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => MealQuickLogSheet(
+    showPanel<void>(
+      context,
+      title: AppLocalizations.of(context).logAMeal,
+      body: (_) => MealQuickLogForm(
         initialProteinG: proteinG,
         initialCarbsG: carbsG,
         initialFatG: fatG,
       ),
     );
 
-class MealQuickLogSheet extends ConsumerStatefulWidget {
-  const MealQuickLogSheet({
+/// The Comida panel's body: presets, the three macros and the save button.
+/// Saving pops the panel it sits in.
+class MealQuickLogForm extends ConsumerStatefulWidget {
+  const MealQuickLogForm({
     super.key,
     this.initialProteinG,
     this.initialCarbsG,
     this.initialFatG,
   });
 
+  /// Macros to prefill, as dictated; null leaves the field empty.
   final double? initialProteinG;
   final double? initialCarbsG;
   final double? initialFatG;
 
   @override
-  ConsumerState<MealQuickLogSheet> createState() => _MealQuickLogSheetState();
+  ConsumerState<MealQuickLogForm> createState() => _MealQuickLogFormState();
 }
 
-class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
+class _MealQuickLogFormState extends ConsumerState<MealQuickLogForm> {
   late final TextEditingController _protein;
   late final TextEditingController _carbs;
   late final TextEditingController _fat;
@@ -118,75 +122,65 @@ class _MealQuickLogSheetState extends ConsumerState<MealQuickLogSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.logAMeal, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 10),
-          // Preset meals — tap to prefill, tweak, save.
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (final meal in presetMeals)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      label: Text(meal.name),
-                      onPressed: () => setState(() {
-                        _protein.text = _fmt(meal.proteinG);
-                        _carbs.text = _fmt(meal.carbsG);
-                        _fat.text = _fmt(meal.fatG);
-                      }),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Preset meals — tap to prefill, tweak, save.
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
             children: [
-              Expanded(child: _macroField(l10n.proteinGramsLabel, _protein)),
-              const SizedBox(width: 8),
-              Expanded(child: _macroField(l10n.carbsGramsLabel, _carbs)),
-              const SizedBox(width: 8),
-              Expanded(child: _macroField(l10n.fatGramsLabel, _fat)),
+              for (final meal in presetMeals)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    label: Text(meal.name),
+                    onPressed: () => setState(() {
+                      _protein.text = _fmt(meal.proteinG);
+                      _carbs.text = _fmt(meal.carbsG);
+                      _fat.text = _fmt(meal.fatG);
+                    }),
+                  ),
+                ),
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _macroField(l10n.proteinGramsLabel, _protein)),
+            const SizedBox(width: 8),
+            Expanded(child: _macroField(l10n.carbsGramsLabel, _carbs)),
+            const SizedBox(width: 8),
+            Expanded(child: _macroField(l10n.fatGramsLabel, _fat)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.kcalLoggedForToday(_kcal.toStringAsFixed(0)),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (_error != null) ...[
           const SizedBox(height: 8),
           Text(
-            l10n.kcalLoggedForToday(_kcal.toStringAsFixed(0)),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _valid && !_saving ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(l10n.saveMeal),
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ],
-      ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: _valid && !_saving ? _save : null,
+          child: _saving
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.saveMeal),
+        ),
+      ],
     );
   }
 

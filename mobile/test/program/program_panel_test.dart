@@ -180,9 +180,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(SyntheticProposalsPage), findsOneWidget);
 
-      // The chosen program is what the detail reads back.
+      // The chosen program is what the detail reads back. Interactions are
+      // cleared here, so the re-read is counted from the choose on (the
+      // provider also re-reads once the restored session's user id arrives).
       when(() => programService.getCurrent())
           .thenAnswer((_) async => sampleUserProgram());
+      clearInteractions(programService);
       await tester.tap(find.text('Low-Volume Mass Builder'));
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.chooseThisProgram));
@@ -200,7 +203,7 @@ void main() {
       expect(find.byKey(const Key('panel-close')), findsOneWidget);
       expect(find.text('Heavy Duty Mass'), findsOneWidget);
       expect(find.byKey(const Key('change-program')), findsOneWidget);
-      verify(() => programService.getCurrent()).called(2);
+      verify(() => programService.getCurrent()).called(1);
     });
 
     testWidgets('with a program, Cambiar programa opens the picker',

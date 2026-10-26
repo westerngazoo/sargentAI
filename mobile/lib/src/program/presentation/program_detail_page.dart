@@ -1,62 +1,68 @@
-// R-0014 / SPEC-0014 §2.5.3 — ProgramDetailScreen.
-//
-// Displays the active program and diet. Reached from ProgramProposalsScreen
+// R-0014 / SPEC-0014 §2.5.3 — the active program and diet.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../core/panels/panel_flow.dart';
 import '../application/program_progress.dart';
 import '../application/program_providers.dart';
 import '../models/program_proposal.dart';
 import '../models/user_program.dart';
+import 'body_type_picker_page.dart';
 import 'progress_ring.dart';
 import 'target_physique.dart';
 
-class ProgramDetailScreen extends ConsumerWidget {
-  const ProgramDetailScreen({super.key});
+/// The first page of the Programa panel's flow (SPEC-0061 §2.6): the current
+/// program and diet, with *Cambiar programa*; or, with no program yet,
+/// *Encuentra tu programa*. Both open the body-type picker as the next page
+/// (R-0061 AC8).
+class ProgramDetailPage extends ConsumerWidget {
+  const ProgramDetailPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currentProgramProvider);
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.yourProgram)),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.couldNotLoadYourProgram),
-              TextButton(
-                onPressed: () => ref.invalidate(currentProgramProvider),
-                child: Text(l10n.retry),
-              ),
-            ],
-          ),
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.couldNotLoadYourProgram),
+            TextButton(
+              onPressed: () => ref.invalidate(currentProgramProvider),
+              child: Text(l10n.retry),
+            ),
+          ],
         ),
-        data: (program) => program == null
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.noProgramYet),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      key: const Key('get-program'),
-                      onPressed: () => context.push('/programs/get'),
-                      child: Text(l10n.findYourProgram),
-                    ),
-                  ],
-                ),
-              )
-            : _ProgramDetail(program: program),
       ),
+      data: (program) => program == null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l10n.noProgramYet),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    key: const Key('get-program'),
+                    onPressed: () => _openPicker(context),
+                    child: Text(l10n.findYourProgram),
+                  ),
+                ],
+              ),
+            )
+          : _ProgramDetail(program: program),
     );
   }
 }
+
+/// Pushes the picker on the flow's navigator: the nearest one, so the choose
+/// flow stays inside the panel.
+void _openPicker(BuildContext context) => Navigator.of(context).push(
+      PanelFlowRoute<void>(builder: (_) => const BodyTypePickerPage()),
+    );
 
 class _ProgramDetail extends ConsumerWidget {
   const _ProgramDetail({required this.program});
@@ -75,6 +81,13 @@ class _ProgramDetail extends ConsumerWidget {
       children: [
         Text(_displayTitle(program.archetypeId),
             style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const Key('change-program'),
+          icon: const Icon(Icons.swap_horiz),
+          label: Text(l10n.changeProgram),
+          onPressed: () => _openPicker(context),
+        ),
         const SizedBox(height: 16),
         TargetPhysique(archetypeId: program.archetypeId),
         const SizedBox(height: 16),

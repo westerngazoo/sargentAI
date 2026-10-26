@@ -2,25 +2,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/panels/panel_flow.dart';
+import '../../core/panels/panel_page_header.dart';
 import '../models/synthetic_match.dart';
 import '../services/program_service.dart';
 import 'body_type_names.dart';
-import 'synthetic_proposals_screen.dart';
+import 'synthetic_proposals_page.dart';
 
-class BodyTypePickerScreen extends ConsumerStatefulWidget {
-  const BodyTypePickerScreen({super.key});
+/// A page of the Programa panel's flow (SPEC-0061 §2.6): shape and fat band,
+/// then *Encuentra mi programa* pushes the proposals as the next page.
+class BodyTypePickerPage extends ConsumerStatefulWidget {
+  const BodyTypePickerPage({super.key});
 
   @override
-  ConsumerState<BodyTypePickerScreen> createState() =>
-      _BodyTypePickerScreenState();
+  ConsumerState<BodyTypePickerPage> createState() => _BodyTypePickerPageState();
 }
 
-class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
+class _BodyTypePickerPageState extends ConsumerState<BodyTypePickerPage> {
   BodyShape? _shape;
   FatBand? _fatBand;
   bool _loading = false;
@@ -39,8 +41,8 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
           .syntheticMatch(_shape!, _fatBand!);
       if (!mounted) return;
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => SyntheticProposalsScreen(
+        PanelFlowRoute<void>(
+          builder: (_) => SyntheticProposalsPage(
             proposals: result.proposals,
             shape: _shape!,
             fatBand: _fatBand!,
@@ -58,68 +60,61 @@ class _BodyTypePickerScreenState extends ConsumerState<BodyTypePickerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.chooseYourBodyType),
-        leading: BackButton(onPressed: () => context.go('/home')),
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(l10n.bodyShape,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    _ShapeGrid(
-                      selected: _shape,
-                      onSelect: (s) => setState(() => _shape = s),
-                    ),
-                    if (_shape != null) ...[
-                      const SizedBox(height: 24),
-                      Text(l10n.bodyFatLevel,
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      _FatBandChips(
-                        selected: _fatBand,
-                        onSelect: (b) => setState(() => _fatBand = b),
-                      ),
-                    ],
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
-                      ),
-                    ],
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PanelPageHeader(title: l10n.chooseYourBodyType),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(l10n.bodyShape,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _ShapeGrid(
+                  selected: _shape,
+                  onSelect: (s) => setState(() => _shape = s),
                 ),
-              ),
+                if (_shape != null) ...[
+                  const SizedBox(height: 24),
+                  Text(l10n.bodyFatLevel,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  _FatBandChips(
+                    selected: _fatBand,
+                    onSelect: (b) => setState(() => _fatBand = b),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: _canConfirm ? _confirm : null,
-                child: _loading
-                    ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.onPrimary),
-                      )
-                    : Text(l10n.findMyProgram),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: FilledButton(
+            onPressed: _canConfirm ? _confirm : null,
+            child: _loading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary),
+                  )
+                : Text(l10n.findMyProgram),
+          ),
+        ),
+      ],
     );
   }
 }

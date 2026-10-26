@@ -4,20 +4,22 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../auth/application/auth_controller.dart';
 import '../auth/presentation/brand_header.dart';
 import '../core/brand.dart';
 import '../core/dates.dart';
 import '../core/panels/show_panel.dart';
 import '../core/theme/halftone.dart';
 import '../core/theme/tokens.dart';
-import '../measurements/presentation/log_measurement_sheet.dart';
+import '../measurements/presentation/measurements_panel.dart';
+import '../measurements/presentation/progress_panel.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../profile/application/profile_providers.dart';
+import '../profile/presentation/account_panel.dart';
 import '../profile/presentation/profile_prompt.dart';
 import '../program/application/schedule_provider.dart';
 import '../program/models/day_state.dart';
 import '../program/models/schedule.dart';
+import '../program/presentation/program_panel.dart';
 import '../workout/application/muscle_names.dart';
 import '../workout/application/save_notice_text.dart';
 import '../workout/application/session_driver.dart';
@@ -203,7 +205,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
               PopupMenuItem(
                   value: _Menu.progress, child: Text(l10n.menuProgress)),
               const PopupMenuDivider(),
-              PopupMenuItem(value: _Menu.signOut, child: Text(l10n.signOut)),
+              PopupMenuItem(
+                  value: _Menu.account, child: Text(l10n.menuAccount)),
             ],
           ),
           const SizedBox(width: 4),
@@ -264,23 +267,42 @@ class _MainScreenState extends ConsumerState<MainScreen>
     );
   }
 
-  /// Until slice 3 gives each its panel, Programa and Progreso push the
-  /// existing screens, so back returns here and nothing is lost (AC2).
+  /// The menu opens panels, never routes (R-0061 AC1, AC8; SPEC-0061 §2.6).
+  /// Programa hosts a flow whose pages scroll on their own, so its frame
+  /// does not. Sign-out lives in Cuenta.
   void _open(_Menu item) {
+    final l10n = AppLocalizations.of(context);
     switch (item) {
       case _Menu.program:
-        context.push('/programs/current');
+        showPanel<void>(
+          context,
+          title: l10n.yourProgram,
+          scrolls: false,
+          body: (_) => const ProgramPanel(),
+        );
       case _Menu.measurements:
-        showLogMeasurementSheet(context);
+        showPanel<void>(
+          context,
+          title: l10n.menuMeasurements,
+          body: (_) => const MeasurementsPanel(),
+        );
       case _Menu.progress:
-        context.push('/progress');
-      case _Menu.signOut:
-        ref.read(authControllerProvider.notifier).logout();
+        showPanel<void>(
+          context,
+          title: l10n.progress,
+          body: (_) => const ProgressPanel(),
+        );
+      case _Menu.account:
+        showPanel<void>(
+          context,
+          title: l10n.menuAccount,
+          body: (_) => const AccountPanel(),
+        );
     }
   }
 }
 
-enum _Menu { program, measurements, progress, signOut }
+enum _Menu { program, measurements, progress, account }
 
 /// A card in the reels' grammar: hard border, hard shadow, no radius to
 /// speak of.

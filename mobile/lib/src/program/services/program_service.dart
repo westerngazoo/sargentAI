@@ -31,14 +31,20 @@ class ProgramService {
   }
 
   /// `POST /programs` — choose an archetype; returns the persisted program.
+  /// [startsOn] is the client's local date the plan starts on (SPEC-0061
+  /// §2.4); the server accepts it within a day of its own.
   Future<UserProgram> chooseProgram(
-      String photoSessionId, String archetypeId) async {
+    String photoSessionId,
+    String archetypeId, {
+    required DateTime startsOn,
+  }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/programs',
         data: {
           'photo_session_id': photoSessionId,
           'archetype_id': archetypeId,
+          'starts_on': isoDate(startsOn),
         },
       );
       return UserProgram.fromJson(res.data!);
@@ -73,8 +79,13 @@ class ProgramService {
   }
 
   /// `POST /programs/synthetic` — choose a proposal from a synthetic match.
+  /// [startsOn] as in [chooseProgram].
   Future<UserProgram> chooseSyntheticProgram(
-      String archetypeId, BodyShape shape, FatBand fatBand) async {
+    String archetypeId,
+    BodyShape shape,
+    FatBand fatBand, {
+    required DateTime startsOn,
+  }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '/programs/synthetic',
@@ -82,6 +93,7 @@ class ProgramService {
           'archetype_id': archetypeId,
           'shape': shape.value,
           'fat_band': fatBand.value,
+          'starts_on': isoDate(startsOn),
         },
       );
       return UserProgram.fromJson(res.data!);

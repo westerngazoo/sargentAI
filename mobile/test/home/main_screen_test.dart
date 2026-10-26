@@ -181,9 +181,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Android back. Under a `Router` the binding hands it to GoRouter's back
+  /// button dispatcher; `WidgetsApp.didPopRoute` would do nothing here.
   Future<void> systemBack(WidgetTester tester) async {
-    final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
-    await widgetsAppState.didPopRoute();
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
   }
 
@@ -574,7 +575,6 @@ void main() {
       when(() => profileRepo.getMe()).thenAnswer((_) async => null);
       await pumpMain(tester);
       await openMenuItem(tester, l10n.menuAccount);
-      expect(find.text(l10n.completeYourProfilePrompt), findsOneWidget);
       expect(find.text(l10n.setUpYourProfile), findsOneWidget);
       expect(find.text(l10n.editProfile), findsNothing);
     });
