@@ -65,7 +65,7 @@ Authenticated (`AuthenticatedUser`), stateless, logs nothing from the body
 | `thigh_m`, `shank_m`, `trunk_m` | optional; each `0.1..=1.5` | that field |
 | `dorsiflexion_deg` | required, `0.0..=90.0` (`Dorsiflexion::from_degrees`) | `field: "dorsiflexion_deg"` |
 | `bar_kg` | optional; `LoadKg::try_new` (`(0, 1000]`) | `field: "bar_kg"` |
-| `frames` | optional, default 41; `FrameCount::new` (`2..=241`) | `field: "frames"` |
+| `frames` | optional, default 41; `FrameCount::new` (`2..=241`) | `field: "frames"` for an integer out of range; a non-integer is a malformed body (`field: "body"`), as everywhere in the API |
 
 `scale` and `MeasuredLengths` validate nothing (`anthro.rs`), so these are
 the only guards. JSON carries no NaN or infinity, so finiteness is free. The
@@ -108,8 +108,8 @@ core's `Serialize` output **unchanged**; the example below is a real dump
         "assumptions": [{"assumption": "sagittal_plane"}, {"assumption": "single_posture", "at": "upright"}, "…"],
         "uncertainty": {"l5s1_placement": 0.03, "com_placement": 0.02}
       },
-      "hip": {"lever_m": 0.029, "bar_n": 823.9, "bar_nm": 23.9, "body_nm": 9.6},
-      "ground_n": 1579.2
+      "hip": {"lever_m": 0.029, "bar_n": 824.04, "bar_nm": 23.82, "body_nm": 9.70},
+      "ground_n": 1579.41
     }
   ],
   "assumptions": [{"assumption": "joints_advance_together"}, {"assumption": "straight_body_upright"}]
@@ -120,24 +120,32 @@ core's `Serialize` output **unchanged**; the example below is a real dump
   `Bottom | Stopped { reached, bottom: Option<Rejection> } | Rejected { rejection: Rejection }`,
   with `impl From<RangeEnd>` for the first two. `Rejected` is this endpoint's
   answer to `squat_range`'s `Err(Rejection)`: `frames: []` and the typed
-  reason (AC3), never an empty animation without a reason. It is not added
+  reason (AC3), never an empty animation without a reason; it carries no
+  range `assumptions` either (`[]`), since core's `Err` states none. It is not added
   to core's `RangeEnd`, whose promise is "the largest balanced prefix"
   (finding 5). `Rejection` serializes as core does (`reason`, `limiting`,
   `needed_deg`, `available_deg`, …).
 - `frames[]` is core's `RangeFrame` (`progress`, `shank_deg`, the three
   angles, `posture`, `mechanics`) **plus two fields the check needs** and
   the client must not compute:
-  - `hip.lever_m`: the horizontal distance from the hip to the bar's line
-    (the design's lever; bodyweight-only frames carry no `hip`);
+  - `hip.lever_m`: the signed horizontal distance from the hip to the bar's
+    line, bar minus hip, positive with the bar ahead (the design's lever;
+    bodyweight-only frames carry no `hip`);
   - `hip.bar_n = bar_kg × g`, `hip.bar_nm = bar_n × lever_m`;
-  - `hip.body_nm = moment_about(Joint::Hip, &body, &posture_without_load)`
-    (`chain.rs`, already `pub`), the body's own share under the stated
-    placement conventions;
+  - `hip.body_nm = body_moment_about(Joint::Hip, &body, &posture)`
+    (`chain.rs`), the segments' share **in the loaded posture shown**, under
+    the stated placement conventions. Not the posture with the load removed:
+    core places the arms' centre of mass at the shoulder → bar midpoint with
+    a bar and hanging without one, so removing the load would also move the
+    arms and the shares would stop summing to the hip moment;
   - `ground_n = (bar_kg + mass_kg) × g`.
 
   A Rust test asserts, per frame, `bar_nm + body_nm == joints[0].moment` to
   `1e-9`. That is the whole "La cuenta" line, and it is the server's
-  arithmetic. The envelope's `g` is `9.80665`.
+  arithmetic. The envelope's `g` is core's `G` (`9.81`), the one constant
+  every moment is multiplied by (SPEC-0045 §2.2); moments are multiplied by
+  it only in `chain.rs`, and the API multiplies it only for the displayed
+  weights `bar_n` and `ground_n`.
 - Range-level `assumptions` are `SquatRange.assumptions` (the convention
   ones); per-frame assumptions sit inside `mechanics`, as core emits them.
 - `table_lengths` lists which of `thigh`, `shank`, `trunk` came from the
@@ -204,7 +212,7 @@ Design v2's physics card, in SPEC-0061 §2.10's tokens and faces:
 - **La cuenta**: the server's `hip` fields, formatted.
 - **The caveats** (AC5), always visible under the figure: the assumptions
   (range-level and the current frame's), which lengths came from the table,
-  "brazos colgando: el modelo no los adelanta como contrapeso", and "entre
+  how the model places the arms ("sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra"), and "entre
   de pie y el fondo las piernas siguen una convención del modelo; tu curva
   real saldrá de tu video".
 - **A stopped range** says, in plain words, how far the lifter gets and why
@@ -316,6 +324,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-10-25 | `400 validation { field }` for an invalid field (OQ-A) | The API's one error shape; the client already parses it. |
 | 2026-10-25 | Dorsiflexion asked once and kept in session memory until R-0058 | SPEC-0045 commits no default; storing it is R-0058's job. |
 | 2026-10-27 | Accepted with R-0059; OQ-A answered `400` | Owner. |
+| 2026-10-28 | `g` is core's `G` (9.81), not 9.80665 | The identity `bar_nm + body_nm == hip moment` holds only with the constant core multiplies every moment by; changing it is a SPEC-0045 question (owner). |
+| 2026-10-28 | `body_nm` is the segments' share in the loaded posture, from core's new `body_moment_about` | The arms' placement depends on the bar, so the unloaded posture is a different posture; one source in `chain.rs`, no copy in the API (owner; architect review of #180). |
 
 ## 8. Changelog
 
@@ -325,6 +335,10 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   profile's ranges; `physics` on `PlanDay`; 59-c split in two; the no-log
   test over three paths.
 - 2026-10-27 — Accepted by the owner with R-0059; OQ-A and OQ-B answered.
+- 2026-10-28 — Amended with slice 59-a (#180), owner-approved: `g` = core's `G`;
+  `body_nm` in the loaded posture via `body_moment_about`; the example's hip
+  numbers from the golden; `rejected` carries no range assumptions; the
+  `frames` row; the arms caveat matches the model.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
