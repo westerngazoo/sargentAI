@@ -3,6 +3,7 @@
 // cycle entries, the four tagged day states with their indices, and the
 // session ids per day. Every index comes from the server (§2.5).
 
+import 'package:fitai/src/physics/domain/lift.dart';
 import 'package:fitai/src/program/models/day_state.dart';
 import 'package:fitai/src/program/models/schedule.dart';
 import 'package:fitai/src/workout/domain/muscle_group.dart';
@@ -46,6 +47,23 @@ void main() {
       final planned = s.stateOn(DateTime(2026, 10, 23)) as PlannedDay;
       expect(planned.cycleIndex, 0);
       expect(s.sessionIds[DateTime(2026, 10, 21)], ['s-1', 's-2']);
+    });
+
+    test('each exercise carries the server physics call (SPEC-0059 §2.5)', () {
+      final s = Schedule.fromJson(scheduleJson(cycle: [
+        trainingDayJson(
+            exercises: ['Back Squat', 'Leg Press', 'Deadlift'],
+            physics: ['squat', null, null]),
+      ]));
+      final day = s.cycle.single as TrainingPlanDay;
+      expect(day.physics, [Lift.squat, null, null]);
+    });
+
+    test('a lift this client cannot draw yet reads as no model', () {
+      final s = Schedule.fromJson(scheduleJson(cycle: [
+        trainingDayJson(exercises: ['Snatch'], physics: ['snatch']),
+      ]));
+      expect((s.cycle.single as TrainingPlanDay).physics, [null]);
     });
 
     test('a day outside the response has no state', () {
