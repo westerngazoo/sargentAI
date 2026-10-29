@@ -3,6 +3,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/dates.dart';
+import '../../physics/domain/lift.dart';
 import '../../workout/domain/muscle_group.dart';
 import '../../workout/domain/plan_seed.dart';
 import 'day_state.dart';
@@ -21,6 +22,9 @@ sealed class PlanDay {
                 .map((t) => MuscleGroup.fromWire(t as String))
                 .toList(),
             exercises: (json['exercises'] as List<dynamic>).cast<String>(),
+            physics: (json['physics'] as List<dynamic>)
+                .map((p) => Lift.fromWire(p as String?))
+                .toList(),
           ),
         'rest' => const RestPlanDay(),
         final other => throw FormatException('unknown plan day kind: $other'),
@@ -30,13 +34,22 @@ sealed class PlanDay {
 /// A training day: named by its [focus] on the client (SPEC-0061 §2.1), with
 /// its exercises as curated English data (§4).
 final class TrainingPlanDay extends PlanDay {
-  const TrainingPlanDay({required this.focus, required this.exercises});
+  const TrainingPlanDay({
+    required this.focus,
+    required this.exercises,
+    required this.physics,
+  });
 
   /// The muscle groups the day trains, in the record's order; never empty.
   final List<MuscleGroup> focus;
 
   /// The day's exercises by name, in the record's order; never empty.
   final List<String> exercises;
+
+  /// Per exercise, in [exercises]' order: the lift whose physics check
+  /// models it, or null when it has none yet (*Pronto*). The server decides
+  /// (SPEC-0059 §2.5).
+  final List<Lift?> physics;
 }
 
 /// A rest day of the cycle.

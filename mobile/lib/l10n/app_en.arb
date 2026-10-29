@@ -7,6 +7,7 @@
   "createAnAccount": "Create an account",
   "forgotPassword": "Forgot password?",
   "continueWithGoogle": "Continue with Google",
+  "squatLeverSum": "{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} from the body = {hipNm} N·m",
   "useTestAccount": "Use test account",
   "createYourAccount": "Create your account",
   "createAccount": "Create account",

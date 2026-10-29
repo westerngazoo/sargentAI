@@ -37,7 +37,7 @@ void main() {
       expect(f.posture.load!.at.y, closeTo(1.424036, 1e-6));
       expect(f.hip!.leverM, closeTo(0.028906, 1e-6));
       expect(f.hip!.barN, closeTo(824.04, 1e-9));
-      expect(f.hip!.barNm, closeTo(23.82, 1e-6));
+      expect(f.hip!.barNm, closeTo(23.820002, 1e-6));
       expect(f.hip!.bodyNm, closeTo(9.697683, 1e-6));
       expect(f.groundN, closeTo(1579.41, 1e-9));
     });

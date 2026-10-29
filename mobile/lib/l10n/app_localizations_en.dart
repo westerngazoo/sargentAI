@@ -30,6 +30,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWithGoogle => 'Continue with Google';
 
   @override
+  String squatLeverSum(
+      String barN, String leverM, String barNm, String bodyNm, String hipNm) {
+    return '$barN N × $leverM m = $barNm N·m, + $bodyNm from the body = $hipNm N·m';
+  }
+
+  @override
   String get useTestAccount => 'Use test account';
 
   @override

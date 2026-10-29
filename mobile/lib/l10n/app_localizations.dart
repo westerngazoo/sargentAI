@@ -140,6 +140,13 @@ abstract class AppLocalizations {
   /// **'Continuar con Google'**
   String get continueWithGoogle;
 
+  /// The squat check's hip sum (La cuenta, SPEC-0059 §2.3): bar force × lever = bar moment, plus the body's share = the hip moment. Every number is pre-formatted from the server.
+  ///
+  /// In es, this message translates to:
+  /// **'{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} del cuerpo = {hipNm} N·m'**
+  String squatLeverSum(
+      String barN, String leverM, String barNm, String bodyNm, String hipNm);
+
   /// No description provided for @useTestAccount.
   ///
   /// In es, this message translates to:
