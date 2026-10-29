@@ -1,13 +1,13 @@
 # R-0059 — The squat, animated in the app
 
-- **Status:** Draft — ready to accept: the three open questions are answered by the owner's 2026-10-25 acceptance of design v2 (see SPEC-0059 OQ-B)
+- **Status:** Accepted — owner, 2026-10-27 (AC1 amended: an invalid field gets `400`)
 - **Milestone:** M6 (the lift model, shown to the lifter)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-10-20
 - **Depends on:** R-0045 (the range of solved postures, merged: slices A and
   B1). R-0058 (guided measurement) only to fill the request from the profile
   later. It is not a blocker.
-- **Realized by:** SPEC-0059 (Draft, architect-reviewed)
+- **Realized by:** SPEC-0059 (Accepted 2026-10-27)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
@@ -50,7 +50,8 @@ The model's assumptions are shown on the same screen.
   hip, shoulder, bar), knee and hip flexion, trunk lean, and the four
   moments, each with its uncertainty and resisting group. It also returns how
   the range ended and every stated assumption. No session gets **401**; an
-  invalid field gets **422** with a typed error naming the field.
+  invalid field gets **400** with a typed error naming the field (amended
+  2026-10-27, OQ-4).
 - **AC2. Measurements travel in the request** (owner, 2026-10-20). The
   endpoint stores nothing. When R-0058 lands, the app fills the request from
   the profile. Missing lengths come from the table, and the result says so.
@@ -113,7 +114,8 @@ The model's assumptions are shown on the same screen.
 - **OQ-3. Screen language.** *Answered:* R-0061's catalogue; Spanish first.
 - **OQ-4 (new, from SPEC-0059).** AC1 says an invalid field gets `422`; the
   API's one validation shape is `400 validation { field }`. SPEC-0059
-  proposes the `400`; the owner may veto.
+  proposes the `400`; the owner may veto. *Answered 2026-10-27:* `400`, the
+  API's existing shape; AC1 amended.
 
 ## 6. Decision log
 
@@ -122,4 +124,5 @@ The model's assumptions are shown on the same screen.
 | 2026-10-20 | The animation is the product, not the table | Owner. |
 | 2026-10-20 | Measurements travel in the request until R-0058 stores them | Owner. The animation does not wait for R-0058; the profile fills the request later. |
 | 2026-10-20 | The model runs on the server; the app only draws | `project-specifics.md` domain note: intelligence server-side, thin client. |
+| 2026-10-27 | Accepted; an invalid field gets `400 validation { field }` (OQ-4) | Owner. One error shape across the API; the client already parses it. |
 - 2026-10-25 — OQ-1..3 answered by design v2; OQ-4 raised by SPEC-0059. Ready to accept.

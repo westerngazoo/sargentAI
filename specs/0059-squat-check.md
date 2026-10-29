@@ -1,7 +1,7 @@
 # SPEC-0059 — The squat check: the range endpoint and the physics check widget
 
-- **Status:** Draft — architect review ACCEPT WITH CHANGES (2026-10-25) applied (§9); awaiting the owner's acceptance of R-0059 and of this spec
-- **Realizes:** R-0059 (Draft; its three open questions are answered below by the owner's 2026-10-25 acceptance of the one-screen design v2)
+- **Status:** Accepted — owner, 2026-10-27, together with R-0059 (OQ-A: `400`)
+- **Realizes:** R-0059 (Accepted 2026-10-27)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-25
 - **Depends on:** SPEC-0045 (slices A and B1: `squat_range`), SPEC-0061 (§2.5 the day region, §2.10 the look, §2.12 slice 4)
@@ -281,11 +281,13 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 - **OQ-A. R-0059 AC1's status code.** This spec uses the API's existing
   `400 validation { field }` instead of AC1's `422`. If the owner agrees, AC1
   is amended by one word; if not, a `422` variant with a field is added to
-  `error.rs` for this endpoint alone.
+  `error.rs` for this endpoint alone. *Answered 2026-10-27:* `400`; AC1
+  amended.
 - **OQ-B. R-0059's acceptance.** R-0059 is still Draft. Its three open
   questions are answered by design v2 (the check lives inside the day; loads
   typed in v1; language is R-0061's catalogue). The owner accepts R-0059 and
-  this spec together, or says what to change.
+  this spec together, or says what to change. *Answered 2026-10-27:* both
+  accepted.
 
 ## 6. Acceptance criteria
 
@@ -313,6 +315,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-10-25 | Which exercise has a model is a `physics` field decided in core | A client string list drifts from the server's names (finding 7). |
 | 2026-10-25 | `400 validation { field }` for an invalid field (OQ-A) | The API's one error shape; the client already parses it. |
 | 2026-10-25 | Dorsiflexion asked once and kept in session memory until R-0058 | SPEC-0045 commits no default; storing it is R-0058's job. |
+| 2026-10-27 | Accepted with R-0059; OQ-A answered `400` | Owner. |
 
 ## 8. Changelog
 
@@ -321,6 +324,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   engine trait; server-side lever arithmetic; `End` as an api enum; the
   profile's ranges; `physics` on `PlanDay`; 59-c split in two; the no-log
   test over three paths.
+- 2026-10-27 — Accepted by the owner with R-0059; OQ-A and OQ-B answered.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
