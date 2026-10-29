@@ -276,6 +276,16 @@ async fn the_wire_matches_the_golden(pool: PgPool) {
         serde_json::from_str(include_str!("fixtures/biomech_squat_range_golden.json"))
             .expect("the golden fixture is JSON");
     assert_json_close(&got, &golden, "$");
+
+    // Published in SPEC-0059 §2.2's example, not produced by this commit.
+    let published = [33.52, -71.49, 109.56, 22.74];
+    for (i, want) in published.into_iter().enumerate() {
+        let moment = f(&got["frames"][0]["mechanics"]["joints"][i]["moment"]);
+        assert!(
+            (moment - want).abs() <= 0.01,
+            "joint {i}: {moment} vs spec {want}"
+        );
+    }
 }
 
 /// Structural equality with a 1e-6 tolerance on numbers.
@@ -309,6 +319,9 @@ fn assert_json_close(got: &Value, want: &Value, path: &str) {
 /// that would otherwise be logged, so a hit in the capture is a leak.
 const SECRET_NUMBERS: [&str; 6] = ["1.7731", "77.123", "0.4567", "0.4231", "29.137", "84.321"];
 
+/// Emitted by the test itself to prove the capture records anything at all.
+const CAPTURE_MARKER: &str = "r0059-no-log-control-marker";
+
 fn recognisable(dorsiflexion: f64) -> Value {
     json!({
         "height_m": 1.7731, "mass_kg": 77.123,
@@ -339,7 +352,7 @@ async fn the_body_is_never_logged(pool: PgPool) {
     assert_eq!(status, StatusCode::OK, "valid path");
 
     let mut malformed = recognisable(29.137);
-    malformed["frames"] = json!("forty-one");
+    malformed["height_m"] = json!("1.7731");
     let (status, body) = post(&app, &auth, malformed).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "JsonRejection path");
     assert_eq!(body, json!({"error": "validation", "field": "body"}));
@@ -348,5 +361,14 @@ async fn the_body_is_never_logged(pool: PgPool) {
     assert_eq!(status, StatusCode::OK, "engine rejection path");
     assert_eq!(body["end"]["kind"], "rejected");
 
+    // Positive control: the capture is live, so a clean capture means something.
+    tracing::info!("{CAPTURE_MARKER}");
+    logs_assert(|lines: &[&str]| {
+        if lines.iter().any(|line| line.contains(CAPTURE_MARKER)) {
+            Ok(())
+        } else {
+            Err("the capture did not record the control marker".to_owned())
+        }
+    });
     logs_assert(assert_no_secret_in);
 }
