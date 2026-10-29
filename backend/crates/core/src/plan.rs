@@ -17,6 +17,8 @@ use chrono::{Days, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::periodize::lift_key;
+use crate::technique::Lift;
 use crate::workout::MuscleGroup;
 
 /// One day of a program's cycle (SPEC-0061 §2.1).
@@ -24,20 +26,47 @@ use crate::workout::MuscleGroup;
 /// A training day names its `focus` with the closed [`MuscleGroup`]
 /// vocabulary — the client builds the day's name from it in the user's
 /// language, so the server sends no prose — and lists its exercises.
+/// `physics` holds, per exercise and in the same order, the lift whose
+/// physics check models it (SPEC-0059 §2.5); build a training day with
+/// [`PlanDay::training`] so the two lists cannot disagree.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PlanDay {
     Training {
         focus: Vec<MuscleGroup>,
         exercises: Vec<String>,
+        physics: Vec<Option<Lift>>,
     },
     Rest,
 }
 
 impl PlanDay {
+    /// A training day whose `physics` is [`physics_for`] of each exercise.
+    #[must_use]
+    pub fn training(focus: Vec<MuscleGroup>, exercises: Vec<String>) -> Self {
+        let physics = exercises.iter().map(|e| physics_for(e)).collect();
+        PlanDay::Training {
+            focus,
+            exercises,
+            physics,
+        }
+    }
+
     fn is_rest(&self) -> bool {
         matches!(self, PlanDay::Rest)
     }
+}
+
+/// The lift whose physics check models `exercise`, or `None` when there is
+/// none yet (SPEC-0059 §2.5: the server decides, not a client string list).
+///
+/// Only the back squat has a model today (SPEC-0045's `squat_range`), and the
+/// library names it "Back Squat". Exact after [`lift_key`] normalization:
+/// a front, hack or low-bar squat is different mechanics, and the deadlift and
+/// bench wait for R-0045's garust work.
+#[must_use]
+pub fn physics_for(exercise: &str) -> Option<Lift> {
+    (lift_key(exercise) == "back squat").then_some(Lift::Squat)
 }
 
 /// The inclusive span of calendar days a projection is asked for.

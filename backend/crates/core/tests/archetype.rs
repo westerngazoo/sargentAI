@@ -609,10 +609,7 @@ fn provenance_carries_internal_sources_for_the_dto_to_omit() {
 
 /// A training day of a cycle.
 fn training_day(focus: Vec<MuscleGroup>, exercises: &[&str]) -> PlanDay {
-    PlanDay::training(
-        focus,
-        exercises.iter().map(|e| (*e).to_string()).collect(),
-    )
+    PlanDay::training(focus, exercises.iter().map(|e| (*e).to_string()).collect())
 }
 
 /// A valid two-day cycle: one training day, one rest day.

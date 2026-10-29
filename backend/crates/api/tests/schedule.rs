@@ -184,7 +184,10 @@ async fn schedule_cycle_marks_each_exercise_with_its_physics(pool: PgPool) {
 
     let cycle = body["cycle"].as_array().unwrap();
     assert_eq!(cycle[0]["exercises"][0], "Back Squat");
-    assert_eq!(cycle[0]["physics"], json!(["squat", null, null, null, null]));
+    assert_eq!(
+        cycle[0]["physics"],
+        json!(["squat", null, null, null, null])
+    );
     for entry in cycle {
         match entry["kind"].as_str().unwrap() {
             "training" => assert_eq!(

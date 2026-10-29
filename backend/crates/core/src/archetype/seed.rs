@@ -29,10 +29,10 @@ const CYCLE_RECONSTRUCTED: &str = "day cycle and exercises reconstructed for R-0
 
 /// A training day of a cycle: what it trains and the exercises it lists.
 fn day(focus: &[MuscleGroup], exercises: &[&str]) -> PlanDay {
-    PlanDay::Training {
-        focus: focus.to_vec(),
-        exercises: exercises.iter().map(|e| (*e).to_string()).collect(),
-    }
+    PlanDay::training(
+        focus.to_vec(),
+        exercises.iter().map(|e| (*e).to_string()).collect(),
+    )
 }
 
 /// The whole curated library, in authored order. The single `expect` is
