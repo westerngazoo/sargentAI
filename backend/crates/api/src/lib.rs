@@ -107,6 +107,7 @@ pub fn app(state: AppState) -> Router {
         .merge(archetype::routes())
         .merge(auth::routes())
         .merge(authored::routes())
+        .merge(biomech::routes())
         .merge(goals::routes())
         .merge(profile::routes())
         .merge(workout::routes())

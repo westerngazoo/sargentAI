@@ -49,7 +49,8 @@ async fn post(app: &Router, auth: &str, body: Value) -> (StatusCode, Value) {
 }
 
 fn f(v: &Value) -> f64 {
-    v.as_f64().unwrap_or_else(|| panic!("expected a number, got {v}"))
+    v.as_f64()
+        .unwrap_or_else(|| panic!("expected a number, got {v}"))
 }
 
 /// AC1 — a valid request returns frames with the four moments, the `hip` and
@@ -103,13 +104,19 @@ async fn a_valid_request_returns_frames_with_four_moments_and_the_lever(pool: Pg
             f(&hip["bar_nm"]),
             f(&hip["body_nm"]),
         );
-        assert!((bar_nm - bar_n * lever).abs() < 1e-9, "bar_nm = bar_n × lever");
+        assert!(
+            (bar_nm - bar_n * lever).abs() < 1e-9,
+            "bar_nm = bar_n × lever"
+        );
         let hip_moment = f(&frame["mechanics"]["joints"][0]["moment"]);
         assert!(
             (bar_nm + body_nm - hip_moment).abs() < 1e-9,
             "the sum the check shows is the hip moment"
         );
-        assert!(f(&frame["ground_n"]) > bar_n, "the ground carries bar and body");
+        assert!(
+            f(&frame["ground_n"]) > bar_n,
+            "the ground carries bar and body"
+        );
     }
 }
 
@@ -137,7 +144,13 @@ async fn every_field_is_bounded_and_named(pool: PgPool) {
     let (app, auth) = authed_app(pool).await;
     let cases: [(&str, Value, Value, Value, Value); 8] = [
         ("height_m", json!(0.5), json!(3.0), json!(0.49), json!(3.01)),
-        ("mass_kg", json!(20.0), json!(500.0), json!(19.9), json!(500.1)),
+        (
+            "mass_kg",
+            json!(20.0),
+            json!(500.0),
+            json!(19.9),
+            json!(500.1),
+        ),
         ("thigh_m", json!(0.1), json!(1.5), json!(0.09), json!(1.51)),
         ("shank_m", json!(0.1), json!(1.5), json!(0.09), json!(1.51)),
         ("trunk_m", json!(0.1), json!(1.5), json!(0.09), json!(1.51)),
@@ -148,7 +161,13 @@ async fn every_field_is_bounded_and_named(pool: PgPool) {
             json!(-0.1),
             json!(90.1),
         ),
-        ("bar_kg", json!(0.1), json!(1000.0), json!(0.0), json!(1000.1)),
+        (
+            "bar_kg",
+            json!(0.1),
+            json!(1000.0),
+            json!(0.0),
+            json!(1000.1),
+        ),
         ("frames", json!(2), json!(241), json!(1), json!(242)),
     ];
     for (field, low, high, below, above) in cases {

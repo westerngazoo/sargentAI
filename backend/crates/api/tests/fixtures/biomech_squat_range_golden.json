@@ -1,1 +1,231 @@
-{}
+{
+  "assumptions": [
+    {
+      "assumption": "joints_advance_together"
+    },
+    {
+      "assumption": "straight_body_upright"
+    }
+  ],
+  "end": {
+    "kind": "bottom"
+  },
+  "frames": [
+    {
+      "ground_n": 1579.41,
+      "hip": {
+        "bar_n": 824.0400000000001,
+        "bar_nm": 23.8200016329144,
+        "body_nm": 9.697682645417082,
+        "lever_m": 0.02890636575034513
+      },
+      "hip_flexion_deg": 0.0,
+      "knee_flexion_deg": 0.0,
+      "mechanics": {
+        "assumptions": [
+          {
+            "assumption": "sagittal_plane"
+          },
+          {
+            "assumption": "quasi_static"
+          },
+          {
+            "assumption": "rigid_segments"
+          },
+          {
+            "assumption": "single_posture",
+            "at": "upright"
+          },
+          {
+            "assumption": "solved_baseline"
+          },
+          {
+            "assumption": "straight_body_upright"
+          },
+          {
+            "assumption": "rigid_trunk_lumbar"
+          },
+          {
+            "assumption": "table_derived_masses"
+          },
+          {
+            "assumption": "table_derived_lengths"
+          },
+          {
+            "assumption": "body_fat_ignored"
+          }
+        ],
+        "joints": [
+          {
+            "joint": "hip",
+            "moment": 33.51768427833149,
+            "resisting": "hip_extensors",
+            "uncertainty": 0.634065473603286
+          },
+          {
+            "joint": "knee",
+            "moment": -71.49467812212968,
+            "resisting": "knee_extensors",
+            "uncertainty": 0.634065473603286
+          },
+          {
+            "joint": "ankle",
+            "moment": 109.56357237571204,
+            "resisting": "plantar_flexors",
+            "uncertainty": 0.6340654736033002
+          },
+          {
+            "joint": "lumbar",
+            "moment": 22.73662390744108,
+            "resisting": "spinal_erectors",
+            "uncertainty": 2.049756135283424
+          }
+        ],
+        "load": {
+          "basis": "bar",
+          "kg": 84.0
+        },
+        "uncertainty": {
+          "com_placement": 0.02,
+          "l5s1_placement": 0.03
+        }
+      },
+      "posture": {
+        "ankle": {
+          "x": -0.07034560000000001,
+          "y": 0.06942
+        },
+        "hip": {
+          "x": -0.018706739441651323,
+          "y": 0.9378861352523972
+        },
+        "knee": {
+          "x": -0.04541649490286616,
+          "y": 0.4886795135701229
+        },
+        "load": {
+          "at": {
+            "x": 0.010199626308693805,
+            "y": 1.424035509501822
+          },
+          "kg": 84.0
+        },
+        "shoulder": {
+          "x": 0.011721013979764602,
+          "y": 1.4496223186728443
+        }
+      },
+      "progress": 0.0,
+      "shank_deg": 3.402791702124454,
+      "trunk_lean_deg": 3.4027917021244525
+    },
+    {
+      "ground_n": 1579.41,
+      "hip": {
+        "bar_n": 824.0400000000001,
+        "bar_nm": 311.59036037498623,
+        "body_nm": 126.85576083724428,
+        "lever_m": 0.3781252856353893
+      },
+      "hip_flexion_deg": 140.93442573701674,
+      "knee_flexion_deg": 119.0,
+      "mechanics": {
+        "assumptions": [
+          {
+            "assumption": "sagittal_plane"
+          },
+          {
+            "assumption": "quasi_static"
+          },
+          {
+            "assumption": "rigid_segments"
+          },
+          {
+            "assumption": "single_posture",
+            "at": "parallel"
+          },
+          {
+            "assumption": "solved_baseline"
+          },
+          {
+            "assumption": "rigid_trunk_lumbar"
+          },
+          {
+            "assumption": "table_derived_masses"
+          },
+          {
+            "assumption": "table_derived_lengths"
+          },
+          {
+            "assumption": "body_fat_ignored"
+          }
+        ],
+        "joints": [
+          {
+            "joint": "hip",
+            "moment": 438.44612121223054,
+            "resisting": "hip_extensors",
+            "uncertainty": 8.29423492349315
+          },
+          {
+            "joint": "knee",
+            "moment": 201.38179688776955,
+            "resisting": "knee_extensors",
+            "uncertainty": 8.294234923493121
+          },
+          {
+            "joint": "ankle",
+            "moment": 109.5635723757121,
+            "resisting": "plantar_flexors",
+            "uncertainty": 8.294234923493121
+          },
+          {
+            "joint": "lumbar",
+            "moment": 297.41865454957554,
+            "resisting": "spinal_erectors",
+            "uncertainty": 26.81293908860482
+          }
+        ],
+        "load": {
+          "basis": "bar",
+          "kg": 84.0
+        },
+        "uncertainty": {
+          "com_placement": 0.02,
+          "l5s1_placement": 0.03
+        }
+      },
+      "posture": {
+        "ankle": {
+          "x": -0.07034560000000001,
+          "y": 0.06942
+        },
+        "hip": {
+          "x": -0.31672555949653847,
+          "y": 0.4367602769985462
+        },
+        "knee": {
+          "x": 0.13327444050346154,
+          "y": 0.4367602769985462
+        },
+        "load": {
+          "at": {
+            "x": 0.06139972613885081,
+            "y": 0.7436773023118306
+          },
+          "kg": 84.0
+        },
+        "shoulder": {
+          "x": 0.08130105696176604,
+          "y": 0.7598308299598981
+        }
+      },
+      "progress": 1.0,
+      "shank_deg": 29.0,
+      "trunk_lean_deg": 50.93442573701672
+    }
+  ],
+  "table_lengths": [
+    "trunk"
+  ]
+}
