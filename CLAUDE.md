@@ -80,7 +80,10 @@ Every requirement `R-NNNN` passes through these eight steps. None is skipped.
 6. **PR** — open the pull request. The architect agent and the owner review.
 7. **QA sign-off** — the qa agent verifies every acceptance criterion and runs
    the unit + e2e suites.
-8. **Merge & track** — the orchestrator updates `ROADMAP.md` and the registers.
+8. **Merge & track** — the tracking (`ROADMAP.md` row, requirement and spec
+   status) rides in the feature PR as its last commit, written as of the
+   merge; the owner merges once. No separate tracking PR, no direct commit
+   to the default branch.
 
 ## 5. Testing standard
 
