@@ -139,10 +139,7 @@ mod tests {
     #[test]
     fn only_a_training_index_inside_the_cycle_is_a_training_day() {
         let cycle = vec![
-            PlanDay::Training {
-                focus: vec![MuscleGroup::Legs],
-                exercises: vec!["Back Squat".into()],
-            },
+            PlanDay::training(vec![MuscleGroup::Legs], vec!["Back Squat".into()]),
             PlanDay::Rest,
         ];
         assert!(is_training_day(&cycle, 0));

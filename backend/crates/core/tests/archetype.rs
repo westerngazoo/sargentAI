@@ -36,6 +36,7 @@ use fitai_core::archetype::{
     LengthBand, MacroEmphasis, PlanDay, ProgramTemplate, Provenance, Somatotype, StructureTag,
     TrainingPhilosophy, VolumeBand, WidthBand,
 };
+use fitai_core::plan::physics_for;
 use fitai_core::{Goal, MuscleGroup};
 
 // ===========================================================================
@@ -608,10 +609,10 @@ fn provenance_carries_internal_sources_for_the_dto_to_omit() {
 
 /// A training day of a cycle.
 fn training_day(focus: Vec<MuscleGroup>, exercises: &[&str]) -> PlanDay {
-    PlanDay::Training {
+    PlanDay::training(
         focus,
-        exercises: exercises.iter().map(|e| (*e).to_string()).collect(),
-    }
+        exercises.iter().map(|e| (*e).to_string()).collect(),
+    )
 }
 
 /// A valid two-day cycle: one training day, one rest day.
@@ -810,4 +811,24 @@ fn library_provenance_notes_record_the_reconstructed_cycle() {
             a.id
         );
     }
+}
+
+#[test]
+fn library_cycles_mark_each_exercise_with_its_physics() {
+    // SPEC-0059 §2.5: which exercise has a model is decided in core, one
+    // entry per exercise; the library's only modelled name is the back squat.
+    let mut squats = 0;
+    for a in library() {
+        for day in &a.program_template.cycle {
+            if let PlanDay::Training {
+                exercises, physics, ..
+            } = day
+            {
+                let expected: Vec<_> = exercises.iter().map(|e| physics_for(e)).collect();
+                assert_eq!(physics, &expected, "{}: {exercises:?}", a.id);
+                squats += physics.iter().filter(|p| p.is_some()).count();
+            }
+        }
+    }
+    assert!(squats > 0, "some library day lists the back squat");
 }

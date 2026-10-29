@@ -306,6 +306,7 @@ impl<'a> Cursor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::technique::Lift;
     use DayState::{Nothing, Planned, Rest};
 
     /// A day of October 2026. The 19th is a Monday.
@@ -314,10 +315,7 @@ mod tests {
     }
 
     fn training(group: MuscleGroup) -> PlanDay {
-        PlanDay::Training {
-            focus: vec![group],
-            exercises: vec!["Some lift".into()],
-        }
+        PlanDay::training(vec![group], vec!["Some lift".into()])
     }
 
     /// Legs, Push, Pull, Rest.
@@ -789,17 +787,62 @@ mod tests {
         }
     }
 
+    // --- physics (SPEC-0059 §2.5) ---------------------------------------
+
+    #[test]
+    fn the_library_back_squat_has_the_squat_model() {
+        for name in ["Back Squat", "back squat", "  BACK SQUAT "] {
+            assert_eq!(physics_for(name), Some(Lift::Squat), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn exercises_without_a_model_have_no_physics() {
+        // Other squats are other mechanics (the model is the back squat);
+        // the deadlift and bench wait for R-0045's garust work.
+        for name in [
+            "Front Squat",
+            "Hack Squat",
+            "Low Bar Squat",
+            "Deadlift",
+            "Romanian Deadlift",
+            "Bench Press",
+            "Close-Grip Bench Press",
+            "Leg Press",
+            "",
+        ] {
+            assert_eq!(physics_for(name), None, "{name:?}");
+        }
+    }
+
+    #[test]
+    fn a_training_day_has_one_physics_entry_per_exercise_in_order() {
+        let day = PlanDay::training(
+            vec![MuscleGroup::Legs],
+            vec!["Leg Press".into(), "Back Squat".into()],
+        );
+        let PlanDay::Training { physics, .. } = day else {
+            panic!("a training day");
+        };
+        assert_eq!(physics, vec![None, Some(Lift::Squat)]);
+    }
+
     // --- wire shape (§2.4; slice 2c serializes these) ------------------
 
     #[test]
     fn plan_day_serializes_with_a_kind_tag() {
-        let day = PlanDay::Training {
-            focus: vec![MuscleGroup::Legs],
-            exercises: vec!["Back Squat".into()],
-        };
+        let day = PlanDay::training(
+            vec![MuscleGroup::Legs],
+            vec!["Back Squat".into(), "Leg Curl".into()],
+        );
         assert_eq!(
             serde_json::to_value(&day).unwrap(),
-            serde_json::json!({ "kind": "training", "focus": ["legs"], "exercises": ["Back Squat"] })
+            serde_json::json!({
+                "kind": "training",
+                "focus": ["legs"],
+                "exercises": ["Back Squat", "Leg Curl"],
+                "physics": ["squat", null],
+            })
         );
         assert_eq!(
             serde_json::to_value(PlanDay::Rest).unwrap(),

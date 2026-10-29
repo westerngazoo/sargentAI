@@ -168,6 +168,35 @@ async fn schedule_projects_plan_and_free_sessions(pool: PgPool) {
     );
 }
 
+/// SPEC-0059 §2.5: each training day of the cycle carries `physics`, one
+/// entry per exercise, decided by the server. `powerbuilder-leverage` opens
+/// with legs: Back Squat (modelled), then Front Squat, Leg Press, Leg Curl
+/// and Standing Calf Raise (not); rest days carry no `physics` at all.
+#[sqlx::test(migrations = "../../migrations")]
+async fn schedule_cycle_marks_each_exercise_with_its_physics(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (user_id, token) = register_and_token(&app, "sched-phys@b.com", "8charsmin").await;
+    seed_program(&pool, &user_id, "powerbuilder-leverage", day(0), true).await;
+
+    let resp = schedule(&app, &token, day(0), day(0), today()).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = body_json(resp).await;
+
+    let cycle = body["cycle"].as_array().unwrap();
+    assert_eq!(cycle[0]["exercises"][0], "Back Squat");
+    assert_eq!(cycle[0]["physics"], json!(["squat", null, null, null, null]));
+    for entry in cycle {
+        match entry["kind"].as_str().unwrap() {
+            "training" => assert_eq!(
+                entry["physics"].as_array().unwrap().len(),
+                entry["exercises"].as_array().unwrap().len(),
+                "one physics entry per exercise: {entry}"
+            ),
+            _ => assert_eq!(entry, &json!({ "kind": "rest" })),
+        }
+    }
+}
+
 /// No current program: `program_id` is null, the cycle is empty and the days
 /// come from the logs alone.
 #[sqlx::test(migrations = "../../migrations")]
