@@ -61,9 +61,11 @@ void main() {
 
     test('a lift this client cannot draw yet reads as no model', () {
       final s = Schedule.fromJson(scheduleJson(cycle: [
-        trainingDayJson(exercises: ['Snatch'], physics: ['snatch']),
+        trainingDayJson(
+            exercises: ['Deadlift', 'Bench Press', 'Snatch'],
+            physics: ['deadlift', 'bench', 'snatch']),
       ]));
-      expect((s.cycle.single as TrainingPlanDay).physics, [null]);
+      expect((s.cycle.single as TrainingPlanDay).physics, [null, null, null]);
     });
 
     test('a day outside the response has no state', () {

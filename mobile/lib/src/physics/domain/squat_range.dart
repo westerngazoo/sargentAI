@@ -19,13 +19,28 @@ class SquatRangeRequest {
     this.frames,
   });
 
+  /// Height, metres; the server accepts 0.5–3.0 (the profile's range).
   final double heightM;
+
+  /// Body mass, kg; the server accepts 20–500 (the profile's range).
   final double massKg;
+
+  /// Thigh length, metres, 0.1–1.5; null takes it from the table.
   final double? thighM;
+
+  /// Shank length, metres, 0.1–1.5; null takes it from the table.
   final double? shankM;
+
+  /// Trunk length, metres, 0.1–1.5; null takes it from the table.
   final double? trunkM;
+
+  /// Ankle dorsiflexion, degrees, 0–90. Required: the model has no default.
   final double dorsiflexionDeg;
+
+  /// Bar load, kg, in (0, 1000]; null is bodyweight only.
   final double? barKg;
+
+  /// Frames to sample across the range, 2–241; null is the server's 41.
   final int? frames;
 
   Map<String, dynamic> toJson() => {
@@ -133,28 +148,24 @@ class JointMoment {
     required this.joint,
     required this.resisting,
     required this.moment,
-    required this.uncertainty,
   });
 
   factory JointMoment.fromJson(Map<String, dynamic> json) => JointMoment(
         joint: Joint.fromWire(json['joint'] as String),
         resisting: json['resisting'] as String,
         moment: _d(json['moment']),
-        uncertainty: _d(json['uncertainty']),
       );
 
   final Joint joint;
   final String resisting;
   final double moment;
-  final double uncertainty;
 }
 
-/// A frame's mechanics: the four moments, the load basis, the assumptions.
+/// A frame's mechanics: the four moments and the frame's assumptions.
 @immutable
 class Mechanics {
   const Mechanics({
     required this.joints,
-    required this.barKg,
     required this.assumptions,
   });
 
@@ -162,15 +173,10 @@ class Mechanics {
         joints: (json['joints'] as List<dynamic>)
             .map((j) => JointMoment.fromJson(j as Map<String, dynamic>))
             .toList(),
-        barKg:
-            ((json['load'] as Map<String, dynamic>)['kg'] as num?)?.toDouble(),
         assumptions: _assumptions(json['assumptions']),
       );
 
   final List<JointMoment> joints;
-
-  /// The bar's mass, or null when the basis is bodyweight only.
-  final double? barKg;
   final List<Assumption> assumptions;
 
   /// The server's moment at [joint]. Throws a [StateError] if the frame
@@ -208,7 +214,6 @@ class HipLever {
 class RangeFrame {
   const RangeFrame({
     required this.progress,
-    required this.shankDeg,
     required this.kneeFlexionDeg,
     required this.hipFlexionDeg,
     required this.trunkLeanDeg,
@@ -222,7 +227,6 @@ class RangeFrame {
     final hip = json['hip'] as Map<String, dynamic>?;
     return RangeFrame(
       progress: _d(json['progress']),
-      shankDeg: _d(json['shank_deg']),
       kneeFlexionDeg: _d(json['knee_flexion_deg']),
       hipFlexionDeg: _d(json['hip_flexion_deg']),
       trunkLeanDeg: _d(json['trunk_lean_deg']),
@@ -235,7 +239,6 @@ class RangeFrame {
 
   /// `0` upright to `1` at the bottom.
   final double progress;
-  final double shankDeg;
   final double kneeFlexionDeg;
   final double hipFlexionDeg;
   final double trunkLeanDeg;

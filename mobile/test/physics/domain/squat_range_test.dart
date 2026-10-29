@@ -27,7 +27,6 @@ void main() {
     test('parses a frame: angles, posture, the hip lever and ground force', () {
       final f = squatGolden().frames.first;
       expect(f.progress, 0.0);
-      expect(f.shankDeg, closeTo(3.4028, 1e-4));
       expect(f.kneeFlexionDeg, 0.0);
       expect(f.hipFlexionDeg, 0.0);
       expect(f.trunkLeanDeg, closeTo(3.4028, 1e-4));
@@ -42,8 +41,7 @@ void main() {
       expect(f.groundN, closeTo(1579.41, 1e-9));
     });
 
-    test('parses the mechanics: four moments, the load and its assumptions',
-        () {
+    test('parses the mechanics: four moments and their assumptions', () {
       final m = squatGolden().frames.first.mechanics;
       expect(m.joints.map((j) => j.joint),
           [Joint.hip, Joint.knee, Joint.ankle, Joint.lumbar]);
@@ -51,8 +49,6 @@ void main() {
       expect(m.moment(Joint.knee), closeTo(-71.494678, 1e-6),
           reason: 'a negative moment survives the parse');
       expect(m.joints.first.resisting, 'hip_extensors');
-      expect(m.joints.last.uncertainty, closeTo(2.049756, 1e-6));
-      expect(m.barKg, 84.0);
       final single =
           m.assumptions.firstWhere((a) => a.assumption == 'single_posture');
       expect(single.at, 'upright');
@@ -120,7 +116,6 @@ void main() {
             .single;
     expect(f.hip, isNull);
     expect(f.posture.load, isNull);
-    expect(f.mechanics.barKg, isNull);
   });
 
   test('the request serializes with the wire names; nulls stay null', () {
