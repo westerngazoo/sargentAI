@@ -27,11 +27,11 @@ mod range;
 
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};
 use crate::biomech::{
-    above, analyse_baseline, baseline, baseline_mechanics, moment_about, scale, Assumption,
-    Baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, LoadBasis, MeasuredLengths, Mechanics,
-    Metres, Point, Position, Posture, Rejection, ResistingGroup, Segment, Unknown, Verification,
-    COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M, L5S1_UP_THE_TRUNK, WINTER,
-    WINTER_VERIFICATION,
+    above, analyse_baseline, baseline, baseline_mechanics, body_moment_about, moment_about, scale,
+    Assumption, Baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, LoadBasis,
+    MeasuredLengths, Mechanics, Metres, Point, Position, Posture, Rejection, ResistingGroup,
+    Segment, Unknown, Verification, COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M,
+    L5S1_UP_THE_TRUNK, WINTER, WINTER_VERIFICATION,
 };
 use crate::workout::LoadKg;
 
@@ -543,6 +543,36 @@ fn masses_are_table_fractions_and_ignore_measured_lengths() {
 // ===========================================================================
 // B1–B4 · Hand-computed statics (AC1, AC4, AC16)
 // ===========================================================================
+
+/// The body's share plus the load's own term is the whole moment, at every
+/// joint, loaded and bodyweight-only: `body_moment_about` is the segment half
+/// of `moment_about`, with the posture (and so the arms) left as solved.
+#[test]
+fn the_body_share_plus_the_load_term_is_the_moment() {
+    let body = lifter();
+    for bar_kg in [Some(100.0), None] {
+        let p = solved(&body, bar_kg, REACHES_PARALLEL);
+        for j in [Joint::Hip, Joint::Knee, Joint::Ankle, Joint::Lumbar] {
+            let load = p.load.map_or(0.0, |l| {
+                j.extension_sign() * l.kg.get() * G * (l.at.x.0 - p.at(j).x.0)
+            });
+            let what = format!("{j:?}, bar {bar_kg:?}");
+            assert_close(
+                body_moment_about(j, &body, &p).0 + load,
+                moment_about(j, &body, &p).0,
+                1e-9,
+                &what,
+            );
+            if bar_kg.is_none() {
+                assert_eq!(
+                    body_moment_about(j, &body, &p),
+                    moment_about(j, &body, &p),
+                    "{what}"
+                );
+            }
+        }
+    }
+}
 
 /// B1 — trunk vertical over the hip, no bar: every load-side COM is over the
 /// hip, so the hip moment is zero. The sign bench (AC16).
