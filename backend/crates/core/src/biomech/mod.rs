@@ -23,7 +23,8 @@
 //! the extensors are loaded, negative means the load is assisting extension —
 //! a real state, never flattened by `.abs()`. The raw coordinate sum flips
 //! sign at the knee on a zig-zag chain, so the per-joint orientation is
-//! applied in exactly one place, [`moment_about`].
+//! applied in exactly one module, `chain` — by [`moment_about`] and its body
+//! share [`body_moment_about`].
 //!
 //! ## What stays out of the type system on purpose
 //!
@@ -53,12 +54,13 @@ pub use analysis::{
 pub use anthro::{
     scale, Body, Length, MeasuredLengths, Segment, Table, Verification, WINTER, WINTER_VERIFICATION,
 };
-pub use chain::{above, moment_about, ChainSegment};
+pub use chain::{above, body_moment_about, moment_about, ChainSegment};
 pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
 pub use squat::{baseline, baseline_mechanics, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR};
 
 /// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2);
-/// [`moment_about`] is the only place it is multiplied.
+/// `chain` ([`moment_about`], [`body_moment_about`]) is the only place it is
+/// multiplied.
 pub const G: f64 = 9.81;
 
 /// Where L5/S1 sits on the trunk line, as a fraction of hip → shoulder.

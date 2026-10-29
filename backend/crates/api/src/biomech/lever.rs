@@ -4,7 +4,7 @@
 //! `g` is core's [`G`], the one constant every moment is multiplied by: a
 //! second value here would break `bar_nm + body_nm == hip moment`.
 
-use fitai_core::biomech::{above, Body, Joint, Posture, RangeFrame, G};
+use fitai_core::biomech::{body_moment_about, Body, Joint, RangeFrame, G};
 use serde::Serialize;
 
 /// The hip moment split into the bar's share and the body's own share, so
@@ -18,8 +18,8 @@ pub(crate) struct HipLever {
     pub(crate) bar_n: f64,
     /// `bar_n × lever_m`, the bar's share of the hip moment, N·m.
     pub(crate) bar_nm: f64,
-    /// The body's own share: every segment above the hip, weight × lever, in
-    /// the loaded posture under the stated placement conventions, N·m.
+    /// The body's own share, core's `body_moment_about` on the loaded posture,
+    /// N·m.
     pub(crate) body_nm: f64,
 }
 
@@ -33,26 +33,8 @@ pub(crate) fn hip_lever(body: &Body, frame: &RangeFrame) -> Option<HipLever> {
         lever_m,
         bar_n,
         bar_nm: bar_n * lever_m,
-        body_nm: body_share_about_hip(body, &frame.posture),
+        body_nm: body_moment_about(Joint::Hip, body, &frame.posture).0,
     })
-}
-
-/// `Σ m·g·(x_com − x_hip)` over the segments above the hip, in `posture` as it
-/// is, load included. This is the segment half of core's hip sum
-/// (`chain.rs`, `raw_sum` under `Placement::STATED`), rebuilt from its public
-/// pieces in the same order, because core exposes only the total.
-///
-/// Not `moment_about(Hip, body, posture without its load)` as SPEC-0059 §2.2
-/// first wrote: core places the arms' centre of mass at the shoulder → bar
-/// midpoint when there is a bar and hanging straight down when there is not,
-/// so dropping the load also moves the arms and the shares stop summing to
-/// the hip moment.
-fn body_share_about_hip(body: &Body, posture: &Posture) -> f64 {
-    let hip_x = posture.hip.x.0;
-    above(Joint::Hip)
-        .iter()
-        .map(|&seg| body.mass_kg(seg) * G * (seg.com(body, posture).x.0 - hip_x))
-        .sum()
 }
 
 /// What the floor pushes up with, `(bar_kg + mass_kg) × g`, newtons.

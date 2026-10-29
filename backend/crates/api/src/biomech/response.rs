@@ -19,7 +19,9 @@ pub(crate) enum End {
     Bottom,
     /// Stopped at `reached`; `bottom` is the bottom's own rejection, if any.
     Stopped {
+        /// The progress `s*` the lifter reached, `0..1`.
         reached: f64,
+        /// Why the bottom itself fails, or `None` when only the convention stops it.
         bottom: Option<Rejection>,
     },
     /// The engine could not place the lifter at all; there are no frames.

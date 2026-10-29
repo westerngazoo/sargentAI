@@ -50,10 +50,15 @@ impl fmt::Debug for RangeRequest {
 /// A validated request: the engine's inputs, plus what the envelope reports.
 /// No `Debug`, since it holds the lifter's measurements.
 pub(crate) struct Squat {
+    /// The lifter: the table scaled by height and mass, measured lengths overriding.
     pub(crate) body: Body,
+    /// Body mass, kilograms, for the ground force.
     pub(crate) mass_kg: f64,
+    /// The bar's load; `None` is bodyweight only.
     pub(crate) bar: Option<LoadKg>,
+    /// The lifter's ankle dorsiflexion.
     pub(crate) ankle: Dorsiflexion,
+    /// How many frames to sample across the range.
     pub(crate) frames: FrameCount,
     /// Which of `thigh`, `shank`, `trunk` the request left to the table (AC2).
     pub(crate) table_lengths: Vec<&'static str>,
