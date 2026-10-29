@@ -1,8 +1,7 @@
 // R-0059 AC2, AC7 -> SPEC-0059 §2.3 (slice 59-b): the controller builds the
 // request from the profile (`height_cm / 100`), the session's dorsiflexion
 // (no default) and the chosen load; exposes the result as an AsyncValue,
-// surfacing a 400 as an error; and interpolates for playback only between
-// the frames the server returned.
+// surfacing a 400 as an error; and delegates playback to playbackAt.
 
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/physics/application/squat_check_controller.dart';
@@ -88,45 +87,13 @@ void main() {
   });
 
   group('playback', () {
-    Future<SquatCheckController> loaded() async {
+    test('delegates to playbackAt over the current result', () async {
       final c = makeContainer(dorsiflexion: 29.0, barKg: 84.0);
       await c.read(squatCheckControllerProvider.future);
-      return c.read(squatCheckControllerProvider.notifier);
-    }
-
-    test('at a returned frame is that frame, exactly', () async {
-      final controller = await loaded();
-      for (final frame in squatGolden().frames) {
-        final p = controller.frameAt(frame.progress)!;
-        expect(p.frame.progress, frame.progress);
-        expect(p.posture.hip.x, frame.posture.hip.x);
-        expect(p.posture.load!.at.y, frame.posture.load!.at.y);
-      }
-      final first = controller.frameAt(0)!;
-      expect(identical(first.posture, first.frame.posture), isTrue);
-    });
-
-    test('between two frames the posture lies between them', () async {
-      final controller = await loaded();
-      final [a, b] = squatGolden().frames;
-      final p = controller.frameAt(0.25)!;
-      expect(p.progress, 0.25);
-      expect(
-          p.posture.hip.y,
-          closeTo(a.posture.hip.y + (b.posture.hip.y - a.posture.hip.y) / 4,
-              1e-12));
-      expect(p.frame.progress, a.progress,
-          reason: 'the numbers shown are the nearest returned frame');
-      expect(controller.frameAt(0.75)!.frame.progress, b.progress);
-    });
-
-    test('never extrapolates past the returned frames', () async {
-      final controller = await loaded();
       final last = squatGolden().frames.last;
-      final p = controller.frameAt(1.5)!;
-      expect(p.progress, last.progress);
+      final p = c.read(squatCheckControllerProvider.notifier).frameAt(1.0)!;
+      expect(p.frame.progress, last.progress);
       expect(p.posture.hip.y, last.posture.hip.y);
-      expect(controller.frameAt(-1)!.progress, 0.0);
     });
 
     test('there is no frame before a result', () async {

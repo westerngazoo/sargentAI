@@ -17,7 +17,7 @@ use chrono::{Days, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::periodize::lift_key;
+use crate::biomech::model_for;
 use crate::technique::Lift;
 use crate::workout::MuscleGroup;
 
@@ -41,10 +41,10 @@ pub enum PlanDay {
 }
 
 impl PlanDay {
-    /// A training day whose `physics` is [`physics_for`] of each exercise.
+    /// A training day whose `physics` is [`model_for`] of each exercise.
     #[must_use]
     pub fn training(focus: Vec<MuscleGroup>, exercises: Vec<String>) -> Self {
-        let physics = exercises.iter().map(|e| physics_for(e)).collect();
+        let physics = exercises.iter().map(|e| model_for(e)).collect();
         PlanDay::Training {
             focus,
             exercises,
@@ -55,18 +55,6 @@ impl PlanDay {
     fn is_rest(&self) -> bool {
         matches!(self, PlanDay::Rest)
     }
-}
-
-/// The lift whose physics check models `exercise`, or `None` when there is
-/// none yet (SPEC-0059 §2.5: the server decides, not a client string list).
-///
-/// Only the back squat has a model today (SPEC-0045's `squat_range`), and the
-/// library names it "Back Squat". Exact after [`lift_key`] normalization:
-/// a front, hack or low-bar squat is different mechanics, and the deadlift and
-/// bench wait for R-0045's garust work.
-#[must_use]
-pub fn physics_for(exercise: &str) -> Option<Lift> {
-    (lift_key(exercise) == "back squat").then_some(Lift::Squat)
 }
 
 /// The inclusive span of calendar days a projection is asked for.
@@ -335,7 +323,6 @@ impl<'a> Cursor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::technique::Lift;
     use DayState::{Nothing, Planned, Rest};
 
     /// A day of October 2026. The 19th is a Monday.
@@ -817,32 +804,6 @@ mod tests {
     }
 
     // --- physics (SPEC-0059 §2.5) ---------------------------------------
-
-    #[test]
-    fn the_library_back_squat_has_the_squat_model() {
-        for name in ["Back Squat", "back squat", "  BACK SQUAT "] {
-            assert_eq!(physics_for(name), Some(Lift::Squat), "{name:?}");
-        }
-    }
-
-    #[test]
-    fn exercises_without_a_model_have_no_physics() {
-        // Other squats are other mechanics (the model is the back squat);
-        // the deadlift and bench wait for R-0045's garust work.
-        for name in [
-            "Front Squat",
-            "Hack Squat",
-            "Low Bar Squat",
-            "Deadlift",
-            "Romanian Deadlift",
-            "Bench Press",
-            "Close-Grip Bench Press",
-            "Leg Press",
-            "",
-        ] {
-            assert_eq!(physics_for(name), None, "{name:?}");
-        }
-    }
 
     #[test]
     fn a_training_day_has_one_physics_entry_per_exercise_in_order() {

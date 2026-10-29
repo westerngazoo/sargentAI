@@ -36,7 +36,7 @@ use fitai_core::archetype::{
     LengthBand, MacroEmphasis, PlanDay, ProgramTemplate, Provenance, Somatotype, StructureTag,
     TrainingPhilosophy, VolumeBand, WidthBand,
 };
-use fitai_core::plan::physics_for;
+use fitai_core::biomech::model_for;
 use fitai_core::{Goal, MuscleGroup};
 
 // ===========================================================================
@@ -821,7 +821,7 @@ fn library_cycles_mark_each_exercise_with_its_physics() {
                 exercises, physics, ..
             } = day
             {
-                let expected: Vec<_> = exercises.iter().map(|e| physics_for(e)).collect();
+                let expected: Vec<_> = exercises.iter().map(|e| model_for(e)).collect();
                 assert_eq!(physics, &expected, "{}: {exercises:?}", a.id);
                 squats += physics.iter().filter(|p| p.is_some()).count();
             }

@@ -40,6 +40,7 @@ mod tests;
 mod analysis;
 mod anthro;
 mod chain;
+mod model;
 mod range;
 mod squat;
 
@@ -55,6 +56,7 @@ pub use anthro::{
     scale, Body, Length, MeasuredLengths, Segment, Table, Verification, WINTER, WINTER_VERIFICATION,
 };
 pub use chain::{above, body_moment_about, moment_about, ChainSegment};
+pub use model::model_for;
 pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
 pub use squat::{baseline, baseline_mechanics, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR};
 
