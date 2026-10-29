@@ -11,6 +11,7 @@
 pub mod archetype;
 pub mod auth;
 pub mod authored;
+pub mod biomech;
 pub mod db;
 pub mod error;
 pub mod goals;
