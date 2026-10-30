@@ -5,7 +5,7 @@
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-25
 - **Depends on:** SPEC-0045 (slices A and B1: `squat_range`), SPEC-0061 (§2.5 the day region, §2.10 the look, §2.12 slice 4)
-- **Module(s):** `backend/crates/api/src/biomech/` (new), `backend/crates/core/src/plan.rs` (one field), `mobile/lib/src/physics/` (new), `mobile/lib/src/home/` (the Física button)
+- **Module(s):** `backend/crates/api/src/biomech/` (new), `backend/crates/core/src/plan.rs` (`PlanExercise`), `backend/crates/core/src/biomech/model.rs` (`model_for`), `mobile/lib/src/physics/` (new), `mobile/lib/src/home/` (the Física button)
 
 ## 1. Motivation
 
@@ -170,10 +170,12 @@ stored".
 - `data/squat_check_api.dart`: `Future<SquatRangeResult> range(SquatRangeRequest)`.
 - `domain/squat_range.dart`: the wire shapes above, parsed once; `End` as a
   sealed class (`Bottom`, `Stopped(reached, bottom?)`, `Rejected(reason)`).
-- `domain/lever_text.dart`, **formatting only**: "981 N × 0.29 m = 284 N·m,
-  + 101 del cuerpo = 385 N·m" from the frame's `hip` fields, with the
-  locale's number format. No physics on the client (AC7); the test checks
-  the string, not a sum.
+- `domain/lever_text.dart`, **formatting only**: "824 N × 0.03 m = 23.8 N·m,
+  + 9.7 del cuerpo = 33.5 N·m" from the frame's `hip` fields and the
+  server's hip moment, with a **decimal point**: Spanish numbers follow the
+  `es_MX` convention (one helper, `numberLocale`; the catalogue stays `es`),
+  since a decimal comma collides with the line's own commas. No physics on
+  the client (AC7); the test checks the string, not a sum.
 - `application/squat_check_controller.dart`: holds the request inputs
   (measurements, dorsiflexion, the chosen load), calls the API, exposes
   `AsyncValue<SquatRangeResult>`, and interpolates between returned frames
@@ -228,11 +230,15 @@ Design v2's physics card, in SPEC-0061 §2.10's tokens and faces:
 
 In the selected-day region, each exercise shows a **Física** button. Which
 exercises have a model is **the server's call, not a client string list**
-(finding 7): `core::plan::PlanDay::Training` gains `physics: Option<Lift>`
-(`Lift::Squat` today), set in `core` from the exercise name by one function
-(`physics_for(name)`), and carried by `GET /programs/me/schedule`'s `cycle`
-(R-0061 slice 2d adds the field to the client model). A free session's
-exercises get the same lookup through the names the app already sends. For
+(finding 7). A training day's exercises are objects on the schedule's
+`cycle`, `{"name": "Back Squat", "physics": "squat"}`, so a name and its
+physics cannot disagree: `core::plan::PlanExercise` is built from the name
+alone, and `physics` (`Lift::Squat` today, or null) comes from one function
+in `core`, `biomech::model_for(name)`. It matches exactly after trim and
+lowercase, never fuzzily: "Back Squat", "Sentadilla" and "Sentadilla
+trasera" are the squat; a bare "Squat", "Sentadilla frontal", a front, hack
+or low-bar squat are not. A free session's exercises get the same lookup
+through the names the app already sends (59-c2). For
 `physics: null` the button reads **Pronto** and opens nothing. On a wide
 window the check opens beside the exercise list; on a phone, below the
 exercise. The deadlift and bench stay *Pronto* until R-0045's garust work
@@ -243,9 +249,9 @@ gives them a model.
 | Slice | Content | Stack |
 |---|---|---|
 | 59-a | `biomech` module: validation, the endpoint, the lever fields, the `End` enum, the golden and no-log tests | backend |
-| 59-b | `physics` folder: API, models, `lever_text`, controller, with tests; `physics` on `PlanDay` and the schedule | both |
+| 59-b | `physics` folder: API, models, `lever_text`, controller, with tests; `{name, physics}` exercises on `PlanDay` and the schedule (`biomech::model_for`) | both |
 | 59-c1 (= R-0061 slice 4, first half) | the figure painter with vectors and lever, playback, the Stopped and Rejected states | mobile |
-| 59-c2 (second half) | readouts, moment bars, the live graph, caveats, the Física/Pronto buttons, the two layouts, the word-list test | mobile |
+| 59-c2 (second half) | readouts, moment bars, the live graph, caveats, the Física/Pronto buttons, the free-session `model_for` lookup, the two layouts, the word-list test | mobile |
 
 Each is within 100–400 lines (finding 4).
 
@@ -326,6 +332,9 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-10-27 | Accepted with R-0059; OQ-A answered `400` | Owner. |
 | 2026-10-28 | `g` is core's `G` (9.81), not 9.80665 | The identity `bar_nm + body_nm == hip moment` holds only with the constant core multiplies every moment by; changing it is a SPEC-0045 question (owner). |
 | 2026-10-28 | `body_nm` is the segments' share in the loaded posture, from core's new `body_moment_about` | The arms' placement depends on the bar, so the unloaded posture is a different posture; one source in `chain.rs`, no copy in the API (owner; architect review of #180). |
+| 2026-10-30 | Exercises are `{name, physics}` objects on the cycle, not a per-day `physics` field or a parallel list | A day lists several exercises, each with its own Física/Pronto button; one object per exercise means a name and its physics cannot disagree (owner, review of #183). |
+| 2026-10-30 | The lookup is `biomech::model_for`, exact after trim and lowercase: "Back Squat", "Sentadilla", "Sentadilla trasera" | It says which mechanics are modelled, narrower than `Lift::from_exercise_name` (which lift a video shows); Spanish names for what lifters type in free sessions (owner). |
+| 2026-10-30 | "La cuenta" uses a decimal point: Spanish numbers follow `es_MX` | The target market is Mexico; a decimal comma collides with the line's own commas (owner). |
 
 ## 8. Changelog
 
@@ -339,6 +348,10 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   `body_nm` in the loaded posture via `body_moment_about`; the example's hip
   numbers from the golden; `rejected` carries no range assumptions; the
   `frames` row; the arms caveat matches the model.
+- 2026-10-30 — Amended with slice 59-b (#183), owner-approved: exercises as
+  `{name, physics}` objects decided by `biomech::model_for` (with the
+  Spanish names); the decimal point in "La cuenta"; 59-c2 carries the
+  free-session lookup.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
