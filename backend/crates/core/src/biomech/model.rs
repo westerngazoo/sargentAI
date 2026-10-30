@@ -6,16 +6,22 @@ use crate::technique::Lift;
 /// The lift whose physics model covers `exercise`, or `None` when there is
 /// none yet (SPEC-0059 §2.5: the server decides, not a client string list).
 ///
-/// Only the back squat has a model today ([`super::squat_range`]), and the
-/// library names it "Back Squat". Exact after [`lift_key`] normalization:
-/// a front, hack or low-bar squat is different mechanics, and the deadlift and
-/// bench wait for R-0045's garust work.
+/// Only the back squat has a model today ([`super::squat_range`]): the
+/// library's "Back Squat", and "Sentadilla" or "Sentadilla trasera" as a
+/// lifter types them (owner, 2026-10-30). Exact after [`lift_key`]
+/// normalization (trim, lowercase), never fuzzy: a bare "Squat", a front,
+/// hack or low-bar squat is not this model, and the deadlift and bench wait
+/// for R-0045's garust work.
 ///
 /// Narrower than [`Lift::from_exercise_name`] on purpose: that one says which
 /// lift a video shows; this one says which mechanics are modelled.
 #[must_use]
 pub fn model_for(exercise: &str) -> Option<Lift> {
-    (lift_key(exercise) == "back squat").then_some(Lift::Squat)
+    matches!(
+        lift_key(exercise).as_str(),
+        "back squat" | "sentadilla" | "sentadilla trasera"
+    )
+    .then_some(Lift::Squat)
 }
 
 #[cfg(test)]
