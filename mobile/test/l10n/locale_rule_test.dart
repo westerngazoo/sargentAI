@@ -13,6 +13,11 @@ void main() {
         const Locale('es'));
   });
 
+  test('Spanish numbers follow es_MX: a decimal point (owner, 2026-10-30)', () {
+    expect(numberLocale('es'), 'es_MX');
+    expect(numberLocale('en'), 'en');
+  });
+
   test('an English device gets en', () {
     expect(resolveLocale([const Locale('en', 'GB')], supportedLocales),
         const Locale('en'));

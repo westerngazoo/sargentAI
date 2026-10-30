@@ -14,10 +14,10 @@ import '../../support/physics_fakes.dart';
 void main() {
   final en = lookupAppLocalizations(const Locale('en'));
 
-  test('the upright frame in Spanish', () {
+  test('the upright frame in Spanish, with the decimal point (es_MX)', () {
     expect(
       leverText(squatGolden().frames.first, l10n),
-      '824 N × 0,03 m = 23,8 N·m, + 9,7 del cuerpo = 33,5 N·m',
+      '824 N × 0.03 m = 23.8 N·m, + 9.7 del cuerpo = 33.5 N·m',
     );
   });
 

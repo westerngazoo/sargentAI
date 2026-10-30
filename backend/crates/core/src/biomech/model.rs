@@ -30,10 +30,28 @@ mod tests {
     }
 
     #[test]
+    fn the_spanish_back_squat_names_have_the_squat_model() {
+        for name in [
+            "Sentadilla",
+            "sentadilla",
+            " SENTADILLA ",
+            "Sentadilla trasera",
+            "sentadilla trasera",
+            "SENTADILLA TRASERA",
+        ] {
+            assert_eq!(model_for(name), Some(Lift::Squat), "{name:?}");
+        }
+    }
+
+    #[test]
     fn exercises_without_a_model_have_none() {
         // Other squats are other mechanics (the model is the back squat);
         // the deadlift and bench wait for R-0045's garust work.
         for name in [
+            "Squat",
+            "Sentadilla frontal",
+            "Sentadilla  trasera",
+            "Sentadillas",
             "Front Squat",
             "Hack Squat",
             "Low Bar Squat",
