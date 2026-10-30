@@ -178,8 +178,10 @@ Map<String, dynamic> trainingDayJson({
     <String, dynamic>{
       'kind': 'training',
       'focus': focus,
-      'exercises': exercises,
-      'physics': physics ?? [for (final _ in exercises) null],
+      'exercises': [
+        for (final (i, name) in exercises.indexed)
+          {'name': name, 'physics': physics?[i]},
+      ],
     };
 
 /// A `rest` cycle entry.

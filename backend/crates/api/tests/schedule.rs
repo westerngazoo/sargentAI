@@ -168,10 +168,10 @@ async fn schedule_projects_plan_and_free_sessions(pool: PgPool) {
     );
 }
 
-/// SPEC-0059 §2.5: each training day of the cycle carries `physics`, one
-/// entry per exercise, decided by the server. `powerbuilder-leverage` opens
-/// with legs: Back Squat (modelled), then Front Squat, Leg Press, Leg Curl
-/// and Standing Calf Raise (not); rest days carry no `physics` at all.
+/// SPEC-0059 §2.5: each exercise of a training day is an object carrying its
+/// `physics`, decided by the server. `powerbuilder-leverage` opens with legs:
+/// Back Squat (modelled), then Front Squat, Leg Press, Leg Curl and Standing
+/// Calf Raise (not).
 #[sqlx::test(migrations = "../../migrations")]
 async fn schedule_cycle_marks_each_exercise_with_its_physics(pool: PgPool) {
     let app = build_app(pool.clone());
@@ -183,21 +183,16 @@ async fn schedule_cycle_marks_each_exercise_with_its_physics(pool: PgPool) {
     let body = body_json(resp).await;
 
     let cycle = body["cycle"].as_array().unwrap();
-    assert_eq!(cycle[0]["exercises"][0], "Back Squat");
     assert_eq!(
-        cycle[0]["physics"],
-        json!(["squat", null, null, null, null])
+        cycle[0]["exercises"],
+        json!([
+            { "name": "Back Squat", "physics": "squat" },
+            { "name": "Front Squat", "physics": null },
+            { "name": "Leg Press", "physics": null },
+            { "name": "Leg Curl", "physics": null },
+            { "name": "Standing Calf Raise", "physics": null },
+        ])
     );
-    for entry in cycle {
-        match entry["kind"].as_str().unwrap() {
-            "training" => assert_eq!(
-                entry["physics"].as_array().unwrap().len(),
-                entry["exercises"].as_array().unwrap().len(),
-                "one physics entry per exercise: {entry}"
-            ),
-            _ => assert_eq!(entry, &json!({ "kind": "rest" })),
-        }
-    }
 }
 
 /// No current program: `program_id` is null, the cycle is empty and the days

@@ -26,32 +26,48 @@ use crate::workout::MuscleGroup;
 /// A training day names its `focus` with the closed [`MuscleGroup`]
 /// vocabulary — the client builds the day's name from it in the user's
 /// language, so the server sends no prose — and lists its exercises.
-/// `physics` holds, per exercise and in the same order, the lift whose
-/// physics check models it (SPEC-0059 §2.5); build a training day with
-/// [`PlanDay::training`] so the two lists cannot disagree.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PlanDay {
     Training {
         focus: Vec<MuscleGroup>,
-        exercises: Vec<String>,
-        physics: Vec<Option<Lift>>,
+        exercises: Vec<PlanExercise>,
     },
     Rest,
 }
 
-impl PlanDay {
-    /// A training day whose `physics` is [`model_for`] of each exercise.
+/// An exercise of a training day and the lift whose physics check models it
+/// (SPEC-0059 §2.5). Built only from the name, through [`model_for`], so the
+/// two cannot disagree.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PlanExercise {
+    name: String,
+    physics: Option<Lift>,
+}
+
+impl PlanExercise {
+    /// The exercise `name`, with its physics decided by [`model_for`].
     #[must_use]
-    pub fn training(focus: Vec<MuscleGroup>, exercises: Vec<String>) -> Self {
-        let physics = exercises.iter().map(|e| model_for(e)).collect();
-        PlanDay::Training {
-            focus,
-            exercises,
-            physics,
-        }
+    pub fn new(name: impl Into<String>) -> Self {
+        let name = name.into();
+        let physics = model_for(&name);
+        Self { name, physics }
     }
 
+    /// The exercise's name, as the program lists it.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The lift whose physics check models this exercise, if any.
+    #[must_use]
+    pub fn physics(&self) -> Option<Lift> {
+        self.physics
+    }
+}
+
+impl PlanDay {
     fn is_rest(&self) -> bool {
         matches!(self, PlanDay::Rest)
     }
@@ -331,7 +347,10 @@ mod tests {
     }
 
     fn training(group: MuscleGroup) -> PlanDay {
-        PlanDay::training(vec![group], vec!["Some lift".into()])
+        PlanDay::Training {
+            focus: vec![group],
+            exercises: vec![PlanExercise::new("Some lift")],
+        }
     }
 
     /// Legs, Push, Pull, Rest.
@@ -806,32 +825,32 @@ mod tests {
     // --- physics (SPEC-0059 §2.5) ---------------------------------------
 
     #[test]
-    fn a_training_day_has_one_physics_entry_per_exercise_in_order() {
-        let day = PlanDay::training(
-            vec![MuscleGroup::Legs],
-            vec!["Leg Press".into(), "Back Squat".into()],
-        );
-        let PlanDay::Training { physics, .. } = day else {
-            panic!("a training day");
-        };
-        assert_eq!(physics, vec![None, Some(Lift::Squat)]);
+    fn an_exercise_takes_its_physics_from_its_name() {
+        assert_eq!(PlanExercise::new("Back Squat").physics(), Some(Lift::Squat));
+        assert_eq!(PlanExercise::new("Leg Press").physics(), None);
+        assert_eq!(PlanExercise::new("Leg Press").name(), "Leg Press");
     }
 
     // --- wire shape (§2.4; slice 2c serializes these) ------------------
 
     #[test]
     fn plan_day_serializes_with_a_kind_tag() {
-        let day = PlanDay::training(
-            vec![MuscleGroup::Legs],
-            vec!["Back Squat".into(), "Leg Curl".into()],
-        );
+        let day = PlanDay::Training {
+            focus: vec![MuscleGroup::Legs],
+            exercises: vec![
+                PlanExercise::new("Back Squat"),
+                PlanExercise::new("Leg Curl"),
+            ],
+        };
         assert_eq!(
             serde_json::to_value(&day).unwrap(),
             serde_json::json!({
                 "kind": "training",
                 "focus": ["legs"],
-                "exercises": ["Back Squat", "Leg Curl"],
-                "physics": ["squat", null],
+                "exercises": [
+                    { "name": "Back Squat", "physics": "squat" },
+                    { "name": "Leg Curl", "physics": null },
+                ],
             })
         );
         assert_eq!(

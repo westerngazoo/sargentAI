@@ -248,10 +248,7 @@ impl ProgramTemplate {
         }
         let mut trains = false;
         for (day, plan_day) in cycle.iter().enumerate() {
-            if let PlanDay::Training {
-                focus, exercises, ..
-            } = plan_day
-            {
+            if let PlanDay::Training { focus, exercises } = plan_day {
                 if focus.is_empty() {
                     return Err(ArchetypeError::CycleDayFocusEmpty { day });
                 }

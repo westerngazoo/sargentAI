@@ -21,9 +21,8 @@ sealed class PlanDay {
             focus: (json['focus'] as List<dynamic>)
                 .map((t) => MuscleGroup.fromWire(t as String))
                 .toList(),
-            exercises: (json['exercises'] as List<dynamic>).cast<String>(),
-            physics: (json['physics'] as List<dynamic>)
-                .map((p) => Lift.fromWire(p as String?))
+            exercises: (json['exercises'] as List<dynamic>)
+                .map((e) => PlanExercise.fromJson(e as Map<String, dynamic>))
                 .toList(),
           ),
         'rest' => const RestPlanDay(),
@@ -34,22 +33,31 @@ sealed class PlanDay {
 /// A training day: named by its [focus] on the client (SPEC-0061 §2.1), with
 /// its exercises as curated English data (§4).
 final class TrainingPlanDay extends PlanDay {
-  const TrainingPlanDay({
-    required this.focus,
-    required this.exercises,
-    required this.physics,
-  });
+  const TrainingPlanDay({required this.focus, required this.exercises});
 
   /// The muscle groups the day trains, in the record's order; never empty.
   final List<MuscleGroup> focus;
 
-  /// The day's exercises by name, in the record's order; never empty.
-  final List<String> exercises;
+  /// The day's exercises, in the record's order; never empty.
+  final List<PlanExercise> exercises;
+}
 
-  /// Per exercise, in [exercises]' order: the lift whose physics check
-  /// models it, or null when it has none yet (*Pronto*). The server decides
-  /// (SPEC-0059 §2.5).
-  final List<Lift?> physics;
+/// An exercise of a training day. Mirrors `core::plan::PlanExercise`.
+@immutable
+class PlanExercise {
+  const PlanExercise({required this.name, this.physics});
+
+  factory PlanExercise.fromJson(Map<String, dynamic> json) => PlanExercise(
+        name: json['name'] as String,
+        physics: Lift.fromWire(json['physics'] as String?),
+      );
+
+  /// The exercise's name, as curated English data (SPEC-0061 §4).
+  final String name;
+
+  /// The lift whose physics check models it, or null when it has none yet
+  /// (*Pronto*). The server decides (SPEC-0059 §2.5).
+  final Lift? physics;
 }
 
 /// A rest day of the cycle.
@@ -127,7 +135,7 @@ class Schedule {
     return PlanSeed(
       userProgramId: programId,
       index: index,
-      exercises: day.exercises,
+      exercises: [for (final e in day.exercises) e.name],
     );
   }
 }

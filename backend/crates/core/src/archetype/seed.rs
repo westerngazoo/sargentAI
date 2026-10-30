@@ -13,6 +13,7 @@
 //! anchor each record to its primary material and flag the provenance honestly
 //! (AC7).
 
+use crate::plan::PlanExercise;
 use crate::workout::MuscleGroup::{self, Arms, Back, Chest, Legs, Shoulders};
 use crate::Goal;
 
@@ -29,10 +30,10 @@ const CYCLE_RECONSTRUCTED: &str = "day cycle and exercises reconstructed for R-0
 
 /// A training day of a cycle: what it trains and the exercises it lists.
 fn day(focus: &[MuscleGroup], exercises: &[&str]) -> PlanDay {
-    PlanDay::training(
-        focus.to_vec(),
-        exercises.iter().map(|e| (*e).to_string()).collect(),
-    )
+    PlanDay::Training {
+        focus: focus.to_vec(),
+        exercises: exercises.iter().copied().map(PlanExercise::new).collect(),
+    }
 }
 
 /// The whole curated library, in authored order. The single `expect` is

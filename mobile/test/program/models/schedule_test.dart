@@ -36,7 +36,7 @@ void main() {
       expect(s.cycle, hasLength(2));
       final training = s.cycle[0] as TrainingPlanDay;
       expect(training.focus, [MuscleGroup.legs]);
-      expect(training.exercises, ['Back Squat']);
+      expect(training.exercises.map((e) => e.name), ['Back Squat']);
       expect(s.cycle[1], isA<RestPlanDay>());
 
       final done = s.stateOn(DateTime(2026, 10, 21)) as DoneDay;
@@ -56,7 +56,7 @@ void main() {
             physics: ['squat', null, null]),
       ]));
       final day = s.cycle.single as TrainingPlanDay;
-      expect(day.physics, [Lift.squat, null, null]);
+      expect(day.exercises.map((e) => e.physics), [Lift.squat, null, null]);
     });
 
     test('a lift this client cannot draw yet reads as no model', () {
@@ -65,7 +65,9 @@ void main() {
             exercises: ['Deadlift', 'Bench Press', 'Snatch'],
             physics: ['deadlift', 'bench', 'snatch']),
       ]));
-      expect((s.cycle.single as TrainingPlanDay).physics, [null, null, null]);
+      expect(
+          (s.cycle.single as TrainingPlanDay).exercises.map((e) => e.physics),
+          [null, null, null]);
     });
 
     test('a day outside the response has no state', () {

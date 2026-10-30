@@ -37,6 +37,7 @@ use fitai_core::archetype::{
     TrainingPhilosophy, VolumeBand, WidthBand,
 };
 use fitai_core::biomech::model_for;
+use fitai_core::plan::PlanExercise;
 use fitai_core::{Goal, MuscleGroup};
 
 // ===========================================================================
@@ -609,7 +610,10 @@ fn provenance_carries_internal_sources_for_the_dto_to_omit() {
 
 /// A training day of a cycle.
 fn training_day(focus: Vec<MuscleGroup>, exercises: &[&str]) -> PlanDay {
-    PlanDay::training(focus, exercises.iter().map(|e| (*e).to_string()).collect())
+    PlanDay::Training {
+        focus,
+        exercises: exercises.iter().copied().map(PlanExercise::new).collect(),
+    }
 }
 
 /// A valid two-day cycle: one training day, one rest day.
@@ -812,18 +816,16 @@ fn library_provenance_notes_record_the_reconstructed_cycle() {
 
 #[test]
 fn library_cycles_mark_each_exercise_with_its_physics() {
-    // SPEC-0059 §2.5: which exercise has a model is decided in core, one
-    // entry per exercise; the library's only modelled name is the back squat.
+    // SPEC-0059 §2.5: which exercise has a model is decided in core by
+    // `model_for`; the library's only modelled name is the back squat.
     let mut squats = 0;
     for a in library() {
         for day in &a.program_template.cycle {
-            if let PlanDay::Training {
-                exercises, physics, ..
-            } = day
-            {
-                let expected: Vec<_> = exercises.iter().map(|e| model_for(e)).collect();
-                assert_eq!(physics, &expected, "{}: {exercises:?}", a.id);
-                squats += physics.iter().filter(|p| p.is_some()).count();
+            if let PlanDay::Training { exercises, .. } = day {
+                for e in exercises {
+                    assert_eq!(e.physics(), model_for(e.name()), "{}: {}", a.id, e.name());
+                    squats += usize::from(e.physics().is_some());
+                }
             }
         }
     }
