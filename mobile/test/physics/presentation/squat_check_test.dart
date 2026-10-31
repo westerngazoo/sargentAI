@@ -19,6 +19,10 @@ import '../../support/l10n.dart';
 import '../../support/physics_fakes.dart';
 import '../../support/profile_fakes.dart';
 
+/// A recorded paint's colour as ARGB: `Paint` keeps colour as floats, so a
+/// round-tripped `Color` need not be `==` to the token it was set from.
+int _argb(Object? paint) => (paint! as Paint).color.toARGB32();
+
 void main() {
   setUpAll(registerSquatFallbacks);
 
@@ -65,6 +69,37 @@ void main() {
       expect(g.lever, isNotNull);
       expect(g.barForce, isNotNull);
       expect(g.ground.length, greaterThan(0));
+    });
+
+    testWidgets('paints the lever and both arrows, in their colours',
+        (tester) async {
+      await pump(tester);
+      final g = painter(tester).geometry(tester.getSize(figure));
+      final t = painter(tester).tokens;
+      final render = tester.renderObject(figure);
+
+      // One drawLine call from [from] to [to] in [color].
+      PaintPatternPredicate line(Offset from, Offset to, Color color) =>
+          (method, args) =>
+              method == #drawLine &&
+              args[0] == from &&
+              args[1] == to &&
+              _argb(args[2]) == color.toARGB32();
+      // The lever's first ink dash: it starts at the hip and stays level.
+      bool leverDash(Symbol method, List<dynamic> args) =>
+          method == #drawLine &&
+          args[0] == g.lever!.$1 &&
+          (args[1] as Offset).dy == g.lever!.$1.dy &&
+          _argb(args[2]) == t.line.toARGB32();
+
+      expect(
+          render, paints..something(line(g.ground.from, g.ground.to, t.line)));
+      expect(render, paints..something(leverDash));
+      expect(
+          render,
+          paints
+            ..something(line(
+                g.barForce!.from, g.barForce!.to, t.heat(g.barForce!.heat!))));
     });
 
     testWidgets('opens on the last frame the server returned', (tester) async {
