@@ -20,7 +20,8 @@ mod common;
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use common::{
-    body_bytes, body_json, build_app, get_with_auth, post_json, register_user, TEST_SECRET,
+    body_bytes, body_json, build_app, get_with_auth, post_json, register_and_token, register_user,
+    TEST_SECRET,
 };
 use serde_json::json;
 use sqlx::{PgPool, Row};
@@ -341,7 +342,8 @@ async fn login_unknown_email_is_indistinguishable(pool: PgPool) {
 // SAC5 → AC5: /auth/me extractor (1 success + 5 failure branches).
 // ---------------------------------------------------------------------------
 
-/// SAC5: valid Bearer token → 200 + `{ user_id }`.
+/// SAC5: valid Bearer token → 200 + `{ user_id, email }` (the email since
+/// SPEC-0061 slice 3c, for the Cuenta panel).
 #[sqlx::test(migrations = "../../migrations")]
 async fn me_with_valid_token_succeeds(pool: PgPool) {
     let app = build_app(pool);
@@ -361,7 +363,28 @@ async fn me_with_valid_token_succeeds(pool: PgPool) {
     let resp = get_with_auth(&app, "/auth/me", Some(&format!("Bearer {token}"))).await;
 
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(body_json(resp).await["user_id"].as_str().unwrap(), user_id);
+    let body = body_json(resp).await;
+    assert_eq!(body["user_id"].as_str().unwrap(), user_id);
+    assert_eq!(body["email"].as_str().unwrap(), "me@b.com");
+}
+
+/// SPEC-0061 slice 3c: the email is the caller's own — B's token never sees
+/// A's address.
+#[sqlx::test(migrations = "../../migrations")]
+async fn me_returns_only_the_callers_email(pool: PgPool) {
+    let app = build_app(pool);
+    let (a_id, a_token) = register_and_token(&app, "a@b.com", "8charsmin").await;
+    let (b_id, b_token) = register_and_token(&app, "b@b.com", "8charsmin").await;
+
+    let a =
+        body_json(get_with_auth(&app, "/auth/me", Some(&format!("Bearer {a_token}"))).await).await;
+    let b =
+        body_json(get_with_auth(&app, "/auth/me", Some(&format!("Bearer {b_token}"))).await).await;
+
+    assert_eq!(a["user_id"].as_str().unwrap(), a_id);
+    assert_eq!(a["email"].as_str().unwrap(), "a@b.com");
+    assert_eq!(b["user_id"].as_str().unwrap(), b_id);
+    assert_eq!(b["email"].as_str().unwrap(), "b@b.com");
 }
 
 /// SAC5(a): missing Authorization header → 401.

@@ -179,22 +179,39 @@ pub fn above(j: Joint) -> &'static [ChainSegment] {
     }
 }
 
-/// `Σ` over everything on the load side of `j`: weight × horizontal lever, in
-/// coordinate signs. The external load is on every joint's load side — it is
-/// carried at the shoulders, above all four.
-fn raw_sum(j: Joint, body: &Body, p: &Posture, placement: Placement) -> f64 {
-    let joint_x = match j {
+/// Where `j` sits horizontally under `placement` — the pivot every lever is
+/// measured from.
+fn joint_x(j: Joint, p: &Posture, placement: Placement) -> f64 {
+    match j {
         Joint::Lumbar => l5s1_point(p, placement.l5s1).x.0,
         Joint::Hip | Joint::Knee | Joint::Ankle => p.at(j).x.0,
-    };
-    let segments: f64 = above(j)
+    }
+}
+
+/// The body's half of [`raw_sum`]: weight × horizontal lever over the
+/// segments on the load side of `j`, in coordinate signs. The segments sit
+/// where `p` puts them, load included — the arms reach for a bar when there
+/// is one (§2.4.2).
+fn segments_sum(j: Joint, body: &Body, p: &Posture, placement: Placement) -> f64 {
+    let pivot = joint_x(j, p, placement);
+    above(j)
         .iter()
-        .map(|&seg| body.mass_kg(seg) * G * (seg.com_with(body, p, placement).x.0 - joint_x))
-        .sum();
-    let load = p
-        .load
-        .map_or(0.0, |l| l.kg.get() * G * (l.at.x.0 - joint_x));
-    segments + load
+        .map(|&seg| body.mass_kg(seg) * G * (seg.com_with(body, p, placement).x.0 - pivot))
+        .sum()
+}
+
+/// The external load's half of [`raw_sum`], in coordinate signs; zero without
+/// a load. The load is on every joint's load side — it is carried at the
+/// shoulders, above all four.
+fn load_sum(j: Joint, p: &Posture, placement: Placement) -> f64 {
+    let pivot = joint_x(j, p, placement);
+    p.load.map_or(0.0, |l| l.kg.get() * G * (l.at.x.0 - pivot))
+}
+
+/// `Σ` over everything on the load side of `j`: weight × horizontal lever, in
+/// coordinate signs — the body's half plus the load's.
+fn raw_sum(j: Joint, body: &Body, p: &Posture, placement: Placement) -> f64 {
+    segments_sum(j, body, p, placement) + load_sum(j, p, placement)
 }
 
 /// The moment about `j` in N·m **resisting extension**: positive means the
@@ -204,6 +221,19 @@ fn raw_sum(j: Joint, body: &Body, p: &Posture, placement: Placement) -> f64 {
 #[must_use]
 pub fn moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
     moment_about_with(j, body, p, Placement::STATED)
+}
+
+/// The body's own share of [`moment_about`]: the same moment, resisting
+/// extension and signed the same way, with the external load's term left out
+/// but the posture left as it is — the segments, arms included, stay where
+/// `p` (load and all) places them under the stated conventions.
+///
+/// Postcondition: `moment_about(j, body, p) == body_moment_about(j, body, p)`
+/// plus the load's own term, `sign(j) · kg · G · (x_load − x_j)`, to floating
+/// point. Without a load it equals [`moment_about`]. Total: never panics.
+#[must_use]
+pub fn body_moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
+    NewtonMetres(j.extension_sign() * segments_sum(j, body, p, Placement::STATED))
 }
 
 /// [`moment_about`] under nudged placement conventions — the corner cases the

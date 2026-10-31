@@ -161,7 +161,7 @@ void main() {
     test('a 400{field} sets error + errorStep and keeps the draft intact',
         () async {
       when(() => repo.putMe(any())).thenThrow(
-        const ApiException('please check your details',
+        const ApiException(ApiErrorKind.badRequest,
             statusCode: 400, field: 'height_cm'),
       );
       final container = makeContainer();
@@ -181,7 +181,7 @@ void main() {
     test('a 400 on body_fat_percentage jumps to the optional step (2)',
         () async {
       when(() => repo.putMe(any())).thenThrow(
-        const ApiException('out of range',
+        const ApiException(ApiErrorKind.badRequest,
             statusCode: 400, field: 'body_fat_percentage'),
       );
       final c = controllerOf(makeContainer());
@@ -194,7 +194,7 @@ void main() {
 
     test('a transport error sets a retryable message, draft intact', () async {
       when(() => repo.putMe(any())).thenThrow(
-        const ApiException("can't reach the server — retry"),
+        const ApiException(ApiErrorKind.transport),
       );
       final c = controllerOf(makeContainer());
       enterValidProfile(c);
@@ -202,7 +202,7 @@ void main() {
 
       await c.submit();
 
-      expect(c.state.error, contains('retry'));
+      expect(c.state.error?.kind, ApiErrorKind.transport);
       expect(c.state.done, isFalse);
       expect(c.state.draft, before);
     });
@@ -210,7 +210,7 @@ void main() {
     test('a 401 surfaces as state error but never sets done (no navigation)',
         () async {
       when(() => repo.putMe(any())).thenThrow(
-        const ApiException('unauthorized', statusCode: 401),
+        const ApiException(ApiErrorKind.unauthorized, statusCode: 401),
       );
       final c = controllerOf(makeContainer());
       enterValidProfile(c);

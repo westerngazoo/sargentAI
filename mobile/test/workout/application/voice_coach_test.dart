@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../support/fakes.dart';
+import '../../support/l10n.dart';
 import '../../support/profile_fakes.dart';
 import '../../support/program_fakes.dart';
 import '../../support/voice_fakes.dart';
@@ -42,6 +43,7 @@ void main() {
         workoutRepositoryProvider.overrideWithValue(workoutRepo),
         speechInputProvider.overrideWithValue(ScriptedSpeechInput(transcripts)),
         voiceOutputProvider.overrideWithValue(voiceOut),
+        l10nOverride,
       ],
     );
     addTearDown(container.dispose);
@@ -63,7 +65,14 @@ void main() {
 
     final coach = container.read(voiceCoachProvider);
     expect(coach.enabled, isTrue);
-    expect(coach.coachLine, contains('First up: ${planned.first}'));
+    expect(
+      coach.coachLine,
+      l10n.coachPlanLoaded(
+        planned.length,
+        planned.first + l10n.coachTargetSuffix(l10n.regionChest.toLowerCase()),
+        l10n.coachSayDoneKeyMic,
+      ),
+    );
     expect(voiceOut.spoken, isNotEmpty);
   });
 
@@ -80,7 +89,7 @@ void main() {
     expect(last!.reps, 10);
     expect(last.weightKg, 100);
     expect(container.read(voiceCoachProvider).coachLine,
-        contains('Logged 10 reps at 100 kilos'));
+        contains('${l10n.repsCount(10)} ${l10n.coachAtKilos('100')}'));
   });
 
   test('"next" advances to the second planned exercise and announces it',
@@ -119,7 +128,7 @@ void main() {
     await coach.dictate();
 
     expect(container.read(voiceCoachProvider).coachLine,
-        contains('ten reps at sixty kilos'));
+        contains(l10n.coachDidNotCatch));
   });
 
   test('hands-free: dictations apply automatically until silence', () async {
@@ -144,8 +153,8 @@ void main() {
 
     // The set after "pause" must never be consumed.
     expect(container.read(sessionDriverProvider).lastSet, isNull);
-    expect(
-        container.read(voiceCoachProvider).coachLine, contains('Standing by'));
+    expect(container.read(voiceCoachProvider).coachLine,
+        contains(l10n.coachStandingBy));
   });
 
   test('guided logging: done → reps → kilos → logged set', () async {
@@ -161,10 +170,10 @@ void main() {
     expect(last, isNotNull);
     expect(last!.reps, 10);
     expect(last.weightKg, 100);
-    expect(voiceOut.spoken.join(' '), contains('How many reps?'));
-    expect(voiceOut.spoken.join(' '), contains('How many kilos?'));
+    expect(voiceOut.spoken.join(' '), contains(l10n.coachHowManyReps));
+    expect(voiceOut.spoken.join(' '), contains(l10n.coachHowManyKilos));
     expect(container.read(voiceCoachProvider).coachLine,
-        contains('Logged 10 reps at 100 kilos'));
+        contains('${l10n.repsCount(10)} ${l10n.coachAtKilos('100')}'));
   });
 
   test('bare reps dictation asks for kilos; bodyweight logs reps-only',
@@ -190,7 +199,7 @@ void main() {
     await coach.dictate();
 
     expect(container.read(sessionDriverProvider).lastSet, isNull);
-    expect(
-        container.read(voiceCoachProvider).coachLine, contains('Standing by'));
+    expect(container.read(voiceCoachProvider).coachLine,
+        contains(l10n.coachStandingBy));
   });
 }

@@ -1,21 +1,25 @@
 //! Route handlers for the program proposal + choose flow (R-0014, SPEC-0014
 //! §2.4).
 
+use std::collections::BTreeMap;
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use fitai_core::archetype::library;
+use fitai_core::archetype::{find, library};
 use fitai_core::matching::{rank, RankedMatch};
+use fitai_core::plan::{project, DateRange, DayState, PlanDay};
 use fitai_core::pose::derive_frame_features;
 use fitai_core::program::{instantiate, GeneratedDiet, GeneratedProgram, ProgramProposal};
 use fitai_core::Profile;
 
+use super::schedule::{check_local_date, day_logs, logs_only};
 use crate::{
     auth::AuthenticatedUser,
     db::{self, UserProgramRow},
@@ -32,6 +36,38 @@ use crate::{
 pub(crate) struct ChooseRequest {
     pub photo_session_id: Uuid,
     pub archetype_id: String,
+    /// The client's local date the plan starts on (R-0061, SPEC-0061 §2.4);
+    /// defaults to the server's UTC date.
+    #[serde(default)]
+    pub starts_on: Option<NaiveDate>,
+}
+
+/// Query for `GET /programs/me/schedule` (SPEC-0061 §2.4). `today` is the
+/// client's local date, so the projection's "past" is the user's own.
+#[derive(Deserialize)]
+pub(crate) struct ScheduleQuery {
+    pub from: NaiveDate,
+    pub to: NaiveDate,
+    pub today: NaiveDate,
+}
+
+/// Response for `GET /programs/me/schedule`. `program_id`, `starts_on` and
+/// `cycle` are null or empty when the caller has no usable plan.
+#[derive(Serialize)]
+pub(crate) struct ScheduleResponse {
+    pub program_id: Option<Uuid>,
+    pub starts_on: Option<NaiveDate>,
+    pub cycle: Vec<PlanDay>,
+    pub days: Vec<ScheduleDay>,
+    pub session_ids: BTreeMap<NaiveDate, Vec<Uuid>>,
+}
+
+/// One calendar day: its date next to the [`DayState`]'s own tagged fields.
+#[derive(Serialize)]
+pub(crate) struct ScheduleDay {
+    pub date: NaiveDate,
+    #[serde(flatten)]
+    pub state: DayState,
 }
 
 /// Pagination query for `GET /programs/me`.
@@ -167,6 +203,7 @@ pub(crate) async fn choose_program(
     user: AuthenticatedUser,
     Json(body): Json<ChooseRequest>,
 ) -> ApiResult<(StatusCode, Json<UserProgramResponse>)> {
+    let starts_on = resolve_starts_on(body.starts_on)?;
     let profile = require_profile(&state, user.user_id).await?;
     let proposals = derive_proposals(&state, user.user_id, body.photo_session_id, &profile).await?;
 
@@ -184,6 +221,7 @@ pub(crate) async fn choose_program(
         Some(body.photo_session_id),
         &chosen.program,
         &chosen.diet,
+        starts_on,
     )
     .await?;
 
@@ -204,6 +242,52 @@ pub(crate) async fn get_current(
         .await?
         .ok_or(ApiError::NotFound)?;
     Ok(Json(UserProgramResponse::try_from(row)?))
+}
+
+/// `GET /programs/me/schedule?from&to&today`
+///
+/// Projects the caller's current plan over `from..=to` (SPEC-0061 §2.4).
+/// Owner-scoped: it reads only the caller's rows. Without a current program,
+/// or with an `archetype_id` the library does not know, the days come from
+/// the logs alone and `program_id` is null.
+///
+/// Returns 422 when `today` is more than a day from the server's UTC date or
+/// the range is inverted, longer than 62 days or ends more than 366 days
+/// after `today`.
+pub(crate) async fn get_schedule(
+    State(state): State<AppState>,
+    user: AuthenticatedUser,
+    Query(q): Query<ScheduleQuery>,
+) -> ApiResult<Json<ScheduleResponse>> {
+    let today = check_local_date(q.today, Utc::now().date_naive(), "today_out_of_bounds")?;
+    let range = DateRange::new(q.from, q.to, today)?;
+
+    let current = db::get_current_program(&state.pool, user.user_id).await?;
+    let plan = current
+        .as_ref()
+        .and_then(|row| find(&row.archetype_id).map(|a| (row, &a.program_template.cycle)));
+
+    let rows = db::find_session_plan_rows(&state.pool, user.user_id).await?;
+    let (logs, ids) = day_logs(&rows, plan.map(|(row, _)| row.id));
+
+    let days = match plan {
+        Some((row, cycle)) => project(cycle, row.starts_on, &logs, today, range)?,
+        None => logs_only(q.from, q.to, &logs),
+    };
+
+    Ok(Json(ScheduleResponse {
+        program_id: plan.map(|(row, _)| row.id),
+        starts_on: plan.map(|(row, _)| row.starts_on),
+        cycle: plan.map(|(_, cycle)| cycle.clone()).unwrap_or_default(),
+        days: days
+            .into_iter()
+            .map(|(date, state)| ScheduleDay { date, state })
+            .collect(),
+        session_ids: ids
+            .range(q.from..=q.to)
+            .map(|(date, ids)| (*date, ids.clone()))
+            .collect(),
+    }))
 }
 
 /// `GET /programs/me`
@@ -233,6 +317,21 @@ pub(crate) async fn get_history(
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/// The day a chosen program starts (SPEC-0061 §2.4): the client's local date
+/// when sent, within a day of the server's UTC date, else that date itself.
+///
+/// # Errors
+/// [`ApiError::Unprocessable`] `starts_on_out_of_bounds` when the date is two
+/// or more days from the server's.
+pub(crate) fn resolve_starts_on(requested: Option<NaiveDate>) -> ApiResult<NaiveDate> {
+    let server_today = Utc::now().date_naive();
+    check_local_date(
+        requested.unwrap_or(server_today),
+        server_today,
+        "starts_on_out_of_bounds",
+    )
+}
 
 async fn require_profile(state: &AppState, user_id: fitai_core::UserId) -> ApiResult<Profile> {
     db::find_profile_by_user(&state.pool, user_id)

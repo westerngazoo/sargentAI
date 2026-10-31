@@ -8,12 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/l10n.dart';
+
 Widget _harness(CoachAdvice advice) => ProviderScope(
       overrides: [
         coachAdviceProvider.overrideWith((ref) async => advice),
       ],
-      child: const MaterialApp(
-        home: Scaffold(body: SingleChildScrollView(child: CoachCard())),
+      child: localizedApp(
+        home: const Scaffold(body: SingleChildScrollView(child: CoachCard())),
       ),
     );
 
@@ -39,11 +41,12 @@ void main() {
     await tester.pumpWidget(_harness(advice));
     await tester.pumpAndSettle();
 
-    expect(find.text('Coach suggestions'), findsOneWidget);
+    expect(find.text(l10n.coachSuggestions), findsOneWidget);
     expect(find.textContaining('Bench Press'), findsOneWidget);
     expect(find.textContaining('Squat'), findsOneWidget);
-    expect(find.text('ACTION'), findsOneWidget); // only the action suggestion
-    expect(find.text('last 8 wks'), findsOneWidget);
+    expect(find.text(l10n.actionCaps),
+        findsOneWidget); // only the action suggestion
+    expect(find.text(l10n.lastWeeks(8)), findsOneWidget);
   });
 
   testWidgets('empty suggestions show the positive on-track state',
@@ -52,9 +55,9 @@ void main() {
     await tester.pumpWidget(_harness(advice));
     await tester.pumpAndSettle();
 
-    expect(find.text('Coach suggestions'), findsOneWidget);
+    expect(find.text(l10n.coachSuggestions), findsOneWidget);
     expect(
-      find.textContaining("On track — keep doing what you're doing."),
+      find.text(l10n.onTrack),
       findsOneWidget,
     );
   });
@@ -69,7 +72,7 @@ void main() {
     await tester.pumpWidget(_harness(advice));
     await tester.pumpAndSettle();
 
-    expect(find.text('Coach suggestions'), findsNothing);
+    expect(find.text(l10n.coachSuggestions), findsNothing);
   });
 
   test('wire parsing maps the tagged change and severity', () {

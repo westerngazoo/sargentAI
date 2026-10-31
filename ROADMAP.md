@@ -84,7 +84,7 @@ screen on top of it.
 | R-0030 | Visual body-type picker: synthetic archetype match, no-photo onboarding path | SPEC-0030 | Done — merged on main (`4bb5053`, `ebd84c9`); accepted as-built in the R-0057 pass (PR #66) |
 | R-0033 | Google Sign-In (OAuth2 auth extension) | SPEC-0033 (to be written) | Done — merged via PR #49 (`a982c46`) |
 | R-0029 | Web frontend client | SPEC-0029 (to be written) | In progress — served today by the Flutter web build, deployed via PR #84 |
-| R-0061 | One screen built around a calendar: the day's session with one action, panels that always close back to it, the session in progress as a focus mode, Spanish-first, a physics style. Adds a plan projection: a sequence of training days that shifts when a day is not logged | SPEC-0061 (to be written) | **Accepted** (owner, 2026-10-22). Pulled forward by the beta. Supersedes R-0011 |
+| R-0061 | One screen built around a calendar: the day's session with one action, panels that always close back to it, the session in progress as a focus mode, Spanish-first, a physics style. Adds a plan projection: a sequence of training days that shifts when a day is not logged | SPEC-0061 (Accepted 2026-10-25) | **In progress** — slices 1a–1f, 2a–2d, 3 (backend #171, 3a #175, 3b #177, 3c #176) and 5 (#173) merged, plus the wide-layout fix from beta feedback (#174). Remaining: slice 4, the physics check (= SPEC-0059 59-c1/c2) |
 
 > **Progress-photo capture** (fixed-angle prompts) was the former R-0010; it is
 > **blocked on the photo-session backend (R-0006)** and re-homed onto that gate —
@@ -172,9 +172,7 @@ conversational intent later.
 | R-0044 | Lift technique video analysis — pure geometry over a keypoint series, refusal as a first-class output | SPEC-0044 (Draft — reworked after the 2026-08-25 architect REJECT) | In progress — requirement Accepted (owner, 2026-09-11); slice A (pure core) merged in #104 |
 | R-0045 | Lift biomechanics model — joint torque and variant comparison | SPEC-0045 (accepted, #122) | In progress — requirement Accepted (owner, 2026-09-11; amended 2026-09-12, 2026-10-17, and 2026-10-23 for the garust kernel, ADR 0001). Slice A, the squat solve and its four moments (#142), and slice B1, the range of balanced postures (#145), merged. Slice C (API, persistence) deferred; R-0059 is the app-facing next step. **Does not require R-0044:** posture can come from parameters instead of a camera (physics-lab RFC-002 §9) |
 | R-0058 | Guided body measurement — landmark heights from the floor and dorsiflexion, checked for consistency, used by the lift model; a measuring guide linked from each exercise | SPEC-0058 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
-| R-0059 | The squat, animated in the app — server-computed range of postures with joint moments, drawn as a side-view figure with playback and the model's caveats | SPEC-0059 (to be written) | **Draft** — 2026-10-20, awaiting owner acceptance |
-| R-0062 | Deadlift mechanics on the garust kernel — solved floor start, range to lockout, four joint moments, checked by virtual work and hand-computed oracles | SPEC-0062 (to be written) | **Draft** — 2026-10-23, awaiting owner acceptance |
-| R-0063 | Bench press mechanics on the 3D garust kernel — both arms, grip width, shoulder and elbow moments, checked by virtual work and hand-computed oracles | SPEC-0063 (to be written) | **Draft** — 2026-10-23, awaiting owner acceptance |
+| R-0059 | The squat, animated in the app — server-computed range of postures with joint moments, drawn as a side-view figure with playback and the model's caveats | SPEC-0059 (Accepted 2026-10-27, #168; amended 2026-10-28, #180) | **In progress** — slices 59-a, `POST /biomech/squat/range` with the server-side lever (#180), and 59-b, the client model and `physics` per exercise on `PlanDay` (#183), merged. Remaining: 59-c1/c2 (= R-0061 slice 4) |
 | R-0037 | Conversational multi-turn voice intent | SPEC-0037 (to be written) | **Parked** — see issue #89. 35 agent PRs have re-attempted it (#97–#109 closed 2026-09-05, #112/#115–#119 closed 2026-09-10, #121/#123–#129/#132–#141/#144 closed by 2026-10-21). Do not implement: `docs/AGENT-PR-GUIDE.md` |
 
 ### M-Platform — Trainer marketplace
@@ -261,8 +259,8 @@ not be used on a wide window (#155).
 ### Awaiting the owner now
 
 - Review and merge **#155**.
-- Accept or amend the drafts **R-0024** (privacy), **R-0058** (guided
-  measurement) and **R-0059** (the squat, animated in the app).
+- Accept or amend the drafts **R-0024** (privacy) and **R-0058** (guided
+  measurement). R-0059 was accepted on 2026-10-27.
 - Record **R-0060** QA sign-off. The requirement file still reads
   `Accepted`, even though the implementation is merged.
 

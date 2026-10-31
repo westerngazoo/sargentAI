@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
+
+import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
 import '../data/auth_repository.dart';
 import 'brand_header.dart';
@@ -56,8 +59,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     if (_password.text != _confirmation.text) {
-      setState(() => _error = "The passwords don't match.");
+      setState(() => _error = l10n.passwordsDoNotMatch);
       return;
     }
     setState(() {
@@ -70,18 +74,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           .resetPassword(token: _token!, password: _password.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated. Log in with it.')),
+        SnackBar(content: Text(l10n.passwordUpdated)),
       );
       context.go('/login');
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        if (e.statusCode == 401) {
+        if (e.kind == ApiErrorKind.unauthorized) {
           _linkInvalid = true;
         } else if (e.field == 'password') {
-          _error = 'Use at least 8 characters.';
+          _error = l10n.useAtLeast8Characters;
         } else {
-          _error = e.message;
+          _error = apiErrorText(e, l10n);
         }
       });
     } finally {
@@ -91,6 +95,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -105,7 +110,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   const BrandHeader(compact: true),
                   const SizedBox(height: 8),
                   Text(
-                    'Set a new password',
+                    l10n.setANewPassword,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
@@ -127,13 +132,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         TextField(
           controller: _password,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'New password'),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).newPasswordLabel,
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _confirmation,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Confirm new password'),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).confirmNewPasswordLabel,
+          ),
         ),
         if (_error != null) ...[
           const SizedBox(height: 12),
@@ -151,20 +160,19 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   width: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Set new password'),
+              : Text(AppLocalizations.of(context).setNewPassword),
         ),
       ];
 
   List<Widget> _invalidLink(BuildContext context) => [
-        const Text(
-          'This link is no longer valid. '
-          'Links expire after 30 minutes and work once.',
+        Text(
+          AppLocalizations.of(context).linkNoLongerValid,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => context.go('/forgot-password'),
-          child: const Text('Request a new link'),
+          child: Text(AppLocalizations.of(context).requestANewLink),
         ),
       ];
 }

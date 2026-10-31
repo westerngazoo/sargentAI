@@ -33,10 +33,12 @@ use std::collections::HashSet;
 
 use fitai_core::archetype::{
     find, library, Archetype, ArchetypeError, Confidence, DietTemplate, FrameProfile, HeightBand,
-    LengthBand, MacroEmphasis, ProgramTemplate, Provenance, Somatotype, StructureTag,
+    LengthBand, MacroEmphasis, PlanDay, ProgramTemplate, Provenance, Somatotype, StructureTag,
     TrainingPhilosophy, VolumeBand, WidthBand,
 };
-use fitai_core::Goal;
+use fitai_core::biomech::model_for;
+use fitai_core::plan::PlanExercise;
+use fitai_core::{Goal, MuscleGroup};
 
 // ===========================================================================
 // Builders for valid value parts — the golden input each rejection test mutates
@@ -599,4 +601,233 @@ fn provenance_carries_internal_sources_for_the_dto_to_omit() {
         !p.sources.is_empty(),
         "a documented record carries source notes (kept internal-only by the DTO)"
     );
+}
+
+// ===========================================================================
+// R-0061 / SPEC-0061 §2.1: the day cycle. `ProgramTemplate::with_cycle` is the
+// validating builder step; the seeded cycles are Annex A v2 as tabled.
+// ===========================================================================
+
+/// A training day of a cycle.
+fn training_day(focus: Vec<MuscleGroup>, exercises: &[&str]) -> PlanDay {
+    PlanDay::Training {
+        focus,
+        exercises: exercises.iter().copied().map(PlanExercise::new).collect(),
+    }
+}
+
+/// A valid two-day cycle: one training day, one rest day.
+fn valid_cycle() -> Vec<PlanDay> {
+    vec![
+        training_day(vec![MuscleGroup::Legs], &["Back Squat"]),
+        PlanDay::Rest,
+    ]
+}
+
+#[test]
+fn program_template_new_yields_an_empty_cycle() {
+    let program = valid_program(3).expect("the golden program must construct");
+    assert!(
+        program.cycle.is_empty(),
+        "`new` keeps its arity; the cycle is attached by `with_cycle`"
+    );
+}
+
+#[test]
+fn with_cycle_accepts_a_valid_cycle() {
+    let program = valid_program(3)
+        .unwrap()
+        .with_cycle(valid_cycle())
+        .expect("a cycle with one training day and one rest day is valid");
+    assert_eq!(program.cycle, valid_cycle());
+    assert_eq!(
+        program.weekly_frequency_per_muscle, 3,
+        "the other fields survive the builder step"
+    );
+}
+
+#[test]
+fn with_cycle_accepts_a_cycle_of_exactly_fourteen_days() {
+    let cycle: Vec<PlanDay> = (0..14)
+        .map(|_| training_day(vec![MuscleGroup::Chest], &["Bench Press"]))
+        .collect();
+    assert!(
+        valid_program(3).unwrap().with_cycle(cycle).is_ok(),
+        "fourteen days is the inclusive upper bound"
+    );
+}
+
+#[test]
+fn with_cycle_rejects_a_cycle_without_a_training_day() {
+    let err = valid_program(3)
+        .unwrap()
+        .with_cycle(vec![PlanDay::Rest, PlanDay::Rest])
+        .expect_err("a cycle of rest days only must be rejected");
+    assert_eq!(err, ArchetypeError::CycleWithoutTrainingDay);
+    assert_eq!(err.field(), "cycle");
+}
+
+#[test]
+fn with_cycle_rejects_an_empty_cycle() {
+    let err = valid_program(3)
+        .unwrap()
+        .with_cycle(vec![])
+        .expect_err("an empty cycle has no training day and must be rejected");
+    assert_eq!(err, ArchetypeError::CycleWithoutTrainingDay);
+}
+
+#[test]
+fn with_cycle_rejects_a_training_day_with_an_empty_focus() {
+    let err = valid_program(3)
+        .unwrap()
+        .with_cycle(vec![PlanDay::Rest, training_day(vec![], &["Back Squat"])])
+        .expect_err("a training day with no focus must be rejected");
+    assert_eq!(err, ArchetypeError::CycleDayFocusEmpty { day: 1 });
+    assert_eq!(err.field(), "cycle");
+}
+
+#[test]
+fn with_cycle_rejects_a_training_day_with_no_exercises() {
+    let err = valid_program(3)
+        .unwrap()
+        .with_cycle(vec![training_day(vec![MuscleGroup::Legs], &[])])
+        .expect_err("a training day with no exercises must be rejected");
+    assert_eq!(err, ArchetypeError::CycleDayExercisesEmpty { day: 0 });
+    assert_eq!(err.field(), "cycle");
+}
+
+#[test]
+fn with_cycle_rejects_a_cycle_of_fifteen_days() {
+    let cycle: Vec<PlanDay> = (0..15)
+        .map(|_| training_day(vec![MuscleGroup::Chest], &["Bench Press"]))
+        .collect();
+    let err = valid_program(3)
+        .unwrap()
+        .with_cycle(cycle)
+        .expect_err("fifteen days exceeds the two-week bound and must be rejected");
+    assert_eq!(err, ArchetypeError::CycleTooLong);
+    assert_eq!(err.field(), "cycle");
+}
+
+#[test]
+fn library_cycles_have_the_annex_a_lengths_and_revalidate() {
+    // Annex A §1: Yates 6, Mentzer 8, Arnold 7, Columbu 7, Cutler 7, Heath 7.
+    // Length and, since the frequency test must skip `arms` (biceps and
+    // triceps on different days), the number of arm days Annex A tables:
+    // Yates 2, Mentzer 1, Arnold 2, Columbu 2, Cutler 1, Heath 1. That is
+    // what catches v1's Heath, which trained arms three times a week.
+    let expected = [
+        ("heavy-duty-mass", 6, 2),
+        ("high-intensity-minimalist", 8, 1),
+        ("classic-aesthetic-taper", 7, 2),
+        ("powerbuilder-leverage", 7, 2),
+        ("mass-monster-volume", 7, 1),
+        ("modern-precision-hypertrophy", 7, 1),
+    ];
+    for (id, len, arm_days) in expected {
+        let a = find(id).unwrap_or_else(|| panic!("seed must contain {id}"));
+        assert_eq!(
+            a.program_template.cycle.len(),
+            len,
+            "{id}: the cycle must be {len} days long, as Annex A tables it"
+        );
+        let arms = a
+            .program_template
+            .cycle
+            .iter()
+            .filter(|d| match d {
+                PlanDay::Training { focus, .. } => focus.contains(&MuscleGroup::Arms),
+                PlanDay::Rest => false,
+            })
+            .count();
+        assert_eq!(
+            arms, arm_days,
+            "{id}: arm days per cycle, as Annex A tables"
+        );
+        // The shipped cycle passes `with_cycle`'s rules again.
+        let revalidated = valid_program(a.program_template.weekly_frequency_per_muscle)
+            .unwrap()
+            .with_cycle(a.program_template.cycle.clone());
+        assert!(
+            revalidated.is_ok(),
+            "{id}: the shipped cycle must re-validate through with_cycle"
+        );
+    }
+}
+
+#[test]
+fn library_cycles_train_each_muscle_near_the_record_weekly_frequency() {
+    // Annex A §2 / SPEC-0061 §2.1: for every muscle group a cycle trains, the
+    // times it is trained per 7 days (`count × 7 / len`) must lie within ±1 of
+    // the record's `weekly_frequency_per_muscle`. Checked in integers by
+    // multiplying through by `len`: |count × 7 − weekly × len| ≤ len.
+    //
+    // `arms` is excluded: `MuscleGroup::Arms` merges biceps and triceps, which
+    // split routines train on different days (Yates: triceps with delts,
+    // biceps with chest), so two "arms" days are two different muscles and the
+    // group's count overstates the frequency of either.
+    let checked = [
+        MuscleGroup::Chest,
+        MuscleGroup::Back,
+        MuscleGroup::Shoulders,
+        MuscleGroup::Legs,
+        MuscleGroup::Core,
+    ];
+    for a in library() {
+        let cycle = &a.program_template.cycle;
+        let len = cycle.len();
+        let weekly = usize::from(a.program_template.weekly_frequency_per_muscle);
+        for group in checked {
+            let count = cycle
+                .iter()
+                .filter(
+                    |day| matches!(day, PlanDay::Training { focus, .. } if focus.contains(&group)),
+                )
+                .count();
+            if count == 0 {
+                continue;
+            }
+            assert!(
+                (count * 7).abs_diff(weekly * len) <= len,
+                "{}: {:?} is trained {count} times in {len} days ({} per week), \
+                 more than ±1 from the record's {weekly}",
+                a.id,
+                group,
+                count * 7 / len
+            );
+        }
+    }
+}
+
+#[test]
+fn library_provenance_notes_record_the_reconstructed_cycle() {
+    // Annex A §3: every cycle is a reconstruction, including the two whose day
+    // order comes from the record, because the exercises are ours.
+    for a in library() {
+        assert!(
+            a.provenance
+                .sources
+                .contains(&"day cycle and exercises reconstructed for R-0061"),
+            "{}: the provenance notes must carry the reconstruction line",
+            a.id
+        );
+    }
+}
+
+#[test]
+fn library_cycles_mark_each_exercise_with_its_physics() {
+    // SPEC-0059 §2.5: which exercise has a model is decided in core by
+    // `model_for`; the library's only modelled name is the back squat.
+    let mut squats = 0;
+    for a in library() {
+        for day in &a.program_template.cycle {
+            if let PlanDay::Training { exercises, .. } = day {
+                for e in exercises {
+                    assert_eq!(e.physics(), model_for(e.name()), "{}: {}", a.id, e.name());
+                    squats += usize::from(e.physics().is_some());
+                }
+            }
+        }
+    }
+    assert!(squats > 0, "some library day lists the back squat");
 }

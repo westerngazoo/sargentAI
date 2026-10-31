@@ -11,6 +11,7 @@
 pub mod archetype;
 pub mod auth;
 pub mod authored;
+pub mod biomech;
 pub mod db;
 pub mod error;
 pub mod goals;
@@ -106,6 +107,7 @@ pub fn app(state: AppState) -> Router {
         .merge(archetype::routes())
         .merge(auth::routes())
         .merge(authored::routes())
+        .merge(biomech::routes())
         .merge(goals::routes())
         .merge(profile::routes())
         .merge(workout::routes())

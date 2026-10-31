@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../application/onboarding_controller.dart';
+import 'field_error_text.dart';
 
 /// Step 1 — body stats (date of birth, height, weight), all required (AC4).
 class BodyStatsStep extends ConsumerWidget {
@@ -9,27 +12,29 @@ class BodyStatsStep extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final draft =
         ref.watch(onboardingControllerProvider.select((s) => s.draft));
     final ctrl = ref.read(onboardingControllerProvider.notifier);
     final today = DateTime.now();
+    final dob = draft.dateOfBirth;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('About you', style: Theme.of(context).textTheme.titleLarge),
+        Text(l10n.aboutYou, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Date of birth',
-            errorText: draft.dateOfBirth == null ? null : draft.dobError(today),
+            labelText: l10n.dateOfBirthLabel,
+            errorText: dob == null
+                ? null
+                : fieldErrorText(draft.dobError(today), l10n),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(draft.dateOfBirth == null
-                  ? 'Not set'
-                  : _fmt(draft.dateOfBirth!)),
+              Text(dob == null ? l10n.notSet : _formatDate(context, dob)),
               TextButton(
                 onPressed: () async {
                   final picked = await showDatePicker(
@@ -44,7 +49,7 @@ class BodyStatsStep extends ConsumerWidget {
                   );
                   if (picked != null) ctrl.setBodyStats(dob: picked);
                 },
-                child: const Text('Choose'),
+                child: Text(l10n.choose),
               ),
             ],
           ),
@@ -53,8 +58,10 @@ class BodyStatsStep extends ConsumerWidget {
         TextField(
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            labelText: 'Height (cm)',
-            errorText: draft.heightCm == null ? null : draft.heightError(),
+            labelText: l10n.heightCmLabel,
+            errorText: draft.heightCm == null
+                ? null
+                : fieldErrorText(draft.heightError(), l10n),
           ),
           onChanged: (v) => ctrl.setBodyStats(height: int.tryParse(v)),
         ),
@@ -62,8 +69,10 @@ class BodyStatsStep extends ConsumerWidget {
         TextField(
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'Weight (kg)',
-            errorText: draft.weightKg == null ? null : draft.weightError(),
+            labelText: l10n.weightKgLabel,
+            errorText: draft.weightKg == null
+                ? null
+                : fieldErrorText(draft.weightError(), l10n),
           ),
           onChanged: (v) => ctrl.setBodyStats(weight: double.tryParse(v)),
         ),
@@ -72,6 +81,7 @@ class BodyStatsStep extends ConsumerWidget {
   }
 }
 
-String _fmt(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
+/// The picked date in the app locale (SPEC-0061 §2.9: dates use `intl` with
+/// the resolved locale).
+String _formatDate(BuildContext context, DateTime d) =>
+    DateFormat.yMMMd(Localizations.localeOf(context).toString()).format(d);

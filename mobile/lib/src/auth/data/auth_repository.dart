@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/dio_provider.dart';
 import '../../core/storage/token_store.dart';
+import '../domain/me.dart';
 import 'auth_api.dart';
 
 /// Orchestrates the [AuthApi] (transport) and [TokenStore] (persistence) so the
@@ -28,7 +29,7 @@ class AuthRepository {
     return token;
   }
 
-  Future<String> me() => _api.me();
+  Future<Me> me() => _api.me();
 
   Future<void> forgotPassword(String email) => _api.forgotPassword(email);
 

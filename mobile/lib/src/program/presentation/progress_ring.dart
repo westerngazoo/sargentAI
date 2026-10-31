@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../application/program_progress.dart';
 
 /// A circular progress ring with the percentage centred. Themed olive track
@@ -16,7 +17,6 @@ class ProgressRing extends StatelessWidget {
     required this.size,
     this.label,
     this.stroke = 8,
-    this.onGradient = false,
   });
 
   final double ratio;
@@ -26,17 +26,12 @@ class ProgressRing extends StatelessWidget {
   final String? label;
   final double stroke;
 
-  /// When painted on the brand gradient (hero card), use white ink.
-  final bool onGradient;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final track = onGradient
-        ? Colors.white.withValues(alpha: 0.25)
-        : cs.surfaceContainerHighest;
-    final sweep = onGradient ? Colors.white : cs.primary;
-    final ink = onGradient ? Colors.white : cs.onSurface;
+    final track = cs.surfaceContainerHighest;
+    final sweep = cs.primary;
+    final ink = cs.onSurface;
     return SizedBox(
       width: size,
       height: size,
@@ -49,7 +44,8 @@ class ProgressRing extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            label ?? '${(ratio * 100).round()}%',
+            label ??
+                AppLocalizations.of(context).percent((ratio * 100).round()),
             style: TextStyle(
               color: ink,
               fontWeight: FontWeight.w800,
@@ -116,6 +112,7 @@ class WeeklyProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -130,7 +127,7 @@ class WeeklyProgressCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'THIS WEEK',
+                        l10n.thisWeekCaps,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               letterSpacing: 1.2,
                               fontWeight: FontWeight.w700,
@@ -143,7 +140,7 @@ class WeeklyProgressCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${progress.daysDone} of ${progress.daysTarget} days',
+                    l10n.daysOfTarget(progress.daysDone, progress.daysTarget),
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
@@ -151,9 +148,7 @@ class WeeklyProgressCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${progress.totalSessions} session'
-                    '${progress.totalSessions == 1 ? '' : 's'} logged '
-                    'on this program',
+                    l10n.sessionsLoggedOnProgram(progress.totalSessions),
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -188,7 +183,7 @@ class _CompleteBadge extends StatelessWidget {
           Icon(Icons.check_circle, size: 14, color: cs.onPrimaryContainer),
           const SizedBox(width: 4),
           Text(
-            'Target met',
+            AppLocalizations.of(context).targetMet,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: cs.onPrimaryContainer,
                   fontWeight: FontWeight.w700,

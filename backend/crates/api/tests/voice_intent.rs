@@ -84,3 +84,24 @@ async fn voice_intent_requires_auth(pool: PgPool) {
     .await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
+
+/// SPEC-0061 §2.8 / R-0061 AC2: navigation answers with an effect token, not a
+/// route string.
+#[sqlx::test(migrations = "../../migrations")]
+async fn voice_intent_navigation_answers_with_an_effect_token(pool: PgPool) {
+    let app = build_app(pool);
+    let (_id, token) = register_and_token(&app, "voice-effect@test.com", "password123").await;
+
+    let resp = post_json_with_auth(
+        &app,
+        "/voice/intent",
+        Some(&format!("Bearer {token}")),
+        json!({ "transcript": "start workout" }),
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = body_json(resp).await;
+    assert_eq!(body["status"], "navigate");
+    assert_eq!(body["effect"], "open_focus_mode");
+    assert!(body["message"].is_string());
+}

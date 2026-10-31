@@ -116,8 +116,17 @@ async fn migration_creates_workout_tables_with_expected_columns(pool: PgPool) {
     let names: Vec<&str> = sessions.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(
         names,
-        vec!["created_at", "id", "performed_on", "updated_at", "user_id"],
-        "workout_sessions must have exactly the five expected columns"
+        vec![
+            "created_at",
+            "id",
+            "performed_on",
+            "plan_day_index",
+            "updated_at",
+            "user_id",
+            "user_program_id"
+        ],
+        "workout_sessions must have exactly the seven expected columns \
+         (R-0061 added the nullable plan pair)"
     );
 
     let exercises = column_set(&fetch("workout_exercises").await);

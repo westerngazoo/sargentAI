@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../../l10n/app_localizations.dart';
 import '../models/coach_suggestion.dart';
 import '../services/adjustment_service.dart';
 
@@ -33,6 +33,7 @@ class _CoachBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Container(
       // Bottom margin lives here so the gap collapses when the card is hidden.
       margin: const EdgeInsets.only(bottom: 24),
@@ -51,24 +52,26 @@ class _CoachBody extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.gradStart, AppTheme.gradEnd],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.military_tech,
-                    size: 19, color: Colors.white),
+                child: Icon(Icons.military_tech,
+                    size: 19, color: Theme.of(context).colorScheme.onPrimary),
               ),
               const SizedBox(width: 12),
-              Text(
-                'Coach suggestions',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+              // Expanded, not a Spacer: in the Medidas panel the row is
+              // narrower than the screen it was drawn for.
+              Expanded(
+                child: Text(
+                  l10n.coachSuggestions,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
-                'last ${advice.windowWeeks} wks',
+                l10n.lastWeeks(advice.windowWeeks),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
@@ -83,7 +86,7 @@ class _CoachBody extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "On track — keep doing what you're doing.",
+                    l10n.onTrack,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -136,7 +139,7 @@ class _SuggestionTile extends StatelessWidget {
               children: [
                 if (suggestion.isAction)
                   Text(
-                    'ACTION',
+                    AppLocalizations.of(context).actionCaps,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.1,
                           fontWeight: FontWeight.w700,

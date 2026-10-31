@@ -2,70 +2,84 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/app_localizations.dart';
+import '../../core/network/api_error_text.dart';
+import '../../core/network/api_exception.dart';
 import '../application/earbud_coach.dart';
 import '../application/session_driver.dart';
 import '../application/voice_coach.dart';
+import '../domain/draft_rejection.dart';
 import '../domain/exercise_draft.dart';
 import '../domain/muscle_activation.dart';
 import '../domain/muscle_group.dart';
-import '../domain/set_draft.dart';
-import 'muscle_map.dart';
 import '../domain/preset_exercises.dart';
+import '../domain/set_draft.dart';
+import '../application/draft_rejection_text.dart';
+import 'muscle_map.dart';
+import '../application/muscle_names.dart';
 
-/// The live in-gym screen — a THIN renderer over [sessionDriverProvider]. All
-/// business logic (validation, the state machine) is driver-side; this widget
-/// holds no `try/catch`. A `null` draft (deep link or post-finish) redirects
-/// home: the driver state, not the route, owns "a session is in progress".
+/// Focus mode (SPEC-0061 §2.7): the live in-gym screen, pushed over the day
+/// — a THIN renderer over [sessionDriverProvider]. All business logic
+/// (validation, the state machine) is driver-side; this widget holds no
+/// `try/catch`. It pops itself when the driver reaches `done`, whichever way
+/// the session was finished (button, voice, earbud), so no path leaves the
+/// user on a stale screen. A `null` draft before `done` is a cold start the
+/// router redirects home: the driver state, not the route, owns "a session
+/// is in progress".
 class LiveSessionScreen extends ConsumerWidget {
   const LiveSessionScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<SessionDriverState>(sessionDriverProvider, (previous, next) {
+      if (next.done && !(previous?.done ?? false)) context.pop();
+    });
     final state = ref.watch(sessionDriverProvider);
     final driver = ref.read(sessionDriverProvider.notifier);
     final coach = ref.watch(voiceCoachProvider);
     final draft = state.draft;
+    final l10n = AppLocalizations.of(context);
 
-    if (draft == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.go('/home');
-      });
-      return const Scaffold(body: SizedBox.shrink());
-    }
+    if (draft == null) return const Scaffold(body: SizedBox.shrink());
 
     return PopScope(
-      canPop: false,
+      // Leaving with logged sets asks first; with none there is nothing to
+      // lose and back just leaves. Nothing is dropped on the way out; only
+      // Discard calls abandon().
+      canPop: !draft.hasSets,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final discard = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Discard this workout?'),
-            content: const Text('Your logged sets will be lost.'),
+            title: Text(l10n.leaveWithoutSaving),
+            content: Text(l10n.yourLoggedSetsWillBeLost),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Discard'),
+                child: Text(l10n.discard),
               ),
             ],
           ),
         );
-        if (discard ?? false) driver.abandon();
+        if (!(discard ?? false)) return;
+        driver.abandon();
+        if (context.mounted) context.pop();
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Workout'),
+          title: Text(l10n.workout),
           actions: [
             Consumer(builder: (context, ref, _) {
               // Watch the coach provider so that it is instantiated and kept alive
               ref.watch(earbudCoachProvider);
               final earbudOn = ref.watch(earbudModeProvider);
               return IconButton(
-                tooltip: earbudOn ? 'Earbud coach off' : 'Earbud coach on',
+                tooltip: earbudOn ? l10n.earbudCoachOff : l10n.earbudCoachOn,
                 isSelected: earbudOn,
                 icon: const Icon(Icons.headphones_outlined),
                 selectedIcon: const Icon(Icons.headphones),
@@ -75,7 +89,7 @@ class LiveSessionScreen extends ConsumerWidget {
               );
             }),
             IconButton(
-              tooltip: coach.enabled ? 'Voice coach off' : 'Voice coach on',
+              tooltip: coach.enabled ? l10n.voiceCoachOff : l10n.voiceCoachOn,
               isSelected: coach.enabled,
               icon: const Icon(Icons.headset_off_outlined),
               selectedIcon: const Icon(Icons.headset_mic),
@@ -96,8 +110,7 @@ class LiveSessionScreen extends ConsumerWidget {
         body: SafeArea(
           child: Column(
             children: [
-              if (state.error != null)
-                _ErrorBanner(error: state.error!, field: state.errorField),
+              if (state.error != null) _ErrorBanner(error: state.error!),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -117,7 +130,7 @@ class LiveSessionScreen extends ConsumerWidget {
                     OutlinedButton.icon(
                       onPressed: () => _showAddSheet(context, driver),
                       icon: const Icon(Icons.add),
-                      label: const Text('Add exercise'),
+                      label: Text(l10n.addExercise),
                     ),
                   ],
                 ),
@@ -153,6 +166,7 @@ class _TargetMusclesCard extends StatelessWidget {
     final activation =
         activationFor(exercise.name, group: exercise.muscleGroup);
     if (activation.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -161,7 +175,7 @@ class _TargetMusclesCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'TARGET MUSCLES — ${exercise.name.toUpperCase()}',
+              l10n.targetMusclesCaps(exercise.name.toUpperCase()),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     letterSpacing: 1.1,
                     fontWeight: FontWeight.w700,
@@ -187,6 +201,7 @@ class _CoachBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -197,7 +212,7 @@ class _CoachBar extends ConsumerWidget {
       child: Row(
         children: [
           IconButton.filled(
-            tooltip: coach.listening ? 'Stop listening' : 'Dictate a set',
+            tooltip: coach.listening ? l10n.stopListening : l10n.dictateASet,
             icon: Icon(coach.listening ? Icons.stop : Icons.mic),
             style: IconButton.styleFrom(
               backgroundColor: coach.listening ? cs.error : cs.primary,
@@ -210,11 +225,10 @@ class _CoachBar extends ConsumerWidget {
             child: Text(
               coach.listening
                   ? (coach.transcript.isEmpty
-                      ? 'Listening…'
+                      ? l10n.listening
                       : '“${coach.transcript}”')
                   : (coach.coachLine.isEmpty
-                      ? 'Tap the mic and say "done" — I will ask your reps '
-                          'and kilos. End every answer with "over".'
+                      ? l10n.coachIdleHint
                       : coach.coachLine),
               style: Theme.of(context)
                   .textTheme
@@ -229,18 +243,19 @@ class _CoachBar extends ConsumerWidget {
 }
 
 /// The finish-failure banner. When the backend named a field, it appends the
-/// area of the screen to check (`fieldArea`), so the message is field-aware —
+/// area of the screen to check (`_fieldArea`), so the message is field-aware —
 /// the context the R-0027 voice transport will speak back.
 class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.error, this.field});
+  const _ErrorBanner({required this.error});
 
-  final String error;
-  final String? field;
+  final ApiException error;
 
   @override
   Widget build(BuildContext context) {
-    final area = fieldArea(field);
-    final message = area == null ? error : '$error — check $area';
+    final l10n = AppLocalizations.of(context);
+    final text = apiErrorText(error, l10n);
+    final area = _fieldArea(error.field, l10n);
+    final message = area == null ? text : l10n.errorCheckArea(text, area);
     return Container(
       width: double.infinity,
       color: Theme.of(context).colorScheme.errorContainer,
@@ -252,6 +267,15 @@ class _ErrorBanner extends StatelessWidget {
     );
   }
 }
+
+/// Maps a backend `400 {field}` to the area of the live screen that owns it;
+/// `null` when the field maps to no specific area.
+String? _fieldArea(String? field, AppLocalizations l10n) => switch (field) {
+      'reps' || 'weight_kg' || 'rpe' => l10n.fieldAreaSets,
+      'name' || 'muscle_group' => l10n.fieldAreaExercise,
+      'exercises' || 'sets' || 'performed_on' => l10n.fieldAreaWorkout,
+      _ => null,
+    };
 
 class _ExerciseCard extends ConsumerWidget {
   const _ExerciseCard({
@@ -267,6 +291,7 @@ class _ExerciseCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final driver = ref.read(sessionDriverProvider.notifier);
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: InkWell(
         onTap: isCurrent ? null : () => driver.selectExercise(index),
@@ -278,11 +303,14 @@ class _ExerciseCard extends ConsumerWidget {
               Text(
                 exercise.muscleGroup == null
                     ? exercise.name
-                    : '${exercise.name} · ${exercise.muscleGroup!.wire}',
+                    : l10n.exerciseWithGroup(
+                        exercise.name,
+                        muscleGroupName(exercise.muscleGroup!, l10n),
+                      ),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               for (var s = 0; s < exercise.sets.length; s++)
-                Text('Set ${s + 1}: ${_setLabel(exercise.sets[s])}'),
+                Text(l10n.setLine(s + 1, _setLabel(exercise.sets[s], l10n))),
               if (isCurrent) const _SetEntry(),
             ],
           ),
@@ -292,10 +320,10 @@ class _ExerciseCard extends ConsumerWidget {
   }
 }
 
-String _setLabel(SetDraft s) {
-  final parts = <String>['${s.reps} reps'];
-  if (s.weightKg != null) parts.add('${_fmt(s.weightKg!)} kg');
-  if (s.rpe != null) parts.add('RPE ${_fmt(s.rpe!)}');
+String _setLabel(SetDraft s, AppLocalizations l10n) {
+  final parts = <String>[l10n.repsCount(s.reps!)];
+  if (s.weightKg != null) parts.add(l10n.kg(_fmt(s.weightKg!)));
+  if (s.rpe != null) parts.add(l10n.rpeValue(_fmt(s.rpe!)));
   return parts.join(' · ');
 }
 
@@ -313,7 +341,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
   final _reps = TextEditingController();
   final _weight = TextEditingController();
   final _rpe = TextEditingController();
-  String? _error;
+  DraftRejection? _error;
 
   @override
   void dispose() {
@@ -351,6 +379,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -361,7 +390,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
               child: TextField(
                 controller: _reps,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Reps'),
+                decoration: InputDecoration(labelText: l10n.repsLabel),
               ),
             ),
             const SizedBox(width: 8),
@@ -370,7 +399,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
                 controller: _weight,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Weight (kg)'),
+                decoration: InputDecoration(labelText: l10n.weightKgLabel),
               ),
             ),
             const SizedBox(width: 8),
@@ -379,7 +408,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
                 controller: _rpe,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'RPE'),
+                decoration: InputDecoration(labelText: l10n.rpeLabel),
               ),
             ),
           ],
@@ -388,7 +417,7 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              _error!,
+              draftRejectionText(_error!, l10n),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -396,10 +425,10 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
           children: [
             TextButton(
               onPressed: _repeat,
-              child: const Text('Repeat last set'),
+              child: Text(l10n.repeatLastSet),
             ),
             const Spacer(),
-            FilledButton(onPressed: _log, child: const Text('Log set')),
+            FilledButton(onPressed: _log, child: Text(l10n.logSet)),
           ],
         ),
       ],
@@ -428,7 +457,7 @@ class _FinishBar extends StatelessWidget {
                   width: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Finish'),
+              : Text(AppLocalizations.of(context).finish),
         ),
       ),
     );
@@ -447,7 +476,7 @@ class _AddExerciseSheet extends StatefulWidget {
 class _AddExerciseSheetState extends State<_AddExerciseSheet> {
   final _name = TextEditingController();
   MuscleGroup? _group;
-  String? _error;
+  DraftRejection? _error;
 
   @override
   void dispose() {
@@ -471,6 +500,7 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -487,16 +517,16 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
           Row(
             children: [
               Expanded(
-                child: Text('New exercise',
+                child: Text(l10n.newExercise,
                     style: Theme.of(context).textTheme.titleLarge),
               ),
-              FilledButton(onPressed: _add, child: const Text('Add')),
+              FilledButton(onPressed: _add, child: Text(l10n.add)),
             ],
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _name,
-            decoration: const InputDecoration(labelText: 'Exercise name'),
+            decoration: InputDecoration(labelText: l10n.exerciseNameLabel),
             onChanged: (_) => setState(() {}),
           ),
           // Target-muscle preview for the picked/typed lift.
@@ -512,7 +542,7 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                _error!,
+                draftRejectionText(_error!, l10n),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
@@ -523,7 +553,7 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Common lifts'),
+                  Text(l10n.commonLifts),
                   Wrap(
                     spacing: 8,
                     children: [
@@ -535,13 +565,13 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text('Muscle group (optional)'),
+                  Text(l10n.muscleGroupOptional),
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final group in MuscleGroup.values)
                         ChoiceChip(
-                          label: Text(group.wire),
+                          label: Text(muscleGroupName(group, l10n)),
                           selected: _group == group,
                           onSelected: (_) => setState(
                               () => _group = _group == group ? null : group),

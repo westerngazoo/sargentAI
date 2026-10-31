@@ -90,10 +90,12 @@ DioException dioErrorFlat(
   String path = '/profile/me',
   String error = 'validation',
   String? field,
+  String? reason,
 }) {
   final req = RequestOptions(path: path);
   final body = <String, dynamic>{'error': error};
   if (field != null) body['field'] = field;
+  if (reason != null) body['reason'] = reason;
   return DioException(
     requestOptions: req,
     type: DioExceptionType.badResponse,

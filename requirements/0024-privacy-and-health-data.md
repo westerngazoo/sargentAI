@@ -52,6 +52,7 @@ this table; if the table is wrong the policy is wrong.
 | **Voice transcripts** | the recognizer's text | `POST /voice/intent`, then to an LLM for intent parsing | **Anthropic** (`claude-haiku-4-5`) |
 | **All API traffic** (auth, profile, logs, transcripts, photo uploads) | every request | the API, hosted on Cloudflare Workers + Containers | **Cloudflare** |
 | Derived program and diet proposals | R-0014, R-0017 | Neon Postgres | Neon |
+| **Squat check request** (height, body mass, optional limb lengths, ankle dorsiflexion, bar load) | R-0059 `POST /biomech/squat/range` | **Processed, not stored**: computed in the API and returned in the response; never written to the database and never logged | Cloudflare (hosts the API) |
 
 Three entries in that table will draw questions. The photograph never
 reaches the regression model; only features derived from it do

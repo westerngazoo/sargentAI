@@ -14,6 +14,7 @@ pub mod matching;
 pub mod nutrition;
 pub mod periodize;
 pub mod photo;
+pub mod plan;
 pub mod pose;
 pub mod profile;
 pub mod program;
@@ -54,6 +55,10 @@ pub use periodize::{
 pub use photo::{
     Angle, ImageContentType, NewPhoto, PhotoError, PhotoSession, SessionPhoto, MAX_BYTES,
 };
+// `plan` is NOT re-exported at the crate root: `plan::PlanError` would collide
+// with the R-0038 `periodize::PlanError`, and `fitai_core::project` says
+// nothing about *what* it projects. Callers reach it as `fitai_core::plan::…`
+// (the `authoring`/`goals` precedent; SPEC-0061 §2.2).
 pub use pose::{
     derive_frame_features, FrameError, FrameFeatures, Keypoint, Landmark, PoseKeypoints,
 };

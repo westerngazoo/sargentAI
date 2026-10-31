@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -45,7 +46,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: RegisterScreen()),
+        child: localizedApp(home: const RegisterScreen()),
       ),
     );
     await tester.pump();
@@ -76,14 +77,14 @@ void main() {
   testWidgets('SAC1 a 400 bad email renders a readable inline message',
       (tester) async {
     when(() => repo.register(any(), any())).thenThrow(
-      const ApiException('enter a valid email',
+      const ApiException(ApiErrorKind.badRequest,
           statusCode: 400, field: 'email'),
     );
     final container = await pumpRegister(tester);
 
     await submit(tester);
 
-    expect(find.textContaining('valid email'), findsOneWidget);
+    expect(find.text(l10n.apiErrorBadRequest), findsOneWidget);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
   });
 
@@ -111,9 +112,8 @@ void main() {
 
     await submit(tester);
 
-    expect(find.text('That email already has an account. Log in instead.'),
-        findsOneWidget);
-    expect(find.textContaining('that already exists'), findsNothing);
+    expect(find.text(l10n.emailAlreadyRegistered), findsOneWidget);
+    expect(find.text(l10n.apiErrorConflict), findsNothing);
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
     verifyNever(() => repo.login(any(), any()));
   });

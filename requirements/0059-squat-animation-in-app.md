@@ -1,13 +1,13 @@
 # R-0059 — The squat, animated in the app
 
-- **Status:** Draft
+- **Status:** Accepted — owner, 2026-10-27 (AC1 amended: an invalid field gets `400`)
 - **Milestone:** M6 (the lift model, shown to the lifter)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-10-20
 - **Depends on:** R-0045 (the range of solved postures, merged: slices A and
   B1). R-0058 (guided measurement) only to fill the request from the profile
   later. It is not a blocker.
-- **Realized by:** SPEC-0059 (to be written)
+- **Realized by:** SPEC-0059 (Accepted 2026-10-27)
 - **QA:** `qa` agent run scoped to this requirement
 
 ## 1. Statement
@@ -50,7 +50,8 @@ The model's assumptions are shown on the same screen.
   hip, shoulder, bar), knee and hip flexion, trunk lean, and the four
   moments, each with its uncertainty and resisting group. It also returns how
   the range ended and every stated assumption. No session gets **401**; an
-  invalid field gets **422** with a typed error naming the field.
+  invalid field gets **400** with a typed error naming the field (amended
+  2026-10-27, OQ-4).
 - **AC2. Measurements travel in the request** (owner, 2026-10-20). The
   endpoint stores nothing. When R-0058 lands, the app fills the request from
   the profile. Missing lengths come from the table, and the result says so.
@@ -105,15 +106,16 @@ The model's assumptions are shown on the same screen.
 
 ## 5. Open questions
 
-- **OQ-1. Where the screen lives.** The app has no per-exercise guide screen
-  yet, and R-0058 AC7 assumes one. SPEC-0059 either creates the squat's
-  guide screen with the animation as its first section, or places the
-  animation elsewhere until that screen exists.
-- **OQ-2. Which loads are offered.** Recommended for v1: typed in by the
-  lifter. Later, from their logged working sets.
-- **OQ-3. Screen language.** The app's strings are English today, and the
-  target market is Mexico and LATAM. Localisation is out of scope here;
-  noted so it is not forgotten.
+- **OQ-1. Where the screen lives.** *Answered 2026-10-25 by design v2:*
+  inside the selected day, one check per exercise, beside the exercise list
+  on a wide window and below the exercise on a phone (R-0061 AC9).
+- **OQ-2. Which loads are offered.** *Answered:* typed in by the lifter in
+  v1; from logged sets later.
+- **OQ-3. Screen language.** *Answered:* R-0061's catalogue; Spanish first.
+- **OQ-4 (new, from SPEC-0059).** AC1 says an invalid field gets `422`; the
+  API's one validation shape is `400 validation { field }`. SPEC-0059
+  proposes the `400`; the owner may veto. *Answered 2026-10-27:* `400`, the
+  API's existing shape; AC1 amended.
 
 ## 6. Decision log
 
@@ -122,3 +124,5 @@ The model's assumptions are shown on the same screen.
 | 2026-10-20 | The animation is the product, not the table | Owner. |
 | 2026-10-20 | Measurements travel in the request until R-0058 stores them | Owner. The animation does not wait for R-0058; the profile fills the request later. |
 | 2026-10-20 | The model runs on the server; the app only draws | `project-specifics.md` domain note: intelligence server-side, thin client. |
+| 2026-10-27 | Accepted; an invalid field gets `400 validation { field }` (OQ-4) | Owner. One error shape across the API; the client already parses it. |
+- 2026-10-25 — OQ-1..3 answered by design v2; OQ-4 raised by SPEC-0059. Ready to accept.

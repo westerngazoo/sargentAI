@@ -10,11 +10,14 @@ class SessionListState {
   const SessionListState({this.submitting = false, this.error});
 
   final bool submitting;
-  final String? error;
+
+  /// The failed delete, rendered by the list; a 404 means the workout was
+  /// already gone, which the list words on its own.
+  final ApiException? error;
 
   SessionListState copyWith({
     bool? submitting,
-    String? error,
+    ApiException? error,
     bool clearError = false,
   }) =>
       SessionListState(
@@ -40,16 +43,11 @@ class SessionListController extends Notifier<SessionListState> {
       ref.invalidate(workoutsProvider);
       state = const SessionListState();
     } on ApiException catch (e) {
-      if (e.statusCode == 404) {
+      if (e.kind == ApiErrorKind.notFound) {
         // Already gone server-side — the cached list is stale, so refresh it.
         ref.invalidate(workoutsProvider);
-        state = state.copyWith(
-          submitting: false,
-          error: 'that workout no longer exists',
-        );
-      } else {
-        state = state.copyWith(submitting: false, error: e.message);
       }
+      state = state.copyWith(submitting: false, error: e);
     }
   }
 }

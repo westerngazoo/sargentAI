@@ -330,3 +330,107 @@ async fn choose_synthetic_no_profile_is_404(pool: PgPool) {
     );
     assert_eq!(body_json(resp).await, json!({ "error": "not_found" }));
 }
+
+// ---------------------------------------------------------------------------
+// R-0061 / SPEC-0061 §2.4 — `starts_on` on the synthetic choose (slice 2c)
+// ---------------------------------------------------------------------------
+
+/// `POST /programs/synthetic` for `archetype_id` with an optional `starts_on`.
+async fn choose_synthetic_starting(
+    app: &axum::Router,
+    token: &str,
+    archetype_id: &str,
+    starts_on: Option<chrono::NaiveDate>,
+) -> axum::response::Response<axum::body::Body> {
+    let mut body = json!({
+        "archetype_id": archetype_id,
+        "shape": "mesomorph",
+        "fat_band": "lean"
+    });
+    if let Some(date) = starts_on {
+        body["starts_on"] = serde_json::Value::String(date.to_string());
+    }
+    post_json_with_auth(app, "/programs/synthetic", Some(&bearer(token)), body).await
+}
+
+async fn stored_starts_on(pool: &PgPool, body: &serde_json::Value) -> chrono::NaiveDate {
+    let id = uuid::Uuid::parse_str(body["id"].as_str().expect("response id")).unwrap();
+    sqlx::query_scalar("SELECT starts_on FROM user_programs WHERE id = $1")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+fn server_today_plus(days: i64) -> chrono::NaiveDate {
+    let today = chrono::Utc::now().date_naive();
+    let n = chrono::Days::new(days.unsigned_abs());
+    if days >= 0 {
+        today.checked_add_days(n).unwrap()
+    } else {
+        today.checked_sub_days(n).unwrap()
+    }
+}
+
+/// Without `starts_on`, the program starts on the server's UTC date.
+#[sqlx::test(migrations = "../../migrations")]
+async fn choose_synthetic_defaults_starts_on_to_the_server_date(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_, token) = register_and_token(&app, "syn-start-default@b.com", "8charsmin").await;
+    create_profile(&app, &token).await;
+    let archetype_id = first_synthetic_archetype(&app, &token).await;
+
+    let resp = choose_synthetic_starting(&app, &token, &archetype_id, None).await;
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let body = body_json(resp).await;
+    assert_eq!(stored_starts_on(&pool, &body).await, server_today_plus(0));
+}
+
+/// The client's local date may sit a day either side of the server's.
+#[sqlx::test(migrations = "../../migrations")]
+async fn choose_synthetic_accepts_starts_on_within_a_day(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_, token) = register_and_token(&app, "syn-start-ok@b.com", "8charsmin").await;
+    create_profile(&app, &token).await;
+    let archetype_id = first_synthetic_archetype(&app, &token).await;
+
+    for offset in [-1, 1] {
+        let date = server_today_plus(offset);
+        let resp = choose_synthetic_starting(&app, &token, &archetype_id, Some(date)).await;
+        assert_eq!(
+            resp.status(),
+            StatusCode::CREATED,
+            "starts_on at {offset:+}"
+        );
+        let body = body_json(resp).await;
+        assert_eq!(stored_starts_on(&pool, &body).await, date);
+    }
+}
+
+/// Two days away is no real local date → 422, and nothing is persisted.
+#[sqlx::test(migrations = "../../migrations")]
+async fn choose_synthetic_rejects_starts_on_two_days_away(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let (_, token) = register_and_token(&app, "syn-start-bad@b.com", "8charsmin").await;
+    create_profile(&app, &token).await;
+    let archetype_id = first_synthetic_archetype(&app, &token).await;
+
+    for offset in [-2, 2] {
+        let date = server_today_plus(offset);
+        let resp = choose_synthetic_starting(&app, &token, &archetype_id, Some(date)).await;
+        assert_eq!(
+            resp.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "starts_on at {offset:+}"
+        );
+        assert_eq!(
+            body_json(resp).await,
+            json!({ "error": "unprocessable", "reason": "starts_on_out_of_bounds" })
+        );
+    }
+    let n: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user_programs")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(n, 0, "a rejected choose persists nothing");
+}

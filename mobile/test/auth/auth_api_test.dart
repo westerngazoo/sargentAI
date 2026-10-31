@@ -2,7 +2,7 @@
 // translates DioException -> ApiException.
 //   register: POST /auth/register -> 201 {user_id};  400/409 -> ApiException
 //   login:    POST /auth/login    -> 200 {token,user_id,expires_at}; 401 -> ApiException
-//   me:       GET  /auth/me       -> 200 {user_id}
+//   me:       GET  /auth/me       -> 200 {user_id,email}
 //   timeout/no-response -> ApiException(statusCode: null) — the AC9 retry text.
 //
 // RED until package:fitai/src/auth/data/auth_api.dart defines AuthApi(Dio) with
@@ -10,6 +10,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:fitai/src/auth/data/auth_api.dart';
+import 'package:fitai/src/auth/domain/me.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,10 +105,19 @@ void main() {
   });
 
   group('SAC4 me', () {
-    test('200 {user_id} returns the user id', () async {
+    test('200 {user_id,email} returns both (SPEC-0061 slice 3c)', () async {
+      when(() => dio.get<dynamic>('/auth/me')).thenAnswer((_) async =>
+          _ok('/auth/me', 200, {'user_id': 'me-1', 'email': 'me@b.com'}));
+      final me = await api.me();
+      expect(me, isA<Me>());
+      expect(me.userId, 'me-1');
+      expect(me.email, 'me@b.com');
+    });
+
+    test('401 -> ApiException(401)', () async {
       when(() => dio.get<dynamic>('/auth/me'))
-          .thenAnswer((_) async => _ok('/auth/me', 200, {'user_id': 'me-1'}));
-      expect(await api.me(), 'me-1');
+          .thenThrow(dioError(401, path: '/auth/me'));
+      await expectLater(api.me(), throwsA(isApiExceptionWithStatus(401)));
     });
   });
 

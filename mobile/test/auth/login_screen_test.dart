@@ -24,6 +24,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../support/fakes.dart';
+import '../support/l10n.dart';
 
 void main() {
   setUpAll(registerFallbacks);
@@ -50,7 +51,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: LoginScreen()),
+        child: localizedApp(home: const LoginScreen()),
       ),
     );
     await tester.pump();
@@ -78,7 +79,7 @@ void main() {
 
   testWidgets('SAC2 a 401 renders the non-enumerating message', (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException('invalid email or password', statusCode: 401),
+      const ApiException(ApiErrorKind.unauthorized, statusCode: 401),
     );
     await pumpLogin(tester);
 
@@ -86,12 +87,12 @@ void main() {
     await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('invalid email or password'), findsOneWidget);
+    expect(find.text(l10n.apiErrorUnauthorized), findsOneWidget);
   });
 
   testWidgets('SAC9 a timeout renders a retryable message', (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException("can't reach the server — retry"),
+      const ApiException(ApiErrorKind.transport),
     );
     await pumpLogin(tester);
 
@@ -99,7 +100,7 @@ void main() {
     await tester.tap(find.byType(ElevatedButton));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('retry'), findsOneWidget);
+    expect(find.text(l10n.apiErrorTransport), findsOneWidget);
   });
 
   testWidgets('SAC9 the button shows a spinner and disables while in flight',
@@ -125,7 +126,7 @@ void main() {
   testWidgets('SAC9 no raw exception text is shown to the user',
       (tester) async {
     when(() => repo.login(any(), any())).thenThrow(
-      const ApiException('invalid email or password', statusCode: 401),
+      const ApiException(ApiErrorKind.unauthorized, statusCode: 401),
     );
     await pumpLogin(tester);
 
@@ -145,7 +146,7 @@ void main() {
     when(() => tokenStore.write(any())).thenAnswer((_) async {});
     final container = await pumpLogin(tester);
 
-    await tester.tap(find.text('Use test account'));
+    await tester.tap(find.text(l10n.useTestAccount));
     await tester.pumpAndSettle();
 
     verify(() => repo.login(DevLogin.email, DevLogin.password)).called(1);
@@ -155,7 +156,7 @@ void main() {
   testWidgets('Google button is hidden without GOOGLE_CLIENT_ID dart-define',
       (tester) async {
     await pumpLogin(tester);
-    expect(find.text('Continue with Google'), findsNothing);
+    expect(find.text(l10n.continueWithGoogle), findsNothing);
   });
 
   // R-0060 M1 -> AC7: the login screen offers "Forgot password?" and it
@@ -174,13 +175,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(routerConfig: router),
+        child: localizedRouterApp(router),
       ),
     );
     await tester.pumpAndSettle();
     expect(router.routerDelegate.currentConfiguration.uri.path, '/login');
 
-    await tester.tap(find.text('Forgot password?'));
+    await tester.tap(find.text(l10n.forgotPassword));
     await tester.pumpAndSettle();
 
     expect(
@@ -188,5 +189,10 @@ void main() {
       '/forgot-password',
     );
     expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+  });
+
+  testWidgets('the brand header speaks the catalogue tagline', (tester) async {
+    await pumpLogin(tester);
+    expect(find.text(l10n.appTagline), findsOneWidget);
   });
 }
