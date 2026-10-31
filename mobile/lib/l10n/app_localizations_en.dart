@@ -1167,4 +1167,94 @@ class AppLocalizationsEn extends AppLocalizations {
       String barN, String leverM, String barNm, String bodyNm, String hipNm) {
     return '$barN N × $leverM m = $barNm N·m, + $bodyNm from the body = $hipNm N·m';
   }
+
+  @override
+  String get squatTitle => 'Your squat, your lever';
+
+  @override
+  String get squatStamp => 'CHECKABLE';
+
+  @override
+  String get squatDorsiflexionLabel => 'Ankle dorsiflexion (°)';
+
+  @override
+  String get squatDorsiflexionHelp =>
+      '0 to 90. The model assumes no value: type yours.';
+
+  @override
+  String get squatDorsiflexionInvalid => 'Type a number from 0 to 90.';
+
+  @override
+  String get squatLoadLabel => 'Bar (kg)';
+
+  @override
+  String get squatLoadHelp => 'Empty: bodyweight only.';
+
+  @override
+  String get squatLoadInvalid => 'Type a weight above 0, up to 1000.';
+
+  @override
+  String get squatNeedsProfile =>
+      'Your profile needs height and weight to build your squat.';
+
+  @override
+  String get squatPlay => 'Play';
+
+  @override
+  String get squatPause => 'Pause';
+
+  @override
+  String get squatScrub => 'Move through the descent, standing to bottom';
+
+  @override
+  String get squatFigureLabel =>
+      'Side view of the squat, with the hip lever and the forces to scale';
+
+  @override
+  String get squatWithoutLoad => 'Without load';
+
+  @override
+  String squatWithLoad(String kg) {
+    return 'With $kg kg';
+  }
+
+  @override
+  String squatStopped(String load, String cause, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      cause,
+      {
+        'ankle': 'your ankle stops you',
+        'knee': 'your knee stops you',
+        'hip': 'your hip stops you',
+        'lumbar': 'your lower back stops you',
+        'balance': 'the model stops balancing you',
+        'implausible': 'the posture stops being anatomically possible',
+        'other': 'the model\'s convention stops you',
+      },
+    );
+    return '$load, $_temp0 at $percent% of the descent.';
+  }
+
+  @override
+  String squatRejected(String reason) {
+    String _temp0 = intl.Intl.selectLogic(
+      reason,
+      {
+        'balance':
+            'The model finds no posture balanced over the mid-foot with these numbers.',
+        'implausible':
+            'With these numbers the model cannot build an anatomically possible posture.',
+        'ankle':
+            'With these numbers, your ankle leaves the model no posture in the descent.',
+        'knee':
+            'With these numbers, your knee leaves the model no posture in the descent.',
+        'hip':
+            'With these numbers, your hip leaves the model no posture in the descent.',
+        'lumbar':
+            'With these numbers, your lower back leaves the model no posture in the descent.',
+        'other': 'With these numbers the model cannot build your squat.',
+      },
+    );
+    return '$_temp0';
+  }
 }

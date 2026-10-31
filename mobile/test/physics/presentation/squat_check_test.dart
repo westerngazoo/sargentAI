@@ -11,7 +11,6 @@ import 'package:fitai/src/physics/presentation/figure_painter.dart';
 import 'package:fitai/src/physics/presentation/squat_check.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
