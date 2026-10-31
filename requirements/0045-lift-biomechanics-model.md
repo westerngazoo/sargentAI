@@ -1,8 +1,8 @@
 # R-0045 — Lift Biomechanics Model (joint torque & variant comparison)
 
 - **Status:** Accepted (owner, 2026-09-11); **amended 2026-09-12** for the
-  parametric source and **2026-10-17** for the range of solved postures (see
-  changelog)
+  parametric source, **2026-10-17** for the range of solved postures and
+  **2026-10-23** for the garust kernel (ADR 0001; see changelog)
 - **Milestone:** M6 (pose pipeline) / M-Platform (the coach-facing half)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
@@ -42,12 +42,15 @@ trainer-platform direction (R-0040/R-0041).
 
 ### The model
 
-- **AC1. Inverse dynamics, not a physics engine.** The lift is modelled as a
-  linked rigid-segment chain in the sagittal plane; joint moments are solved
-  from static equilibrium at each sampled frame. This is linear algebra over a `Posture` in metres — produced by the v1
-  parametric solver or, later, by the R-0044 series — no forward simulation,
-  no collision solver, no game physics dependency. *(Amended 2026-09-12:
-  was "over the R-0044 series".)*
+- **AC1. Inverse dynamics on the garust kernel.** The lift is modelled as a
+  rigid-segment kinematic tree (`garust::tree::Tree`) with its external loads;
+  joint moments are solved from static equilibrium at each sampled frame by
+  `garust::physics::multibody`. The input is a `Posture` in metres — produced
+  by the v1 parametric solver or, later, by the R-0044 series. No forward
+  simulation of the lifter, no collision solver, no game-physics engine.
+  *(Amended 2026-10-23, ADR 0001: was "linear algebra over a `Posture` … no
+  game physics dependency"; the kernel is now garust, pinned by git rev.)*
+  *(Amended 2026-09-12: was "over the R-0044 series".)*
 - **AC2. Anthropometric scaling from published tables.** Segment masses,
   lengths and centre-of-mass positions come from a standard anthropometric
   table (Dempster/Winter or equivalent), scaled by the user's height and
@@ -120,11 +123,14 @@ trainer-platform direction (R-0040/R-0041).
 - **AC14. No injury or safety claims.** Higher torque is not "dangerous" and
   lower is not "safe" — the output describes load distribution, not risk.
   (Consistent with R-0044 AC14.)
-- **AC15. Pure core.** All mechanics live in `fitai-core` as deterministic
-  functions over a `Posture` plus profile and load. *(Amended 2026-09-12: was
-  "over the keypoint series".)* Unit-testable
-  against hand-computed textbook cases with no video, no database, and no
-  model.
+- **AC15. Pure core, one kernel.** All lift mechanics live in `fitai-core` as
+  deterministic functions over a `Posture` plus profile and load. The kernel
+  (tree, loads, moments) is garust; what is ours (anthropometry, placement
+  conventions, posture solvers, result types) stays in `fitai-core`. Neither
+  pulls in an I/O crate, checked with `cargo tree`. *(Amended 2026-10-23, ADR
+  0001: adds the kernel split.)* *(Amended 2026-09-12: was "over the keypoint
+  series".)* Unit-testable against hand-computed textbook cases with no video,
+  no database, and no model.
 
 - **AC16. Tests.** Hand-verifiable static cases (a known posture and load with
   a torque computed by hand); a symmetric posture yielding symmetric torques;
@@ -132,14 +138,33 @@ trainer-platform direction (R-0040/R-0041).
   direction; each rejection reason; delta stability under small keypoint noise;
   and the bodyweight-only path.
 
+- **AC17. Real physics, checked from outside the engine.** *(Owner hard
+  requirement, 2026-10-23: "no estamos jugando a simular que simulamos
+  física, tenemos que hacer física de verdad".)* A moment is reported only if
+  all three hold:
+  - **(a) Two derivations agree.** The moment from the distal rule
+    (`joint_torque`, a cross product) and from virtual work
+    (`generalized_torque`, a gradient) agree within a stated tolerance on
+    every posture the tests produce.
+  - **(b) Oracles.** At least one case per joint whose expected value is a
+    literal, computed by hand or cited, beside its arithmetic. No engine
+    function appears on the expected side (the `physics-lab/oraculos` rule).
+  - **(c) Parity on the move.** Moving the squat onto the kernel changes no
+    slice A or B1 golden value beyond floating-point noise (stated bound:
+    1e-9 N·m).
+
 ## 4. Constraints & non-goals
 
 - **Out of scope:** per-muscle force or activation (AC5); EMG; 3D or
   frontal-plane mechanics; muscle-fibre or tendon models; injury-risk scoring;
   optimizing *for* the user (the coach chooses the variant — the app computes
   its consequence); real-time feedback during a set; coach→client sharing
-  (needs R-0040).
-- No new heavyweight dependency: `ndarray` is already present and sufficient.
+  (needs R-0040). The deadlift and the bench are their own requirements
+  (R-0062, R-0063) on the same kernel; the 3D bench is R-0063's, not this one's.
+- One new dependency, `garust` (ADR 0001): `no_std`, zero dependencies, `MIT
+  OR Apache-2.0`, git-pinned by rev. No other physics or ML crate.
+  *(Amended 2026-10-23: was "No new heavyweight dependency: `ndarray` is
+  already present and sufficient".)*
 
 ## 5. Open questions (deferred to SPEC-0045)
 
@@ -171,6 +196,8 @@ trainer-platform direction (R-0040/R-0041).
 | 2026-10-17 | The range of solved postures from upright toward the bottom (AC4) | Owner decision. Base for the technique video and the video comparison. One declared convention moves the legs; the trunk is solved in every frame. What is read across the range (a peak, a reach) is the convention's, and the result says so. |
 | 2026-10-17 | One engine for the app and the reels (SPEC-0045 §5.7(b), slice E) | Owner decision. The reel and the model disagreed by 35% on the same lift. Supersedes the 2026-09-12 "physics lives in `fitai-core` only" once slice E's design is accepted; until then that row stands. |
 | 2026-08-25 | Deltas are the headline, not absolutes | The absolute torque carries every modelling assumption; the difference between two postures of the same body carries far fewer. |
+| 2026-10-23 | garust is the mechanics kernel (ADR 0001); AC1, AC15 amended, AC17 added | Owner hard requirement: real, checkable physics. A parity spike reproduced every squat-range moment on garust to 1.3e-12 N·m over 2 992 postures, with virtual work agreeing to 1.5e-6 N·m. Supersedes the 2026-08-25 "not a physics engine" row's *dependency* clause; its substance — inverse dynamics, no forward simulation — stands. |
+| 2026-10-23 | The bench returns, as R-0063, on the 3D kernel | The 2026-09-12 strike was for want of elbow/shoulder joints and a frontal plane; a garust tree has both. The deadlift arrives as R-0062. |
 
 ## Changelog
 
@@ -185,3 +212,7 @@ trainer-platform direction (R-0040/R-0041).
 - _2026-10-17 — AC4 amended for the range of solved postures (owner decision,
   SPEC-0045 §2.6.6, §5.7(a)); the one-engine decision recorded (§5.7(b)),
   with AC15's amendment deferred to slice E's design._
+- _2026-10-23 — amended for the garust kernel (owner hard requirement, ADR
+  0001): AC1 and AC15 re-worded, AC17 added, the dependency constraint
+  replaced. The bench and deadlift move to R-0063 and R-0062. Status stays
+  Accepted pending the owner's review of this amendment's PR._
