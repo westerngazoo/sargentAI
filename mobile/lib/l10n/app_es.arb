@@ -899,5 +899,94 @@
         "type": "String"
       }
     }
+  },
+  "squatTitle": "Tu sentadilla, tu palanca",
+  "@squatTitle": {
+    "description": "The squat check's headline (SPEC-0059 §2.4, design v2)."
+  },
+  "squatStamp": "COMPROBABLE",
+  "@squatStamp": {
+    "description": "The squat check's stamp (SPEC-0061 §2.10): every number can be checked. Never 'COMPROBADO' (verified)."
+  },
+  "squatDorsiflexionLabel": "Dorsiflexión del tobillo (°)",
+  "@squatDorsiflexionLabel": {
+    "description": "Label of the squat check's dorsiflexion field, in degrees."
+  },
+  "squatDorsiflexionHelp": "De 0 a 90. El modelo no supone un valor: escribe el tuyo.",
+  "@squatDorsiflexionHelp": {
+    "description": "Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1). The range is dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart)."
+  },
+  "squatDorsiflexionInvalid": "Escribe un número de 0 a 90.",
+  "@squatDorsiflexionInvalid": {
+    "description": "Error when the typed dorsiflexion is not a number in dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart, 0..90)."
+  },
+  "squatLoadLabel": "Barra (kg)",
+  "@squatLoadLabel": {
+    "description": "Label of the squat check's bar-load field."
+  },
+  "squatLoadHelp": "Vacío: solo tu cuerpo.",
+  "@squatLoadHelp": {
+    "description": "Helper under the bar-load field: leaving it empty checks bodyweight only."
+  },
+  "squatLoadInvalid": "Escribe un peso mayor que 0, hasta 1000.",
+  "@squatLoadInvalid": {
+    "description": "Error when the typed bar load is not a number above barKgAbove and up to barKgMax (squat_range.dart, (0, 1000])."
+  },
+  "squatNeedsProfile": "Tu perfil necesita estatura y peso para armar tu sentadilla.",
+  "@squatNeedsProfile": {
+    "description": "Shown when the squat check has no profile to take height and mass from."
+  },
+  "squatPlay": "Reproducir",
+  "@squatPlay": {
+    "description": "Tooltip of the squat check's play button."
+  },
+  "squatPause": "Pausar",
+  "@squatPause": {
+    "description": "Tooltip of the squat check's pause button."
+  },
+  "squatScrub": "Recorrer la bajada, de pie al fondo",
+  "@squatScrub": {
+    "description": "Accessibility label of the squat check's scrubber."
+  },
+  "squatFigureLabel": "Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala",
+  "@squatFigureLabel": {
+    "description": "Accessibility label of the squat figure."
+  },
+  "squatWithoutLoad": "Sin carga",
+  "@squatWithoutLoad": {
+    "description": "Opens the stopped-range line for a bodyweight check."
+  },
+  "squatWithLoad": "Con {kg} kg",
+  "@squatWithLoad": {
+    "description": "Opens the stopped-range line for a loaded check; kg is the server's bar load, pre-formatted.",
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "squatStopped": "{load}, {cause, select, ankle{tu tobillo te detiene} knee{tu rodilla te detiene} hip{tu cadera te detiene} lumbar{tu espalda baja te detiene} balance{el modelo deja de equilibrarte} implausible{la postura deja de ser anatómicamente posible} other{la convención del modelo te detiene}} al {percent} % de la bajada.",
+  "@squatStopped": {
+    "description": "A stopped squat range in plain words (SPEC-0059 §2.4, R-0059 AC3). load is squatWithLoad or squatWithoutLoad; cause is the limiting joint (ankle, knee, hip, lumbar), 'balance', 'implausible', or 'other' when only the model's convention stops the range; percent is how far down the lifter gets. No safety or injury claim.",
+    "placeholders": {
+      "load": {
+        "type": "String"
+      },
+      "cause": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "squatRejected": "{reason, select, balance{El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.} implausible{Con estos datos el modelo no puede armar una postura anatómicamente posible.} ankle{Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.} knee{Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.} hip{Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.} lumbar{Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.} other{Con estos datos el modelo no puede armar tu sentadilla.}}",
+  "@squatRejected": {
+    "description": "Why the model could not place the lifter at all (a rejected squat range, R-0059 AC3): reason is 'balance', 'implausible', the limiting joint (ankle, knee, hip, lumbar), or 'other'. No figure is shown. No safety or injury claim.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

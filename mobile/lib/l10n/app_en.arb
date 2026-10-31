@@ -709,5 +709,22 @@
   "@workoutSessionChannel": {
     "description": "Android notification channel name for the earbud coach, shown in the OS notification settings"
   },
-  "squatLeverSum": "{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} from the body = {hipNm} N·m"
+  "squatLeverSum": "{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} from the body = {hipNm} N·m",
+  "squatTitle": "Your squat, your lever",
+  "squatStamp": "CHECKABLE",
+  "squatDorsiflexionLabel": "Ankle dorsiflexion (°)",
+  "squatDorsiflexionHelp": "0 to 90. The model assumes no value: type yours.",
+  "squatDorsiflexionInvalid": "Type a number from 0 to 90.",
+  "squatLoadLabel": "Bar (kg)",
+  "squatLoadHelp": "Empty: bodyweight only.",
+  "squatLoadInvalid": "Type a weight above 0, up to 1000.",
+  "squatNeedsProfile": "Your profile needs height and weight to build your squat.",
+  "squatPlay": "Play",
+  "squatPause": "Pause",
+  "squatScrub": "Move through the descent, standing to bottom",
+  "squatFigureLabel": "Side view of the squat, with the hip lever and the forces to scale",
+  "squatWithoutLoad": "Without load",
+  "squatWithLoad": "With {kg} kg",
+  "squatStopped": "{load}, {cause, select, ankle{your ankle stops you} knee{your knee stops you} hip{your hip stops you} lumbar{your lower back stops you} balance{the model stops balancing you} implausible{the posture stops being anatomically possible} other{the model's convention stops you}} at {percent}% of the descent.",
+  "squatRejected": "{reason, select, balance{The model finds no posture balanced over the mid-foot with these numbers.} implausible{With these numbers the model cannot build an anatomically possible posture.} ankle{With these numbers, your ankle leaves the model no posture in the descent.} knee{With these numbers, your knee leaves the model no posture in the descent.} hip{With these numbers, your hip leaves the model no posture in the descent.} lumbar{With these numbers, your lower back leaves the model no posture in the descent.} other{With these numbers the model cannot build your squat.}}"
 }

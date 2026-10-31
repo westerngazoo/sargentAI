@@ -28,3 +28,34 @@ const sampleSquatRequest = SquatRangeRequest(
 
 /// Registers the mocktail fallback for `range(any())`.
 void registerSquatFallbacks() => registerFallbackValue(sampleSquatRequest);
+
+/// The golden's frames as a bodyweight-only range: no bar in the posture, no
+/// hip lever, and the ground carrying the body alone (the golden's 77 kg ×
+/// core's g = 9.81), as the server sends for `bar_kg: null`. A test double
+/// for drawing: the moments are still the loaded golden's.
+List<RangeFrame> squatGoldenBodyweightFrames() => [
+      for (final f in squatGolden().frames)
+        RangeFrame(
+          progress: f.progress,
+          kneeFlexionDeg: f.kneeFlexionDeg,
+          hipFlexionDeg: f.hipFlexionDeg,
+          trunkLeanDeg: f.trunkLeanDeg,
+          posture: Posture(
+            ankle: f.posture.ankle,
+            knee: f.posture.knee,
+            hip: f.posture.hip,
+            shoulder: f.posture.shoulder,
+          ),
+          mechanics: f.mechanics,
+          groundN: 77.0 * 9.81,
+        ),
+    ];
+
+/// A result with [end] over [frames] (the golden's when omitted).
+SquatRangeResult squatResult(End end, {List<RangeFrame>? frames}) =>
+    SquatRangeResult(
+      end: end,
+      tableLengths: const ['trunk'],
+      frames: frames ?? squatGolden().frames,
+      assumptions: const [],
+    );
