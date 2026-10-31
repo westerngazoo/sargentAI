@@ -2122,13 +2122,13 @@ abstract class AppLocalizations {
   /// **'Dorsiflexión del tobillo (°)'**
   String get squatDorsiflexionLabel;
 
-  /// Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1).
+  /// Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1). The range is dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart).
   ///
   /// In es, this message translates to:
   /// **'De 0 a 90. El modelo no supone un valor: escribe el tuyo.'**
   String get squatDorsiflexionHelp;
 
-  /// Error when the typed dorsiflexion is not a number in 0..90.
+  /// Error when the typed dorsiflexion is not a number in dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart, 0..90).
   ///
   /// In es, this message translates to:
   /// **'Escribe un número de 0 a 90.'**
@@ -2146,7 +2146,7 @@ abstract class AppLocalizations {
   /// **'Vacío: solo tu cuerpo.'**
   String get squatLoadHelp;
 
-  /// Error when the typed bar load is not a number in (0, 1000].
+  /// Error when the typed bar load is not a number above barKgAbove and up to barKgMax (squat_range.dart, (0, 1000]).
   ///
   /// In es, this message translates to:
   /// **'Escribe un peso mayor que 0, hasta 1000.'**

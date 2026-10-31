@@ -12,6 +12,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/tokens.dart';
 import '../../l10n/locale_rule.dart';
 import '../application/squat_check_controller.dart';
+import '../domain/playback.dart';
 import '../domain/range_end_text.dart';
 import '../domain/squat_range.dart';
 import 'figure_painter.dart';
@@ -108,7 +109,8 @@ class _Inputs extends ConsumerWidget {
           help: l10n.squatDorsiflexionHelp,
           invalid: l10n.squatDorsiflexionInvalid,
           initial: text(ref.read(squatDorsiflexionProvider)),
-          accepts: (v) => v != null && v >= 0 && v <= 90,
+          accepts: (v) =>
+              v != null && v >= dorsiflexionMinDeg && v <= dorsiflexionMaxDeg,
           onValue: (v) =>
               ref.read(squatDorsiflexionProvider.notifier).state = v,
         ),
@@ -118,7 +120,7 @@ class _Inputs extends ConsumerWidget {
           help: l10n.squatLoadHelp,
           invalid: l10n.squatLoadInvalid,
           initial: text(ref.read(squatLoadKgProvider)),
-          accepts: (v) => v == null || (v > 0 && v <= 1000),
+          accepts: (v) => v == null || (v > barKgAbove && v <= barKgMax),
           onValue: (v) => ref.read(squatLoadKgProvider.notifier).state = v,
         ),
       ],
@@ -186,16 +188,16 @@ class _NumberFieldState extends State<_NumberField> {
 
 /// The figure over the returned frames, with play/pause and a scrubber.
 /// Opens paused on the last frame: the bottom, or where the lifter stops.
-class _Playback extends ConsumerStatefulWidget {
+class _Playback extends StatefulWidget {
   const _Playback({super.key, required this.result});
 
   final SquatRangeResult result;
 
   @override
-  ConsumerState<_Playback> createState() => _PlaybackState();
+  State<_Playback> createState() => _PlaybackState();
 }
 
-class _PlaybackState extends ConsumerState<_Playback>
+class _PlaybackState extends State<_Playback>
     with SingleTickerProviderStateMixin {
   // 0 upright to 1 at the last returned frame; down and back up on play.
   late final _ticker = AnimationController(
@@ -221,8 +223,8 @@ class _PlaybackState extends ConsumerState<_Playback>
     final frames = widget.result.frames;
     final (first, last) = (frames.first.progress, frames.last.progress);
     final progress = first + (last - first) * _ticker.value;
-    final current =
-        ref.read(squatCheckControllerProvider.notifier).frameAt(progress);
+    // The painter's range and the frame it draws come from one list.
+    final current = playbackAt(frames, progress);
     if (current == null) return const SizedBox.shrink();
     final t = _tokens(context);
     final end = widget.result.end;

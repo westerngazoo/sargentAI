@@ -2,10 +2,12 @@
 // One metres-to-canvas fit for the whole range, so the figure never jumps;
 // the balance line on the mid-foot; the hip lever from the hip to the bar's
 // line; the bar and ground vectors to one scale chosen from the largest
-// `ground_n`. Every magnitude is the returned frame's. Pure: no mocks.
+// `ground_n`, the bar's heated by the hip moment and the ground's in ink.
+// Every magnitude is the returned frame's. Pure: no mocks.
 
 import 'dart:ui';
 
+import 'package:fitai/src/physics/domain/moment_scale.dart';
 import 'package:fitai/src/physics/domain/playback.dart';
 import 'package:fitai/src/physics/domain/squat_range.dart';
 import 'package:fitai/src/physics/presentation/figure_geometry.dart';
@@ -105,10 +107,18 @@ void main() {
       expect(g.barForce!.to.dy, greaterThan(g.barForce!.from.dy));
     });
 
-    test('heat is the force against the largest ground force', () {
+    test('the bar is heated by the frame\'s hip moment; the ground is ink', () {
       final g = at(bottom);
-      expect(g.ground.heat, closeTo(1.0, 1e-9));
-      expect(g.barForce!.heat, closeTo(bottom.hip!.barN / 1579.41, 1e-9));
+      expect(g.ground.heat, isNull);
+      expect(
+          g.barForce!.heat,
+          closeTo(
+              bottom.mechanics.moment(Joint.hip) / maxAbsMoment(range), 1e-9));
+    });
+
+    test('the bar arrow hangs from under the plate', () {
+      final g = at(bottom);
+      expect(g.barForce!.from.dy, closeTo(g.bar!.dy + g.plateRadius, 1e-9));
     });
   });
 

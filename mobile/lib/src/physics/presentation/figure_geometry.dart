@@ -6,6 +6,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../domain/moment_scale.dart';
 import '../domain/playback.dart';
 import '../domain/squat_range.dart';
 
@@ -48,14 +49,15 @@ class FigureFit {
       Offset(origin.dx + p.x * scale, origin.dy - p.y * scale);
 }
 
-/// A force drawn as an arrow from [from] to [to]; [heat] is its magnitude
-/// against the range's largest ground force, `0..=1`, for the tension ramp.
+/// A force drawn as an arrow from [from] to [to]. [heat], `0..=1`, is the
+/// tension it loads for the ramp (SPEC-0061 §2.10: heat is tension magnitude
+/// only); null draws it in ink, as the ground's reaction is.
 class ForceVector {
   const ForceVector(this.from, this.to, this.heat);
 
   final Offset from;
   final Offset to;
-  final double heat;
+  final double? heat;
 
   double get length => (to - from).distance;
 }
@@ -107,10 +109,11 @@ class FigureGeometry {
   /// From the hip, level, to the bar's vertical line; null without a bar.
   final Segment? lever;
 
-  /// The ground's reaction, up from the mid-foot.
+  /// The ground's reaction, up from the mid-foot, in ink (no heat).
   final ForceVector ground;
 
-  /// The bar's weight, down from the bar; null for bodyweight only.
+  /// The bar's weight, down from under the plate, heated by the frame's hip
+  /// moment against the range's [maxAbsMoment]; null for bodyweight only.
   final ForceVector? barForce;
 }
 
@@ -170,12 +173,13 @@ double newtonsPerPixel(List<RangeFrame> range, Size size) =>
 
 /// The figure for [current] over [range] (the frames it plays between) on
 /// a canvas of [size]. The posture drawn is [current]'s, interpolated or
-/// not; the forces are its returned frame's.
+/// not; the forces and the hip moment heating the bar's arrow are its
+/// returned frame's.
 FigureGeometry figureGeometry(
     List<RangeFrame> range, PlaybackFrame current, Size size) {
   final fit = fitRange(range, size);
   final nPerPx = newtonsPerPixel(range, size);
-  final maxN = _maxGroundN(range);
+  final maxMoment = maxAbsMoment(range);
   final p = current.posture;
   final c = fit.toCanvas;
 
@@ -185,6 +189,12 @@ FigureGeometry figureGeometry(
   final bar = load == null ? null : c(load.at);
   final barN = current.frame.hip?.barN;
   final groundN = current.frame.groundN;
+  final hipNm = current.frame.mechanics.moment(Joint.hip);
+  final barHeat = maxMoment == 0 ? 0.0 : math.max(0.0, hipNm) / maxMoment;
+  // The arrow hangs from under the plate, as in design v2, so the plate
+  // does not hide where it starts.
+  final barFrom =
+      load == null ? null : c(Point(load.at.x, load.at.y - plateRadiusM));
 
   return FigureGeometry(
     scale: fit.scale,
@@ -203,10 +213,9 @@ FigureGeometry figureGeometry(
     plateRadius: plateRadiusM * fit.scale,
     balanceLine: (midFoot, Offset(midFoot.dx, _padPx)),
     lever: bar == null ? null : (hip, Offset(bar.dx, hip.dy)),
-    ground: ForceVector(
-        midFoot, midFoot.translate(0, -groundN / nPerPx), groundN / maxN),
-    barForce: bar == null || barN == null
+    ground: ForceVector(midFoot, midFoot.translate(0, -groundN / nPerPx), null),
+    barForce: barFrom == null || barN == null
         ? null
-        : ForceVector(bar, bar.translate(0, barN / nPerPx), barN / maxN),
+        : ForceVector(barFrom, barFrom.translate(0, barN / nPerPx), barHeat),
   );
 }

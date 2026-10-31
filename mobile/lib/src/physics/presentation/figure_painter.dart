@@ -1,7 +1,7 @@
 // SPEC-0059 §2.4 — the squat figure, drawn in SPEC-0061 §2.10's ink: a
 // side-view silhouette in `line`, the dashed mid-foot balance line and hip
-// lever, and the bar and ground forces as arrows to one scale in the
-// tension ramp. Where things go is `figure_geometry.dart`'s; this only
+// lever in ink, and the bar and ground forces as arrows to one scale: the
+// bar's in the tension ramp, the ground's in ink. Where things go is `figure_geometry.dart`'s; this only
 // strokes it.
 
 import 'dart:math' as math;
@@ -68,10 +68,13 @@ class SquatFigurePainter extends CustomPainter {
       canvas.drawCircle(bar, g.plateRadius, stroke(tokens.line, 2));
       canvas.drawCircle(bar, 0.03 * g.scale, Paint()..color = tokens.line);
     }
-    // Red, over the body: the lever is the torque's arm, and at parallel it
-    // lies along the thigh.
+    // In ink, over the body (red is for force and torque). At parallel it
+    // lies along the thigh, so a paper underlay keeps the dashes apart.
     final lever = g.lever;
-    if (lever != null) _dashed(canvas, lever, stroke(tokens.red, 2.5));
+    if (lever != null) {
+      _dashed(canvas, lever, stroke(tokens.panel, 5));
+      _dashed(canvas, lever, stroke(tokens.line, 2));
+    }
     final barForce = g.barForce;
     if (barForce != null) _arrow(canvas, barForce);
 
@@ -96,7 +99,10 @@ class SquatFigurePainter extends CustomPainter {
   void _arrow(Canvas canvas, ForceVector v) {
     if (v.length == 0) return;
     final paint = Paint()
-      ..color = tokens.heat(v.heat)
+      ..color = switch (v.heat) {
+        null => tokens.line,
+        final heat => tokens.heat(heat),
+      }
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
