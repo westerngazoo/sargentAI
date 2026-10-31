@@ -500,7 +500,7 @@ class _DayRegion extends StatelessWidget {
           for (final exercise in planned.exercises)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(exercise, style: text.bodyLarge),
+              child: Text(exercise.name, style: text.bodyLarge),
             ),
         ],
         if (loading) ...[

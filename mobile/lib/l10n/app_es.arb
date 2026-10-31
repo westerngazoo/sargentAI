@@ -878,5 +878,26 @@
   "workoutSessionChannel": "Sesión de entrenamiento",
   "@workoutSessionChannel": {
     "description": "Android notification channel name for the earbud coach, shown in the OS notification settings"
+  },
+  "squatLeverSum": "{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} del cuerpo = {hipNm} N·m",
+  "@squatLeverSum": {
+    "description": "The squat check's hip sum (La cuenta, SPEC-0059 §2.3): bar force × lever = bar moment, plus the body's share = the hip moment. Every number is pre-formatted from the server.",
+    "placeholders": {
+      "barN": {
+        "type": "String"
+      },
+      "leverM": {
+        "type": "String"
+      },
+      "barNm": {
+        "type": "String"
+      },
+      "bodyNm": {
+        "type": "String"
+      },
+      "hipNm": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -101,6 +101,7 @@ mod tests {
     #![allow(clippy::unwrap_used)]
 
     use super::*;
+    use fitai_core::plan::PlanExercise;
     use fitai_core::MuscleGroup;
 
     fn oct(day: u32) -> NaiveDate {
@@ -141,7 +142,7 @@ mod tests {
         let cycle = vec![
             PlanDay::Training {
                 focus: vec![MuscleGroup::Legs],
-                exercises: vec!["Back Squat".into()],
+                exercises: vec![PlanExercise::new("Back Squat")],
             },
             PlanDay::Rest,
         ];

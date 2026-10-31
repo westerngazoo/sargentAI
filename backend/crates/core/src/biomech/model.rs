@@ -1,0 +1,74 @@
+//! SPEC-0059 §2.5 — which exercise names have a physics model in this module.
+
+use crate::periodize::lift_key;
+use crate::technique::Lift;
+
+/// The lift whose physics model covers `exercise`, or `None` when there is
+/// none yet (SPEC-0059 §2.5: the server decides, not a client string list).
+///
+/// Only the back squat has a model today ([`super::squat_range`]): the
+/// library's "Back Squat", and "Sentadilla" or "Sentadilla trasera" as a
+/// lifter types them (owner, 2026-10-30). Exact after [`lift_key`]
+/// normalization (trim, lowercase), never fuzzy: a bare "Squat", a front,
+/// hack or low-bar squat is not this model, and the deadlift and bench wait
+/// for R-0045's garust work.
+///
+/// Narrower than [`Lift::from_exercise_name`] on purpose: that one says which
+/// lift a video shows; this one says which mechanics are modelled.
+#[must_use]
+pub fn model_for(exercise: &str) -> Option<Lift> {
+    matches!(
+        lift_key(exercise).as_str(),
+        "back squat" | "sentadilla" | "sentadilla trasera"
+    )
+    .then_some(Lift::Squat)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_library_back_squat_has_the_squat_model() {
+        for name in ["Back Squat", "back squat", "  BACK SQUAT "] {
+            assert_eq!(model_for(name), Some(Lift::Squat), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn the_spanish_back_squat_names_have_the_squat_model() {
+        for name in [
+            "Sentadilla",
+            "sentadilla",
+            " SENTADILLA ",
+            "Sentadilla trasera",
+            "sentadilla trasera",
+            "SENTADILLA TRASERA",
+        ] {
+            assert_eq!(model_for(name), Some(Lift::Squat), "{name:?}");
+        }
+    }
+
+    #[test]
+    fn exercises_without_a_model_have_none() {
+        // Other squats are other mechanics (the model is the back squat);
+        // the deadlift and bench wait for R-0045's garust work.
+        for name in [
+            "Squat",
+            "Sentadilla frontal",
+            "Sentadilla  trasera",
+            "Sentadillas",
+            "Front Squat",
+            "Hack Squat",
+            "Low Bar Squat",
+            "Deadlift",
+            "Romanian Deadlift",
+            "Bench Press",
+            "Close-Grip Bench Press",
+            "Leg Press",
+            "",
+        ] {
+            assert_eq!(model_for(name), None, "{name:?}");
+        }
+    }
+}

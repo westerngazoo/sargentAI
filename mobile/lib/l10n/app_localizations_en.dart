@@ -1161,4 +1161,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workoutSessionChannel => 'Workout session';
+
+  @override
+  String squatLeverSum(
+      String barN, String leverM, String barNm, String bodyNm, String hipNm) {
+    return '$barN N × $leverM m = $barNm N·m, + $bodyNm from the body = $hipNm N·m';
+  }
 }

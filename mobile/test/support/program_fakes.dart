@@ -173,11 +173,15 @@ UserProgram sampleUserProgram({
 Map<String, dynamic> trainingDayJson({
   List<String> focus = const ['legs'],
   List<String> exercises = const ['Back Squat', 'Leg Press'],
+  List<String?>? physics,
 }) =>
     <String, dynamic>{
       'kind': 'training',
       'focus': focus,
-      'exercises': exercises,
+      'exercises': [
+        for (final (i, name) in exercises.indexed)
+          {'name': name, 'physics': physics?[i]},
+      ],
     };
 
 /// A `rest` cycle entry.
