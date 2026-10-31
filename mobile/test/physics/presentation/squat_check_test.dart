@@ -92,8 +92,12 @@ void main() {
           (args[1] as Offset).dy == g.lever!.$1.dy &&
           _argb(args[2]) == t.line.toARGB32();
 
+      // The ground arrow's paper underlay comes before its ink stroke.
       expect(
-          render, paints..something(line(g.ground.from, g.ground.to, t.line)));
+          render,
+          paints
+            ..something(line(g.ground.from, g.ground.to, t.panel))
+            ..something(line(g.ground.from, g.ground.to, t.line)));
       expect(render, paints..something(leverDash));
       expect(
           render,

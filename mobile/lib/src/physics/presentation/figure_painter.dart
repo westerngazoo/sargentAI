@@ -1,7 +1,7 @@
 // SPEC-0059 §2.4 — the squat figure, drawn in SPEC-0061 §2.10's ink: a
 // side-view silhouette in `line`, the dashed mid-foot balance line and hip
 // lever in ink, and the bar and ground forces as arrows to one scale: the
-// bar's in the tension ramp, the ground's in ink. Where things go is `figure_geometry.dart`'s; this only
+// bar's in the tension ramp, the ground's in ink over a paper underlay. Where things go is `figure_geometry.dart`'s; this only
 // strokes it.
 
 import 'dart:math' as math;
@@ -42,7 +42,6 @@ class SquatFigurePainter extends CustomPainter {
     canvas.drawLine(Offset(0, g.groundY), Offset(size.width, g.groundY),
         stroke(tokens.line, 2));
     _dashed(canvas, g.balanceLine, stroke(tokens.muted, 1));
-    _arrow(canvas, g.ground);
 
     // The silhouette: each segment outlined in paper so the limbs separate.
     void limb(List<Offset> points, double metres) {
@@ -75,6 +74,9 @@ class SquatFigurePainter extends CustomPainter {
       _dashed(canvas, lever, stroke(tokens.panel, 5));
       _dashed(canvas, lever, stroke(tokens.line, 2));
     }
+    // The ground's arrow is ink and rises through the shank, so it goes over
+    // the body on a paper underlay, like the lever.
+    _arrow(canvas, g.ground, underlay: true);
     final barForce = g.barForce;
     if (barForce != null) _arrow(canvas, barForce);
 
@@ -96,25 +98,30 @@ class SquatFigurePainter extends CustomPainter {
     }
   }
 
-  void _arrow(Canvas canvas, ForceVector v) {
+  /// Strokes [v]'s shaft and head in its heat, or in ink when it has none;
+  /// with [underlay], a wider paper stroke first so it reads over the body.
+  void _arrow(Canvas canvas, ForceVector v, {bool underlay = false}) {
     if (v.length == 0) return;
-    final paint = Paint()
-      ..color = switch (v.heat) {
-        null => tokens.line,
-        final heat => tokens.heat(heat),
-      }
+    Paint pen(Color color, double width) => Paint()
+      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = width
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    canvas.drawLine(v.from, v.to, paint);
+    final ink = switch (v.heat) {
+      null => tokens.line,
+      final heat => tokens.heat(heat),
+    };
     final back = (v.from - v.to) / v.length * 9;
-    for (final turn in [-0.5, 0.5]) {
-      final c = math.cos(turn), s = math.sin(turn);
-      canvas.drawLine(
-          v.to,
-          v.to + Offset(back.dx * c - back.dy * s, back.dx * s + back.dy * c),
-          paint);
+    for (final paint in [if (underlay) pen(tokens.panel, 6), pen(ink, 3)]) {
+      canvas.drawLine(v.from, v.to, paint);
+      for (final turn in [-0.5, 0.5]) {
+        final c = math.cos(turn), s = math.sin(turn);
+        canvas.drawLine(
+            v.to,
+            v.to + Offset(back.dx * c - back.dy * s, back.dx * s + back.dy * c),
+            paint);
+      }
     }
   }
 
