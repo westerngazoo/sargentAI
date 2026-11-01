@@ -30,12 +30,13 @@ const _tokens = [
 SquatRangeResult _stating(
   List<Assumption> range, {
   List<String> tableLengths = const [],
-}) => SquatRangeResult(
-  end: const Bottom(),
-  tableLengths: tableLengths,
-  frames: squatGolden().frames,
-  assumptions: range,
-);
+}) =>
+    SquatRangeResult(
+      end: const Bottom(),
+      tableLengths: tableLengths,
+      frames: squatGolden().frames,
+      assumptions: range,
+    );
 
 void main() {
   final bottom = squatGolden().frames.last;
@@ -51,16 +52,15 @@ void main() {
         caveatLines(_stating([Assumption(token)]), bottom, l10n).first,
     };
     expect(lines, hasLength(_tokens.length));
-    for (final line in lines) {
-      expect(unknown, isNot(contains(line)), reason: line);
-    }
+    expect(lines, isNot(contains(unknown.first)));
   });
 
   test('an unknown token still gets a line', () {
     expect(unknown.first, l10n.squatAssumption('other'));
   });
 
-  test('always says how the arms are placed and that the legs follow a '
+  test(
+      'always says how the arms are placed and that the legs follow a '
       'convention', () {
     final lines = caveatLines(_stating(const []), bottom, l10n);
     expect(lines, contains(l10n.squatCaveatArms));

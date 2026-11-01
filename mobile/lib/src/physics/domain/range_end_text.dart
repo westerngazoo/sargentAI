@@ -19,17 +19,23 @@ String _cause(Rejection? r) => switch (r) {
       Rejection() => 'other',
     };
 
-/// "Sin carga, tu tobillo te detiene al 57 % de la bajada." for a [Stopped]
-/// range, with the load from the result's own bar ([barKg], null for
-/// bodyweight only).
+/// "Sin carga, tu tobillo te detiene al 57 % de la bajada. El fondo pide 38°
+/// y tienes 29°." for a [Stopped] range, with the load from the result's own
+/// bar ([barKg], null for bodyweight only). The degrees appear only when the
+/// server sends both.
 String stoppedText(Stopped end, double? barKg, AppLocalizations l10n) {
   final load = barKg == null
       ? l10n.squatWithoutLoad
       : l10n.squatWithLoad(
           NumberFormat.decimalPattern(numberLocale(l10n.localeName))
               .format(barKg));
-  return l10n.squatStopped(
-      load, _cause(end.bottom), (end.reached * 100).round());
+  final stop =
+      l10n.squatStopped(load, _cause(end.bottom), (end.reached * 100).round());
+  return switch (end.bottom) {
+    Rejection(neededDeg: final needed?, availableDeg: final available?) =>
+      '$stop ${l10n.squatStoppedDegrees(needed.round(), available.round())}',
+    _ => stop,
+  };
 }
 
 /// Why the model could not place the lifter at all, for a [Rejected] range.

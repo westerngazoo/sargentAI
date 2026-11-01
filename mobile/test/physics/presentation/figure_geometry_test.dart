@@ -21,10 +21,7 @@ void main() {
   final [top, bottom] = range;
 
   FigureGeometry at(RangeFrame f, {List<RangeFrame>? over}) => figureGeometry(
-    over ?? range,
-    playbackAt(over ?? range, f.progress)!,
-    size,
-  );
+      over ?? range, playbackAt(over ?? range, f.progress)!, size);
 
   bool inside(Offset p) =>
       p.dx >= 0 && p.dx <= size.width && p.dy >= 0 && p.dy <= size.height;
@@ -75,9 +72,7 @@ void main() {
       expect(to.dx, g.bar!.dx);
       final scale = fitRange(range, size).scale;
       expect(
-        (to.dx - from.dx).abs(),
-        closeTo(bottom.hip!.leverM * scale, 1e-6),
-      );
+          (to.dx - from.dx).abs(), closeTo(bottom.hip!.leverM * scale, 1e-6));
     });
 
     test('is absent for bodyweight only', () {
@@ -93,19 +88,15 @@ void main() {
     test('the largest ground force spans the chosen length', () {
       final nPerPx = newtonsPerPixel(range, size);
       expect(
-        nPerPx,
-        closeTo(1579.41 / (maxVectorFraction * size.height), 1e-9),
-      );
+          nPerPx, closeTo(1579.41 / (maxVectorFraction * size.height), 1e-9));
       final g = at(top);
       expect(g.ground.length, closeTo(maxVectorFraction * size.height, 1e-9));
     });
 
     test('ground and bar share one scale, from the frame\'s own numbers', () {
       final g = at(bottom);
-      expect(
-        g.barForce!.length / g.ground.length,
-        closeTo(bottom.hip!.barN / bottom.groundN, 1e-9),
-      );
+      expect(g.barForce!.length / g.ground.length,
+          closeTo(bottom.hip!.barN / bottom.groundN, 1e-9));
     });
 
     test('the ground pushes up from the mid-foot, the bar pulls down', () {
@@ -120,9 +111,9 @@ void main() {
       final g = at(bottom);
       expect(g.ground.heat, isNull);
       expect(
-        g.barForce!.heat,
-        closeTo(bottom.mechanics.moment(Joint.hip) / maxAbsMoment(range), 1e-9),
-      );
+          g.barForce!.heat,
+          closeTo(
+              bottom.mechanics.moment(Joint.hip) / maxAbsMoment(range), 1e-9));
     });
 
     test('the bar arrow hangs from under the plate', () {
@@ -145,10 +136,8 @@ void main() {
 
     test('the plate is drawn to scale around the bar', () {
       final g = at(top);
-      expect(
-        g.plateRadius,
-        closeTo(plateRadiusM * fitRange(range, size).scale, 1e-9),
-      );
+      expect(g.plateRadius,
+          closeTo(plateRadiusM * fitRange(range, size).scale, 1e-9));
     });
   });
 }

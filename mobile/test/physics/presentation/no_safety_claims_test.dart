@@ -17,9 +17,8 @@ final _forbidden = RegExp(
 void main() {
   for (final lang in ['es', 'en']) {
     test('$lang: no squat entry makes a safety claim', () {
-      final arb =
-          jsonDecode(File('lib/l10n/app_$lang.arb').readAsStringSync())
-              as Map<String, dynamic>;
+      final arb = jsonDecode(File('lib/l10n/app_$lang.arb').readAsStringSync())
+          as Map<String, dynamic>;
       final entries = arb.entries.where(
         (e) => e.key.startsWith('squat') && e.value is String,
       );

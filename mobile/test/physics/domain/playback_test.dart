@@ -24,22 +24,17 @@ void main() {
     final p = playbackAt(frames, 0.25)!;
     expect(p.progress, 0.25);
     expect(
-      p.posture.hip.y,
-      closeTo(a.posture.hip.y + (b.posture.hip.y - a.posture.hip.y) / 4, 1e-12),
-    );
+        p.posture.hip.y,
+        closeTo(
+            a.posture.hip.y + (b.posture.hip.y - a.posture.hip.y) / 4, 1e-12));
     expect(
-      p.posture.load!.at.x,
-      closeTo(
-        a.posture.load!.at.x +
-            (b.posture.load!.at.x - a.posture.load!.at.x) / 4,
-        1e-12,
-      ),
-    );
-    expect(
-      identical(p.frame, a),
-      isTrue,
-      reason: 'the numbers shown are the nearest returned frame',
-    );
+        p.posture.load!.at.x,
+        closeTo(
+            a.posture.load!.at.x +
+                (b.posture.load!.at.x - a.posture.load!.at.x) / 4,
+            1e-12));
+    expect(identical(p.frame, a), isTrue,
+        reason: 'the numbers shown are the nearest returned frame');
     expect(identical(playbackAt(frames, 0.75)!.frame, b), isTrue);
   });
 

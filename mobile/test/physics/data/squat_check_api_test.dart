@@ -25,40 +25,30 @@ void main() {
   });
 
   test('posts the request and parses the 200 body', () async {
-    when(
-      () => dio.post<Map<String, dynamic>>(_path, data: any(named: 'data')),
-    ).thenAnswer(
-      (_) async => Response(
-        requestOptions: RequestOptions(path: _path),
-        statusCode: 200,
-        data: squatGoldenJson(),
-      ),
-    );
+    when(() => dio.post<Map<String, dynamic>>(_path, data: any(named: 'data')))
+        .thenAnswer((_) async => Response(
+              requestOptions: RequestOptions(path: _path),
+              statusCode: 200,
+              data: squatGoldenJson(),
+            ));
 
     final r = await api.range(sampleSquatRequest);
 
     expect(r.end, isA<Bottom>());
     expect(r.frames, hasLength(2));
-    verify(
-      () => dio.post<Map<String, dynamic>>(
-        _path,
-        data: sampleSquatRequest.toJson(),
-      ),
-    ).called(1);
+    verify(() => dio.post<Map<String, dynamic>>(_path,
+        data: sampleSquatRequest.toJson())).called(1);
   });
 
   test('a 400 validation becomes an ApiException naming the field', () async {
-    when(
-      () => dio.post<Map<String, dynamic>>(_path, data: any(named: 'data')),
-    ).thenThrow(dioErrorFlat(400, path: _path, field: 'dorsiflexion_deg'));
+    when(() => dio.post<Map<String, dynamic>>(_path, data: any(named: 'data')))
+        .thenThrow(dioErrorFlat(400, path: _path, field: 'dorsiflexion_deg'));
 
     await expectLater(
       api.range(sampleSquatRequest),
-      throwsA(
-        isA<ApiException>()
-            .having((e) => e.kind, 'kind', ApiErrorKind.badRequest)
-            .having((e) => e.field, 'field', 'dorsiflexion_deg'),
-      ),
+      throwsA(isA<ApiException>()
+          .having((e) => e.kind, 'kind', ApiErrorKind.badRequest)
+          .having((e) => e.field, 'field', 'dorsiflexion_deg')),
     );
   });
 }

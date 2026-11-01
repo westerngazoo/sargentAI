@@ -31,9 +31,8 @@ void main() {
   test('the total is the server hip moment, not a client sum', () {
     final json = squatGoldenJson();
     final frame = (json['frames'] as List).first as Map<String, dynamic>;
-    final hip =
-        ((frame['mechanics'] as Map<String, dynamic>)['joints'] as List)[0]
-            as Map<String, dynamic>;
+    final hip = ((frame['mechanics'] as Map<String, dynamic>)['joints']
+        as List)[0] as Map<String, dynamic>;
     hip['moment'] = 50.0; // not 23.8 + 9.7: the text must still say 50
     expect(
       leverText(SquatRangeResult.fromJson(json).frames.first, en),

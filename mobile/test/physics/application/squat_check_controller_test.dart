@@ -20,13 +20,11 @@ void main() {
   late MockSquatCheckApi api;
 
   ProviderContainer makeContainer({double? dorsiflexion, double? barKg}) {
-    final c = ProviderContainer(
-      overrides: [
-        squatCheckApiProvider.overrideWithValue(api),
-        // 180 cm, 82.5 kg.
-        profileProvider.overrideWith((_) async => sampleProfile()),
-      ],
-    );
+    final c = ProviderContainer(overrides: [
+      squatCheckApiProvider.overrideWithValue(api),
+      // 180 cm, 82.5 kg.
+      profileProvider.overrideWith((_) async => sampleProfile()),
+    ]);
     addTearDown(c.dispose);
     c.read(squatDorsiflexionProvider.notifier).state = dorsiflexion;
     c.read(squatLoadKgProvider.notifier).state = barKg;
@@ -45,58 +43,46 @@ void main() {
       verifyNever(() => api.range(any()));
     });
 
-    test(
-      'comes from the profile, the session dorsiflexion and the load',
-      () async {
-        final c = makeContainer(dorsiflexion: 29.0, barKg: 84.0);
+    test('comes from the profile, the session dorsiflexion and the load',
+        () async {
+      final c = makeContainer(dorsiflexion: 29.0, barKg: 84.0);
 
-        final r = await c.read(squatCheckControllerProvider.future);
+      final r = await c.read(squatCheckControllerProvider.future);
 
-        expect(r!.frames, hasLength(2));
-        final req =
-            verify(() => api.range(captureAny())).captured.single
-                as SquatRangeRequest;
-        expect(req.heightM, 1.8);
-        expect(req.massKg, 82.5);
-        expect(req.dorsiflexionDeg, 29.0);
-        expect(req.barKg, 84.0);
-        expect(
-          [req.thighM, req.shankM, req.trunkM],
-          [null, null, null],
-          reason: 'limb lengths wait for R-0058',
-        );
-      },
-    );
+      expect(r!.frames, hasLength(2));
+      final req = verify(() => api.range(captureAny())).captured.single
+          as SquatRangeRequest;
+      expect(req.heightM, 1.8);
+      expect(req.massKg, 82.5);
+      expect(req.dorsiflexionDeg, 29.0);
+      expect(req.barKg, 84.0);
+      expect([req.thighM, req.shankM, req.trunkM], [null, null, null],
+          reason: 'limb lengths wait for R-0058');
+    });
 
     test('no chosen load is bodyweight only', () async {
       final c = makeContainer(dorsiflexion: 29.0);
       await c.read(squatCheckControllerProvider.future);
-      final req =
-          verify(() => api.range(captureAny())).captured.single
-              as SquatRangeRequest;
+      final req = verify(() => api.range(captureAny())).captured.single
+          as SquatRangeRequest;
       expect(req.barKg, isNull);
     });
 
     test('a 400 validation is surfaced as the error', () async {
-      when(() => api.range(any())).thenThrow(
-        const ApiException(
+      when(() => api.range(any())).thenThrow(const ApiException(
           ApiErrorKind.badRequest,
           statusCode: 400,
-          field: 'dorsiflexion_deg',
-        ),
-      );
+          field: 'dorsiflexion_deg'));
       final c = makeContainer(dorsiflexion: 29.0);
 
       await expectLater(
-        c.read(squatCheckControllerProvider.future),
-        throwsA(anything),
-      );
+          c.read(squatCheckControllerProvider.future), throwsA(anything));
 
       final state = c.read(squatCheckControllerProvider);
       expect(
-        state.error,
-        isA<ApiException>().having((e) => e.field, 'field', 'dorsiflexion_deg'),
-      );
+          state.error,
+          isA<ApiException>()
+              .having((e) => e.field, 'field', 'dorsiflexion_deg'));
     });
   });
 
