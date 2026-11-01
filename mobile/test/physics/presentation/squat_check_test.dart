@@ -326,12 +326,16 @@ void main() {
     testWidgets('the readout boxes: heat on the torques, not on the lever',
         (tester) async {
       await pump(tester);
-      Color edge(String key) =>
-          ((tester.widget<Container>(find.byKey(Key(key))).decoration!
-                      as BoxDecoration)
-                  .border! as Border)
-              .left
-              .color;
+      Color edge(String key) {
+        final box = tester.widget<Container>(find
+            .descendant(
+                of: find.byKey(Key(key)), matching: find.byType(Container))
+            .first);
+        return ((box.decoration! as BoxDecoration).border! as Border)
+            .left
+            .color;
+      }
+
       final t = FbfTokens.light;
       expect(edge('readout-hip'), t.heat(1));
       expect(edge('readout-lever'), t.line);

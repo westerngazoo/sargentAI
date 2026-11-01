@@ -55,7 +55,7 @@ void main() {
         (args[2] as Paint).style == PaintingStyle.fill &&
         (args[2] as Paint).color.toARGB32() == fill.toARGB32();
 
-    void paintAt(RangeFrame f, Matcher expected) {
+    void paintAt(RangeFrame f, Object expected) {
       final painter = LiveGraphPainter(
           frames: frames,
           current: PlaybackFrame(f.progress, f.posture, f),

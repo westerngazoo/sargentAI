@@ -1,13 +1,13 @@
 // SPEC-0059 §2.4 (R-0059 AC4) — the frame's readouts in design v2's
 // `panelito` boxes: τ cadera, palanca cadera, τ rodilla, β tronco, then the
 // flexions and progress in the mono face. The server's numbers, rounded for
-// reading; the lever is shown in cm. The torque boxes carry the tension
-// ramp on their edge, as the figure does (SPEC-0061 §2.10).
+// reading; the lever is shown in cm. Only the torque boxes carry the
+// tension ramp on their edge: heat is tension magnitude, never a length or
+// an angle (SPEC-0061 §2.10).
 
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/theme/tokens.dart';
@@ -25,9 +25,8 @@ class FrameReadouts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final t = Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
-    final format = NumberFormat.decimalPatternDigits(
-        locale: numberLocale(l10n.localeName), decimalDigits: 0);
+    final t = FbfTokens.of(context);
+    final format = numberFormat(l10n.localeName, digits: 0);
     Color heat(double moment) =>
         maxAbs > 0 ? t.heat(math.max(0, moment) / maxAbs) : t.line;
     final hip = frame.mechanics.moment(Joint.hip);
@@ -54,7 +53,7 @@ class FrameReadouts extends StatelessWidget {
                   label: l10n.squatReadoutLever,
                   value: format.format(lever.leverM * 100),
                   unit: 'cm',
-                  edge: heat(hip),
+                  edge: t.line,
                   tokens: t),
             _Box(
                 key: const Key('readout-knee'),

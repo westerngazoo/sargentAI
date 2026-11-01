@@ -4,6 +4,7 @@
 // places the server's numbers, it derives none.
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -58,8 +59,9 @@ class GraphScale {
 }
 
 /// Paints the graph over [frames], marking [current]'s returned frame. The
-/// hip's curve is heated segment by segment by its moment, as the figure's
-/// bar arrow is; the knee's is a thin neutral line.
+/// hip's curve and point carry each returned frame's own heat, as the
+/// figure's bar arrow does (a segment blends its two ends' colours, no
+/// number derived); the knee's is a thin neutral line.
 class LiveGraphPainter extends CustomPainter {
   LiveGraphPainter({
     required this.frames,
@@ -78,6 +80,8 @@ class LiveGraphPainter extends CustomPainter {
     final plot = _inset.deflateRect(Offset.zero & size);
     final scale = GraphScale(frames, plot);
     final max = maxAbsMoment(frames);
+    Color heat(RangeFrame f) => tokens
+        .heat(max > 0 ? math.max(0, f.mechanics.moment(Joint.hip)) / max : 0);
     final stroke = Paint()..style = PaintingStyle.stroke;
     canvas.drawLine(
         Offset(plot.left, scale.zeroY),
@@ -90,37 +94,30 @@ class LiveGraphPainter extends CustomPainter {
       canvas.drawLine(
           scale.at(a, Joint.knee),
           scale.at(b, Joint.knee),
-          stroke
+          Paint()
             ..color = tokens.muted
             ..strokeWidth = 1.6);
-      final m =
-          (a.mechanics.moment(Joint.hip) + b.mechanics.moment(Joint.hip)) / 2;
+      final (from, to) = (scale.at(a, Joint.hip), scale.at(b, Joint.hip));
       canvas.drawLine(
-        scale.at(a, Joint.hip),
-        scale.at(b, Joint.hip),
-        stroke
-          ..color = tokens.heat(max > 0 ? math.max(0, m) / max : 0)
+        from,
+        to,
+        Paint()
+          ..shader = ui.Gradient.linear(from, to, [heat(a), heat(b)])
           ..strokeWidth = 4
           ..strokeCap = StrokeCap.round,
       );
     }
     final knee = scale.at(current.frame, Joint.knee);
     final hip = scale.at(current.frame, Joint.hip);
+    Paint ink(double width) => Paint()
+      ..style = PaintingStyle.stroke
+      ..color = tokens.text
+      ..strokeWidth = width;
     canvas
       ..drawCircle(knee, 4, Paint()..color = tokens.panel)
-      ..drawCircle(
-          knee,
-          4,
-          stroke
-            ..color = tokens.text
-            ..strokeWidth = 1.5)
-      ..drawCircle(hip, 6, Paint()..color = tokens.red)
-      ..drawCircle(
-          hip,
-          6,
-          stroke
-            ..color = tokens.text
-            ..strokeWidth = 1.8);
+      ..drawCircle(knee, 4, ink(1.5))
+      ..drawCircle(hip, 6, Paint()..color = heat(current.frame))
+      ..drawCircle(hip, 6, ink(1.8));
   }
 
   @override
@@ -138,7 +135,7 @@ class LiveGraph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final t = Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
+    final t = FbfTokens.of(context);
     final small = Theme.of(context)
         .textTheme
         .bodySmall

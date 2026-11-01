@@ -7,7 +7,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/theme/tokens.dart';
@@ -50,10 +49,9 @@ class MomentBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final t = Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
+    final t = FbfTokens.of(context);
     final text = Theme.of(context).textTheme;
-    final format = NumberFormat.decimalPatternDigits(
-        locale: numberLocale(l10n.localeName), decimalDigits: 0);
+    final format = numberFormat(l10n.localeName, digits: 0);
     final mono = text.bodySmall?.copyWith(fontFamily: AppFonts.mono);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
@@ -22,9 +21,6 @@ import 'figure_painter.dart';
 import 'frame_readouts.dart';
 import 'live_graph.dart';
 import 'moment_bars.dart';
-
-FbfTokens _tokens(BuildContext context) =>
-    Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
 
 /// The lifter's squat as the server computed it: asks for the dorsiflexion
 /// (no default, SPEC-0045 §2.6.1.1) and the bar, then draws the range. A
@@ -76,7 +72,7 @@ class _Stamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _tokens(context);
+    final t = FbfTokens.of(context);
     return Transform.rotate(
       angle: -0.12,
       child: Container(
@@ -105,7 +101,7 @@ class _Inputs extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final format = NumberFormat.decimalPattern(numberLocale(l10n.localeName));
+    final format = numberFormat(l10n.localeName);
     String text(double? v) => v == null ? '' : format.format(v);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -233,7 +229,7 @@ class _PlaybackState extends State<_Playback>
     // The painter's range and the frame it draws come from one list.
     final current = playbackAt(frames, progress);
     if (current == null) return const SizedBox.shrink();
-    final t = _tokens(context);
+    final t = FbfTokens.of(context);
     final end = widget.result.end;
     final playing = _ticker.isAnimating;
     final maxAbs = maxAbsMoment(frames);
@@ -315,7 +311,7 @@ class _Caveats extends StatelessWidget {
     final style = Theme.of(context).textTheme.bodySmall?.copyWith(
         fontFamily: AppFonts.mono,
         fontSize: 11.5,
-        color: _tokens(context).muted);
+        color: FbfTokens.of(context).muted);
     return Column(
       key: const Key('squat-caveats'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -332,7 +328,7 @@ class _Cuenta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _tokens(context);
+    final t = FbfTokens.of(context);
     final text = Theme.of(context).textTheme;
     return Container(
       padding: const EdgeInsets.all(10),
