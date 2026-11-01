@@ -2103,6 +2103,108 @@ abstract class AppLocalizations {
   /// **'{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} del cuerpo = {hipNm} N·m'**
   String squatLeverSum(
       String barN, String leverM, String barNm, String bodyNm, String hipNm);
+
+  /// The squat check's headline (SPEC-0059 §2.4, design v2).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sentadilla, tu palanca'**
+  String get squatTitle;
+
+  /// The squat check's stamp (SPEC-0061 §2.10): every number can be checked. Never 'COMPROBADO' (verified).
+  ///
+  /// In es, this message translates to:
+  /// **'COMPROBABLE'**
+  String get squatStamp;
+
+  /// Label of the squat check's dorsiflexion field, in degrees.
+  ///
+  /// In es, this message translates to:
+  /// **'Dorsiflexión del tobillo (°)'**
+  String get squatDorsiflexionLabel;
+
+  /// Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1). The range is dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart).
+  ///
+  /// In es, this message translates to:
+  /// **'De 0 a 90. El modelo no supone un valor: escribe el tuyo.'**
+  String get squatDorsiflexionHelp;
+
+  /// Error when the typed dorsiflexion is not a number in dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart, 0..90).
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un número de 0 a 90.'**
+  String get squatDorsiflexionInvalid;
+
+  /// Label of the squat check's bar-load field.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra (kg)'**
+  String get squatLoadLabel;
+
+  /// Helper under the bar-load field: leaving it empty checks bodyweight only.
+  ///
+  /// In es, this message translates to:
+  /// **'Vacío: solo tu cuerpo.'**
+  String get squatLoadHelp;
+
+  /// Error when the typed bar load is not a number above barKgAbove and up to barKgMax (squat_range.dart, (0, 1000]).
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un peso mayor que 0, hasta 1000.'**
+  String get squatLoadInvalid;
+
+  /// Shown when the squat check has no profile to take height and mass from.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil necesita estatura y peso para armar tu sentadilla.'**
+  String get squatNeedsProfile;
+
+  /// Tooltip of the squat check's play button.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproducir'**
+  String get squatPlay;
+
+  /// Tooltip of the squat check's pause button.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get squatPause;
+
+  /// Accessibility label of the squat check's scrubber.
+  ///
+  /// In es, this message translates to:
+  /// **'Recorrer la bajada, de pie al fondo'**
+  String get squatScrub;
+
+  /// Accessibility label of the squat figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala'**
+  String get squatFigureLabel;
+
+  /// Opens the stopped-range line for a bodyweight check.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin carga'**
+  String get squatWithoutLoad;
+
+  /// Opens the stopped-range line for a loaded check; kg is the server's bar load, pre-formatted.
+  ///
+  /// In es, this message translates to:
+  /// **'Con {kg} kg'**
+  String squatWithLoad(String kg);
+
+  /// A stopped squat range in plain words (SPEC-0059 §2.4, R-0059 AC3). load is squatWithLoad or squatWithoutLoad; cause is the limiting joint (ankle, knee, hip, lumbar), 'balance', 'implausible', or 'other' when only the model's convention stops the range; percent is how far down the lifter gets. No safety or injury claim.
+  ///
+  /// In es, this message translates to:
+  /// **'{load}, {cause, select, ankle{tu tobillo te detiene} knee{tu rodilla te detiene} hip{tu cadera te detiene} lumbar{tu espalda baja te detiene} balance{el modelo deja de equilibrarte} implausible{la postura deja de ser anatómicamente posible} other{la convención del modelo te detiene}} al {percent} % de la bajada.'**
+  String squatStopped(String load, String cause, int percent);
+
+  /// Why the model could not place the lifter at all (a rejected squat range, R-0059 AC3): reason is 'balance', 'implausible', the limiting joint (ankle, knee, hip, lumbar), or 'other'. No figure is shown. No safety or injury claim.
+  ///
+  /// In es, this message translates to:
+  /// **'{reason, select, balance{El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.} implausible{Con estos datos el modelo no puede armar una postura anatómicamente posible.} ankle{Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.} knee{Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.} hip{Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.} lumbar{Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.} other{Con estos datos el modelo no puede armar tu sentadilla.}}'**
+  String squatRejected(String reason);
 }
 
 class _AppLocalizationsDelegate

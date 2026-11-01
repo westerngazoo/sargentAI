@@ -1175,4 +1175,94 @@ class AppLocalizationsEs extends AppLocalizations {
       String barN, String leverM, String barNm, String bodyNm, String hipNm) {
     return '$barN N × $leverM m = $barNm N·m, + $bodyNm del cuerpo = $hipNm N·m';
   }
+
+  @override
+  String get squatTitle => 'Tu sentadilla, tu palanca';
+
+  @override
+  String get squatStamp => 'COMPROBABLE';
+
+  @override
+  String get squatDorsiflexionLabel => 'Dorsiflexión del tobillo (°)';
+
+  @override
+  String get squatDorsiflexionHelp =>
+      'De 0 a 90. El modelo no supone un valor: escribe el tuyo.';
+
+  @override
+  String get squatDorsiflexionInvalid => 'Escribe un número de 0 a 90.';
+
+  @override
+  String get squatLoadLabel => 'Barra (kg)';
+
+  @override
+  String get squatLoadHelp => 'Vacío: solo tu cuerpo.';
+
+  @override
+  String get squatLoadInvalid => 'Escribe un peso mayor que 0, hasta 1000.';
+
+  @override
+  String get squatNeedsProfile =>
+      'Tu perfil necesita estatura y peso para armar tu sentadilla.';
+
+  @override
+  String get squatPlay => 'Reproducir';
+
+  @override
+  String get squatPause => 'Pausar';
+
+  @override
+  String get squatScrub => 'Recorrer la bajada, de pie al fondo';
+
+  @override
+  String get squatFigureLabel =>
+      'Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala';
+
+  @override
+  String get squatWithoutLoad => 'Sin carga';
+
+  @override
+  String squatWithLoad(String kg) {
+    return 'Con $kg kg';
+  }
+
+  @override
+  String squatStopped(String load, String cause, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      cause,
+      {
+        'ankle': 'tu tobillo te detiene',
+        'knee': 'tu rodilla te detiene',
+        'hip': 'tu cadera te detiene',
+        'lumbar': 'tu espalda baja te detiene',
+        'balance': 'el modelo deja de equilibrarte',
+        'implausible': 'la postura deja de ser anatómicamente posible',
+        'other': 'la convención del modelo te detiene',
+      },
+    );
+    return '$load, $_temp0 al $percent % de la bajada.';
+  }
+
+  @override
+  String squatRejected(String reason) {
+    String _temp0 = intl.Intl.selectLogic(
+      reason,
+      {
+        'balance':
+            'El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.',
+        'implausible':
+            'Con estos datos el modelo no puede armar una postura anatómicamente posible.',
+        'ankle':
+            'Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.',
+        'knee':
+            'Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.',
+        'hip':
+            'Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.',
+        'lumbar':
+            'Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.',
+        'other': 'Con estos datos el modelo no puede armar tu sentadilla.',
+      },
+    );
+    return '$_temp0';
+  }
 }
