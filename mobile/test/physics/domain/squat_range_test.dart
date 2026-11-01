@@ -19,8 +19,10 @@ void main() {
       final r = squatGolden();
       expect(r.end, isA<Bottom>());
       expect(r.tableLengths, ['trunk']);
-      expect(r.assumptions.map((a) => a.assumption),
-          ['joints_advance_together', 'straight_body_upright']);
+      expect(r.assumptions.map((a) => a.assumption), [
+        'joints_advance_together',
+        'straight_body_upright',
+      ]);
       expect(r.frames, hasLength(2));
     });
 
@@ -43,30 +45,40 @@ void main() {
 
     test('parses the mechanics: four moments and their assumptions', () {
       final m = squatGolden().frames.first.mechanics;
-      expect(m.joints.map((j) => j.joint),
-          [Joint.hip, Joint.knee, Joint.ankle, Joint.lumbar]);
+      expect(m.joints.map((j) => j.joint), [
+        Joint.hip,
+        Joint.knee,
+        Joint.ankle,
+        Joint.lumbar,
+      ]);
       expect(m.moment(Joint.hip), closeTo(33.517684, 1e-6));
-      expect(m.moment(Joint.knee), closeTo(-71.494678, 1e-6),
-          reason: 'a negative moment survives the parse');
+      expect(
+        m.moment(Joint.knee),
+        closeTo(-71.494678, 1e-6),
+        reason: 'a negative moment survives the parse',
+      );
       expect(m.joints.first.resisting, 'hip_extensors');
-      final single =
-          m.assumptions.firstWhere((a) => a.assumption == 'single_posture');
+      final single = m.assumptions.firstWhere(
+        (a) => a.assumption == 'single_posture',
+      );
       expect(single.at, 'upright');
     });
   });
 
   group('end', () {
     test('stopped carries how far the lifter got and the bottom rejection', () {
-      final r = SquatRangeResult.fromJson(_with({
-        'kind': 'stopped',
-        'reached': 0.565,
-        'bottom': {
-          'reason': 'depth_not_reachable',
-          'limiting': 'ankle',
-          'needed_deg': 31.5,
-          'available_deg': 25.0,
-        },
-      }));
+      final r = SquatRangeResult.fromJson(
+        _with({
+          'kind': 'stopped',
+          'reached': 0.565,
+          'bottom': {
+            'reason': 'depth_not_reachable',
+            'limiting': 'ankle',
+            'needed_deg': 31.5,
+            'available_deg': 25.0,
+          },
+        }),
+      );
       final end = r.end as Stopped;
       expect(end.reached, 0.565);
       expect(end.bottom!.reason, RejectionReason.depthNotReachable);
@@ -77,18 +89,24 @@ void main() {
 
     test('stopped by the convention alone has no bottom rejection', () {
       final r = SquatRangeResult.fromJson(
-          _with({'kind': 'stopped', 'reached': 0.9, 'bottom': null}));
+        _with({'kind': 'stopped', 'reached': 0.9, 'bottom': null}),
+      );
       expect((r.end as Stopped).bottom, isNull);
     });
 
     test('rejected carries the typed reason and no frames', () {
-      final r = SquatRangeResult.fromJson(squatGoldenJson()
-        ..['end'] = {
-          'kind': 'rejected',
-          'rejection': {'reason': 'does_not_balance', 'unknown': 'trunk_angle'},
-        }
-        ..['frames'] = <dynamic>[]
-        ..['assumptions'] = <dynamic>[]);
+      final r = SquatRangeResult.fromJson(
+        squatGoldenJson()
+          ..['end'] = {
+            'kind': 'rejected',
+            'rejection': {
+              'reason': 'does_not_balance',
+              'unknown': 'trunk_angle',
+            },
+          }
+          ..['frames'] = <dynamic>[]
+          ..['assumptions'] = <dynamic>[],
+      );
       final end = r.end as Rejected;
       expect(end.reason.reason, RejectionReason.doesNotBalance);
       expect(end.reason.limiting, isNull);
@@ -97,23 +115,24 @@ void main() {
     });
 
     test('an unknown end kind is a FormatException', () {
-      expect(() => SquatRangeResult.fromJson(_with({'kind': 'sideways'})),
-          throwsFormatException);
+      expect(
+        () => SquatRangeResult.fromJson(_with({'kind': 'sideways'})),
+        throwsFormatException,
+      );
     });
   });
 
   test('a bodyweight frame has no hip lever and no bar', () {
     final frame = Map<String, dynamic>.of(
-        (squatGoldenJson()['frames'] as List).first as Map<String, dynamic>)
-      ..remove('hip');
+      (squatGoldenJson()['frames'] as List).first as Map<String, dynamic>,
+    )..remove('hip');
     (frame['posture'] as Map<String, dynamic>)['load'] = null;
     (frame['mechanics'] as Map<String, dynamic>)['load'] = {
-      'basis': 'bodyweight_only'
+      'basis': 'bodyweight_only',
     };
-    final f =
-        SquatRangeResult.fromJson(_with({'kind': 'bottom'}, frames: [frame]))
-            .frames
-            .single;
+    final f = SquatRangeResult.fromJson(
+      _with({'kind': 'bottom'}, frames: [frame]),
+    ).frames.single;
     expect(f.hip, isNull);
     expect(f.posture.load, isNull);
   });
