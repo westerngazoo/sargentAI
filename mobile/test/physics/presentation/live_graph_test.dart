@@ -2,9 +2,11 @@
 // server's hip and knee moments against bar height, standing at the left and
 // the bottom at the right, as design v2 draws it. Geometry only.
 
+import 'package:fitai/src/core/theme/tokens.dart';
+import 'package:fitai/src/physics/domain/playback.dart';
 import 'package:fitai/src/physics/domain/squat_range.dart';
 import 'package:fitai/src/physics/presentation/live_graph.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/physics_fakes.dart';
@@ -43,5 +45,31 @@ void main() {
   test('one frame sits in the middle instead of dividing by zero', () {
     final one = [frames.last];
     expect(GraphScale(one, plot).at(one.first, Joint.hip).dx, plot.center.dx);
+  });
+
+  group('the painter', () {
+    final light = FbfTokens.light;
+
+    PaintPatternPredicate circle(Color fill) => (method, args) =>
+        method == #drawCircle &&
+        (args[2] as Paint).style == PaintingStyle.fill &&
+        (args[2] as Paint).color.toARGB32() == fill.toARGB32();
+
+    void paintAt(RangeFrame f, Matcher expected) {
+      final painter = LiveGraphPainter(
+          frames: frames,
+          current: PlaybackFrame(f.progress, f.posture, f),
+          tokens: light);
+      expect((Canvas c) => painter.paint(c, const Size(300, 150)), expected);
+    }
+
+    test('the hip point is heated by the frame\'s moment, not always red', () {
+      // Standing, the hip moment is small: the point is not the ramp's top.
+      final standing = frames.first;
+      final heat = standing.mechanics.moment(Joint.hip) /
+          frames.last.mechanics.moment(Joint.hip);
+      paintAt(standing, paints..something(circle(light.heat(heat))));
+      paintAt(frames.last, paints..something(circle(light.heat(1))));
+    });
   });
 }

@@ -323,6 +323,21 @@ void main() {
       expect(find.text('-71 N·m'), findsOneWidget);
     });
 
+    testWidgets('the readout boxes: heat on the torques, not on the lever',
+        (tester) async {
+      await pump(tester);
+      Color edge(String key) =>
+          ((tester.widget<Container>(find.byKey(Key(key))).decoration!
+                      as BoxDecoration)
+                  .border! as Border)
+              .left
+              .color;
+      final t = FbfTokens.light;
+      expect(edge('readout-hip'), t.heat(1));
+      expect(edge('readout-lever'), t.line);
+      expect(edge('readout-trunk'), t.line);
+    });
+
     testWidgets('the graph\'s point follows the frame', (tester) async {
       await pump(tester);
       LiveGraphPainter graph() => tester

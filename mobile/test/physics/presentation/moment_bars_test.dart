@@ -13,11 +13,24 @@ void main() {
     expect(bar.heat, closeTo(0.5, 1e-12));
   });
 
-  test('the largest moment fills the track', () {
+  test('the largest positive moment fills the track, at full heat', () {
+    final bar = momentBar(440, 440);
+    expect(bar.left + bar.width, closeTo(1, 1e-12));
+    expect(bar.heat, 1);
+  });
+
+  test('a negative moment past the zero offset is clipped at the left edge',
+      () {
     final bar = momentBar(-440, 440);
     expect(bar.left + bar.width, momentZero);
     expect(bar.left, 0);
     expect(bar.heat, isNull);
+  });
+
+  test('past the clip two different negatives draw the same bar', () {
+    // |m| beyond momentZero / (1 - momentZero) of the scale (about 19 %).
+    final (a, b) = (momentBar(-100, 440), momentBar(-300, 440));
+    expect((a.left, a.width), (b.left, b.width));
   });
 
   test('a negative moment ends at zero, left of it, with no heat', () {
