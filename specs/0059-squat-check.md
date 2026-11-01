@@ -218,7 +218,9 @@ Design v2's physics card, in SPEC-0061 §2.10's tokens and faces:
   de pie y el fondo las piernas siguen una convención del modelo; tu curva
   real saldrá de tu video".
 - **A stopped range** says, in plain words, how far the lifter gets and why
-  (`Stopped`: "sin carga tu tobillo te detiene al 57 % de la bajada");
+  (`Stopped`: "sin carga tu tobillo te detiene al 57 % de la bajada"),
+  followed by the degrees when the server sends both ("el fondo pide 38° y
+  tienes 29°");
   `Rejected` shows the typed reason and no figure (AC3).
 - **No injury or safety claim** (AC6): heat means tension magnitude; no copy
   says safe or dangerous; a word-list test over the catalogue entries used
@@ -251,9 +253,13 @@ gives them a model.
 | 59-a | `biomech` module: validation, the endpoint, the lever fields, the `End` enum, the golden and no-log tests | backend |
 | 59-b | `physics` folder: API, models, `lever_text`, controller, with tests; `{name, physics}` exercises on `PlanDay` and the schedule (`biomech::model_for`) | both |
 | 59-c1 (= R-0061 slice 4, first half) | the figure painter with vectors and lever, playback, the Stopped and Rejected states | mobile |
-| 59-c2 (second half) | readouts, moment bars, the live graph, caveats, the Física/Pronto buttons, the free-session `model_for` lookup, the two layouts, the word-list test | mobile |
+| 59-c2a (second half) | readouts, moment bars, the live graph, "La cuenta", the caveats, the degrees in the stopped line, the word-list test | mobile |
+| 59-c2b | the Física/Pronto buttons and the two layouts | mobile |
+| 59-c2c | the free-session `model_for` lookup | backend + mobile |
 
-Each is within 100–400 lines (finding 4).
+Each is within 100–400 hand-written lines (finding 4); 59-c2 as one slice
+was about 1000, and its free-session lookup needs the server (amended
+2026-11-01).
 
 ## 3. Code outline
 
@@ -335,6 +341,9 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-10-30 | Exercises are `{name, physics}` objects on the cycle, not a per-day `physics` field or a parallel list | A day lists several exercises, each with its own Física/Pronto button; one object per exercise means a name and its physics cannot disagree (owner, review of #183). |
 | 2026-10-30 | The lookup is `biomech::model_for`, exact after trim and lowercase: "Back Squat", "Sentadilla", "Sentadilla trasera" | It says which mechanics are modelled, narrower than `Lift::from_exercise_name` (which lift a video shows); Spanish names for what lifters type in free sessions (owner). |
 | 2026-10-30 | "La cuenta" uses a decimal point: Spanish numbers follow `es_MX` | The target market is Mexico; a decimal comma collides with the line's own commas (owner). |
+| 2026-11-01 | 59-c2 split into c2a (the widget), c2b (where it lives) and c2c (the free-session lookup) | About 1000 lines as one slice, and the free session's lookup needs the server: the client only has names (finding 7) (owner). |
+| 2026-11-01 | The stopped line gives the degrees needed and available | The reason is checkable only with its numbers (owner). |
+| 2026-11-01 | The plate stays drawn to scale; the stamp reads CHECKABLE in English | "To scale" is the product's promise (owner, accepted with the c2 plan). |
 
 ## 8. Changelog
 
@@ -352,6 +361,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   `{name, physics}` objects decided by `biomech::model_for` (with the
   Spanish names); the decimal point in "La cuenta"; 59-c2 carries the
   free-session lookup.
+- 2026-11-01 — Amended with slice 59-c2a, owner-approved: 59-c2 split in
+  c2a, c2b and c2c; the degrees in the stopped line.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
