@@ -732,14 +732,17 @@ void main() {
         await tester.ensureVisible(find.byKey(squat));
         await tester.tap(find.byKey(squat));
         await tester.pumpAndSettle();
-        final caveats = find.byKey(const Key('squat-caveats'));
-        expect(caveats, findsOne);
-        // One scrollable above them: the screen's own.
-        expect(find.ancestor(of: caveats, matching: find.byType(Scrollable)),
-            findsOne);
-        await tester.ensureVisible(caveats);
-        await tester.pumpAndSettle();
-        expect(caveats.hitTestable(), findsOne);
+        for (final key in ['squat-caveats', 'squat-assumptions']) {
+          final caveats = find.byKey(Key(key));
+          expect(caveats, findsOne, reason: key);
+          // One scrollable above them: the screen's own.
+          expect(find.ancestor(of: caveats, matching: find.byType(Scrollable)),
+              findsOne,
+              reason: key);
+          await tester.ensureVisible(caveats);
+          await tester.pumpAndSettle();
+          expect(caveats.hitTestable(), findsOne, reason: key);
+        }
       });
     }
   });
