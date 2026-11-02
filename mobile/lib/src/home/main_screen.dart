@@ -14,9 +14,8 @@ import '../hub/dictation_sheet.dart';
 import '../hub/voice_effect.dart';
 import '../measurements/presentation/measurements_panel.dart';
 import '../measurements/presentation/progress_panel.dart';
-import '../physics/domain/lift.dart';
-import '../physics/presentation/squat_check.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
+import '../physics/presentation/physics_check.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/account_panel.dart';
 import '../profile/presentation/profile_prompt.dart';
@@ -422,6 +421,31 @@ class _DayRegionState extends State<_DayRegion> {
   /// The exercise whose check is open, by its index in the day's list.
   int? _open;
 
+  /// A re-read schedule (app resume, a saved workout, a program change)
+  /// keeps the check open only while the same exercise sits at its index.
+  @override
+  void didUpdateWidget(_DayRegion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final i = _open;
+    if (i == null) return;
+    final was = _plannedOf(oldWidget)?.elementAtOrNull(i);
+    final now = _plannedOf(widget)?.elementAtOrNull(i);
+    if (now == null ||
+        was == null ||
+        now.name != was.name ||
+        now.physics != was.physics) {
+      _open = null;
+    }
+  }
+
+  /// The planned exercises [region] lists, or null on any other day.
+  static List<PlanExercise>? _plannedOf(_DayRegion region) =>
+      switch (region.state) {
+        PlannedDay(:final cycleIndex) =>
+          region.schedule?.trainingDay(cycleIndex)?.exercises,
+        _ => null,
+      };
+
   @override
   Widget build(BuildContext context) {
     final _DayRegion(
@@ -565,7 +589,7 @@ class _DayRegionState extends State<_DayRegion> {
         children: [
           Expanded(child: Column(children: rows)),
           const SizedBox(width: 16),
-          Expanded(flex: 2, child: _check(open)),
+          Expanded(flex: 2, child: PhysicsCheck(lift: open)),
         ],
       );
     }
@@ -575,7 +599,7 @@ class _DayRegionState extends State<_DayRegion> {
         for (final (i, row) in rows.indexed) ...[
           row,
           if (i == _open) ...[
-            _check(open),
+            PhysicsCheck(lift: open),
             const SizedBox(height: 12),
           ],
         ],
@@ -608,11 +632,6 @@ class _DayRegionState extends State<_DayRegion> {
       ),
     );
   }
-
-  /// The check for [lift]; a lift gains a case when its check is built.
-  Widget _check(Lift lift) => switch (lift) {
-        Lift.squat => const SquatCheck(),
-      };
 }
 
 /// Nutrition orbits the training: one action, *+ Comida* (R-0061 AC7).

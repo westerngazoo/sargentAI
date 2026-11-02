@@ -721,6 +721,18 @@ void main() {
           check.bottom, lessThan(tester.getRect(find.text('Leg Press')).top));
     });
 
+    testWidgets('the same plan re-read keeps the check open', (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => modelled());
+      final (container, _) = await pumpMain(tester);
+      await tester.ensureVisible(find.byKey(squat));
+      await tester.tap(find.byKey(squat));
+      await tester.pumpAndSettle();
+      // As on app resume: the schedule is read again, unchanged.
+      container.invalidate(scheduleProvider);
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsOne);
+    });
+
     testWidgets('a new plan for the same day closes the check', (tester) async {
       // The squat second, so its open index is past the new plan's end.
       whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
