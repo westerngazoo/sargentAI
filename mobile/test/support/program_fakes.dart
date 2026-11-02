@@ -235,8 +235,10 @@ Map<String, dynamic> scheduleJson({
 Schedule sampleSchedule({
   List<Map<String, dynamic>> days = const [],
   String? programId = 'prog-uuid-001',
+  List<Map<String, dynamic>>? cycle,
 }) =>
-    Schedule.fromJson(scheduleJson(days: days, programId: programId));
+    Schedule.fromJson(
+        scheduleJson(days: days, programId: programId, cycle: cycle));
 
 /// The `getSchedule` stub for any range, so a test says only what comes back.
 When<Future<Schedule>> whenGetSchedule(MockProgramService service) =>
