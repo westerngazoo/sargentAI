@@ -212,11 +212,12 @@ Design v2's physics card, in SPEC-0061 §2.10's tokens and faces:
 - **Playback**: play/pause and a scrubber over progress; the controller
   interpolates frames.
 - **La cuenta**: the server's `hip` fields, formatted.
-- **The caveats** (AC5), always visible under the figure: the assumptions
-  (range-level and the current frame's), which lengths came from the table,
+- **The caveats** (AC5), always visible, none folded away. Under the figure,
+  the key lines: which lengths came from the table,
   how the model places the arms ("sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra"), and "entre
   de pie y el fondo las piernas siguen una convención del modelo; tu curva
-  real saldrá de tu video".
+  real saldrá de tu video". The assumptions (range-level and the current
+  frame's) close the card, after "La cuenta", without repeating a key line.
 - **A stopped range** says, in plain words, how far the lifter gets and why
   (`Stopped`: "sin carga tu tobillo te detiene al 57 % de la bajada"),
   followed by the degrees when the server sends both ("el fondo pide 38° y
@@ -241,9 +242,11 @@ lowercase, never fuzzily: "Back Squat", "Sentadilla" and "Sentadilla
 trasera" are the squat; a bare "Squat", "Sentadilla frontal", a front, hack
 or low-bar squat are not. A free session's exercises get the same lookup
 through the names the app already sends (59-c2). For
-`physics: null` the button reads **Pronto** and opens nothing. On a wide
-window the check opens beside the exercise list; on a phone, below the
-exercise. The deadlift and bench stay *Pronto* until R-0045's garust work
+`physics: null` the button reads **Pronto** and opens nothing. From 1180 px
+the check opens beside the exercise list; on narrower windows, below the
+exercise. 1180 px is SPEC-0061's breakpoint: below it the day's column is
+too narrow for a check beside the list. Beside, the list takes a third of
+the row and the check the rest. The deadlift and bench stay *Pronto* until R-0045's garust work
 gives them a model.
 
 ### 2.6 Slicing
@@ -344,6 +347,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-11-01 | 59-c2 split into c2a (the widget), c2b (where it lives) and c2c (the free-session lookup) | About 1000 lines as one slice, and the free session's lookup needs the server: the client only has names (finding 7) (owner). |
 | 2026-11-01 | The stopped line gives the degrees needed and available | The reason is checkable only with its numbers (owner). |
 | 2026-11-01 | The plate stays drawn to scale; the stamp reads CHECKABLE in English | "To scale" is the product's promise (owner, accepted with the c2 plan). |
+| 2026-11-01 | Key caveats under the figure (table lengths, arms, convention); the assumptions close the card | Twelve lines under the figure read as fine print and pushed the numbers down; all of them stay visible (owner, with 59-c2b). |
+| 2026-11-01 | The check sits beside the list from 1180 px, SPEC-0061's breakpoint, list 1 : check 2 | Between 720 and 1180 px the day's column is about 360 px (owner, with 59-c2b). |
 
 ## 8. Changelog
 
@@ -363,6 +368,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   free-session lookup.
 - 2026-11-01 — Amended with slice 59-c2a, owner-approved: 59-c2 split in
   c2a, c2b and c2c; the degrees in the stopped line.
+- 2026-11-01 — Amended with slice 59-c2b, owner-approved: the key caveats
+  under the figure and the assumptions closing the card; beside from 1180 px.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
