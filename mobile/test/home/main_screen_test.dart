@@ -50,6 +50,7 @@ import 'package:fitai/src/physics/presentation/squat_check.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/account_panel.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
+import 'package:fitai/src/program/application/schedule_provider.dart';
 import 'package:fitai/src/program/models/schedule.dart';
 import 'package:fitai/src/program/models/synthetic_match.dart';
 import 'package:fitai/src/program/presentation/body_type_names.dart';
@@ -668,6 +669,10 @@ void main() {
           find.descendant(
               of: find.byKey(legPress), matching: find.text(l10n.daySoon)),
           findsOne);
+      expect(tester.widget<OutlinedButton>(find.byKey(squat)).onPressed,
+          isNotNull);
+      expect(tester.widget<OutlinedButton>(find.byKey(legPress)).onPressed,
+          isNull);
       expect(find.byType(SquatCheck), findsNothing);
     });
 
@@ -677,6 +682,8 @@ void main() {
       await tester.ensureVisible(find.byKey(legPress));
       await tester.tap(find.byKey(legPress));
       await tester.pumpAndSettle();
+      expect(tester.widget<OutlinedButton>(find.byKey(legPress)).onPressed,
+          isNull);
       expect(find.byType(SquatCheck), findsNothing);
     });
 
@@ -697,6 +704,55 @@ void main() {
       final list = tester.getRect(find.text('Leg Press'));
       expect(check.left, greaterThan(list.right));
       expect(check.top, lessThan(list.bottom));
+      // The list a third of the row, the check the rest: the list's column
+      // runs from the region's left edge to its buttons' right edge.
+      final column = tester.getRect(find.byKey(squat)).right -
+          tester.getRect(find.byKey(const Key('day-region'))).left;
+      expect(check.width, closeTo(2 * column, 1));
+    });
+
+    testWidgets('just under 1180 px the check opens below its exercise',
+        (tester) async {
+      await open(tester, size: const Size(1179, 900));
+      final check = tester.getRect(find.byType(SquatCheck));
+      expect(check.top,
+          greaterThan(tester.getRect(find.text('Back Squat')).bottom));
+      expect(
+          check.bottom, lessThan(tester.getRect(find.text('Leg Press')).top));
+    });
+
+    testWidgets('a new plan for the same day closes the check', (tester) async {
+      // The squat second, so its open index is past the new plan's end.
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 1)],
+            cycle: [
+              trainingDayJson(focus: ['chest', 'arms']),
+              trainingDayJson(
+                  exercises: ['Leg Press', 'Back Squat'],
+                  physics: [null, 'squat']),
+              restDayJson,
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      await tester.ensureVisible(find.byKey(legPress));
+      await tester.tap(find.byKey(legPress));
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsOne);
+      // The day now lists one exercise, with no model: the open index is
+      // past its end.
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 1)],
+            cycle: [
+              trainingDayJson(focus: ['chest', 'arms']),
+              trainingDayJson(exercises: ['Leg Press']),
+              restDayJson,
+            ],
+          ));
+      container.invalidate(scheduleProvider);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Back Squat'), findsNothing);
+      expect(find.byType(SquatCheck), findsNothing);
     });
 
     testWidgets('Física again closes the check', (tester) async {
