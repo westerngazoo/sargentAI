@@ -40,7 +40,20 @@ SquatRangeResult _stating(
     );
 
 void main() {
-  final bottom = squatGolden().frames.last;
+  final golden = squatGolden().frames.last;
+  // The bottom frame stating nothing of its own: these tests read the
+  // range's assumptions alone.
+  final bottom = RangeFrame(
+    progress: golden.progress,
+    kneeFlexionDeg: golden.kneeFlexionDeg,
+    hipFlexionDeg: golden.hipFlexionDeg,
+    trunkLeanDeg: golden.trunkLeanDeg,
+    posture: golden.posture,
+    mechanics:
+        Mechanics(joints: golden.mechanics.joints, assumptions: const []),
+    groundN: golden.groundN,
+    hip: golden.hip,
+  );
   final unknown = caveatLines(
     _stating(const [Assumption('a_token_from_the_future')]),
     bottom,
@@ -48,17 +61,13 @@ void main() {
   ).assumptions;
 
   test('every core assumption has its own line, none the generic one', () {
+    // The convention token is a key line, so it has no assumption line.
+    final others = _tokens.where((t) => t != 'joints_advance_together');
     final lines = {
-      for (final token in _tokens)
-        [
-          ...caveatLines(_stating([Assumption(token)]), bottom, l10n)
-              .assumptions,
-          token,
-        ].first,
+      for (final token in others)
+        ...caveatLines(_stating([Assumption(token)]), bottom, l10n).assumptions,
     };
-    // The convention token is a key line, so it leaves no assumption line;
-    // the token itself stands in for it here.
-    expect(lines, hasLength(_tokens.length));
+    expect(lines, hasLength(others.length));
     expect(lines, isNot(contains(unknown.first)));
   });
 
@@ -115,8 +124,7 @@ void main() {
   });
 
   test('the range\'s and the frame\'s assumptions, each line once', () {
-    final golden = squatGolden();
-    final lines = caveatLines(golden, bottom, l10n).assumptions;
+    final lines = caveatLines(squatGolden(), golden, l10n).assumptions;
     expect(lines.toSet(), hasLength(lines.length));
     expect(lines, contains(l10n.squatAssumption('quasi_static')));
     expect(lines, contains(l10n.squatAssumption('straight_body_upright')));

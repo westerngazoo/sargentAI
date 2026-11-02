@@ -709,8 +709,9 @@ void main() {
 
     testWidgets('another day closes the check', (tester) async {
       await open(tester);
+      // doneDay is always in the week strip (see its definition).
       await tester
-          .tap(find.byKey(ValueKey('day-${tomorrow.toIso8601String()}')));
+          .tap(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(ValueKey('day-${today.toIso8601String()}')));
       await tester.pumpAndSettle();
