@@ -524,6 +524,12 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get dayPhysics => 'Física';
+
+  @override
+  String get daySoon => 'Pronto';
+
+  @override
   String get startSession => 'Empezar sesión';
 
   @override

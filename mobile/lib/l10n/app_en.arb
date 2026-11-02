@@ -151,6 +151,8 @@
   "dayFreeHeadline": "Free session",
   "dayRestHeadline": "Rest",
   "pendingPlanDay": "Still pending: {focus}",
+  "dayPhysics": "Physics",
+  "daySoon": "Soon",
   "startSession": "Start session",
   "logLate": "Log late",
   "viewLogged": "See what you logged",

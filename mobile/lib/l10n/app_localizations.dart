@@ -1004,6 +1004,18 @@ abstract class AppLocalizations {
   /// **'Pendiente del plan: {focus}'**
   String pendingPlanDay(String focus);
 
+  /// An exercise's button in the selected day that opens its physics check (R-0061 AC9).
+  ///
+  /// In es, this message translates to:
+  /// **'Física'**
+  String get dayPhysics;
+
+  /// The same button, disabled, for an exercise the server has no physics model for yet (R-0061 AC9).
+  ///
+  /// In es, this message translates to:
+  /// **'Pronto'**
+  String get daySoon;
+
   /// No description provided for @startSession.
   ///
   /// In es, this message translates to:

@@ -14,6 +14,8 @@ import '../hub/dictation_sheet.dart';
 import '../hub/voice_effect.dart';
 import '../measurements/presentation/measurements_panel.dart';
 import '../measurements/presentation/progress_panel.dart';
+import '../physics/domain/lift.dart';
+import '../physics/presentation/squat_check.dart';
 import '../nutrition/presentation/meal_quick_log_sheet.dart';
 import '../profile/application/profile_providers.dart';
 import '../profile/presentation/account_panel.dart';
@@ -31,6 +33,10 @@ import '../workout/presentation/session_list.dart';
 import 'calendar.dart';
 import 'day_action.dart';
 import 'selected_day.dart';
+
+/// From this width the rail widens to 340 px and an open physics check sits
+/// beside the day's exercise list (SPEC-0061 §2.5).
+const _besideWidth = 1180.0;
 
 /// The one screen (R-0061 AC1, SPEC-0061 §2.5): the calendar, the selected
 /// day with its one action, and the few controls AC7 allows. Everything
@@ -151,6 +157,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     );
 
     final day = _DayRegion(
+      key: ValueKey(selected),
       day: selected,
       today: today,
       state: stateOf(selected),
@@ -237,9 +244,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
                         children: [
                           SizedBox(
                             // §2.5: a 316 px rail, 340 from 1180.
-                            width: MediaQuery.sizeOf(context).width >= 1180
-                                ? 340
-                                : 316,
+                            width:
+                                MediaQuery.sizeOf(context).width >= _besideWidth
+                                    ? 340
+                                    : 316,
                             child: Column(
                               children: [
                                 _Panel(child: calendar),
@@ -377,9 +385,12 @@ class _Panel extends StatelessWidget {
 /// profile, one primary action, and what was logged or what the plan puts
 /// there (R-0061 AC5). A planned day is named by its focus and lists its
 /// exercises; a free workout on a plan day keeps that day startable below
-/// the log (SPEC-0061 §2.2, N1).
-class _DayRegion extends StatelessWidget {
+/// the log (SPEC-0061 §2.2, N1). Each exercise has its Física button
+/// (R-0061 AC9); the check it opens closes with the day, since the region
+/// is keyed by it.
+class _DayRegion extends StatefulWidget {
   const _DayRegion({
+    super.key,
     required this.day,
     required this.today,
     required this.state,
@@ -404,7 +415,24 @@ class _DayRegion extends StatelessWidget {
   final void Function(DateTime day, int? planDayIndex) onStart;
 
   @override
+  State<_DayRegion> createState() => _DayRegionState();
+}
+
+class _DayRegionState extends State<_DayRegion> {
+  /// The exercise whose check is open, by its index in the day's list.
+  int? _open;
+
+  @override
   Widget build(BuildContext context) {
+    final _DayRegion(
+      :day,
+      :today,
+      :state,
+      :schedule,
+      :loading,
+      :prompt,
+      :onStart,
+    ) = widget;
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toString();
     final text = Theme.of(context).textTheme;
@@ -427,6 +455,7 @@ class _DayRegion extends StatelessWidget {
         );
 
     return Column(
+      key: const Key('day-region'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
@@ -497,11 +526,7 @@ class _DayRegion extends StatelessWidget {
         ],
         if (planned != null) ...[
           const SizedBox(height: 12),
-          for (final exercise in planned.exercises)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(exercise.name, style: text.bodyLarge),
-            ),
+          _exercises(planned.exercises),
         ],
         if (loading) ...[
           const SizedBox(height: 12),
@@ -520,6 +545,74 @@ class _DayRegion extends StatelessWidget {
       ],
     );
   }
+
+  /// The day's exercises, each with its Física button, and the open check:
+  /// beside the list from [_besideWidth], below its exercise under it
+  /// (SPEC-0061 §2.5). The list takes a third of the row, the check the
+  /// rest: the figure and the graph need the width.
+  Widget _exercises(List<PlanExercise> exercises) {
+    final open = switch (_open) {
+      final i? => exercises[i].physics,
+      null => null,
+    };
+    final rows = [
+      for (final (i, exercise) in exercises.indexed) _row(i, exercise),
+    ];
+    if (open == null) return Column(children: rows);
+    if (MediaQuery.sizeOf(context).width >= _besideWidth) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Column(children: rows)),
+          const SizedBox(width: 16),
+          Expanded(flex: 2, child: _check(open)),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, row) in rows.indexed) ...[
+          row,
+          if (i == _open) ...[
+            _check(open),
+            const SizedBox(height: 12),
+          ],
+        ],
+      ],
+    );
+  }
+
+  /// An exercise and its button: Física opens or closes its check; without
+  /// a model it reads Pronto and opens nothing (R-0061 AC9).
+  Widget _row(int index, PlanExercise exercise) {
+    final l10n = AppLocalizations.of(context);
+    final modelled = exercise.physics != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(exercise.name,
+                style: Theme.of(context).textTheme.bodyLarge),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            key: Key('physics-$index'),
+            onPressed: modelled
+                ? () => setState(() => _open = _open == index ? null : index)
+                : null,
+            child: Text(modelled ? l10n.dayPhysics : l10n.daySoon),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The check for [lift]; a lift gains a case when its check is built.
+  Widget _check(Lift lift) => switch (lift) {
+        Lift.squat => const SquatCheck(),
+      };
 }
 
 /// Nutrition orbits the training: one action, *+ Comida* (R-0061 AC7).
