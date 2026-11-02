@@ -1,8 +1,6 @@
 // SPEC-0059 §2.3 — "La cuenta": formatting only. Every number is the
 // server's (§2.2); this file does no arithmetic on them (R-0059 AC7).
 
-import 'package:intl/intl.dart';
-
 import '../../../l10n/app_localizations.dart';
 import '../../l10n/locale_rule.dart';
 import 'squat_range.dart';
@@ -14,10 +12,8 @@ import 'squat_range.dart';
 String? leverText(RangeFrame frame, AppLocalizations l10n) {
   final hip = frame.hip;
   if (hip == null) return null;
-  String format(double value, int digits) => NumberFormat.decimalPatternDigits(
-        locale: numberLocale(l10n.localeName),
-        decimalDigits: digits,
-      ).format(value);
+  String format(double value, int digits) =>
+      numberFormat(l10n.localeName, digits: digits).format(value);
   return l10n.squatLeverSum(
     format(hip.barN, 0),
     format(hip.leverM, 2),

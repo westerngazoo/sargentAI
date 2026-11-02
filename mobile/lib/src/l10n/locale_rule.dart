@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:intl/intl.dart';
+
 /// The locales the app has a complete catalogue for (R-0061 AC11, OQ-1).
 /// Spanish first: it is the template and the fallback.
 const supportedLocales = [Locale('es'), Locale('en')];
@@ -11,6 +13,17 @@ const supportedLocales = [Locale('es'), Locale('en')];
 /// `es`; only number formatting changes.
 String numberLocale(String languageCode) =>
     languageCode == 'es' ? 'es_MX' : languageCode;
+
+/// The number format for an app [languageCode], in [numberLocale]: the
+/// locale's own decimals when [digits] is null, exactly [digits] otherwise.
+/// The one place the rule above is applied.
+NumberFormat numberFormat(String languageCode, {int? digits}) {
+  final locale = numberLocale(languageCode);
+  return digits == null
+      ? NumberFormat.decimalPattern(locale)
+      : NumberFormat.decimalPatternDigits(
+          locale: locale, decimalDigits: digits);
+}
 
 /// Picks the app locale from the device's preferences: the first device
 /// language that has a catalogue wins, and a device with none falls back to

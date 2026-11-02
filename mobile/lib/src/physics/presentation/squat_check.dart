@@ -1,10 +1,9 @@
-// SPEC-0059 §2.4 (slice 59-c1) — the squat check: its inputs, the figure
-// with playback, and how the range ended. Readouts, moment bars, the live
-// graph and the caveats are slice 59-c2's.
+// SPEC-0059 §2.4 — the squat check: its inputs, the figure with playback,
+// how the range ended, the caveats under the figure, and the frame's
+// readouts, moment bars, live graph and "La cuenta".
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
@@ -12,13 +11,16 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/tokens.dart';
 import '../../l10n/locale_rule.dart';
 import '../application/squat_check_controller.dart';
+import '../domain/caveat_text.dart';
+import '../domain/lever_text.dart';
+import '../domain/moment_scale.dart';
 import '../domain/playback.dart';
 import '../domain/range_end_text.dart';
 import '../domain/squat_range.dart';
 import 'figure_painter.dart';
-
-FbfTokens _tokens(BuildContext context) =>
-    Theme.of(context).extension<FbfTokens>() ?? FbfTokens.light;
+import 'frame_readouts.dart';
+import 'live_graph.dart';
+import 'moment_bars.dart';
 
 /// The lifter's squat as the server computed it: asks for the dorsiflexion
 /// (no default, SPEC-0045 §2.6.1.1) and the bar, then draws the range. A
@@ -70,7 +72,7 @@ class _Stamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = _tokens(context);
+    final t = FbfTokens.of(context);
     return Transform.rotate(
       angle: -0.12,
       child: Container(
@@ -99,7 +101,7 @@ class _Inputs extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final format = NumberFormat.decimalPattern(numberLocale(l10n.localeName));
+    final format = numberFormat(l10n.localeName);
     String text(double? v) => v == null ? '' : format.format(v);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,8 +188,9 @@ class _NumberFieldState extends State<_NumberField> {
       );
 }
 
-/// The figure over the returned frames, with play/pause and a scrubber.
-/// Opens paused on the last frame: the bottom, or where the lifter stops.
+/// The figure over the returned frames, with play/pause and a scrubber, the
+/// caveats right under it (R-0059 AC5), then the frame's numbers. Opens
+/// paused on the last frame: the bottom, or where the lifter stops.
 class _Playback extends StatefulWidget {
   const _Playback({super.key, required this.result});
 
@@ -226,9 +229,10 @@ class _PlaybackState extends State<_Playback>
     // The painter's range and the frame it draws come from one list.
     final current = playbackAt(frames, progress);
     if (current == null) return const SizedBox.shrink();
-    final t = _tokens(context);
+    final t = FbfTokens.of(context);
     final end = widget.result.end;
     final playing = _ticker.isAnimating;
+    final maxAbs = maxAbsMoment(frames);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -279,7 +283,69 @@ class _PlaybackState extends State<_Playback>
               ),
             ],
           ),
+        const SizedBox(height: 8),
+        _Caveats(lines: caveatLines(widget.result, current.frame, l10n)),
+        const SizedBox(height: 12),
+        FrameReadouts(frame: current.frame, maxAbs: maxAbs),
+        const SizedBox(height: 12),
+        MomentBars(frame: current.frame, maxAbs: maxAbs),
+        const SizedBox(height: 14),
+        LiveGraph(frames: frames, current: current),
+        if (leverText(current.frame, l10n) case final sum?) ...[
+          const SizedBox(height: 14),
+          _Cuenta(sum: sum),
+        ],
       ],
+    );
+  }
+}
+
+/// The caveats (R-0059 AC5), in the small mono face design v2 gives them.
+class _Caveats extends StatelessWidget {
+  const _Caveats({required this.lines});
+
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+        fontFamily: AppFonts.mono,
+        fontSize: 11.5,
+        color: FbfTokens.of(context).muted);
+    return Column(
+      key: const Key('squat-caveats'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final line in lines) Text(line, style: style)],
+    );
+  }
+}
+
+/// "La cuenta": the hip's lever sum, the server's numbers formatted.
+class _Cuenta extends StatelessWidget {
+  const _Cuenta({required this.sum});
+
+  final String sum;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = FbfTokens.of(context);
+    final text = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: t.panel,
+        border: Border.all(color: t.line, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(AppLocalizations.of(context).squatCuentaTitle,
+              style: text.labelSmall?.copyWith(color: t.muted)),
+          const SizedBox(height: 4),
+          Text(sum,
+              style: text.bodyMedium?.copyWith(fontFamily: AppFonts.mono)),
+        ],
+      ),
     );
   }
 }

@@ -3,11 +3,17 @@
 // and the scrubber change the frame shown; a stopped range says in plain
 // words how far the lifter gets and why; a rejected one shows the reason
 // and no figure; the dorsiflexion is asked for, with no default, before
-// anything is sent. The stamp reads COMPROBABLE.
+// anything is sent. The stamp reads COMPROBABLE. Slice 59-c2a: the
+// readouts, moment bars, live graph and "La cuenta" follow the frame shown;
+// the caveats sit right under the figure, ahead of the readouts.
 
+import 'package:fitai/src/core/theme/tokens.dart';
 import 'package:fitai/src/physics/application/squat_check_controller.dart';
+import 'package:fitai/src/physics/domain/caveat_text.dart';
+import 'package:fitai/src/physics/domain/lever_text.dart';
 import 'package:fitai/src/physics/domain/squat_range.dart';
 import 'package:fitai/src/physics/presentation/figure_painter.dart';
+import 'package:fitai/src/physics/presentation/live_graph.dart';
 import 'package:fitai/src/physics/presentation/squat_check.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:flutter/material.dart';
@@ -164,7 +170,8 @@ void main() {
       await pump(tester);
 
       expect(
-          find.text('Sin carga, tu tobillo te detiene al 57 % de la bajada.'),
+          find.text('Sin carga, tu tobillo te detiene al 57 % de la bajada. '
+              'El fondo pide 38° y tienes 29°.'),
           findsOneWidget);
       expect(figure, findsOneWidget);
     });
@@ -175,7 +182,9 @@ void main() {
       await pump(tester);
 
       expect(
-          find.text(l10n.squatStopped(l10n.squatWithLoad('84'), 'ankle', 57)),
+          find.text(
+              '${l10n.squatStopped(l10n.squatWithLoad('84'), 'ankle', 57)} '
+              '${l10n.squatStoppedDegrees(38, 29)}'),
           findsOneWidget);
     });
 
@@ -262,6 +271,112 @@ void main() {
       req = verify(() => api.range(captureAny())).captured.single
           as SquatRangeRequest;
       expect(req.barKg, isNull);
+    });
+  });
+  group('readouts, bars and the graph follow the frame (AC4)', () {
+    Future<void> scrubToStart(WidgetTester tester) async {
+      await tester.drag(find.byType(Slider), const Offset(-1000, 0));
+      await tester.pump();
+    }
+
+    Finder readout(String key, String value) =>
+        find.descendant(of: find.byKey(Key(key)), matching: find.text(value));
+
+    testWidgets('the readouts show the frame\'s numbers', (tester) async {
+      await pump(tester);
+      final bottom = squatGolden().frames.last;
+
+      expect(readout('readout-hip', '438'), findsOneWidget);
+      expect(readout('readout-lever', '38'), findsOneWidget);
+      expect(readout('readout-knee', '201'), findsOneWidget);
+      expect(readout('readout-trunk', '51'), findsOneWidget);
+      expect(
+          find.text(l10n.squatAngles('${bottom.kneeFlexionDeg.round()}',
+              '${bottom.hipFlexionDeg.round()}', 100)),
+          findsOneWidget);
+
+      await scrubToStart(tester);
+      expect(readout('readout-hip', '34'), findsOneWidget);
+    });
+
+    testWidgets('a bodyweight range has no lever readout', (tester) async {
+      when(() => api.range(any())).thenAnswer((_) async =>
+          squatResult(const Bottom(), frames: squatGoldenBodyweightFrames()));
+      await pump(tester);
+      expect(find.byKey(const Key('readout-lever')), findsNothing);
+      expect(find.byKey(const Key('readout-hip')), findsOneWidget);
+    });
+
+    testWidgets('a negative moment draws left of zero, in grey',
+        (tester) async {
+      await pump(tester);
+      await scrubToStart(tester);
+
+      final zero = tester.getRect(find.byKey(const Key('moment-zero-knee')));
+      final knee = tester.getRect(find.byKey(const Key('moment-bar-knee')));
+      final hip = tester.getRect(find.byKey(const Key('moment-bar-hip')));
+      expect(knee.right, lessThanOrEqualTo(zero.left + 0.5));
+      expect(hip.left, greaterThanOrEqualTo(zero.left - 0.5));
+      final bar =
+          tester.widget<ColoredBox>(find.byKey(const Key('moment-bar-knee')));
+      expect(bar.color, FbfTokens.light.muted);
+      expect(find.text('-71 N·m'), findsOneWidget);
+    });
+
+    testWidgets('the readout boxes: heat on the torques, not on the lever',
+        (tester) async {
+      await pump(tester);
+      Color edge(String key) {
+        final box = tester.widget<Container>(find
+            .descendant(
+                of: find.byKey(Key(key)), matching: find.byType(Container))
+            .first);
+        return ((box.decoration! as BoxDecoration).border! as Border)
+            .left
+            .color;
+      }
+
+      final t = FbfTokens.light;
+      expect(edge('readout-hip'), t.heat(1));
+      expect(edge('readout-lever'), t.line);
+      expect(edge('readout-trunk'), t.line);
+    });
+
+    testWidgets('the graph\'s point follows the frame', (tester) async {
+      await pump(tester);
+      LiveGraphPainter graph() => tester
+          .widget<CustomPaint>(find.byWidgetPredicate(
+              (w) => w is CustomPaint && w.painter is LiveGraphPainter))
+          .painter! as LiveGraphPainter;
+      expect(graph().current.progress, 1.0);
+      await scrubToStart(tester);
+      expect(graph().current.progress, 0.0);
+    });
+
+    testWidgets('La cuenta shows the server\'s sum for the frame',
+        (tester) async {
+      await pump(tester);
+      expect(find.text(leverText(squatGolden().frames.last, l10n)!),
+          findsOneWidget);
+    });
+  });
+
+  group('the caveats (AC5)', () {
+    testWidgets('sit right under the figure, ahead of the readouts',
+        (tester) async {
+      await pump(tester);
+      final golden = squatGolden();
+      final caveats = find.byKey(const Key('squat-caveats'));
+      expect(caveats, findsOneWidget);
+      for (final line in caveatLines(golden, golden.frames.last, l10n)) {
+        expect(find.descendant(of: caveats, matching: find.text(line)),
+            findsOneWidget,
+            reason: line);
+      }
+      final top = tester.getRect(caveats).top;
+      expect(top, greaterThan(tester.getRect(figure).bottom));
+      expect(top,
+          lessThan(tester.getRect(find.byKey(const Key('readout-hip'))).top));
     });
   });
 }

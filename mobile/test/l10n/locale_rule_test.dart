@@ -18,6 +18,13 @@ void main() {
     expect(numberLocale('en'), 'en');
   });
 
+  test('numberFormat applies the rule, with fixed digits when asked', () {
+    expect(numberFormat('es', digits: 1).format(23.84), '23.8');
+    expect(numberFormat('es', digits: 0).format(-71.49), '-71');
+    expect(numberFormat('es').format(84.5), '84.5');
+    expect(numberFormat('en', digits: 2).format(0.0312), '0.03');
+  });
+
   test('an English device gets en', () {
     expect(resolveLocale([const Locale('en', 'GB')], supportedLocales),
         const Locale('en'));
