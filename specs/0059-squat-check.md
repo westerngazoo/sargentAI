@@ -240,8 +240,8 @@ alone, and `physics` (`Lift::Squat` today, or null) comes from one function
 in `core`, `biomech::model_for(name)`. It matches exactly after trim and
 lowercase, never fuzzily: "Back Squat", "Sentadilla" and "Sentadilla
 trasera" are the squat; a bare "Squat", "Sentadilla frontal", a front, hack
-or low-bar squat are not. A free session's exercises get the same lookup
-through the names the app already sends (59-c2). For
+or low-bar squat are not. A free session's logged exercises get no button:
+the log lists them by name only (owner, 2026-11-02). For
 `physics: null` the button reads **Pronto** and opens nothing. From 1180 px
 the check opens beside the exercise list; on narrower windows, below the
 exercise. 1180 px is SPEC-0061's breakpoint: below it the day's column is
@@ -258,7 +258,7 @@ gives them a model.
 | 59-c1 (= R-0061 slice 4, first half) | the figure painter with vectors and lever, playback, the Stopped and Rejected states | mobile |
 | 59-c2a (second half) | readouts, moment bars, the live graph, "La cuenta", the caveats, the degrees in the stopped line, the word-list test | mobile |
 | 59-c2b | the Física/Pronto buttons and the two layouts | mobile |
-| 59-c2c | the free-session `model_for` lookup | backend + mobile |
+| ~~59-c2c~~ | ~~the free-session `model_for` lookup~~ — dropped 2026-11-02 | — |
 
 Each is within 100–400 hand-written lines (finding 4); 59-c2 as one slice
 was about 1000, and its free-session lookup needs the server (amended
@@ -292,6 +292,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 
 ## 4. Non-goals
 
+- A Física button on logged exercises: the log lists them by name. Seeing
+  the model against the lifter's own video is its own requirement.
 - Saving a check or a variant (SPEC-0045 slice C).
 - Low-bar, deadlift, bench: *Pronto* until modelled.
 - Reading logged sets for the load list.
@@ -349,6 +351,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-11-01 | The plate stays drawn to scale; the stamp reads CHECKABLE in English | "To scale" is the product's promise (owner, accepted with the c2 plan). |
 | 2026-11-01 | Key caveats under the figure (table lengths, arms, convention); the assumptions close the card | Twelve lines under the figure read as fine print and pushed the numbers down; all of them stay visible (owner, with 59-c2b). |
 | 2026-11-01 | The check sits beside the list from 1180 px, SPEC-0061's breakpoint, list 1 : check 2 | Between 720 and 1180 px the day's column is about 360 px (owner, with 59-c2b). |
+| 2026-11-02 | 59-c2c dropped: no physics lookup for free sessions | The log lists exercises by name only; seeing the model against the lifter's video is a separate section and requirement (owner). |
 
 ## 8. Changelog
 
@@ -370,6 +373,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   c2a, c2b and c2c; the degrees in the stopped line.
 - 2026-11-01 — Amended with slice 59-c2b, owner-approved: the key caveats
   under the figure and the assumptions closing the card; beside from 1180 px.
+- 2026-11-02 — 59-c2c dropped (owner): free sessions' logged exercises get
+  no Física button. Every remaining slice is in.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
