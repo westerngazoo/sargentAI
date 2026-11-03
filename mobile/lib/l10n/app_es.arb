@@ -321,6 +321,14 @@
       }
     }
   },
+  "dayPhysics": "Física",
+  "@dayPhysics": {
+    "description": "An exercise's button in the selected day that opens its physics check (R-0061 AC9)."
+  },
+  "daySoon": "Pronto",
+  "@daySoon": {
+    "description": "The same button, disabled, for an exercise the server has no physics model for yet (R-0061 AC9)."
+  },
   "startSession": "Empezar sesión",
   "logLate": "Registrar tarde",
   "viewLogged": "Ver lo registrado",

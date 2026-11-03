@@ -1,6 +1,6 @@
 // SPEC-0059 §2.4 — the squat check: its inputs, the figure with playback,
-// how the range ended, the caveats under the figure, and the frame's
-// readouts, moment bars, live graph and "La cuenta".
+// how the range ended, the key caveats under the figure, the frame's
+// readouts, moment bars, live graph and "La cuenta", and the assumptions.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -189,7 +189,8 @@ class _NumberFieldState extends State<_NumberField> {
 }
 
 /// The figure over the returned frames, with play/pause and a scrubber, the
-/// caveats right under it (R-0059 AC5), then the frame's numbers. Opens
+/// key caveats right under it (R-0059 AC5), then the frame's numbers, and
+/// the assumptions in full at the end, never folded away. Opens
 /// paused on the last frame: the bottom, or where the lifter stops.
 class _Playback extends StatefulWidget {
   const _Playback({super.key, required this.result});
@@ -233,6 +234,7 @@ class _PlaybackState extends State<_Playback>
     final end = widget.result.end;
     final playing = _ticker.isAnimating;
     final maxAbs = maxAbsMoment(frames);
+    final caveats = caveatLines(widget.result, current.frame, l10n);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -284,7 +286,7 @@ class _PlaybackState extends State<_Playback>
             ],
           ),
         const SizedBox(height: 8),
-        _Caveats(lines: caveatLines(widget.result, current.frame, l10n)),
+        _Caveats(key: const Key('squat-caveats'), lines: caveats.key),
         const SizedBox(height: 12),
         FrameReadouts(frame: current.frame, maxAbs: maxAbs),
         const SizedBox(height: 12),
@@ -295,14 +297,19 @@ class _PlaybackState extends State<_Playback>
           const SizedBox(height: 14),
           _Cuenta(sum: sum),
         ],
+        if (caveats.assumptions.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _Caveats(
+              key: const Key('squat-assumptions'), lines: caveats.assumptions),
+        ],
       ],
     );
   }
 }
 
-/// The caveats (R-0059 AC5), in the small mono face design v2 gives them.
+/// Caveat lines (R-0059 AC5), in the small mono face design v2 gives them.
 class _Caveats extends StatelessWidget {
-  const _Caveats({required this.lines});
+  const _Caveats({super.key, required this.lines});
 
   final List<String> lines;
 
@@ -313,7 +320,6 @@ class _Caveats extends StatelessWidget {
         fontSize: 11.5,
         color: FbfTokens.of(context).muted);
     return Column(
-      key: const Key('squat-caveats'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [for (final line in lines) Text(line, style: style)],
     );

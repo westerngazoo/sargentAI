@@ -18,6 +18,11 @@
 // A dictated meal logs; "start workout" by voice closes the sheet and opens
 // focus mode with today's PlanSeed, like Empezar sesión; the other effects
 // open their panel or screen; the sheet closes four ways like any panel.
+//
+// R-0061 AC7, AC9 and R-0059 AC5 -> SPEC-0061 §2.5, SPEC-0059 §2.5 (slice
+// 59-c2b): each exercise of the day has a Física button, Pronto without a
+// model; the check opens below the exercise on a phone and beside the list
+// from 1180 px, with its caveats in the card, never behind a scroll.
 
 import 'dart:async';
 
@@ -40,9 +45,12 @@ import 'package:fitai/src/measurements/services/adjustment_service.dart';
 import 'package:fitai/src/measurements/services/measurement_service.dart';
 import 'package:fitai/src/nutrition/presentation/meal_quick_log_sheet.dart';
 import 'package:fitai/src/nutrition/services/nutrition_service.dart';
+import 'package:fitai/src/physics/application/squat_check_controller.dart';
+import 'package:fitai/src/physics/presentation/squat_check.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/presentation/account_panel.dart';
 import 'package:fitai/src/profile/presentation/profile_prompt.dart';
+import 'package:fitai/src/program/application/schedule_provider.dart';
 import 'package:fitai/src/program/models/schedule.dart';
 import 'package:fitai/src/program/models/synthetic_match.dart';
 import 'package:fitai/src/program/presentation/body_type_names.dart';
@@ -67,6 +75,7 @@ import 'package:mocktail/mocktail.dart';
 import '../support/fakes.dart';
 import '../support/l10n.dart';
 import '../support/measurement_fakes.dart';
+import '../support/physics_fakes.dart';
 import '../support/profile_fakes.dart';
 import '../support/program_fakes.dart';
 import '../support/voice_fakes.dart';
@@ -81,6 +90,7 @@ void main() {
     registerProfileFallbacks();
     registerWorkoutFallbacks();
     registerProgramFallbacks();
+    registerSquatFallbacks();
   });
 
   late MockTokenStore tokenStore;
@@ -159,7 +169,8 @@ void main() {
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
       {Size size = phone,
       bool settle = true,
-      List<String> dictation = const []}) async {
+      List<String> dictation = const [],
+      List<Override> overrides = const []}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -177,6 +188,7 @@ void main() {
       speechInputProvider.overrideWithValue(ScriptedSpeechInput(dictation)),
       voiceOutputProvider.overrideWithValue(voiceOut),
       l10nOverride,
+      ...overrides,
     ]);
     addTearDown(container.dispose);
     // A stored token restores the session, as a cold start does.
@@ -618,6 +630,190 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('secondary-action')), findsNothing);
     });
+  });
+
+  // R-0061 AC9: the physics check per exercise, inside the day.
+  group('AC9 the physics check', () {
+    /// Today is legs, its Back Squat modelled and its Leg Press not.
+    Schedule modelled() => sampleSchedule(
+          days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 1)],
+          cycle: [
+            trainingDayJson(focus: ['chest', 'arms']),
+            trainingDayJson(physics: ['squat', null]),
+            restDayJson,
+          ],
+        );
+    const squat = Key('physics-0');
+    const legPress = Key('physics-1');
+
+    Future<void> open(WidgetTester tester, {Size size = phone}) async {
+      whenGetSchedule(programService).thenAnswer((_) async => modelled());
+      await pumpMain(tester, size: size);
+      await tester.ensureVisible(find.byKey(squat));
+      await tester.tap(find.byKey(squat));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a modelled exercise reads Física, an unmodelled one Pronto',
+        (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => modelled());
+      await pumpMain(tester);
+      final region = find.byKey(const Key('day-region'));
+      expect(
+          find.descendant(of: region, matching: find.byKey(squat)), findsOne);
+      expect(
+          find.descendant(
+              of: find.byKey(squat), matching: find.text(l10n.dayPhysics)),
+          findsOne);
+      expect(
+          find.descendant(
+              of: find.byKey(legPress), matching: find.text(l10n.daySoon)),
+          findsOne);
+      expect(tester.widget<OutlinedButton>(find.byKey(squat)).onPressed,
+          isNotNull);
+      expect(tester.widget<OutlinedButton>(find.byKey(legPress)).onPressed,
+          isNull);
+      expect(find.byType(SquatCheck), findsNothing);
+    });
+
+    testWidgets('Pronto opens nothing', (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => modelled());
+      await pumpMain(tester);
+      await tester.ensureVisible(find.byKey(legPress));
+      await tester.tap(find.byKey(legPress));
+      await tester.pumpAndSettle();
+      expect(tester.widget<OutlinedButton>(find.byKey(legPress)).onPressed,
+          isNull);
+      expect(find.byType(SquatCheck), findsNothing);
+    });
+
+    testWidgets('on a phone the check opens below its exercise',
+        (tester) async {
+      await open(tester);
+      final check = tester.getRect(find.byType(SquatCheck));
+      expect(check.top,
+          greaterThan(tester.getRect(find.text('Back Squat')).bottom));
+      expect(
+          check.bottom, lessThan(tester.getRect(find.text('Leg Press')).top));
+    });
+
+    testWidgets('from 1180 px the check opens beside the exercise list',
+        (tester) async {
+      await open(tester, size: desktop);
+      final check = tester.getRect(find.byType(SquatCheck));
+      final list = tester.getRect(find.text('Leg Press'));
+      expect(check.left, greaterThan(list.right));
+      expect(check.top, lessThan(list.bottom));
+      // The list a third of the row, the check the rest: the list's column
+      // runs from the region's left edge to its buttons' right edge.
+      final column = tester.getRect(find.byKey(squat)).right -
+          tester.getRect(find.byKey(const Key('day-region'))).left;
+      expect(check.width, closeTo(2 * column, 1));
+    });
+
+    testWidgets('just under 1180 px the check opens below its exercise',
+        (tester) async {
+      await open(tester, size: const Size(1179, 900));
+      final check = tester.getRect(find.byType(SquatCheck));
+      expect(check.top,
+          greaterThan(tester.getRect(find.text('Back Squat')).bottom));
+      expect(
+          check.bottom, lessThan(tester.getRect(find.text('Leg Press')).top));
+    });
+
+    testWidgets('the same plan re-read keeps the check open', (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => modelled());
+      final (container, _) = await pumpMain(tester);
+      await tester.ensureVisible(find.byKey(squat));
+      await tester.tap(find.byKey(squat));
+      await tester.pumpAndSettle();
+      // As on app resume: the schedule is read again, unchanged.
+      container.invalidate(scheduleProvider);
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsOne);
+    });
+
+    testWidgets('a new plan for the same day closes the check', (tester) async {
+      // The squat second, so its open index is past the new plan's end.
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 1)],
+            cycle: [
+              trainingDayJson(focus: ['chest', 'arms']),
+              trainingDayJson(
+                  exercises: ['Leg Press', 'Back Squat'],
+                  physics: [null, 'squat']),
+              restDayJson,
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      await tester.ensureVisible(find.byKey(legPress));
+      await tester.tap(find.byKey(legPress));
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsOne);
+      // The day now lists one exercise, with no model: the open index is
+      // past its end.
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [dayJson(isoDate(today), state: 'planned', cycleIndex: 1)],
+            cycle: [
+              trainingDayJson(focus: ['chest', 'arms']),
+              trainingDayJson(exercises: ['Leg Press']),
+              restDayJson,
+            ],
+          ));
+      container.invalidate(scheduleProvider);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Back Squat'), findsNothing);
+      expect(find.byType(SquatCheck), findsNothing);
+    });
+
+    testWidgets('Física again closes the check', (tester) async {
+      await open(tester);
+      await tester.ensureVisible(find.byKey(squat));
+      await tester.tap(find.byKey(squat));
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsNothing);
+    });
+
+    testWidgets('another day closes the check', (tester) async {
+      await open(tester);
+      // doneDay is always in the week strip (see its definition).
+      await tester
+          .tap(find.byKey(ValueKey('day-${doneDay.toIso8601String()}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('day-${today.toIso8601String()}')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SquatCheck), findsNothing);
+    });
+
+    // R-0059 AC5: the caveats sit in the card, behind no scroll of its own,
+    // at both sizes.
+    for (final (name, size) in [('phone', phone), ('desktop', desktop)]) {
+      testWidgets('the caveats are in the card on a $name', (tester) async {
+        final api = MockSquatCheckApi();
+        when(() => api.range(any())).thenAnswer((_) async => squatGolden());
+        whenGetSchedule(programService).thenAnswer((_) async => modelled());
+        await pumpMain(tester, size: size, overrides: [
+          squatCheckApiProvider.overrideWithValue(api),
+          squatDorsiflexionProvider.overrideWith((_) => 29),
+          squatLoadKgProvider.overrideWith((_) => 84),
+        ]);
+        await tester.ensureVisible(find.byKey(squat));
+        await tester.tap(find.byKey(squat));
+        await tester.pumpAndSettle();
+        for (final key in ['squat-caveats', 'squat-assumptions']) {
+          final caveats = find.byKey(Key(key));
+          expect(caveats, findsOne, reason: key);
+          // One scrollable above them: the screen's own.
+          expect(find.ancestor(of: caveats, matching: find.byType(Scrollable)),
+              findsOne,
+              reason: key);
+          await tester.ensureVisible(caveats);
+          await tester.pumpAndSettle();
+          expect(caveats.hitTestable(), findsOne, reason: key);
+        }
+      });
+    }
   });
 
   group('AC8 panels over the screen', () {

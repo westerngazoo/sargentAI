@@ -5,7 +5,9 @@
 // and no figure; the dorsiflexion is asked for, with no default, before
 // anything is sent. The stamp reads COMPROBABLE. Slice 59-c2a: the
 // readouts, moment bars, live graph and "La cuenta" follow the frame shown;
-// the caveats sit right under the figure, ahead of the readouts.
+// the caveats sit right under the figure, ahead of the readouts. Slice
+// 59-c2b: under the figure only the key lines; the assumptions close the
+// card, after "La cuenta".
 
 import 'package:fitai/src/core/theme/tokens.dart';
 import 'package:fitai/src/physics/application/squat_check_controller.dart';
@@ -362,13 +364,14 @@ void main() {
   });
 
   group('the caveats (AC5)', () {
-    testWidgets('sit right under the figure, ahead of the readouts',
+    testWidgets(
+        'the key lines sit right under the figure, ahead of the readouts',
         (tester) async {
       await pump(tester);
       final golden = squatGolden();
       final caveats = find.byKey(const Key('squat-caveats'));
       expect(caveats, findsOneWidget);
-      for (final line in caveatLines(golden, golden.frames.last, l10n)) {
+      for (final line in caveatLines(golden, golden.frames.last, l10n).key) {
         expect(find.descendant(of: caveats, matching: find.text(line)),
             findsOneWidget,
             reason: line);
@@ -377,6 +380,26 @@ void main() {
       expect(top, greaterThan(tester.getRect(figure).bottom));
       expect(top,
           lessThan(tester.getRect(find.byKey(const Key('readout-hip'))).top));
+    });
+
+    testWidgets('the assumptions close the card, after La cuenta',
+        (tester) async {
+      await pump(tester);
+      final golden = squatGolden();
+      final list = find.byKey(const Key('squat-assumptions'));
+      expect(list, findsOneWidget);
+      final lines = caveatLines(golden, golden.frames.last, l10n).assumptions;
+      expect(lines, isNotEmpty);
+      for (final line in lines) {
+        expect(find.descendant(of: list, matching: find.text(line)),
+            findsOneWidget,
+            reason: line);
+      }
+      expect(
+          tester.getRect(list).top,
+          greaterThan(tester
+              .getRect(find.text(leverText(golden.frames.last, l10n)!))
+              .bottom));
     });
   });
 }
