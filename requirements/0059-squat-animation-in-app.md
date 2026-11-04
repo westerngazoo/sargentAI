@@ -1,6 +1,6 @@
 # R-0059 — The squat, animated in the app
 
-- **Status:** Accepted — owner, 2026-10-27 (AC1 amended: an invalid field gets `400`)
+- **Status:** Met — merged via PR #187; qa signed off 2026-11-04 (accepted by the owner 2026-10-27; AC1, AC5 and AC6 amended to as-built)
 - **Milestone:** M6 (the lift model, shown to the lifter)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-10-20
@@ -73,12 +73,14 @@ The model's assumptions are shown on the same screen.
 - **AC5. The caveats, on the screen:**
   - the stated assumptions;
   - which lengths came from the table;
-  - that arms hang and are not used as a counterweight;
+  - how the model places the arms: without a bar they hang; with one, the
+    model puts them between the shoulder and the bar (SPEC-0059, amended
+    2026-10-28);
   - that the legs move between standing and the bottom by a stated
     convention, so where a moment peaks across frames belongs to the
     convention, not to the lifter (SPEC-0045 §2.6.6).
-- **AC6. No injury or safety claims** (R-0045 AC14). Colours identify
-  joints, never good and bad. No wording calls a torque dangerous or safe.
+- **AC6. No injury or safety claims** (R-0045 AC14). Colour means tension
+  magnitude only (SPEC-0061 §2.10), never good and bad. No wording calls a torque dangerous or safe.
 - **AC7. Thin client.** The app may interpolate between returned frames for
   smooth playback; that is display only. It computes no posture or moment.
 - **AC8. Privacy.** The request carries body measurements. The endpoint
@@ -125,4 +127,6 @@ The model's assumptions are shown on the same screen.
 | 2026-10-20 | Measurements travel in the request until R-0058 stores them | Owner. The animation does not wait for R-0058; the profile fills the request later. |
 | 2026-10-20 | The model runs on the server; the app only draws | `project-specifics.md` domain note: intelligence server-side, thin client. |
 | 2026-10-27 | Accepted; an invalid field gets `400 validation { field }` (OQ-4) | Owner. One error shape across the API; the client already parses it. |
+| 2026-11-04 | AC5's arms line and AC6's colour clause amended to as-built | The qa sign-off found both stale: the arms hold the bar when there is one, and colour is a grey-to-red ramp of tension magnitude, not a colour per joint (owner). |
 - 2026-10-25 — OQ-1..3 answered by design v2; OQ-4 raised by SPEC-0059. Ready to accept.
+- 2026-11-04 — AC5 and AC6 amended to as-built (owner); Met after the qa sign-off.

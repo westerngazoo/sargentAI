@@ -1,6 +1,6 @@
 # R-0061 — One screen, built around a calendar
 
-- **Status:** Accepted (owner, 2026-10-22: all five open questions answered)
+- **Status:** Met — merged via PR #187; qa signed off 2026-11-04 (accepted by the owner 2026-10-22)
 - **Milestone:** M3 (Flutter client). Pulled forward by the beta (owner, 2026-10-22).
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-10-22
@@ -275,6 +275,7 @@ All answered by the owner on 2026-10-22:
 | 2026-10-22 | **The plan is a sequence of training days that shifts when a day is not logged.** There is no "missed" state. | Owner (OQ-3): "the dates are not important, the training day is", for example leg day. A fixed-date plan would silently skip a leg day the user never did. |
 | 2026-10-22 | **The microphone opens a dictation sheet only.** | Owner (OQ-4). |
 | 2026-10-22 | **R-0011 is superseded by R-0061.** | Owner (OQ-5). |
+| 2026-11-04 | **Met after the qa sign-off.** Its fixes (the day's Física buttons and focus mode under the app theme; focus mode dark) ride in the sign-off PR. | qa (step 7); owner. |
 
 ## Changelog
 
@@ -290,3 +291,4 @@ All answered by the owner on 2026-10-22:
     controls count as part of the day;
   - unmodelled exercises show "Pronto" with no numbers;
   - the visual identity is @fisicobuenfisico's black, white and red.
+- 2026-11-04 — Met: qa signed off; focus mode's set buttons stack on a phone (owner).

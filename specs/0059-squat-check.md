@@ -1,6 +1,6 @@
 # SPEC-0059 — The squat check: the range endpoint and the physics check widget
 
-- **Status:** Accepted — owner, 2026-10-27, together with R-0059 (OQ-A: `400`)
+- **Status:** Implemented — PRs #180, #183, #184, #185, #186; qa signed off in #187 (accepted by the owner 2026-10-27, together with R-0059; OQ-A: `400`)
 - **Realizes:** R-0059 (Accepted 2026-10-27)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-25
@@ -375,6 +375,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   under the figure and the assumptions closing the card; beside from 1180 px.
 - 2026-11-02 — 59-c2c dropped (owner): free sessions' logged exercises get
   no Física button. Every remaining slice is in.
+- 2026-11-04 — Implemented: qa signed off (#187); R-0059 AC5 and AC6 amended to as-built.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 
