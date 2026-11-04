@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../core/network/api_error_text.dart';
 import '../../core/network/api_exception.dart';
+import '../../core/theme/app_theme.dart';
 import '../application/earbud_coach.dart';
 import '../application/session_driver.dart';
 import '../application/voice_coach.dart';
@@ -25,9 +26,19 @@ import '../application/muscle_names.dart';
 /// the session was finished (button, voice, earbud), so no path leaves the
 /// user on a stale screen. A `null` draft before `done` is a cold start the
 /// router redirects home: the driver state, not the route, owns "a session
-/// is in progress".
-class LiveSessionScreen extends ConsumerWidget {
+/// is in progress". It is dark in both themes (R-0061 AC12): the focus
+/// theme sits above the body, so the body's dialogs and sheets, which
+/// capture the theme of the context that opens them, are dark too.
+class LiveSessionScreen extends StatelessWidget {
   const LiveSessionScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      Theme(data: AppTheme.focus(), child: const _LiveSession());
+}
+
+class _LiveSession extends ConsumerWidget {
+  const _LiveSession();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -421,8 +432,8 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
-        // Stacked, full width: side by side they overflow a phone (R-0061
-        // AC13), and the theme's buttons already span the width.
+        // Stacked, at every size: side by side they overflow a phone (R-0061
+        // AC13). The column stretches them to its width.
         const SizedBox(height: 8),
         TextButton(
           onPressed: _repeat,
@@ -518,7 +529,13 @@ class _AddExerciseSheetState extends State<_AddExerciseSheet> {
                 child: Text(l10n.newExercise,
                     style: Theme.of(context).textTheme.titleLarge),
               ),
-              FilledButton(onPressed: _add, child: Text(l10n.add)),
+              FilledButton(
+                // The theme's full-width minimum would ask the Row for
+                // infinite width.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                onPressed: _add,
+                child: Text(l10n.add),
+              ),
             ],
           ),
           const SizedBox(height: 12),

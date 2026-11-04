@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +8,6 @@ import '../auth/presentation/forgot_password_screen.dart';
 import '../auth/presentation/login_screen.dart';
 import '../auth/presentation/register_screen.dart';
 import '../auth/presentation/reset_password_screen.dart';
-import '../core/theme/app_theme.dart';
 import '../profile/presentation/onboarding_screen.dart';
 import '../home/main_screen.dart';
 import '../shell/splash_screen.dart';
@@ -86,11 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/session',
-        // Focus mode is dark in both themes (R-0061 AC12).
-        builder: (_, __) => Theme(
-          data: AppTheme.focus(),
-          child: const LiveSessionScreen(),
-        ),
+        builder: (_, __) => const LiveSessionScreen(),
       ),
     ],
   );

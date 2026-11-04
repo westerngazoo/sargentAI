@@ -291,4 +291,4 @@ All answered by the owner on 2026-10-22:
     controls count as part of the day;
   - unmodelled exercises show "Pronto" with no numbers;
   - the visual identity is @fisicobuenfisico's black, white and red.
-- 2026-11-04 — Met: qa signed off; focus mode's set buttons stack on a phone (owner).
+- 2026-11-04 — Met: qa signed off; focus mode's set buttons stack at every size (owner).
