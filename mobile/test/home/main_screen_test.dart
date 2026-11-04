@@ -1144,6 +1144,19 @@ void main() {
           }
         });
       }
+
+      // R-0061 AC13 under the app's own theme: a planned day lists its
+      // exercises, each with its Física or Pronto button, and none of them
+      // may break the layout.
+      testWidgets('$name: a planned day with its exercises lays out',
+          (tester) async {
+        await pumpMain(tester, size: size, theme: AppTheme.light());
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const Key('physics-0')), findsOneWidget);
+        final rect = tester.getRect(find.byKey(const Key('primary-action')));
+        expect((Offset.zero & size).contains(rect.topLeft), isTrue);
+        expect(rect.bottom, lessThanOrEqualTo(size.height));
+      });
     }
   });
 

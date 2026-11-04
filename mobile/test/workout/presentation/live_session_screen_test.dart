@@ -28,6 +28,7 @@
 import 'dart:async';
 
 import 'package:fitai/src/core/network/api_exception.dart';
+import 'package:fitai/src/core/theme/app_theme.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/hub/speech_input.dart';
 import 'package:fitai/src/hub/voice_output.dart';
@@ -84,12 +85,14 @@ void main() {
   // Hosts the LiveSessionScreen pushed over a /home sentinel, as the app
   // does (SPEC-0061 §2.5), so a pop is observable. `started` controls whether
   // a session is in progress before the first pump; [seed] starts a plan
-  // session; [transcripts] script the voice coach's dictations.
+  // session; [transcripts] script the voice coach's dictations; [theme] is
+  // the app's own when a layout check needs it.
   Future<(ProviderContainer, GoRouter)> pumpSession(
     WidgetTester tester, {
     bool started = true,
     PlanSeed? seed,
     List<String> transcripts = const [],
+    ThemeData? theme,
   }) async {
     final programService = MockProgramService();
     when(() => programService.getCurrent()).thenAnswer((_) async => null);
@@ -122,7 +125,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedRouterApp(router),
+        child: localizedRouterApp(router, theme: theme),
       ),
     );
     router.push('/session');
@@ -679,5 +682,55 @@ void main() {
       expect(exerciseAfter.sets[1].reps, 5);
       expect(exerciseAfterScreen.sets[2].reps, 5);
     });
+  });
+
+  // R-0061 AC13 -> SPEC-0061 §2.11: focus mode at both sizes, a seeded
+  // session with a set logged: no overflow, no horizontal scroll wider than
+  // the screen, and the AppBar's controls and Finish inside the viewport.
+  group('AC13 focus mode at both sizes', () {
+    for (final (name, size) in [
+      ('phone', const Size(390, 844)),
+      ('desktop', const Size(1440, 900)),
+    ]) {
+      testWidgets('$name: no overflow and no clipped control', (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final (container, _) = await pumpSession(
+          tester,
+          seed: const PlanSeed(
+            userProgramId: 'prog-1',
+            index: 1,
+            exercises: ['Back Squat', 'Leg Press'],
+          ),
+          theme: AppTheme.light(),
+        );
+        driverOf(container).logSet(const SetDraft(reps: 5));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final screen = Offset.zero & size;
+        for (final control in [
+          find.byIcon(Icons.headset_off_outlined),
+          find.byIcon(Icons.headphones_outlined),
+          find.text(l10n.finish).first,
+        ]) {
+          await tester.ensureVisible(control);
+          await tester.pumpAndSettle();
+          final r = tester.getRect(control);
+          expect(screen.contains(r.topLeft), isTrue, reason: '$control $r');
+          expect(screen.contains(r.bottomRight - const Offset(1, 1)), isTrue,
+              reason: '$control $r');
+        }
+        for (final e in find.byType(Scrollable).evaluate()) {
+          final s = e.widget as Scrollable;
+          if (s.axisDirection == AxisDirection.left ||
+              s.axisDirection == AxisDirection.right) {
+            expect(tester.getRect(find.byWidget(s)).width,
+                lessThanOrEqualTo(size.width));
+          }
+        }
+      });
+    }
   });
 }
