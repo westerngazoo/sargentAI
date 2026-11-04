@@ -31,6 +31,7 @@ import 'package:fitai/src/auth/data/auth_repository.dart';
 import 'package:fitai/src/auth/domain/auth_state.dart';
 import 'package:fitai/src/core/network/api_exception.dart';
 import 'package:fitai/src/core/storage/token_store.dart';
+import 'package:fitai/src/core/theme/app_theme.dart';
 import 'package:fitai/src/home/calendar.dart';
 import 'package:fitai/src/home/main_screen.dart';
 import 'package:fitai/src/home/selected_day.dart';
@@ -165,12 +166,14 @@ void main() {
 
   /// [settle] is false when something on screen never stops animating (the
   /// loading spinner while a stubbed request never completes). [dictation]
-  /// is what the speech engine hears, one transcript per listen.
+  /// is what the speech engine hears, one transcript per listen. [theme] is
+  /// the app's own when a layout check needs it.
   Future<(ProviderContainer, GoRouter)> pumpMain(WidgetTester tester,
       {Size size = phone,
       bool settle = true,
       List<String> dictation = const [],
-      List<Override> overrides = const []}) async {
+      List<Override> overrides = const [],
+      ThemeData? theme}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -208,7 +211,7 @@ void main() {
     );
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
-      child: localizedRouterApp(router),
+      child: localizedRouterApp(router, theme: theme),
     ));
     if (settle) {
       await tester.pumpAndSettle();
@@ -273,6 +276,37 @@ void main() {
       }
       expect(find.text(l10n.signOut), findsNothing);
     });
+
+    // SPEC-0061 §6 AC7: "lists exactly the controls". Every enabled ink
+    // control outside the calendar and the day region belongs to one of the
+    // three, and each of the three is there: nothing else to tap.
+    for (final (name, size) in [('phone', phone), ('desktop', desktop)]) {
+      testWidgets(
+          '$name: outside the calendar and the day, exactly the menu, '
+          '+ Comida and the mic', (tester) async {
+        await pumpMain(tester, size: size);
+        const allowed = [Key('profile-menu'), Key('add-meal'), Key('mic')];
+        final inside = [
+          find.byType(CalendarView),
+          find.byKey(const Key('day-region')),
+          for (final k in allowed) find.byKey(k),
+        ];
+        final stray = find.byWidgetPredicate((w) =>
+            w is InkResponse && (w.onTap != null || w.onLongPress != null));
+        expect(stray, findsWidgets, reason: 'the scan sees ink controls');
+        final others = stray.evaluate().where((e) => !inside.any((region) =>
+            find
+                .descendant(of: region, matching: find.byWidget(e.widget))
+                .evaluate()
+                .isNotEmpty));
+        expect(others, isEmpty,
+            reason: 'a control outside AC7: '
+                '${others.map((e) => e.widget.key ?? e.widget).toList()}');
+        for (final k in allowed) {
+          expect(find.byKey(k), findsOneWidget, reason: '$k');
+        }
+      });
+    }
   });
 
   // R-0061 AC2: every capability reachable before the one screen is reached
@@ -1056,6 +1090,60 @@ void main() {
           }
         }
       });
+    }
+
+    // R-0061 AC13: "every panel" at both sizes, each with its real body and
+    // the app's own theme. The day is a free one (no program), so only the
+    // panel is under test here; the day with its exercises is below.
+    final panels = <(String, Future<void> Function(WidgetTester))>[
+      for (final item in [
+        l10n.menuProgram,
+        l10n.menuMeasurements,
+        l10n.menuProgress,
+        l10n.menuAccount,
+      ])
+        (item, (t) => openMenuItem(t, item)),
+      (
+        l10n.addMeal,
+        (t) async {
+          await t.tap(find.byKey(const Key('add-meal')));
+          await t.pumpAndSettle();
+        }
+      ),
+      (
+        l10n.dictationTitle,
+        (t) async {
+          await t.tap(find.byKey(const Key('mic')));
+          await t.pumpAndSettle();
+        }
+      ),
+    ];
+    for (final (name, size) in [('phone', phone), ('desktop', desktop)]) {
+      for (final (panel, open) in panels) {
+        testWidgets('$name: $panel has no overflow and its ✕ on screen',
+            (tester) async {
+          whenGetSchedule(programService)
+              .thenAnswer((_) async => sampleSchedule(programId: null));
+          await pumpMain(tester, size: size, theme: AppTheme.light());
+          expect(tester.takeException(), isNull);
+          await open(tester);
+          expect(tester.takeException(), isNull);
+          final close = tester.getRect(find.byKey(const Key('panel-close')));
+          final screen = Offset.zero & size;
+          expect(screen.contains(close.topLeft), isTrue, reason: '$close');
+          expect(
+              screen.contains(close.bottomRight - const Offset(1, 1)), isTrue,
+              reason: '$close');
+          for (final e in find.byType(Scrollable).evaluate()) {
+            final s = e.widget as Scrollable;
+            if (s.axisDirection == AxisDirection.left ||
+                s.axisDirection == AxisDirection.right) {
+              final r = tester.getRect(find.byWidget(s));
+              expect(r.width, lessThanOrEqualTo(size.width));
+            }
+          }
+        });
+      }
     }
   });
 
