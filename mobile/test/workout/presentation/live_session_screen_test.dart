@@ -670,8 +670,11 @@ void main() {
       expect(exerciseAfter.sets, hasLength(2));
 
       // Simulate on-screen 'Repeat last set' and then 'Log set' for parity
+      // Stacked under the entry, the buttons scroll with the sets above.
+      await tester.ensureVisible(find.text(l10n.repeatLastSet));
       await tester.tap(find.text(l10n.repeatLastSet));
       await tester.pump();
+      await tester.ensureVisible(find.text(l10n.logSet));
       await tester.tap(find.text(l10n.logSet));
       await tester.pump();
 

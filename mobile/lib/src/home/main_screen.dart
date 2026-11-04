@@ -623,6 +623,9 @@ class _DayRegionState extends State<_DayRegion> {
           const SizedBox(width: 8),
           OutlinedButton(
             key: Key('physics-$index'),
+            // The theme's full-width minimum would ask a Row for infinite
+            // width; as + Comida does.
+            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
             onPressed: modelled
                 ? () => setState(() => _open = _open == index ? null : index)
                 : null,

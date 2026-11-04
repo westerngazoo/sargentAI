@@ -421,16 +421,14 @@ class _SetEntryState extends ConsumerState<_SetEntry> {
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
-        Row(
-          children: [
-            TextButton(
-              onPressed: _repeat,
-              child: Text(l10n.repeatLastSet),
-            ),
-            const Spacer(),
-            FilledButton(onPressed: _log, child: Text(l10n.logSet)),
-          ],
+        // Stacked, full width: side by side they overflow a phone (R-0061
+        // AC13), and the theme's buttons already span the width.
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: _repeat,
+          child: Text(l10n.repeatLastSet),
         ),
+        FilledButton(onPressed: _log, child: Text(l10n.logSet)),
       ],
     );
   }
