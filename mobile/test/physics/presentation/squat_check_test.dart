@@ -114,6 +114,43 @@ void main() {
                 g.barForce!.from, g.barForce!.to, t.heat(g.barForce!.heat!))));
     });
 
+    // QA (R-0059 AC4): every part the criterion lists is painted, in ink.
+    testWidgets('paints feet, shank, thigh, trunk, head, arms and the plate',
+        (tester) async {
+      await pump(tester);
+      final g = painter(tester).geometry(tester.getSize(figure));
+      final ink = painter(tester).tokens.line.toARGB32();
+      final render = tester.renderObject(figure);
+
+      PaintPatternPredicate segment(Offset from, Offset to) => (method, args) =>
+          method == #drawLine &&
+          args[0] == from &&
+          args[1] == to &&
+          _argb(args[2]) == ink;
+      PaintPatternPredicate circle(Offset centre, double radius) =>
+          (method, args) =>
+              method == #drawCircle &&
+              args[0] == centre &&
+              args[1] == radius &&
+              _argb(args[2]) == ink;
+
+      for (final (part, from, to) in [
+        ('foot', g.foot.$1, g.foot.$2),
+        ('shank', g.ankle, g.knee),
+        ('thigh', g.knee, g.hip),
+        ('trunk', g.hip, g.shoulder),
+        ('upper arm', g.arm[0], g.arm[1]),
+        ('forearm', g.arm[g.arm.length - 2], g.arm.last),
+      ]) {
+        expect(render, paints..something(segment(from, to)), reason: part);
+      }
+      expect(g.foot.$1.dy, g.groundY, reason: 'the foot is on the ground');
+      expect(render, paints..something(circle(g.head, g.headRadius)),
+          reason: 'head');
+      expect(render, paints..something(circle(g.bar!, g.plateRadius)),
+          reason: 'plate');
+    });
+
     testWidgets('opens on the last frame the server returned', (tester) async {
       await pump(tester);
       expect(painter(tester).current.frame.progress, 1.0);

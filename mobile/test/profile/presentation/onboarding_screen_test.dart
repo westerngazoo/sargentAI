@@ -23,6 +23,7 @@
 import 'dart:async';
 
 import 'package:fitai/src/core/network/api_exception.dart';
+import 'package:fitai/src/core/theme/app_theme.dart';
 import 'package:fitai/src/profile/application/onboarding_controller.dart';
 import 'package:fitai/src/profile/application/profile_providers.dart';
 import 'package:fitai/src/profile/domain/goal.dart';
@@ -50,7 +51,8 @@ void main() {
 
   // Hosts the OnboardingScreen under a minimal router so a `go('/home')` is
   // observable. The /home route is a sentinel.
-  Future<(ProviderContainer, GoRouter)> pumpWizard(WidgetTester tester) async {
+  Future<(ProviderContainer, GoRouter)> pumpWizard(WidgetTester tester,
+      {ThemeData? theme}) async {
     final container = ProviderContainer(
       overrides: [
         profileRepositoryProvider.overrideWithValue(repo),
@@ -74,7 +76,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: localizedRouterApp(router),
+        child: localizedRouterApp(router, theme: theme),
       ),
     );
     await tester.pump();
@@ -247,4 +249,25 @@ void main() {
       expect(find.byType(YearPicker), findsOneWidget);
     });
   });
+
+  // R-0061 AC13: the wizard's Atrás / Siguiente / Terminar row lays out under
+  // the app's own theme, whose buttons have a full-width minimum.
+  for (final (name, size) in [
+    ('phone', const Size(390, 844)),
+    ('desktop', const Size(1440, 900)),
+  ]) {
+    testWidgets('AC13 $name: the step buttons lay out under the app theme',
+        (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final (container, _) = await pumpWizard(tester, theme: AppTheme.light());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      fillValidDraft(container);
+      container.read(onboardingControllerProvider.notifier).next();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
