@@ -1004,6 +1004,12 @@ abstract class AppLocalizations {
   /// **'Pendiente del plan: {focus}'**
   String pendingPlanDay(String focus);
 
+  /// Under today's Empezar sesión on a planned day: skipping today moves this training day to tomorrow (SPEC-0061 §2.5).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Hoy no puedes? {focus} pasa a mañana y el plan se recorre un día.'**
+  String shiftLine(String focus);
+
   /// An exercise's button in the selected day that opens its physics check (R-0061 AC9).
   ///
   /// In es, this message translates to:
