@@ -321,6 +321,15 @@
       }
     }
   },
+  "shiftLine": "¿Hoy no puedes? {focus} pasa a mañana y el plan se recorre un día.",
+  "@shiftLine": {
+    "description": "Under today's Empezar sesión on a planned day: skipping today moves this training day to tomorrow (SPEC-0061 §2.5).",
+    "placeholders": {
+      "focus": {
+        "type": "String"
+      }
+    }
+  },
   "dayPhysics": "Física",
   "@dayPhysics": {
     "description": "An exercise's button in the selected day that opens its physics check (R-0061 AC9)."

@@ -666,6 +666,61 @@ void main() {
     });
   });
 
+  // SPEC-0061 §2.5, slice 6: the shift line under today's action.
+  group('the shift line', () {
+    testWidgets('a planned today says its focus moves to tomorrow',
+        (tester) async {
+      await pumpMain(tester);
+      expect(find.byKey(const Key('shift-line')), findsOneWidget);
+      expect(find.text(l10n.shiftLine(l10n.muscleLegs)), findsOneWidget);
+    });
+
+    testWidgets('it sits under the primary action', (tester) async {
+      await pumpMain(tester);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('shift-line'))).dy,
+        greaterThan(
+            tester.getBottomLeft(find.byKey(const Key('primary-action'))).dy),
+      );
+    });
+
+    testWidgets('a planned future day has none', (tester) async {
+      final later = DateTime(today.year, today.month, today.day + 3);
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [
+              dayJson(isoDate(today), state: 'planned', cycleIndex: 1),
+              dayJson(isoDate(later), state: 'planned', cycleIndex: 0),
+            ],
+          ));
+      final (container, _) = await pumpMain(tester);
+      container.read(selectedDayProvider.notifier).state = later;
+      await tester.pumpAndSettle();
+      expect(find.text('Bench Press'), findsOneWidget);
+      expect(find.byKey(const Key('shift-line')), findsNothing);
+    });
+
+    testWidgets('a rest day and a done day have none', (tester) async {
+      final (container, _) = await pumpMain(tester);
+      container.read(selectedDayProvider.notifier).state = tomorrow;
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('shift-line')), findsNothing);
+      container.read(selectedDayProvider.notifier).state = doneDay;
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('shift-line')), findsNothing);
+    });
+
+    testWidgets('a free workout today, with the plan day pending, has none',
+        (tester) async {
+      whenGetSchedule(programService).thenAnswer((_) async => sampleSchedule(
+            days: [
+              dayJson(isoDate(today), state: 'done', completed: [], pending: 1),
+            ],
+          ));
+      await pumpMain(tester);
+      expect(find.byKey(const Key('shift-line')), findsNothing);
+    });
+  });
+
   // R-0061 AC9: the physics check per exercise, inside the day.
   group('AC9 the physics check', () {
     /// Today is legs, its Back Squat modelled and its Leg Press not.
