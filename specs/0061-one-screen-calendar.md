@@ -332,7 +332,7 @@ site moves to `context.push`, `showPanel` or a pop.
   window it lives in a left rail with the nutrition card.
 - **Selected day.** The hero: the day's name as a comic headline, its
   setup line, one primary action, the shift line ("¿Hoy no puedes? Pierna
-  B pasa a mañana"), and the exercise list, each exercise with a **Física**
+  B pasa a mañana y el plan se recorre un día.", today only), and the exercise list, each exercise with a **Física**
   button.
 - **The physics check (AC9).** Opened by an exercise's Física button,
   inside the day region: beside the exercise list from 1180 px, below the
