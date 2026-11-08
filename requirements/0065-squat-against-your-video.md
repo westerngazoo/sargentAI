@@ -147,24 +147,27 @@ bar sits over the foot) closes the gap, in degrees and centimetres.
 - **OQ-1. How many key frames.** Five fixed frames (top, halfway down,
   bottom, halfway up, top) or the lifter's choice within a range (3 to 9)?
   Proposal: five fixed frames in v1. They match the phases of the rep and
-  keep the fit comparable between lifters.
+  keep the fit comparable between lifters. *Answered 2026-11-08:* five
+  fixed frames; AC3 holds as written.
 - **OQ-2. Saving.** Save the marked points (never the video) so the lifter
   can compare squats over time? Proposal: not in v1. A later slice once
-  R-0024's privacy inventory covers it.
+  R-0024's privacy inventory covers it. *Answered 2026-11-08:* not in v1.
 - **OQ-3. R-0044 and the video on the phone.** R-0044 (Accepted) uploads the
   clip for server-side pose estimation. With the owner's 2026-11-08 call
   that the video stays on the phone, does R-0044's upload path still stand,
   or does it move to on-device extraction, or is it closed? This does not
-  block R-0065.
+  block R-0065. *Answered 2026-11-08:* R-0044 moves to the phone. Its
+  amendment is R-0044's own change, not this requirement's.
 - **OQ-4. One number for the game?** AC8 reports per joint. Should the screen
   also show one summary (for example the largest gap of any joint, in %)?
   Proposal: per joint only in v1, so no joint's trade-off is hidden behind
-  another.
+  another. *Answered 2026-11-08:* per joint only.
 - **OQ-5. Is the minimum well defined?** Whether R-0045's model has a unique
   least-demand posture over trunk lean, knee travel and bar position, and
   how the joints are weighed when lowering one raises another, is for
   SPEC-0065 to show with the architect. If it is not unique, AC8 is amended
-  before acceptance.
+  before acceptance. *Carried to SPEC-0065* (owner, 2026-11-08): the spec
+  shows it with the architect before any code.
 
 ## 6. Decision log
 
@@ -176,8 +179,10 @@ bar sits over the foot) closes the gap, in degrees and centimetres.
 | 2026-11-08 | "Efficient" means the lifter's peak moments against the model's minimum for the same body, load and depth; never good or bad. | R-0059 AC6; a checkable number. Owner agreed. |
 | 2026-11-08 | The video stays on the phone; only the marked points travel. | Owner. Health data: no video stored, nothing to hold before M8's privacy review. |
 | 2026-11-08 | The entry is *Compárate con tu video* in each exercise's physics check. | Owner agreed. |
+| 2026-11-08 | Five fixed key frames; nothing saved in v1; the gap per joint, no single score; whether the minimum is unique is shown in SPEC-0065. | Owner accepted the proposals of OQ-1, OQ-2, OQ-4 and OQ-5. |
 | 2026-11-08 | Squat first; the other basic lifts join through R-0062 and R-0063. | Owner: "necesitamos meter más ejercicios básicos". Each lift needs its own model first. |
 
 ## Changelog
 
 - 2026-11-08 — created (Draft).
+- 2026-11-08 — OQ-1 to OQ-4 answered by the owner; OQ-5 carried to SPEC-0065.
