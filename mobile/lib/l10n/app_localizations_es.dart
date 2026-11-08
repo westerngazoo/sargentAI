@@ -524,6 +524,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String shiftLine(String focus) {
+    return '¿Hoy no puedes? $focus pasa a mañana y el plan se recorre un día.';
+  }
+
+  @override
   String get dayPhysics => 'Física';
 
   @override

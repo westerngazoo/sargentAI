@@ -535,6 +535,14 @@ class _DayRegionState extends State<_DayRegion> {
             ),
           NoAction() => const SizedBox.shrink(),
         },
+        if (isToday && planned != null && action is StartSession) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.shiftLine(focusName(planned.focus, l10n)),
+            key: const Key('shift-line'),
+            style: text.bodySmall?.copyWith(color: t.muted),
+          ),
+        ],
         if (action case ViewLogWithPending(pending: final pendingIndex)) ...[
           const SizedBox(height: 12),
           if (pending != null)
