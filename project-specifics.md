@@ -59,10 +59,13 @@ decision recorded against `R-0001`.
 ## Domain notes
 
 **The intelligence is server-side.** The mobile app is intentionally thin:
-log capture, photo capture, dashboard display. No on-device inference. This
-is a deliberate choice for the target market — Mexico and LATAM, where Android
-hardware quality varies widely — and it lets the ML model improve without
-shipping app updates.
+log capture, photo capture, dashboard display. This is a deliberate choice
+for the target market — Mexico and LATAM, where Android hardware quality
+varies widely — and it lets the ML model improve without shipping app
+updates. **One exception (ADR 0002, 2026-11-10):** pose estimation from
+video runs on the phone, so the video never leaves it; only the keypoint
+series travels, and everything after it is server-side. No other on-device
+inference.
 
 **Bodybuilder archetypes as priors.** New users are matched to a curated
 "archetype library" — Mentzer (low-volume HIT), Arnold (high-volume split),

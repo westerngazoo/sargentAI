@@ -1,6 +1,6 @@
 # R-0044 — Lift Technique Video Analysis
 
-- **Status:** Accepted (owner, 2026-09-11) — amended twice by the owner (2026-08-25, 2026-08-27)
+- **Status:** Accepted (owner, 2026-09-11) — amended by the owner 2026-08-25, 2026-08-27 and 2026-11-10 (pose on the phone, ADR 0002)
 - **Milestone:** M6 (photo/pose pipeline) — the movement half
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-08-25
@@ -40,24 +40,31 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 
 ### Capture and extraction
 
-- **AC0. Asynchronous analysis.** *(Added 2026-08-25.)* Upload returns
-  immediately with an analysis id; the result is polled. Synchronous analysis
-  does not fit: the frame budget implies tens of seconds of serialized
-  inference against a 5-second client read timeout.
+- **AC0. Synchronous analysis of the series.** *(Added 2026-08-25; amended
+  2026-11-10.)* The phone sends the keypoint series and the server answers in
+  the same request. The server only does geometry over a few hundred numbers,
+  so the old reason for a polled job (tens of seconds of server inference)
+  is gone with ADR 0002.
 - **AC0b. Android floor.** *(Added 2026-08-27.)* Frame extraction requires
   `getScaledFrameAtTime` (API 27), so **minSdk for this feature is 27**. The
   alternative — full-resolution decode — is slowest and heaviest on precisely
   the old hardware a lower floor would protect, so a degraded path is worse
   than no path. Below 27 the feature is unavailable with a clear message; the
-  rest of the app is unaffected.
-- **AC1. Server-side inference.** The clip is uploaded and analyzed on the
-  server, reusing R-0013's `PoseEstimator`. No on-device inference — the
-  `project-specifics.md` decision stands (owner-confirmed): one model, improved
-  without app releases, behaving identically on every phone in a market where
-  Android hardware varies widely.
-- **AC2. Bounded input.** Clip duration, file size, resolution and frame count
-  all carry explicit caps, enforced **before** decoding. A clip is
-  attacker-controlled input driving an expensive expansion — the R-0041/R-0042
+  rest of the app is unaffected. *(Amended 2026-11-10.)* The pose model on
+  the phone sets a second floor, stated in SPEC-0044 (hardware and OS); below
+  it the same rule holds.
+- **AC1. Pose on the phone; the video never leaves it.** *(Amended
+  2026-11-10, ADR 0002; was server-side inference.)* The phone extracts the
+  frames and runs the pose model. No video, frame or pixel is ever uploaded;
+  a test asserts the request carries none. The request carries the keypoint
+  series and the pose model's name and version. The server analyses only a
+  version it knows, and answers an unknown one with a typed refusal, so every
+  verdict comes from a model whose accuracy is known.
+- **AC2. Bounded input.** *(Amended 2026-11-10.)* On the phone, clip
+  duration, resolution and frame count are capped **before** decoding. On the
+  server, the series carries explicit caps (frame count, duration, keypoints
+  per frame, coordinate range, confidence in `0..=1`), enforced before any
+  analysis. The series is attacker-controlled input; the R-0041/R-0042
   magnitude-bound lesson applies directly.
 - **AC3. Sampled, not exhaustive.** Analysis samples frames at a stated rate
   (a rep lasts seconds; 60 fps is waste). The rate is a named constant, not a
@@ -151,7 +158,7 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
   segmentation, angles, fault detection, verdicts — is deterministic pure
   functions in `fitai-core` over the keypoint series, with no I/O and no model.
   Unit-testable with synthetic joint series and **no video whatsoever**.
-- **AC16. Ownership and auth.** Clips and analyses are per-user; another user's
+- **AC16. Ownership and auth.** Analyses are per-user (no clip reaches the server); another user's
   is **404**, never 403. Every route requires a JWT.
 - **AC17. Tests.** Synthetic keypoint series per lift covering: a clean rep, one
   clearly-faulty rep per fault type, a borderline case at each threshold, a
@@ -161,18 +168,16 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 
 ## 4. Constraints & non-goals
 
-- **Out of scope:** on-device inference (AC1); real-time / live-camera coaching;
+- **Out of scope:** uploading video or frames (AC1, ADR 0002); real-time / live-camera coaching;
   3D pose reconstruction or multi-camera; lifts beyond the three named;
   automatic weight or rep-count entry into the workout log; comparing a user
   against another person's video; storing clips longer than the analysis needs
   (see below); any injury-risk score.
-- **Video retention is a privacy decision, not a technical one.** Clips are
-  body footage and fall under the same health-data sensitivity as progress
-  photos (`project-specifics.md`, M8 legal review). The spec must state a
-  retention rule; the default should be to discard the clip once the keypoint
-  series is extracted, since the series is all the analysis needs.
-- Ephemeral container disk is **not** durable storage — the same trap the
-  photo pipeline already has.
+- **Video retention.** *(Amended 2026-11-10.)* The clip stays on the phone,
+  so the server holds no footage. The keypoint series is still body data
+  under the same health-data sensitivity as progress photos
+  (`project-specifics.md`, M8 legal review): the spec states whether the
+  series and the analysis are stored, and for how long.
 
 ## 5. Open questions (deferred to SPEC-0044)
 
@@ -188,16 +193,23 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
   spec must say where each number came from rather than inventing them.
 - **OQ-5:** Is analysis synchronous on upload, or a job with a result polled
   later? Cold-start plus decode plus N-frame inference may exceed a request
-  timeout.
+  timeout. *Answered 2026-11-10:* synchronous; inference moved to the phone
+  (AC0).
 - **OQ-6:** Does a clip attach to a logged set (linking technique to load), or
   stand alone? Linking is far more valuable and costs a foreign key.
 - **OQ-7:** Retention default and whether the user can opt into keeping clips.
+  *Narrowed 2026-11-10:* clips never reach the server; the question is now
+  the retention of the series and the analysis.
+- **OQ-8 (new, 2026-11-10):** Which pose model and runtime on the phone
+  (MoveNet via TFLite, ML Kit pose, MediaPipe), its size, and the hardware
+  floor. SPEC-0044 names the dependency and the alternative it rejected.
 
 ## 6. Decision log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2026-08-25 | Server-side inference | Owner decision, upholding `project-specifics.md`: one model improvable without app updates, identical behaviour across highly variable Android hardware. |
+| 2026-11-10 | **Pose on the phone; the video never leaves it** (ADR 0002). Supersedes the 2026-08-25 row below. | Owner. The video is body footage; R-0065 keeps it on the phone, and automatic pose without the video can only run there. Cost: improving the model needs an app release, so the server checks the model version. |
+| 2026-08-25 | ~~Server-side inference~~ (superseded 2026-11-10) | Owner decision, upholding `project-specifics.md`: one model improvable without app updates, identical behaviour across highly variable Android hardware. |
 | 2026-08-25 | All three big lifts in v1 | Owner decision. Noted at the time that each lift needs a different camera view and a wrong verdict on one costs trust in all three; per-lift camera requirements (AC4) and refusal (AC12) are the mitigations. |
 | 2026-08-25 | Analysis is pure geometry in core, not a model | The ML answers "where are the joints"; everything after is deterministic trigonometry, which is testable, explainable, and fixable without retraining. |
 | 2026-08-25 | Refusal is a first-class output | A confident wrong technique verdict causes the injury the feature exists to prevent. This is the strictest application of the codebase's existing honesty precedent. |
@@ -206,6 +218,10 @@ pure geometry that belongs in `fitai-core` beside `goals::assess`.
 ## Changelog
 
 - _2026-08-25 — created (Draft)._
+- _2026-11-10 — pose estimation moves to the phone (owner, ADR 0002): AC0
+  synchronous, AC0b a second floor, AC1 rewritten, AC2 bounds on the series,
+  AC16, the retention note, OQ-5 answered, OQ-7 narrowed, OQ-8 added.
+  SPEC-0044 must be reworked before its next slice._
 - _2026-08-27 — AC7 re-scoped to the calibration seam (the marking UI is
   deferred to its own requirement); AC0b sets the Android floor at API 27.
   Both owner decisions from the SPEC-0044 rewrite._
