@@ -1,6 +1,6 @@
 # R-0065 — Your squat against the model, from your own video
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-11-13)
 - **Milestone:** M6 (the lift model, shown to the lifter)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-11-08
@@ -34,8 +34,8 @@ bar sits over the foot) closes the gap, in degrees and centimetres.
   next question is "and mine?" (owner, 2026-11-02). Marking key frames over
   their own video puts the lifter's real posture into the same physics.
 - **Marking beats guessing.** Automatic pose estimation on a phone video is
-  noisy in exactly the joints that matter (hip, bar), and R-0044's server
-  path needs the video uploaded. A lifter marking five frames carefully is
+  noisy in exactly the joints that matter (hip, bar), even now that R-0044
+  runs it on the phone (ADR 0002). A lifter marking five frames carefully is
   slower but checkable, and it keeps the video on the phone (owner,
   2026-11-08).
 - **"How efficient is my squat" needs a physical answer.** A score of good
@@ -135,7 +135,8 @@ bar sits over the foot) closes the gap, in degrees and centimetres.
   frontal plane need a front view and a 3D model. They are a later
   requirement, not part of this one.
 - **No automatic pose estimation.** The lifter marks the points. R-0044 is the
-  automatic, uploaded path; this requirement does not use it.
+  automatic path (on the phone since ADR 0002); this requirement does not use
+  it.
 - **Demand only.** Where the lifter is closest to their muscles' limit is
   R-0064. Once R-0064 lands, its sticking point can be drawn on this screen.
 - **Nothing saved in v1** (see OQ-2).
@@ -181,8 +182,10 @@ bar sits over the foot) closes the gap, in degrees and centimetres.
 | 2026-11-08 | The entry is *Compárate con tu video* in each exercise's physics check. | Owner agreed. |
 | 2026-11-08 | Five fixed key frames; nothing saved in v1; the gap per joint, no single score; whether the minimum is unique is shown in SPEC-0065. | Owner accepted the proposals of OQ-1, OQ-2, OQ-4 and OQ-5. |
 | 2026-11-08 | Squat first; the other basic lifts join through R-0062 and R-0063. | Owner: "necesitamos meter más ejercicios básicos". Each lift needs its own model first. |
+| 2026-11-13 | Accepted. | Owner. Whether AC5's fit also estimates the camera angle waits on the marking prototype's result with a real video; if it does, AC5 is amended in SPEC-0065. |
 
 ## Changelog
 
 - 2026-11-08 — created (Draft).
 - 2026-11-08 — OQ-1 to OQ-4 answered by the owner; OQ-5 carried to SPEC-0065.
+- 2026-11-13 — R-0044 references updated to ADR 0002 (pose on the phone); Accepted by the owner.
