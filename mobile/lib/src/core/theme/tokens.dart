@@ -95,6 +95,11 @@ class FbfTokens extends ThemeExtension<FbfTokens> {
     barRed: Color(0xFFFF4D4D),
   );
 
+  /// The tokens of [context]'s theme, or [light] when the theme carries none
+  /// (a bare `MaterialApp`, as in widget tests).
+  static FbfTokens of(BuildContext context) =>
+      Theme.of(context).extension<FbfTokens>() ?? light;
+
   /// The tension colour for a magnitude in `0..=1`.
   Color heat(double t) {
     final x = t.clamp(0.0, 1.0);

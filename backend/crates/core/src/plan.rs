@@ -17,6 +17,8 @@ use chrono::{Days, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::biomech::model_for;
+use crate::technique::Lift;
 use crate::workout::MuscleGroup;
 
 /// One day of a program's cycle (SPEC-0061 §2.1).
@@ -24,14 +26,45 @@ use crate::workout::MuscleGroup;
 /// A training day names its `focus` with the closed [`MuscleGroup`]
 /// vocabulary — the client builds the day's name from it in the user's
 /// language, so the server sends no prose — and lists its exercises.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PlanDay {
     Training {
         focus: Vec<MuscleGroup>,
-        exercises: Vec<String>,
+        exercises: Vec<PlanExercise>,
     },
     Rest,
+}
+
+/// An exercise of a training day and the lift whose physics check models it
+/// (SPEC-0059 §2.5). Built only from the name, through [`model_for`], so the
+/// two cannot disagree.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct PlanExercise {
+    name: String,
+    physics: Option<Lift>,
+}
+
+impl PlanExercise {
+    /// The exercise `name`, with its physics decided by [`model_for`].
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        let name = name.into();
+        let physics = model_for(&name);
+        Self { name, physics }
+    }
+
+    /// The exercise's name, as the program lists it.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The lift whose physics check models this exercise, if any.
+    #[must_use]
+    pub fn physics(&self) -> Option<Lift> {
+        self.physics
+    }
 }
 
 impl PlanDay {
@@ -316,7 +349,7 @@ mod tests {
     fn training(group: MuscleGroup) -> PlanDay {
         PlanDay::Training {
             focus: vec![group],
-            exercises: vec!["Some lift".into()],
+            exercises: vec![PlanExercise::new("Some lift")],
         }
     }
 
@@ -789,17 +822,36 @@ mod tests {
         }
     }
 
+    // --- physics (SPEC-0059 §2.5) ---------------------------------------
+
+    #[test]
+    fn an_exercise_takes_its_physics_from_its_name() {
+        assert_eq!(PlanExercise::new("Back Squat").physics(), Some(Lift::Squat));
+        assert_eq!(PlanExercise::new("Leg Press").physics(), None);
+        assert_eq!(PlanExercise::new("Leg Press").name(), "Leg Press");
+    }
+
     // --- wire shape (§2.4; slice 2c serializes these) ------------------
 
     #[test]
     fn plan_day_serializes_with_a_kind_tag() {
         let day = PlanDay::Training {
             focus: vec![MuscleGroup::Legs],
-            exercises: vec!["Back Squat".into()],
+            exercises: vec![
+                PlanExercise::new("Back Squat"),
+                PlanExercise::new("Leg Curl"),
+            ],
         };
         assert_eq!(
             serde_json::to_value(&day).unwrap(),
-            serde_json::json!({ "kind": "training", "focus": ["legs"], "exercises": ["Back Squat"] })
+            serde_json::json!({
+                "kind": "training",
+                "focus": ["legs"],
+                "exercises": [
+                    { "name": "Back Squat", "physics": "squat" },
+                    { "name": "Leg Curl", "physics": null },
+                ],
+            })
         );
         assert_eq!(
             serde_json::to_value(PlanDay::Rest).unwrap(),

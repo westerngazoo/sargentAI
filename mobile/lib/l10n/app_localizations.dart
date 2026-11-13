@@ -1004,6 +1004,24 @@ abstract class AppLocalizations {
   /// **'Pendiente del plan: {focus}'**
   String pendingPlanDay(String focus);
 
+  /// Under today's Empezar sesión on a planned day: skipping today moves this training day to tomorrow (SPEC-0061 §2.5).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Hoy no puedes? {focus} pasa a mañana y el plan se recorre un día.'**
+  String shiftLine(String focus);
+
+  /// An exercise's button in the selected day that opens its physics check (R-0061 AC9).
+  ///
+  /// In es, this message translates to:
+  /// **'Física'**
+  String get dayPhysics;
+
+  /// The same button, disabled, for an exercise the server has no physics model for yet (R-0061 AC9).
+  ///
+  /// In es, this message translates to:
+  /// **'Pronto'**
+  String get daySoon;
+
   /// No description provided for @startSession.
   ///
   /// In es, this message translates to:
@@ -2096,6 +2114,223 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sesión de entrenamiento'**
   String get workoutSessionChannel;
+
+  /// The squat check's hip sum (La cuenta, SPEC-0059 §2.3): bar force × lever = bar moment, plus the body's share = the hip moment. Every number is pre-formatted from the server.
+  ///
+  /// In es, this message translates to:
+  /// **'{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} del cuerpo = {hipNm} N·m'**
+  String squatLeverSum(
+      String barN, String leverM, String barNm, String bodyNm, String hipNm);
+
+  /// The squat check's headline (SPEC-0059 §2.4, design v2).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sentadilla, tu palanca'**
+  String get squatTitle;
+
+  /// The squat check's stamp (SPEC-0061 §2.10): every number can be checked. Never 'COMPROBADO' (verified).
+  ///
+  /// In es, this message translates to:
+  /// **'COMPROBABLE'**
+  String get squatStamp;
+
+  /// Label of the squat check's dorsiflexion field, in degrees.
+  ///
+  /// In es, this message translates to:
+  /// **'Dorsiflexión del tobillo (°)'**
+  String get squatDorsiflexionLabel;
+
+  /// Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1). The range is dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart).
+  ///
+  /// In es, this message translates to:
+  /// **'De 0 a 90. El modelo no supone un valor: escribe el tuyo.'**
+  String get squatDorsiflexionHelp;
+
+  /// Error when the typed dorsiflexion is not a number in dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart, 0..90).
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un número de 0 a 90.'**
+  String get squatDorsiflexionInvalid;
+
+  /// Label of the squat check's bar-load field.
+  ///
+  /// In es, this message translates to:
+  /// **'Barra (kg)'**
+  String get squatLoadLabel;
+
+  /// Helper under the bar-load field: leaving it empty checks bodyweight only.
+  ///
+  /// In es, this message translates to:
+  /// **'Vacío: solo tu cuerpo.'**
+  String get squatLoadHelp;
+
+  /// Error when the typed bar load is not a number above barKgAbove and up to barKgMax (squat_range.dart, (0, 1000]).
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un peso mayor que 0, hasta 1000.'**
+  String get squatLoadInvalid;
+
+  /// Shown when the squat check has no profile to take height and mass from.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu perfil necesita estatura y peso para armar tu sentadilla.'**
+  String get squatNeedsProfile;
+
+  /// Tooltip of the squat check's play button.
+  ///
+  /// In es, this message translates to:
+  /// **'Reproducir'**
+  String get squatPlay;
+
+  /// Tooltip of the squat check's pause button.
+  ///
+  /// In es, this message translates to:
+  /// **'Pausar'**
+  String get squatPause;
+
+  /// Accessibility label of the squat check's scrubber.
+  ///
+  /// In es, this message translates to:
+  /// **'Recorrer la bajada, de pie al fondo'**
+  String get squatScrub;
+
+  /// Accessibility label of the squat figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala'**
+  String get squatFigureLabel;
+
+  /// Opens the stopped-range line for a bodyweight check.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin carga'**
+  String get squatWithoutLoad;
+
+  /// Opens the stopped-range line for a loaded check; kg is the server's bar load, pre-formatted.
+  ///
+  /// In es, this message translates to:
+  /// **'Con {kg} kg'**
+  String squatWithLoad(String kg);
+
+  /// A stopped squat range in plain words (SPEC-0059 §2.4, R-0059 AC3). load is squatWithLoad or squatWithoutLoad; cause is the limiting joint (ankle, knee, hip, lumbar), 'balance', 'implausible', or 'other' when only the model's convention stops the range; percent is how far down the lifter gets. No safety or injury claim.
+  ///
+  /// In es, this message translates to:
+  /// **'{load}, {cause, select, ankle{tu tobillo te detiene} knee{tu rodilla te detiene} hip{tu cadera te detiene} lumbar{tu espalda baja te detiene} balance{el modelo deja de equilibrarte} implausible{la postura deja de ser anatómicamente posible} other{la convención del modelo te detiene}} al {percent} % de la bajada.'**
+  String squatStopped(String load, String cause, int percent);
+
+  /// Why the model could not place the lifter at all (a rejected squat range, R-0059 AC3): reason is 'balance', 'implausible', the limiting joint (ankle, knee, hip, lumbar), or 'other'. No figure is shown. No safety or injury claim.
+  ///
+  /// In es, this message translates to:
+  /// **'{reason, select, balance{El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.} implausible{Con estos datos el modelo no puede armar una postura anatómicamente posible.} ankle{Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.} knee{Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.} hip{Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.} lumbar{Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.} other{Con estos datos el modelo no puede armar tu sentadilla.}}'**
+  String squatRejected(String reason);
+
+  /// Follows squatStopped when a joint's limit stops the range: the degrees the bottom needs and the lifter's own, the server's numbers rounded.
+  ///
+  /// In es, this message translates to:
+  /// **'El fondo pide {needed}° y tienes {available}°.'**
+  String squatStoppedDegrees(int needed, int available);
+
+  /// Readout label: the hip's net moment, N·m.
+  ///
+  /// In es, this message translates to:
+  /// **'τ cadera'**
+  String get squatReadoutHip;
+
+  /// Readout label: the horizontal distance from the hip to the bar's line, cm.
+  ///
+  /// In es, this message translates to:
+  /// **'palanca cadera'**
+  String get squatReadoutLever;
+
+  /// Readout label: the knee's net moment, N·m.
+  ///
+  /// In es, this message translates to:
+  /// **'τ rodilla'**
+  String get squatReadoutKnee;
+
+  /// Readout label: the trunk's lean from vertical, degrees.
+  ///
+  /// In es, this message translates to:
+  /// **'β tronco'**
+  String get squatReadoutTrunk;
+
+  /// The frame's knee and hip flexion (pre-formatted) and how far down it is.
+  ///
+  /// In es, this message translates to:
+  /// **'rodilla {knee}° · cadera {hip}° · recorrido {percent} %'**
+  String squatAngles(String knee, String hip, int percent);
+
+  /// Heading over the moment bars.
+  ///
+  /// In es, this message translates to:
+  /// **'N·m que sostiene cada articulación'**
+  String get squatGroupsTitle;
+
+  /// A moment bar's row label: the joint (hip, knee, ankle, lumbar).
+  ///
+  /// In es, this message translates to:
+  /// **'{joint, select, hip{Cadera} knee{Rodilla} ankle{Tobillo} lumbar{Espalda baja} other{Otra}}'**
+  String squatJoint(String joint);
+
+  /// A moment bar's value; value is the server's moment, pre-formatted, a minus sign when the load assists extension.
+  ///
+  /// In es, this message translates to:
+  /// **'{value} N·m'**
+  String squatMomentValue(String value);
+
+  /// Heading over the live graph.
+  ///
+  /// In es, this message translates to:
+  /// **'τ contra altura de la barra'**
+  String get squatGraphTitle;
+
+  /// The live graph's semantics label.
+  ///
+  /// In es, this message translates to:
+  /// **'Gráfica del torque de cadera y de rodilla según la altura de la barra'**
+  String get squatGraphLabel;
+
+  /// Caption under the live graph.
+  ///
+  /// In es, this message translates to:
+  /// **'Altura de la barra: de pie a la izquierda, el fondo a la derecha.'**
+  String get squatGraphAxis;
+
+  /// Heading over the lever sum (squatLeverSum).
+  ///
+  /// In es, this message translates to:
+  /// **'La cuenta de tu cadera'**
+  String get squatCuentaTitle;
+
+  /// How the model places the arms (R-0059 AC5).
+  ///
+  /// In es, this message translates to:
+  /// **'Sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra.'**
+  String get squatCaveatArms;
+
+  /// The range's leg convention (R-0059 AC5, SPEC-0045 §2.6.6).
+  ///
+  /// In es, this message translates to:
+  /// **'Entre de pie y el fondo las piernas siguen una convención del modelo; tu curva real saldrá de tu video.'**
+  String get squatCaveatConvention;
+
+  /// Which segment lengths came from the anthropometric table; parts is a comma-separated list of squatLength.
+  ///
+  /// In es, this message translates to:
+  /// **'De la tabla, no medidos: {parts}.'**
+  String squatTableLengths(String parts);
+
+  /// A segment named by the server's table_lengths token.
+  ///
+  /// In es, this message translates to:
+  /// **'{part, select, thigh{muslo} shank{pierna} trunk{tronco} other{otro segmento}}'**
+  String squatLength(String part);
+
+  /// A stated model assumption, by the server's token (core's Assumption, SPEC-0045). joints_advance_together is shown as squatCaveatConvention. Unknown tokens take 'other'. No safety or injury claim.
+  ///
+  /// In es, this message translates to:
+  /// **'{token, select, sagittal_plane{De perfil: todo pasa en un plano; los momentos de frente no se calculan.} quasi_static{Estático: cada cuadro es una postura en equilibrio sobre el mediopié, sin aceleraciones.} rigid_segments{Segmentos rígidos: el tronco no se redondea.} single_posture{Cada cuadro es una postura, no una repetición: no hay velocidad.} solved_baseline{La postura se calcula con tus largos y una convención; no es una postura en la que te hayamos visto.} rigid_trunk_lumbar{La espalda baja es una sola articulación (L5/S1) en un tronco rígido.} table_derived_masses{La masa de cada segmento sale de una tabla, como fracción de tu peso.} table_derived_lengths{Algún largo salió de la tabla, no de tus medidas.} knees_track_feet{Las rodillas siguen la línea de los pies; el momento de frente de la cadera no se calcula.} body_fat_ignored{La grasa corporal no entra en el modelo.} straight_body_upright{De pie es un cuerpo recto, inclinado desde el tobillo hasta quedar sobre el mediopié; no es tu postura observada.} other{El modelo declara un supuesto más que esta versión de la app no sabe nombrar.}}'**
+  String squatAssumption(String token);
 }
 
 class _AppLocalizationsDelegate

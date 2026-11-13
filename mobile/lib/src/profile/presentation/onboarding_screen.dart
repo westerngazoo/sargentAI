@@ -119,13 +119,17 @@ class _Controls extends StatelessWidget {
                 child: Text(l10n.back),
               ),
             const Spacer(),
+            // The theme's buttons have a full-width minimum, which a Row
+            // cannot give; these keep its height only.
             if (!isLast)
               FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 54)),
                 onPressed: canAdvance ? ctrl.next : null,
                 child: Text(l10n.next),
               )
             else
               FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 54)),
                 onPressed: state.submitting ? null : ctrl.submit,
                 child: state.submitting
                     ? const SizedBox(

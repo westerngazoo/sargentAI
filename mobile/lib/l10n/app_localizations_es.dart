@@ -524,6 +524,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String shiftLine(String focus) {
+    return '¿Hoy no puedes? $focus pasa a mañana y el plan se recorre un día.';
+  }
+
+  @override
+  String get dayPhysics => 'Física';
+
+  @override
+  String get daySoon => 'Pronto';
+
+  @override
   String get startSession => 'Empezar sesión';
 
   @override
@@ -1169,4 +1180,218 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get workoutSessionChannel => 'Sesión de entrenamiento';
+
+  @override
+  String squatLeverSum(
+      String barN, String leverM, String barNm, String bodyNm, String hipNm) {
+    return '$barN N × $leverM m = $barNm N·m, + $bodyNm del cuerpo = $hipNm N·m';
+  }
+
+  @override
+  String get squatTitle => 'Tu sentadilla, tu palanca';
+
+  @override
+  String get squatStamp => 'COMPROBABLE';
+
+  @override
+  String get squatDorsiflexionLabel => 'Dorsiflexión del tobillo (°)';
+
+  @override
+  String get squatDorsiflexionHelp =>
+      'De 0 a 90. El modelo no supone un valor: escribe el tuyo.';
+
+  @override
+  String get squatDorsiflexionInvalid => 'Escribe un número de 0 a 90.';
+
+  @override
+  String get squatLoadLabel => 'Barra (kg)';
+
+  @override
+  String get squatLoadHelp => 'Vacío: solo tu cuerpo.';
+
+  @override
+  String get squatLoadInvalid => 'Escribe un peso mayor que 0, hasta 1000.';
+
+  @override
+  String get squatNeedsProfile =>
+      'Tu perfil necesita estatura y peso para armar tu sentadilla.';
+
+  @override
+  String get squatPlay => 'Reproducir';
+
+  @override
+  String get squatPause => 'Pausar';
+
+  @override
+  String get squatScrub => 'Recorrer la bajada, de pie al fondo';
+
+  @override
+  String get squatFigureLabel =>
+      'Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala';
+
+  @override
+  String get squatWithoutLoad => 'Sin carga';
+
+  @override
+  String squatWithLoad(String kg) {
+    return 'Con $kg kg';
+  }
+
+  @override
+  String squatStopped(String load, String cause, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      cause,
+      {
+        'ankle': 'tu tobillo te detiene',
+        'knee': 'tu rodilla te detiene',
+        'hip': 'tu cadera te detiene',
+        'lumbar': 'tu espalda baja te detiene',
+        'balance': 'el modelo deja de equilibrarte',
+        'implausible': 'la postura deja de ser anatómicamente posible',
+        'other': 'la convención del modelo te detiene',
+      },
+    );
+    return '$load, $_temp0 al $percent % de la bajada.';
+  }
+
+  @override
+  String squatRejected(String reason) {
+    String _temp0 = intl.Intl.selectLogic(
+      reason,
+      {
+        'balance':
+            'El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.',
+        'implausible':
+            'Con estos datos el modelo no puede armar una postura anatómicamente posible.',
+        'ankle':
+            'Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.',
+        'knee':
+            'Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.',
+        'hip':
+            'Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.',
+        'lumbar':
+            'Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.',
+        'other': 'Con estos datos el modelo no puede armar tu sentadilla.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatStoppedDegrees(int needed, int available) {
+    return 'El fondo pide $needed° y tienes $available°.';
+  }
+
+  @override
+  String get squatReadoutHip => 'τ cadera';
+
+  @override
+  String get squatReadoutLever => 'palanca cadera';
+
+  @override
+  String get squatReadoutKnee => 'τ rodilla';
+
+  @override
+  String get squatReadoutTrunk => 'β tronco';
+
+  @override
+  String squatAngles(String knee, String hip, int percent) {
+    return 'rodilla $knee° · cadera $hip° · recorrido $percent %';
+  }
+
+  @override
+  String get squatGroupsTitle => 'N·m que sostiene cada articulación';
+
+  @override
+  String squatJoint(String joint) {
+    String _temp0 = intl.Intl.selectLogic(
+      joint,
+      {
+        'hip': 'Cadera',
+        'knee': 'Rodilla',
+        'ankle': 'Tobillo',
+        'lumbar': 'Espalda baja',
+        'other': 'Otra',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatMomentValue(String value) {
+    return '$value N·m';
+  }
+
+  @override
+  String get squatGraphTitle => 'τ contra altura de la barra';
+
+  @override
+  String get squatGraphLabel =>
+      'Gráfica del torque de cadera y de rodilla según la altura de la barra';
+
+  @override
+  String get squatGraphAxis =>
+      'Altura de la barra: de pie a la izquierda, el fondo a la derecha.';
+
+  @override
+  String get squatCuentaTitle => 'La cuenta de tu cadera';
+
+  @override
+  String get squatCaveatArms =>
+      'Sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra.';
+
+  @override
+  String get squatCaveatConvention =>
+      'Entre de pie y el fondo las piernas siguen una convención del modelo; tu curva real saldrá de tu video.';
+
+  @override
+  String squatTableLengths(String parts) {
+    return 'De la tabla, no medidos: $parts.';
+  }
+
+  @override
+  String squatLength(String part) {
+    String _temp0 = intl.Intl.selectLogic(
+      part,
+      {
+        'thigh': 'muslo',
+        'shank': 'pierna',
+        'trunk': 'tronco',
+        'other': 'otro segmento',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatAssumption(String token) {
+    String _temp0 = intl.Intl.selectLogic(
+      token,
+      {
+        'sagittal_plane':
+            'De perfil: todo pasa en un plano; los momentos de frente no se calculan.',
+        'quasi_static':
+            'Estático: cada cuadro es una postura en equilibrio sobre el mediopié, sin aceleraciones.',
+        'rigid_segments': 'Segmentos rígidos: el tronco no se redondea.',
+        'single_posture':
+            'Cada cuadro es una postura, no una repetición: no hay velocidad.',
+        'solved_baseline':
+            'La postura se calcula con tus largos y una convención; no es una postura en la que te hayamos visto.',
+        'rigid_trunk_lumbar':
+            'La espalda baja es una sola articulación (L5/S1) en un tronco rígido.',
+        'table_derived_masses':
+            'La masa de cada segmento sale de una tabla, como fracción de tu peso.',
+        'table_derived_lengths':
+            'Algún largo salió de la tabla, no de tus medidas.',
+        'knees_track_feet':
+            'Las rodillas siguen la línea de los pies; el momento de frente de la cadera no se calcula.',
+        'body_fat_ignored': 'La grasa corporal no entra en el modelo.',
+        'straight_body_upright':
+            'De pie es un cuerpo recto, inclinado desde el tobillo hasta quedar sobre el mediopié; no es tu postura observada.',
+        'other':
+            'El modelo declara un supuesto más que esta versión de la app no sabe nombrar.',
+      },
+    );
+    return '$_temp0';
+  }
 }

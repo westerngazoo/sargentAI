@@ -321,6 +321,23 @@
       }
     }
   },
+  "shiftLine": "¿Hoy no puedes? {focus} pasa a mañana y el plan se recorre un día.",
+  "@shiftLine": {
+    "description": "Under today's Empezar sesión on a planned day: skipping today moves this training day to tomorrow (SPEC-0061 §2.5).",
+    "placeholders": {
+      "focus": {
+        "type": "String"
+      }
+    }
+  },
+  "dayPhysics": "Física",
+  "@dayPhysics": {
+    "description": "An exercise's button in the selected day that opens its physics check (R-0061 AC9)."
+  },
+  "daySoon": "Pronto",
+  "@daySoon": {
+    "description": "The same button, disabled, for an exercise the server has no physics model for yet (R-0061 AC9)."
+  },
   "startSession": "Empezar sesión",
   "logLate": "Registrar tarde",
   "viewLogged": "Ver lo registrado",
@@ -878,5 +895,231 @@
   "workoutSessionChannel": "Sesión de entrenamiento",
   "@workoutSessionChannel": {
     "description": "Android notification channel name for the earbud coach, shown in the OS notification settings"
+  },
+  "squatLeverSum": "{barN} N × {leverM} m = {barNm} N·m, + {bodyNm} del cuerpo = {hipNm} N·m",
+  "@squatLeverSum": {
+    "description": "The squat check's hip sum (La cuenta, SPEC-0059 §2.3): bar force × lever = bar moment, plus the body's share = the hip moment. Every number is pre-formatted from the server.",
+    "placeholders": {
+      "barN": {
+        "type": "String"
+      },
+      "leverM": {
+        "type": "String"
+      },
+      "barNm": {
+        "type": "String"
+      },
+      "bodyNm": {
+        "type": "String"
+      },
+      "hipNm": {
+        "type": "String"
+      }
+    }
+  },
+  "squatTitle": "Tu sentadilla, tu palanca",
+  "@squatTitle": {
+    "description": "The squat check's headline (SPEC-0059 §2.4, design v2)."
+  },
+  "squatStamp": "COMPROBABLE",
+  "@squatStamp": {
+    "description": "The squat check's stamp (SPEC-0061 §2.10): every number can be checked. Never 'COMPROBADO' (verified)."
+  },
+  "squatDorsiflexionLabel": "Dorsiflexión del tobillo (°)",
+  "@squatDorsiflexionLabel": {
+    "description": "Label of the squat check's dorsiflexion field, in degrees."
+  },
+  "squatDorsiflexionHelp": "De 0 a 90. El modelo no supone un valor: escribe el tuyo.",
+  "@squatDorsiflexionHelp": {
+    "description": "Helper under the dorsiflexion field: it has no default (SPEC-0045 §2.6.1.1). The range is dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart)."
+  },
+  "squatDorsiflexionInvalid": "Escribe un número de 0 a 90.",
+  "@squatDorsiflexionInvalid": {
+    "description": "Error when the typed dorsiflexion is not a number in dorsiflexionMinDeg..dorsiflexionMaxDeg (squat_range.dart, 0..90)."
+  },
+  "squatLoadLabel": "Barra (kg)",
+  "@squatLoadLabel": {
+    "description": "Label of the squat check's bar-load field."
+  },
+  "squatLoadHelp": "Vacío: solo tu cuerpo.",
+  "@squatLoadHelp": {
+    "description": "Helper under the bar-load field: leaving it empty checks bodyweight only."
+  },
+  "squatLoadInvalid": "Escribe un peso mayor que 0, hasta 1000.",
+  "@squatLoadInvalid": {
+    "description": "Error when the typed bar load is not a number above barKgAbove and up to barKgMax (squat_range.dart, (0, 1000])."
+  },
+  "squatNeedsProfile": "Tu perfil necesita estatura y peso para armar tu sentadilla.",
+  "@squatNeedsProfile": {
+    "description": "Shown when the squat check has no profile to take height and mass from."
+  },
+  "squatPlay": "Reproducir",
+  "@squatPlay": {
+    "description": "Tooltip of the squat check's play button."
+  },
+  "squatPause": "Pausar",
+  "@squatPause": {
+    "description": "Tooltip of the squat check's pause button."
+  },
+  "squatScrub": "Recorrer la bajada, de pie al fondo",
+  "@squatScrub": {
+    "description": "Accessibility label of the squat check's scrubber."
+  },
+  "squatFigureLabel": "Figura de perfil de la sentadilla, con la palanca de la cadera y las fuerzas a escala",
+  "@squatFigureLabel": {
+    "description": "Accessibility label of the squat figure."
+  },
+  "squatWithoutLoad": "Sin carga",
+  "@squatWithoutLoad": {
+    "description": "Opens the stopped-range line for a bodyweight check."
+  },
+  "squatWithLoad": "Con {kg} kg",
+  "@squatWithLoad": {
+    "description": "Opens the stopped-range line for a loaded check; kg is the server's bar load, pre-formatted.",
+    "placeholders": {
+      "kg": {
+        "type": "String"
+      }
+    }
+  },
+  "squatStopped": "{load}, {cause, select, ankle{tu tobillo te detiene} knee{tu rodilla te detiene} hip{tu cadera te detiene} lumbar{tu espalda baja te detiene} balance{el modelo deja de equilibrarte} implausible{la postura deja de ser anatómicamente posible} other{la convención del modelo te detiene}} al {percent} % de la bajada.",
+  "@squatStopped": {
+    "description": "A stopped squat range in plain words (SPEC-0059 §2.4, R-0059 AC3). load is squatWithLoad or squatWithoutLoad; cause is the limiting joint (ankle, knee, hip, lumbar), 'balance', 'implausible', or 'other' when only the model's convention stops the range; percent is how far down the lifter gets. No safety or injury claim.",
+    "placeholders": {
+      "load": {
+        "type": "String"
+      },
+      "cause": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "squatRejected": "{reason, select, balance{El modelo no encuentra una postura en equilibrio sobre el mediopié con estos datos.} implausible{Con estos datos el modelo no puede armar una postura anatómicamente posible.} ankle{Con estos datos, tu tobillo no deja al modelo armar ninguna postura de la bajada.} knee{Con estos datos, tu rodilla no deja al modelo armar ninguna postura de la bajada.} hip{Con estos datos, tu cadera no deja al modelo armar ninguna postura de la bajada.} lumbar{Con estos datos, tu espalda baja no deja al modelo armar ninguna postura de la bajada.} other{Con estos datos el modelo no puede armar tu sentadilla.}}",
+  "@squatRejected": {
+    "description": "Why the model could not place the lifter at all (a rejected squat range, R-0059 AC3): reason is 'balance', 'implausible', the limiting joint (ankle, knee, hip, lumbar), or 'other'. No figure is shown. No safety or injury claim.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "squatStoppedDegrees": "El fondo pide {needed}° y tienes {available}°.",
+  "@squatStoppedDegrees": {
+    "description": "Follows squatStopped when a joint's limit stops the range: the degrees the bottom needs and the lifter's own, the server's numbers rounded.",
+    "placeholders": {
+      "needed": {
+        "type": "int"
+      },
+      "available": {
+        "type": "int"
+      }
+    }
+  },
+  "squatReadoutHip": "τ cadera",
+  "@squatReadoutHip": {
+    "description": "Readout label: the hip's net moment, N·m."
+  },
+  "squatReadoutLever": "palanca cadera",
+  "@squatReadoutLever": {
+    "description": "Readout label: the horizontal distance from the hip to the bar's line, cm."
+  },
+  "squatReadoutKnee": "τ rodilla",
+  "@squatReadoutKnee": {
+    "description": "Readout label: the knee's net moment, N·m."
+  },
+  "squatReadoutTrunk": "β tronco",
+  "@squatReadoutTrunk": {
+    "description": "Readout label: the trunk's lean from vertical, degrees."
+  },
+  "squatAngles": "rodilla {knee}° · cadera {hip}° · recorrido {percent} %",
+  "@squatAngles": {
+    "description": "The frame's knee and hip flexion (pre-formatted) and how far down it is.",
+    "placeholders": {
+      "knee": {
+        "type": "String"
+      },
+      "hip": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "squatGroupsTitle": "N·m que sostiene cada articulación",
+  "@squatGroupsTitle": {
+    "description": "Heading over the moment bars."
+  },
+  "squatJoint": "{joint, select, hip{Cadera} knee{Rodilla} ankle{Tobillo} lumbar{Espalda baja} other{Otra}}",
+  "@squatJoint": {
+    "description": "A moment bar's row label: the joint (hip, knee, ankle, lumbar).",
+    "placeholders": {
+      "joint": {
+        "type": "String"
+      }
+    }
+  },
+  "squatMomentValue": "{value} N·m",
+  "@squatMomentValue": {
+    "description": "A moment bar's value; value is the server's moment, pre-formatted, a minus sign when the load assists extension.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "squatGraphTitle": "τ contra altura de la barra",
+  "@squatGraphTitle": {
+    "description": "Heading over the live graph."
+  },
+  "squatGraphLabel": "Gráfica del torque de cadera y de rodilla según la altura de la barra",
+  "@squatGraphLabel": {
+    "description": "The live graph's semantics label."
+  },
+  "squatGraphAxis": "Altura de la barra: de pie a la izquierda, el fondo a la derecha.",
+  "@squatGraphAxis": {
+    "description": "Caption under the live graph."
+  },
+  "squatCuentaTitle": "La cuenta de tu cadera",
+  "@squatCuentaTitle": {
+    "description": "Heading over the lever sum (squatLeverSum)."
+  },
+  "squatCaveatArms": "Sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra.",
+  "@squatCaveatArms": {
+    "description": "How the model places the arms (R-0059 AC5)."
+  },
+  "squatCaveatConvention": "Entre de pie y el fondo las piernas siguen una convención del modelo; tu curva real saldrá de tu video.",
+  "@squatCaveatConvention": {
+    "description": "The range's leg convention (R-0059 AC5, SPEC-0045 §2.6.6)."
+  },
+  "squatTableLengths": "De la tabla, no medidos: {parts}.",
+  "@squatTableLengths": {
+    "description": "Which segment lengths came from the anthropometric table; parts is a comma-separated list of squatLength.",
+    "placeholders": {
+      "parts": {
+        "type": "String"
+      }
+    }
+  },
+  "squatLength": "{part, select, thigh{muslo} shank{pierna} trunk{tronco} other{otro segmento}}",
+  "@squatLength": {
+    "description": "A segment named by the server's table_lengths token.",
+    "placeholders": {
+      "part": {
+        "type": "String"
+      }
+    }
+  },
+  "squatAssumption": "{token, select, sagittal_plane{De perfil: todo pasa en un plano; los momentos de frente no se calculan.} quasi_static{Estático: cada cuadro es una postura en equilibrio sobre el mediopié, sin aceleraciones.} rigid_segments{Segmentos rígidos: el tronco no se redondea.} single_posture{Cada cuadro es una postura, no una repetición: no hay velocidad.} solved_baseline{La postura se calcula con tus largos y una convención; no es una postura en la que te hayamos visto.} rigid_trunk_lumbar{La espalda baja es una sola articulación (L5/S1) en un tronco rígido.} table_derived_masses{La masa de cada segmento sale de una tabla, como fracción de tu peso.} table_derived_lengths{Algún largo salió de la tabla, no de tus medidas.} knees_track_feet{Las rodillas siguen la línea de los pies; el momento de frente de la cadera no se calcula.} body_fat_ignored{La grasa corporal no entra en el modelo.} straight_body_upright{De pie es un cuerpo recto, inclinado desde el tobillo hasta quedar sobre el mediopié; no es tu postura observada.} other{El modelo declara un supuesto más que esta versión de la app no sabe nombrar.}}",
+  "@squatAssumption": {
+    "description": "A stated model assumption, by the server's token (core's Assumption, SPEC-0045). joints_advance_together is shown as squatCaveatConvention. Unknown tokens take 'other'. No safety or injury claim.",
+    "placeholders": {
+      "token": {
+        "type": "String"
+      }
+    }
   }
 }

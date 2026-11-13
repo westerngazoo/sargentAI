@@ -173,11 +173,15 @@ UserProgram sampleUserProgram({
 Map<String, dynamic> trainingDayJson({
   List<String> focus = const ['legs'],
   List<String> exercises = const ['Back Squat', 'Leg Press'],
+  List<String?>? physics,
 }) =>
     <String, dynamic>{
       'kind': 'training',
       'focus': focus,
-      'exercises': exercises,
+      'exercises': [
+        for (final (i, name) in exercises.indexed)
+          {'name': name, 'physics': physics?[i]},
+      ],
     };
 
 /// A `rest` cycle entry.
@@ -231,8 +235,10 @@ Map<String, dynamic> scheduleJson({
 Schedule sampleSchedule({
   List<Map<String, dynamic>> days = const [],
   String? programId = 'prog-uuid-001',
+  List<Map<String, dynamic>>? cycle,
 }) =>
-    Schedule.fromJson(scheduleJson(days: days, programId: programId));
+    Schedule.fromJson(
+        scheduleJson(days: days, programId: programId, cycle: cycle));
 
 /// The `getSchedule` stub for any range, so a test says only what comes back.
 When<Future<Schedule>> whenGetSchedule(MockProgramService service) =>

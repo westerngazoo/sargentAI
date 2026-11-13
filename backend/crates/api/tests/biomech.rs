@@ -372,3 +372,172 @@ async fn the_body_is_never_logged(pool: PgPool) {
     });
     logs_assert(assert_no_secret_in);
 }
+
+// ---------------------------------------------------------------------------
+// e2e — R-0059 end to end against a booted server (AC9, QA-owned).
+// ---------------------------------------------------------------------------
+
+/// Row count of every table the migrations created: "stores nothing" (AC2,
+/// AC8) means no table gains or loses a row.
+async fn row_counts(pool: &PgPool) -> Vec<(String, i64)> {
+    let tables: Vec<String> = sqlx::query_scalar(
+        "SELECT table_name::text FROM information_schema.tables \
+         WHERE table_schema = 'public' AND table_type = 'BASE TABLE' \
+         ORDER BY table_name",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap();
+    let mut counts = Vec::with_capacity(tables.len());
+    for table in tables {
+        let n: i64 = sqlx::query_scalar(&format!("SELECT count(*) FROM \"{table}\""))
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        counts.push((table, n));
+    }
+    counts
+}
+
+/// One JSON call over the real listener: `(status, parsed body or null)`.
+async fn call(req: reqwest::RequestBuilder, body: Option<&Value>) -> (reqwest::StatusCode, Value) {
+    let req = match body {
+        Some(body) => req
+            .header("content-type", "application/json")
+            .body(body.to_string()),
+        None => req,
+    };
+    let res = req.send().await.unwrap();
+    let status = res.status();
+    let text = res.text().await.unwrap();
+    (status, serde_json::from_str(&text).unwrap_or(Value::Null))
+}
+
+/// e2e → AC1, AC2, AC3, AC8 over a real TCP listener, along the app's path:
+/// the profile gives height and mass (`height_cm / 100`, SPEC-0059 §2.3),
+/// the day's Back Squat carries `physics: "squat"` (§2.5), and the check
+/// asks for a loaded range (frames to the bottom), a bodyweight one that
+/// stops at the ankle, one the engine cannot place, an invalid field and no
+/// session. None of the range calls stores a row.
+#[sqlx::test(migrations = "../../migrations")]
+async fn e2e_profile_to_squat_range_over_a_real_server(pool: PgPool) {
+    let app = build_app(pool.clone());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let http = reqwest::Client::new();
+
+    let account = json!({ "email": "e2e-squat@b.com", "password": "8charsmin" });
+    let (status, registered) =
+        call(http.post(format!("{base}/auth/register")), Some(&account)).await;
+    assert_eq!(status, reqwest::StatusCode::CREATED);
+    let user_id = registered["user_id"].as_str().unwrap().to_owned();
+    let (_, login) = call(http.post(format!("{base}/auth/login")), Some(&account)).await;
+    let jwt = login["token"].as_str().unwrap().to_owned();
+
+    // The SPEC-0045 R7 lifter (1.75 m, 80 kg), saved on the profile.
+    let profile = json!({
+        "date_of_birth": "1996-01-01", "height_cm": 175, "weight_kg": 80.0,
+        "goals": ["build_muscle"], "sex": "male", "body_fat_percentage": 20.0
+    });
+    let (status, _) = call(
+        http.put(format!("{base}/profile/me")).bearer_auth(&jwt),
+        Some(&profile),
+    )
+    .await;
+    assert!(status.is_success(), "{status}");
+    let (_, profile) = call(
+        http.get(format!("{base}/profile/me")).bearer_auth(&jwt),
+        None,
+    )
+    .await;
+
+    // The day's Back Squat is the exercise the server says is modelled.
+    let today = chrono::Utc::now().date_naive();
+    common::seed_program(&pool, &user_id, "powerbuilder-leverage", today, true).await;
+    let (_, schedule) = call(
+        http.get(format!(
+            "{base}/programs/me/schedule?from={today}&to={today}&today={today}"
+        ))
+        .bearer_auth(&jwt),
+        None,
+    )
+    .await;
+    assert_eq!(
+        schedule["cycle"][0]["exercises"][0],
+        json!({ "name": "Back Squat", "physics": "squat" })
+    );
+
+    // The request the app builds: the profile's height in metres and mass, no
+    // limb lengths until R-0058, the session's dorsiflexion, the typed load.
+    let request = |dorsiflexion: f64, bar: Value| {
+        json!({
+            "height_m": f(&profile["height_cm"]) / 100.0,
+            "mass_kg": f(&profile["weight_kg"]),
+            "thigh_m": null, "shank_m": null, "trunk_m": null,
+            "dorsiflexion_deg": dorsiflexion,
+            "bar_kg": bar,
+            "frames": 21
+        })
+    };
+    let range = |auth: Option<&str>| {
+        let req = http.post(format!("{base}{PATH}"));
+        match auth {
+            Some(jwt) => req.bearer_auth(jwt),
+            None => req,
+        }
+    };
+    let before = row_counts(&pool).await;
+
+    // AC1, AC2: a loaded range reaches the bottom frame by frame, with the
+    // four moments and the server's lever sum; every length is the table's.
+    let (status, loaded) = call(range(Some(&jwt)), Some(&request(45.0, json!(84.0)))).await;
+    assert_eq!(status, reqwest::StatusCode::OK, "{loaded}");
+    assert_eq!(loaded["end"]["kind"], "bottom", "{}", loaded["end"]);
+    assert_eq!(loaded["table_lengths"], json!(["thigh", "shank", "trunk"]));
+    assert!(!loaded["assumptions"].as_array().unwrap().is_empty());
+    let frames = loaded["frames"].as_array().unwrap();
+    assert_eq!(frames.len(), 21);
+    assert_eq!(f(&frames[0]["progress"]), 0.0);
+    assert_eq!(f(&frames[20]["progress"]), 1.0);
+    for frame in frames {
+        assert_eq!(frame["mechanics"]["joints"].as_array().unwrap().len(), 4);
+        let hip_moment = f(&frame["mechanics"]["joints"][0]["moment"]);
+        let lever = &frame["hip"];
+        assert!((f(&lever["bar_nm"]) + f(&lever["body_nm"]) - hip_moment).abs() < 1e-9);
+    }
+
+    // AC3: bodyweight at 25° stops at the ankle: a 200 with the frames up to
+    // where the lifter got.
+    let (status, stopped) = call(range(Some(&jwt)), Some(&request(25.0, Value::Null))).await;
+    assert_eq!(status, reqwest::StatusCode::OK, "{stopped}");
+    assert_eq!(stopped["end"]["kind"], "stopped");
+    assert_eq!(stopped["end"]["bottom"]["limiting"], "ankle");
+    let reached = f(&stopped["end"]["reached"]);
+    let frames = stopped["frames"].as_array().unwrap();
+    assert!(!frames.is_empty() && frames.len() < 21);
+    assert!(frames.iter().all(|fr| f(&fr["progress"]) <= reached));
+
+    // AC3: a lifter the engine cannot place is a 200 with the typed reason
+    // and no frames.
+    let (status, rejected) = call(range(Some(&jwt)), Some(&request(2.0, Value::Null))).await;
+    assert_eq!(status, reqwest::StatusCode::OK, "{rejected}");
+    assert_eq!(rejected["end"]["kind"], "rejected");
+    assert!(rejected["end"]["rejection"]["reason"].is_string());
+    assert_eq!(rejected["frames"], json!([]));
+
+    // AC1: an invalid field is a 400 naming it; no session is a 401.
+    let (status, invalid) = call(range(Some(&jwt)), Some(&request(90.1, Value::Null))).await;
+    assert_eq!(status, reqwest::StatusCode::BAD_REQUEST);
+    assert_eq!(
+        invalid,
+        json!({ "error": "validation", "field": "dorsiflexion_deg" })
+    );
+    let (status, _) = call(range(None), Some(&request(45.0, json!(84.0)))).await;
+    assert_eq!(status, reqwest::StatusCode::UNAUTHORIZED);
+
+    // AC2, AC8: the endpoint stored nothing.
+    assert_eq!(row_counts(&pool).await, before);
+
+    server.abort();
+}
