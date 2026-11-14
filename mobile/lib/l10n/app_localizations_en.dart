@@ -521,6 +521,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String shiftLine(String focus) {
+    return 'Can\'t make it today? $focus moves to tomorrow and the plan shifts a day.';
+  }
+
+  @override
+  String get dayPhysics => 'Physics';
+
+  @override
+  String get daySoon => 'Soon';
+
+  @override
   String get startSession => 'Start session';
 
   @override
@@ -1166,5 +1177,212 @@ class AppLocalizationsEn extends AppLocalizations {
   String squatLeverSum(
       String barN, String leverM, String barNm, String bodyNm, String hipNm) {
     return '$barN N × $leverM m = $barNm N·m, + $bodyNm from the body = $hipNm N·m';
+  }
+
+  @override
+  String get squatTitle => 'Your squat, your lever';
+
+  @override
+  String get squatStamp => 'CHECKABLE';
+
+  @override
+  String get squatDorsiflexionLabel => 'Ankle dorsiflexion (°)';
+
+  @override
+  String get squatDorsiflexionHelp =>
+      '0 to 90. The model assumes no value: type yours.';
+
+  @override
+  String get squatDorsiflexionInvalid => 'Type a number from 0 to 90.';
+
+  @override
+  String get squatLoadLabel => 'Bar (kg)';
+
+  @override
+  String get squatLoadHelp => 'Empty: bodyweight only.';
+
+  @override
+  String get squatLoadInvalid => 'Type a weight above 0, up to 1000.';
+
+  @override
+  String get squatNeedsProfile =>
+      'Your profile needs height and weight to build your squat.';
+
+  @override
+  String get squatPlay => 'Play';
+
+  @override
+  String get squatPause => 'Pause';
+
+  @override
+  String get squatScrub => 'Move through the descent, standing to bottom';
+
+  @override
+  String get squatFigureLabel =>
+      'Side view of the squat, with the hip lever and the forces to scale';
+
+  @override
+  String get squatWithoutLoad => 'Without load';
+
+  @override
+  String squatWithLoad(String kg) {
+    return 'With $kg kg';
+  }
+
+  @override
+  String squatStopped(String load, String cause, int percent) {
+    String _temp0 = intl.Intl.selectLogic(
+      cause,
+      {
+        'ankle': 'your ankle stops you',
+        'knee': 'your knee stops you',
+        'hip': 'your hip stops you',
+        'lumbar': 'your lower back stops you',
+        'balance': 'the model stops balancing you',
+        'implausible': 'the posture stops being anatomically possible',
+        'other': 'the model\'s convention stops you',
+      },
+    );
+    return '$load, $_temp0 at $percent% of the descent.';
+  }
+
+  @override
+  String squatRejected(String reason) {
+    String _temp0 = intl.Intl.selectLogic(
+      reason,
+      {
+        'balance':
+            'The model finds no posture balanced over the mid-foot with these numbers.',
+        'implausible':
+            'With these numbers the model cannot build an anatomically possible posture.',
+        'ankle':
+            'With these numbers, your ankle leaves the model no posture in the descent.',
+        'knee':
+            'With these numbers, your knee leaves the model no posture in the descent.',
+        'hip':
+            'With these numbers, your hip leaves the model no posture in the descent.',
+        'lumbar':
+            'With these numbers, your lower back leaves the model no posture in the descent.',
+        'other': 'With these numbers the model cannot build your squat.',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatStoppedDegrees(int needed, int available) {
+    return 'The bottom needs $needed° and you have $available°.';
+  }
+
+  @override
+  String get squatReadoutHip => 'τ hip';
+
+  @override
+  String get squatReadoutLever => 'hip lever';
+
+  @override
+  String get squatReadoutKnee => 'τ knee';
+
+  @override
+  String get squatReadoutTrunk => 'β trunk';
+
+  @override
+  String squatAngles(String knee, String hip, int percent) {
+    return 'knee $knee° · hip $hip° · range $percent%';
+  }
+
+  @override
+  String get squatGroupsTitle => 'N·m each joint holds';
+
+  @override
+  String squatJoint(String joint) {
+    String _temp0 = intl.Intl.selectLogic(
+      joint,
+      {
+        'hip': 'Hip',
+        'knee': 'Knee',
+        'ankle': 'Ankle',
+        'lumbar': 'Lower back',
+        'other': 'Other',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatMomentValue(String value) {
+    return '$value N·m';
+  }
+
+  @override
+  String get squatGraphTitle => 'τ against bar height';
+
+  @override
+  String get squatGraphLabel =>
+      'Graph of hip and knee torque against bar height';
+
+  @override
+  String get squatGraphAxis =>
+      'Bar height: standing on the left, the bottom on the right.';
+
+  @override
+  String get squatCuentaTitle => 'Your hip\'s sum';
+
+  @override
+  String get squatCaveatArms =>
+      'Without a bar the arms hang; with one, the model places them between the shoulder and the bar.';
+
+  @override
+  String get squatCaveatConvention =>
+      'Between standing and the bottom the legs follow a model convention; your real curve will come from your video.';
+
+  @override
+  String squatTableLengths(String parts) {
+    return 'From the table, not measured: $parts.';
+  }
+
+  @override
+  String squatLength(String part) {
+    String _temp0 = intl.Intl.selectLogic(
+      part,
+      {
+        'thigh': 'thigh',
+        'shank': 'shank',
+        'trunk': 'trunk',
+        'other': 'another segment',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String squatAssumption(String token) {
+    String _temp0 = intl.Intl.selectLogic(
+      token,
+      {
+        'sagittal_plane':
+            'Side view: everything happens in one plane; frontal moments are not computed.',
+        'quasi_static':
+            'Static: each frame is a posture balanced over the mid-foot, with no acceleration.',
+        'rigid_segments': 'Rigid segments: the trunk cannot round.',
+        'single_posture': 'Each frame is one posture, not a rep: no velocity.',
+        'solved_baseline':
+            'The posture is solved from your lengths under a convention; it is not one you were seen in.',
+        'rigid_trunk_lumbar':
+            'The lower back is one joint (L5/S1) on a rigid trunk.',
+        'table_derived_masses':
+            'Each segment\'s mass comes from a table, as a fraction of your weight.',
+        'table_derived_lengths':
+            'Some lengths came from the table, not your measurements.',
+        'knees_track_feet':
+            'The knees track the feet; the hip\'s frontal moment is not computed.',
+        'body_fat_ignored': 'Body fat is not in the model.',
+        'straight_body_upright':
+            'Standing is a straight body leaning from the ankle until it is over the mid-foot; not your observed posture.',
+        'other':
+            'The model states one more assumption this version of the app cannot name.',
+      },
+    );
+    return '$_temp0';
   }
 }

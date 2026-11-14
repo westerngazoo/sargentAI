@@ -30,9 +30,12 @@ Widget localizedApp({
       localizationsDelegates: _delegates,
     );
 
-/// A `MaterialApp.router` with the app's catalogues, pinned to Spanish.
-Widget localizedRouterApp(GoRouter router) => MaterialApp.router(
+/// A `MaterialApp.router` with the app's catalogues, pinned to Spanish, with
+/// an optional [theme] (the app's own, for a layout check).
+Widget localizedRouterApp(GoRouter router, {ThemeData? theme}) =>
+    MaterialApp.router(
       routerConfig: router,
+      theme: theme,
       locale: const Locale('es'),
       supportedLocales: supportedLocales,
       localizationsDelegates: _delegates,

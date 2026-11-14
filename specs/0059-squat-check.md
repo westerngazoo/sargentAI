@@ -1,6 +1,6 @@
 # SPEC-0059 — The squat check: the range endpoint and the physics check widget
 
-- **Status:** Accepted — owner, 2026-10-27, together with R-0059 (OQ-A: `400`)
+- **Status:** Implemented — PRs #180, #183, #184, #185, #186; qa signed off in #187 (accepted by the owner 2026-10-27, together with R-0059; OQ-A: `400`)
 - **Realizes:** R-0059 (Accepted 2026-10-27)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-10-25
@@ -212,13 +212,16 @@ Design v2's physics card, in SPEC-0061 §2.10's tokens and faces:
 - **Playback**: play/pause and a scrubber over progress; the controller
   interpolates frames.
 - **La cuenta**: the server's `hip` fields, formatted.
-- **The caveats** (AC5), always visible under the figure: the assumptions
-  (range-level and the current frame's), which lengths came from the table,
+- **The caveats** (AC5), always visible, none folded away. Under the figure,
+  the key lines: which lengths came from the table,
   how the model places the arms ("sin barra, los brazos cuelgan; con barra, el modelo los pone entre el hombro y la barra"), and "entre
   de pie y el fondo las piernas siguen una convención del modelo; tu curva
-  real saldrá de tu video".
+  real saldrá de tu video". The assumptions (range-level and the current
+  frame's) close the card, after "La cuenta", without repeating a key line.
 - **A stopped range** says, in plain words, how far the lifter gets and why
-  (`Stopped`: "sin carga tu tobillo te detiene al 57 % de la bajada");
+  (`Stopped`: "sin carga tu tobillo te detiene al 57 % de la bajada"),
+  followed by the degrees when the server sends both ("el fondo pide 38° y
+  tienes 29°");
   `Rejected` shows the typed reason and no figure (AC3).
 - **No injury or safety claim** (AC6): heat means tension magnitude; no copy
   says safe or dangerous; a word-list test over the catalogue entries used
@@ -237,11 +240,13 @@ alone, and `physics` (`Lift::Squat` today, or null) comes from one function
 in `core`, `biomech::model_for(name)`. It matches exactly after trim and
 lowercase, never fuzzily: "Back Squat", "Sentadilla" and "Sentadilla
 trasera" are the squat; a bare "Squat", "Sentadilla frontal", a front, hack
-or low-bar squat are not. A free session's exercises get the same lookup
-through the names the app already sends (59-c2). For
-`physics: null` the button reads **Pronto** and opens nothing. On a wide
-window the check opens beside the exercise list; on a phone, below the
-exercise. The deadlift and bench stay *Pronto* until R-0045's garust work
+or low-bar squat are not. A free session's logged exercises get no button:
+the log lists them by name only (owner, 2026-11-02). For
+`physics: null` the button reads **Pronto** and opens nothing. From 1180 px
+the check opens beside the exercise list; on narrower windows, below the
+exercise. 1180 px is SPEC-0061's breakpoint: below it the day's column is
+too narrow for a check beside the list. Beside, the list takes a third of
+the row and the check the rest. The deadlift and bench stay *Pronto* until R-0045's garust work
 gives them a model.
 
 ### 2.6 Slicing
@@ -251,9 +256,13 @@ gives them a model.
 | 59-a | `biomech` module: validation, the endpoint, the lever fields, the `End` enum, the golden and no-log tests | backend |
 | 59-b | `physics` folder: API, models, `lever_text`, controller, with tests; `{name, physics}` exercises on `PlanDay` and the schedule (`biomech::model_for`) | both |
 | 59-c1 (= R-0061 slice 4, first half) | the figure painter with vectors and lever, playback, the Stopped and Rejected states | mobile |
-| 59-c2 (second half) | readouts, moment bars, the live graph, caveats, the Física/Pronto buttons, the free-session `model_for` lookup, the two layouts, the word-list test | mobile |
+| 59-c2a (second half) | readouts, moment bars, the live graph, "La cuenta", the caveats, the degrees in the stopped line, the word-list test | mobile |
+| 59-c2b | the Física/Pronto buttons and the two layouts | mobile |
+| ~~59-c2c~~ | ~~the free-session `model_for` lookup~~ — dropped 2026-11-02 | — |
 
-Each is within 100–400 lines (finding 4).
+Each is within 100–400 hand-written lines (finding 4); 59-c2 as one slice
+was about 1000, and its free-session lookup needs the server (amended
+2026-11-01).
 
 ## 3. Code outline
 
@@ -283,6 +292,8 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 
 ## 4. Non-goals
 
+- A Física button on logged exercises: the log lists them by name. Seeing
+  the model against the lifter's own video is its own requirement.
 - Saving a check or a variant (SPEC-0045 slice C).
 - Low-bar, deadlift, bench: *Pronto* until modelled.
 - Reading logged sets for the load list.
@@ -335,6 +346,12 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 | 2026-10-30 | Exercises are `{name, physics}` objects on the cycle, not a per-day `physics` field or a parallel list | A day lists several exercises, each with its own Física/Pronto button; one object per exercise means a name and its physics cannot disagree (owner, review of #183). |
 | 2026-10-30 | The lookup is `biomech::model_for`, exact after trim and lowercase: "Back Squat", "Sentadilla", "Sentadilla trasera" | It says which mechanics are modelled, narrower than `Lift::from_exercise_name` (which lift a video shows); Spanish names for what lifters type in free sessions (owner). |
 | 2026-10-30 | "La cuenta" uses a decimal point: Spanish numbers follow `es_MX` | The target market is Mexico; a decimal comma collides with the line's own commas (owner). |
+| 2026-11-01 | 59-c2 split into c2a (the widget), c2b (where it lives) and c2c (the free-session lookup) | About 1000 lines as one slice, and the free session's lookup needs the server: the client only has names (finding 7) (owner). |
+| 2026-11-01 | The stopped line gives the degrees needed and available | The reason is checkable only with its numbers (owner). |
+| 2026-11-01 | The plate stays drawn to scale; the stamp reads CHECKABLE in English | "To scale" is the product's promise (owner, accepted with the c2 plan). |
+| 2026-11-01 | Key caveats under the figure (table lengths, arms, convention); the assumptions close the card | Twelve lines under the figure read as fine print and pushed the numbers down; all of them stay visible (owner, with 59-c2b). |
+| 2026-11-01 | The check sits beside the list from 1180 px, SPEC-0061's breakpoint, list 1 : check 2 | Between 720 and 1180 px the day's column is about 360 px (owner, with 59-c2b). |
+| 2026-11-02 | 59-c2c dropped: no physics lookup for free sessions | The log lists exercises by name only; seeing the model against the lifter's video is a separate section and requirement (owner). |
 
 ## 8. Changelog
 
@@ -352,6 +369,13 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
   `{name, physics}` objects decided by `biomech::model_for` (with the
   Spanish names); the decimal point in "La cuenta"; 59-c2 carries the
   free-session lookup.
+- 2026-11-01 — Amended with slice 59-c2a, owner-approved: 59-c2 split in
+  c2a, c2b and c2c; the degrees in the stopped line.
+- 2026-11-01 — Amended with slice 59-c2b, owner-approved: the key caveats
+  under the figure and the assumptions closing the card; beside from 1180 px.
+- 2026-11-02 — 59-c2c dropped (owner): free sessions' logged exercises get
+  no Física button. Every remaining slice is in.
+- 2026-11-04 — Implemented: qa signed off (#187); R-0059 AC5 and AC6 amended to as-built.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 

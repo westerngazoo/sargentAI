@@ -3,6 +3,17 @@
 
 import 'package:flutter/foundation.dart';
 
+/// The dorsiflexion the server accepts, degrees, both ends inclusive. They
+/// mirror SPEC-0059 §2.2's validation, so the check refuses a value before
+/// the server would answer it with a 400.
+const dorsiflexionMinDeg = 0.0;
+const dorsiflexionMaxDeg = 90.0;
+
+/// The bar load the server accepts, kg: above [barKgAbove], up to and
+/// including [barKgMax] (`LoadKg::try_new`, SPEC-0059 §2.2).
+const barKgAbove = 0.0;
+const barKgMax = 1000.0;
+
 /// The request body. Lengths and the bar are optional: a null length comes
 /// from the anthropometric table (the result lists it in `tableLengths`), a
 /// null bar is bodyweight only, a null [frames] is the server's default.
