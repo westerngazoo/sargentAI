@@ -18,30 +18,31 @@ FROM ubuntu:24.04 AS onnxruntime
 # (see the `api-24` feature in backend/Cargo.toml). This default is overridden
 # by CI in .github/workflows/ci.yml. Keep them in lockstep.
 ARG ONNXRUNTIME_VERSION=1.24.2
-ARG ONNXRUNTIME_CHECKSUM_X64=43725474ba5663642e17684717946693850e2005efbd724ac72da278fead25e6
-ARG ONNXRUNTIME_CHECKSUM_ARM64=6715b3d19965a2a6981e78ed4ba24f17a8c30d2d26420dbed10aac7ceca0085e
+# SHA-256 of Microsoft's official NuGet package Microsoft.ML.OnnxRuntime, one
+# package for both architectures. The GitHub release assets stopped resolving
+# on 2026-11-21 (github.com/microsoft/onnxruntime → 404).
+ARG ONNXRUNTIME_NUPKG_SHA256=782564d3d68e87269ea1812cc94710ad06fe014faf093f01a6f89d0bd58719d3
 # Provided automatically by BuildKit: "amd64" or "arm64".
 ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
-# Map Docker's TARGETARCH to ONNX Runtime's release-asset architecture name.
+COPY scripts/ort-from-nupkg.sh /usr/local/bin/ort-from-nupkg.sh
+# Map Docker's TARGETARCH to the package's runtime directory name.
 RUN case "${TARGETARCH}" in \
-        amd64) ort_arch=x64; checksum="${ONNXRUNTIME_CHECKSUM_X64}" ;; \
-        arm64) ort_arch=aarch64; checksum="${ONNXRUNTIME_CHECKSUM_ARM64}" ;; \
+        amd64) ort_arch=x64 ;; \
+        arm64) ort_arch=arm64 ;; \
         *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
-    pkg="onnxruntime-linux-${ort_arch}-${ONNXRUNTIME_VERSION}"; \
     curl --proto '=https' --tlsv1.2 -fsSL \
-        "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
-        -o /tmp/ort.tgz; \
-    echo "${checksum}  /tmp/ort.tgz" | sha256sum -c -; \
-    mkdir -p /opt/onnxruntime; \
-    tar -xzf /tmp/ort.tgz -C /opt/onnxruntime --strip-components=1 "${pkg}/lib" "${pkg}/include"; \
-    rm /tmp/ort.tgz; \
-    test -e /opt/onnxruntime/lib/libonnxruntime.so
+        "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/${ONNXRUNTIME_VERSION}/microsoft.ml.onnxruntime.${ONNXRUNTIME_VERSION}.nupkg" \
+        -o /tmp/ort.nupkg; \
+    echo "${ONNXRUNTIME_NUPKG_SHA256}  /tmp/ort.nupkg" | sha256sum -c -; \
+    ort-from-nupkg.sh /tmp/ort.nupkg "${ort_arch}" "${ONNXRUNTIME_VERSION}" /opt/onnxruntime; \
+    rm /tmp/ort.nupkg
 
 # ---------------------------------------------------------------------------
 # Rust toolchain (cached independently of source changes).

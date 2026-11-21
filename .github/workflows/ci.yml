@@ -8,8 +8,10 @@ on:
 
 env:
   ONNXRUNTIME_VERSION: 1.24.2
-  ONNXRUNTIME_CHECKSUM_X64: 43725474ba5663642e17684717946693850e2005efbd724ac72da278fead25e6
-  ONNXRUNTIME_CHECKSUM_ARM64: 6715b3d19965a2a6981e78ed4ba24f17a8c30d2d26420dbed10aac7ceca0085e
+  # SHA-256 of Microsoft's official NuGet package Microsoft.ML.OnnxRuntime
+  # (one package, both linux-x64 and linux-arm64). The GitHub release assets
+  # stopped resolving on 2026-11-21 (github.com/microsoft/onnxruntime → 404).
+  ONNXRUNTIME_NUPKG_SHA256: 782564d3d68e87269ea1812cc94710ad06fe014faf093f01a6f89d0bd58719d3
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,25 +41,22 @@ jobs:
       JWT_SECRET: ci-only-test-secret
     steps:
       - uses: actions/checkout@v4
-      - name: cache ONNX Runtime tarball
+      - name: cache ONNX Runtime package
         id: cache-onnx
         uses: actions/cache@v4
         with:
-          path: /tmp/ort.tgz
-          key: onnxruntime-x64-${{ env.ONNXRUNTIME_VERSION }}-${{ env.ONNXRUNTIME_CHECKSUM_X64 }}
+          path: /tmp/ort.nupkg
+          key: onnxruntime-nupkg-${{ env.ONNXRUNTIME_VERSION }}-${{ env.ONNXRUNTIME_NUPKG_SHA256 }}
       - name: install ONNX Runtime (for ort system linking)
         run: |
           set -euo pipefail
-          pkg="onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}"
-          if [ ! -f /tmp/ort.tgz ]; then
+          if [ ! -f /tmp/ort.nupkg ]; then
             curl --proto '=https' --tlsv1.2 -fsSL \
-              "https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/${pkg}.tgz" \
-              -o /tmp/ort.tgz
+              "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/${ONNXRUNTIME_VERSION}/microsoft.ml.onnxruntime.${ONNXRUNTIME_VERSION}.nupkg" \
+              -o /tmp/ort.nupkg
           fi
-          echo "${ONNXRUNTIME_CHECKSUM_X64}  /tmp/ort.tgz" | sha256sum -c -
-          sudo mkdir -p /opt/onnxruntime
-          sudo tar -xzf /tmp/ort.tgz -C /opt/onnxruntime --strip-components=1 "${pkg}/lib" "${pkg}/include"
-          test -e /opt/onnxruntime/lib/libonnxruntime.so
+          echo "${ONNXRUNTIME_NUPKG_SHA256}  /tmp/ort.nupkg" | sha256sum -c -
+          sudo scripts/ort-from-nupkg.sh /tmp/ort.nupkg x64 "${ONNXRUNTIME_VERSION}" /opt/onnxruntime
           {
             echo "ORT_STRATEGY=system"
             echo "ORT_LIB_LOCATION=/opt/onnxruntime/lib"
@@ -131,6 +130,5 @@ jobs:
         run: |
           docker build -t fitai-api:ci \
             --build-arg ONNXRUNTIME_VERSION="${ONNXRUNTIME_VERSION}" \
-            --build-arg ONNXRUNTIME_CHECKSUM_X64="${ONNXRUNTIME_CHECKSUM_X64}" \
-            --build-arg ONNXRUNTIME_CHECKSUM_ARM64="${ONNXRUNTIME_CHECKSUM_ARM64}" \
+            --build-arg ONNXRUNTIME_NUPKG_SHA256="${ONNXRUNTIME_NUPKG_SHA256}" \
             backend
