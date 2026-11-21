@@ -15,17 +15,6 @@
       ],
       "port": 9500,
       "cwd": "mobile"
-    },
-    {
-      "name": "fitai-api",
-      "runtimeExecutable": "env",
-      "runtimeArgs": [
-        "ORT_LIB_LOCATION=/Users/goose/Library/Caches/ort.pyke.io/dfbin/aarch64-apple-darwin/612739f75438dc0a075461e1fb454226b4a1eb175e60a7271ba966bbbb972cd4",
-        "DATABASE_URL=postgres://fitai:dev@localhost:5432/fitai",
-        "scripts/dev/run.sh",
-        "backend"
-      ],
-      "port": 8080
     }
   ]
 }
