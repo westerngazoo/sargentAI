@@ -1,6 +1,6 @@
 # SPEC-0066 — The exercise model library on the garust kernel
 
-- **Status:** Draft, revision 3 — architect ACCEPT WITH CHANGES applied (§10); §2.7 for a last architect look, then owner acceptance
+- **Status:** Draft, revision 4 — architect ACCEPT (2026-11-21, §11); awaiting owner acceptance with OQ-C and OQ-D
 - **Realizes:** R-0066 (Accepted 2026-11-21)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-11-21
@@ -423,10 +423,15 @@ hand COM distance`. Both are stated in the result.
   - `hand_bottom` is the upper chest, a stated point on the thorax.
   - The shoulder and elbow are solved by `two_link_joint` with `l1 =
     upper_arm` and `l2 = L_fh` (forearm + hand COM distance; the hand is
-    rigid beyond the forearm), elbow behind the bar.
+    rigid beyond the forearm), the elbow hint `−x̂` (behind the bar).
   - garust clamps an unreachable target, so `pulldown.rs` checks the reach
     itself, with a stated tolerance of 1e-9 m. A hand beyond `upper_arm +
-    L_fh` ends the range as `stopped { reason: OutOfReach { frame } }`.
+    L_fh` would end the range as `stopped { reason: OutOfReach { frame } }`.
+    **That variant is unreachable under the stated motion.** Both ends lie
+    inside the reach disc, the disc is convex, and the inner bound `|l1 − l2|`
+    (about 0.02 m) is far smaller than the shoulder-to-chest distance. It is
+    kept as a guard and documented as unreachable, as SPEC-0045 documents
+    `AnatomicallyImplausible`.
 - **Loads:** the thorax, head and neck and the arms as `Weight`s, and a
   `Cable` from the hand COM to the pulley.
 - **Parameters:**
@@ -451,22 +456,28 @@ hand COM distance`. Both are stated in the result.
 **The assumption, stated once.** The sled or carriage moves on a rail at α
 to the horizontal. The force between the feet and the platform acts **along
 the rail, through the centre of pressure `cop`** on the foot (`heel`, `mid`
-or `toes`, at 0.15, 0.50 and 0.85 of the foot's length from the heel).
-
-**The foot, a stated convention.** Winter's foot row runs from the ankle to
-the second metatarsal head and gives no heel point, so the foot's geometry is
-a convention with its own spread:
-- the foot's length, heel to toe, is Winter's `0.152 H`;
-- the sole lies `ankle_height` (`WINTER.ankle_height`) below the ankle;
-- the ankle sits over a point `0.25` of the foot's length forward of the heel.
-
-The `cop` nudge (±0.02 m) carries this convention's error. The result states
-it as `Assumption::FootGeometryConvention`. The
+or `toes`, at 0.15, 0.50 and 0.85 of the foot's length from the heel). The
 seat or pad takes everything else. Rail friction opposes the motion: on the
 press (`phase: up`) the platform force is `W_along + μ·N`, and on the descent
 (`phase: down`) it is `W_along − μ·N`. `N` is the rail's normal force on the
 carriage. `μ` defaults to 0 (frictionless) and ranges `0..=0.35`, after NASA
 RP-1228 as the reel cites.
+
+**The foot, a stated convention.** Winter's foot row runs from the ankle to
+the second metatarsal head and gives no heel point, so the foot's geometry is
+a convention with its own spread. It reuses the squat's (SPEC-0045 §2.6.1)
+rather than adding a second one:
+- the foot's length, heel to toe, is Winter's `0.152 H`;
+- the ankle sits `ANKLE_BEHIND_MID_FOOT` (0.26 of the foot) behind the
+  mid-foot, so 0.24 of the foot's length forward of the heel;
+- on the platform the sole is flat on it. The ankle lies `ankle_height`
+  (`WINTER.ankle_height`) off the platform along `−û`, toward the lifter. The
+  toes point along `+n̂`.
+- `foot_height_m` places the **ankle's** projection on the platform, along
+  `n̂` from the platform centre.
+
+The `cop` nudge (±0.02 m) carries this convention's error. The result states
+it as `Assumption::FootGeometryConvention`.
 
 **A rail-fixed frame.**
 - `û` points up the rail, and `n̂` is `û` rotated +90° in the side view,
@@ -475,7 +486,8 @@ RP-1228 as the reel cites.
   the machine's geometry.
 - The hip sits at `−hip_offset_m · n̂` from the rail line through the platform
   centre, with the platform's travel `s` along `û` as the motion.
-- The foot's position on the platform is `foot_height_m`, along `n̂`.
+- The foot's position on the platform is `foot_height_m`, along `n̂` (the
+  ankle's projection, as above).
 - The leg solve passes `+n̂` to `two_link_joint` as the knee's side, toward
   the chest.
 - **No ankle limit is applied.** A flat foot fixes the ankle angle, and deep
@@ -487,10 +499,16 @@ RP-1228 as the reel cites.
 - Tree: pelvis (root, the seat) → hip (revolute) → thigh → knee (revolute) →
   shank → ankle (revolute) → foot. `side = +1` throughout (rooted at the
   pelvis, the distal side is anatomical).
-- Motion: knee angle from `knee_extended_deg` to `knee_flexed_deg`. At each
-  frame `s` and the thigh angle are solved by the two-circle intersection
-  (hip fixed, sole on the platform), knee on the `+n̂` side.
-  When no intersection exists the range ends as `NoLegSolution { frame }`.
+- Motion: knee angle from `knee_extended_deg` to `knee_flexed_deg`, solved
+  in two named steps per frame.
+  1. **Circle–line.** The knee angle fixes the hip–ankle distance `d` (law of
+     cosines over thigh and shank). The ankle moves on a line parallel to `û`
+     (the platform's travel). So `s` is the intersection of that line with
+     the circle of radius `d` about the hip. Of its two roots, take the one
+     with the platform up the rail from the hip. With no root, the range ends
+     as `NoLegSolution { frame }`.
+  2. **Two-circle.** With hip and ankle placed, `two_link_joint` gives the
+     knee, on the `+n̂` side.
 - Loads: the leg segments as `Weight`s, and the platform force
   `kernel::force` at the foot's `cop`, of magnitude `(sled_kg + plates_kg)·g·
   sin α ± μ·(sled_kg + plates_kg)·g·cos α`, along `−û`. The legs are not on
@@ -531,8 +549,10 @@ RP-1228 as the reel cites.
 - **Zero lever**: a posture where the force line passes through the knee
   gives `τ_knee` = the shank and foot weight terms only. This is the test
   that the platform force is along the rail.
-- **Hip lever**: the force line a stated distance d from the hip gives
-  `τ_hip = F·d` plus the segment terms.
+- **Hip lever**: the force line a stated distance d from the hip, passing on
+  the `+n̂` side of it (the chest side), gives `τ_hip = F·d` plus the segment
+  terms. The force tends to flex the hip there, so the moment is positive and
+  the hip extensors resist (§2.1.3). The sign is checkable by inspection.
 - **The force sum** (both machines): the reported platform force `F` and the
   rail's normal force `N` equal the free-body totals above, computed by hand
   for the standard body. This is the oracle that catches a missing mass.
@@ -647,6 +667,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — created (Draft).
 - 2026-11-21 — revision 2: the architect's REJECT applied (§9).
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
+- 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 
 ## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3
 
@@ -686,3 +707,14 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 | 15 | Revolute axes through the frame origin | §2.1.2 invariant |
 | 16 | The squat's `physics` wire value | §2.3, §7 |
 | 17 | `&'static Description`, duplicate `id()`, features, `Assumption: Eq`, AC3 value, bar 0, SPEC-0045 row, the rail "direction oracle" | §2.3, §2.1.2, §2.2, §2.7 |
+
+## 11. Architect review — ACCEPT (2026-11-21), minors applied in revision 4
+
+| # | Finding | Where applied |
+|---|---|---|
+| 1 | The foot convention disagreed with the squat's (0.25 vs 0.24 from the heel) | §2.7: reuses `ANKLE_BEHIND_MID_FOOT`, SPEC-0045 §2.6.1 |
+| 2 | Foot orientation and reference point unstated | §2.7: toes along `+n̂`, ankle `ankle_height` off the platform along `−û`, `foot_height_m` places the ankle |
+| 3 | The leg solve mixed two intersections | §2.7: circle–line for `s` (root up the rail), then two-circle for the knee |
+| 4 | `OutOfReach` cannot fire | §2.6: kept as a guard, documented unreachable; elbow hint `−x̂` |
+| 5 | The hip-lever oracle's sign | §2.7: force line on the `+n̂` side, positive, hip extensors |
+| 6 | 66-a2's PR must name the `resisting` wire change | 66-a2's PR description (process, not spec text) |
