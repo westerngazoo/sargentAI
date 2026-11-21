@@ -67,7 +67,11 @@ reel's own numbers are never copied in.
 - **AC4. The motion convention.** Each model names the parameters that move
   it (for example trunk lean and knee travel in a squat, the elbow's path in a
   curl) and how the remaining angles are solved. Where the body must stay in
-  balance (standing, unsupported), the solver keeps it in balance. Where the
+  balance (standing, unsupported) and a reported joint's moment depends on
+  that balance, the solver keeps it in balance. Where every reported joint is
+  distal to a fixed root (for example the elbow and shoulder of a standing
+  curl), balance is not solved and the result says so. *(Amended 2026-11-21,
+  owner, SPEC-0066 OQ-C.)* Where the
   body is supported (a seat, a bench, a pad), the support is part of the
   model, and its reaction is reported.
 
@@ -168,8 +172,10 @@ reel's own numbers are never copied in.
 | 2026-11-21 | Machines are in scope: cable, guided rail, lever or cam. | Owner, 2026-11-21: "también máquinas". |
 | 2026-11-21 | Start with five exercises, with tests. | Owner, 2026-11-21: "vamos iniciando con algunos 5 ejercicios, agrega pruebas". SPEC-0066 proposes dumbbell curl, triceps pushdown, lat pulldown, 45° leg press and hack squat, after the squat moves onto the kernel. |
 | 2026-11-21 | Accepted, with the proposals as the answers to the open questions. | Owner: "acepta 0066 y 0067". |
+| 2026-11-21 | AC4: balance is solved only where a reported joint's moment depends on it. | Owner, SPEC-0066 OQ-C. A standing curl's elbow and shoulder moments are the arm's and its load's, whatever the rest of the body does. |
 
 ## Changelog
 
 - 2026-11-21 — created (Draft).
 - 2026-11-21 — Accepted by the owner; open questions answered with the proposals.
+- 2026-11-21 — AC4 amended (SPEC-0066 OQ-C, owner).

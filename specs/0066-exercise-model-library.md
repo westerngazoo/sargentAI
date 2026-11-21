@@ -1,6 +1,6 @@
 # SPEC-0066 — The exercise model library on the garust kernel
 
-- **Status:** Draft, revision 4 — architect ACCEPT (2026-11-21, §11); awaiting owner acceptance with OQ-C and OQ-D
+- **Status:** Accepted (owner, 2026-11-21) — architect ACCEPT (§11); OQ-C and OQ-D answered yes
 - **Realizes:** R-0066 (Accepted 2026-11-21)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-11-21
@@ -622,11 +622,11 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
   AC4 as applying only to joints whose moment depends on balance, and states
   `BalanceNotModelled`. Proposal: amend AC4's wording to say so, rather than
   solving whole-body balance for exercises that never report a balance-bound
-  joint.
+  joint. *Answered 2026-11-21 (owner):* yes; R-0066 AC4 amended.
 - **OQ-D. The garust change (owner).** 66-0 changes the owner's library
   (`generalized_torque`), in its own repository and PR, before 66-a1.
   Proposal: yes. It fixes a real error for every non-constant load, not only
-  fitAI's.
+  fitAI's. *Answered 2026-11-21 (owner):* yes; the fix is garust BUG PM-20 (project "Goose Garust library", sprint "sprint doc").
 
 ## 6. Acceptance criteria (this spec)
 
@@ -661,6 +661,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 | 2026-11-21 | Guided machines: the platform force acts along the rail through the foot's centre of pressure; `cop`, friction and the phase are settings; the hack squat's force comes from a stated free body. | The machine is indeterminate otherwise. A stated assumption the lifter can move stays checkable. |
 | 2026-11-21 | The plan keeps `"squat"` as the squat's `physics` value; new ids reach the plan only with SPEC-0067. | Installed app builds must not lose the squat's *Física* button, nor gain buttons that open nothing. |
 | 2026-11-21 | The five first exercises: dumbbell curl, triceps pushdown, lat pulldown, 45° leg press, hack squat. | Owner asked for five. They cover free weight, cable and guided rail, from one joint to three. |
+| 2026-11-21 | Accepted. OQ-C: AC4 amended. OQ-D: the garust fix goes ahead as PM-20. | Owner. |
 
 ## 8. Changelog
 
@@ -668,6 +669,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 2: the architect's REJECT applied (§9).
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
+- 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
 
 ## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3
 
