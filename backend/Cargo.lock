@@ -529,6 +529,9 @@ name = "fitai-core"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "garust-core",
+ "garust-geo",
+ "garust-physics",
  "serde",
  "serde_json",
  "thiserror",
@@ -646,6 +649,28 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "slab",
+]
+
+[[package]]
+name = "garust-core"
+version = "0.1.0"
+source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+
+[[package]]
+name = "garust-geo"
+version = "0.1.0"
+source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+dependencies = [
+ "garust-core",
+]
+
+[[package]]
+name = "garust-physics"
+version = "0.1.0"
+source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+dependencies = [
+ "garust-core",
+ "garust-geo",
 ]
 
 [[package]]

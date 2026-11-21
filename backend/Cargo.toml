@@ -35,6 +35,13 @@ validator = { version = "0.20", features = ["derive"] }
 eyre = "0.6"
 tracing-test = "0.2"
 
+# ADR 0001 / SPEC-0066 §2.1.2 — the mechanics kernel, pinned by git rev until a
+# crates.io release carries `tree` and `multibody`. Bumped only with the squat
+# parity tests green (ADR 0001).
+garust-core = { git = "https://github.com/westerngazoo/garust", rev = "55e91407ba77c781f18020e2e329c5c44e86c4b6" }
+garust-geo = { git = "https://github.com/westerngazoo/garust", rev = "55e91407ba77c781f18020e2e329c5c44e86c4b6" }
+garust-physics = { git = "https://github.com/westerngazoo/garust", rev = "55e91407ba77c781f18020e2e329c5c44e86c4b6" }
+
 # R-0006 / SPEC-0006 §2.7 — the photo-session object-store seam.
 bytes = "1"
 async-trait = "0.1"

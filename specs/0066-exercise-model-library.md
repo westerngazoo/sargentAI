@@ -92,10 +92,10 @@ pub struct PlanarTree {
 
 /// Signed moments (§2.1.3) at every reported joint, each cross-checked by
 /// virtual work. The caller adds `resisting` and the uncertainty.
-pub fn moments(tree: &PlanarTree, q: &[f64]) -> Result<Vec<(Joint, NewtonMetres)>, KernelError>;
+pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelError>;
 
 /// The force and moment the root takes: minus the sum of every applied load.
-pub fn root_reaction(tree: &PlanarTree, q: &[f64]) -> Reaction;
+pub fn root_reaction(tree: &PlanarTree) -> Reaction;   // arrives with 66-d
 ```
 
 - **The world origin is the tree's root.** That keeps `|F·x|` small and the
@@ -191,19 +191,31 @@ is the single source for both the balance solve (`squat.rs`, which relies on
   the trunk line beyond the shoulder, and the arms at the shoulder-to-bar
   midpoint or hanging**, exactly as `com_with` places them. Nothing is lumped
   into a HAT weight.
-- `side = −1` at every squat joint (rooted at the foot, the distal side is
-  the anatomical proximal one).
+- `side = −1` at the ankle, knee and hip (rooted at the foot, the tree's
+  distal side is the anatomical proximal one), and `side = +1` at L5/S1: its
+  tree-distal side is the thorax, which is the joint's anatomical distal
+  segment. *(Corrected in 66-a1: revision 4 said −1 at every joint, which
+  would have flipped the lumbar sign. Found while writing 66-a1; the sign test pins it.)*
 
 **66-a1: both paths alive.**
 - Adds the dependency, `kernel.rs`, its unit tests, and `squat::tree`.
+- **The pin.** By the owner's call of 2026-11-21 ("arranca ya"), 66-a1 starts
+  before 66-0 at the ADR rev `55e91407`. The squat uses only weights, which
+  that rev handles correctly. The pin moves to 66-0's rev before 66-c, with
+  this slice's parity tests re-run green (ADR 0001).
+- **Trees are built at a posture** (`q = 0`): each link's frame sits at its
+  joint's centre, so `moments` and `root_reaction` take no `q`. `force`,
+  `Cable` and `root_reaction` arrive with the first slice that uses them
+  (66-c to 66-e), so no unused code lands early.
 - Adds a parity test: every posture of a dense grid (the spike's four bodies,
-  four bars, three dorsiflexions, every frame of each range, about 3 000
-  postures, and all nine `Placement` corners of a subset) through both paths,
-  asserting `|kernel − chain| ≤ 1e-9 N·m` at every joint.
+  four bars, three dorsiflexions, every frame of each range: 48 cases, 1 916
+  postures, the rest not reaching depth) and all eight `Placement` corners of
+  one lifter's range, through both paths, asserting `|kernel − chain| ≤ 1e-9
+  N·m` at every joint.
 - The same PR snapshots the kernel's values over that grid at full precision
   into a fixture (`tests/fixtures/squat_kernel_parity.json`). That is what
-  survives `chain.rs`. The fixture is generated (about 3 000 postures × 4
-  joints), excluded from the line budget, and marked as regenerable only with
+  survives `chain.rs`. The fixture is generated (1 916 postures × 4
+  joints, 148 kB), excluded from the line budget, and marked as regenerable only with
   both paths alive. After 66-a2 that means never.
 - Amends SPEC-0045's slice E row: recast by ADR 0001 as "the squat on the
   garust kernel", realized here.
@@ -670,6 +682,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
+- 2026-11-21 — 66-a1 as built: the pin stays at `55e91407` until before 66-c (owner); the lumbar `side` corrected to `+1`; trees built at a posture (no `q`); `force`, `Cable` and `root_reaction` deferred to the slices that use them; the grid is 1 916 postures.
 
 ## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3
 

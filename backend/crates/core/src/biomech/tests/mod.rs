@@ -23,6 +23,7 @@
 
 #![allow(clippy::doc_markdown)]
 
+mod kernel;
 mod range;
 
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};

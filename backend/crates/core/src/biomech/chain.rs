@@ -133,7 +133,7 @@ impl Placement {
 
 /// The L5/S1 point: the §2.5 convention, nudged by `offset_m` along the trunk
 /// line. One home for the placement (SPEC-0045 §2.5).
-fn l5s1_point(p: &Posture, offset_m: f64) -> Point {
+pub(super) fn l5s1_point(p: &Posture, offset_m: f64) -> Point {
     offset(p.l5s1(L5S1_UP_THE_TRUNK), unit(p.hip, p.shoulder), offset_m)
 }
 
