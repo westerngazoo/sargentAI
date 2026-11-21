@@ -40,6 +40,8 @@
 
 use crate::workout::LoadKg;
 
+use super::chain::{l5s1_point, Placement};
+use super::kernel::{PlanarTree, Side};
 use super::{
     above, along, analyse_baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, Mechanics,
     Metres, Point, Posture, Rejection, Unknown,
@@ -323,4 +325,53 @@ impl Balance {
     fn sin_theta(&self, u: f64) -> f64 {
         -self.q.mul_add(u, self.p) / self.b
     }
+}
+
+/// The squat as a garust tree (SPEC-0066 §2.2): **rooted at the ankle** (the
+/// foot is not a link), then knee, hip and L5/S1, each segment's weight on the
+/// link that carries it, under the stated placement conventions.
+///
+/// Public in slice 66-a1 only because nothing in the crate consumes it until
+/// 66-a2 (the parity tests are its one caller); 66-a2 lowers it to the crate.
+#[must_use]
+pub fn squat_tree(body: &Body, p: &Posture) -> PlanarTree {
+    tree_with(body, p, Placement::STATED)
+}
+
+/// [`squat_tree`] under nudged placement conventions, the corners the
+/// uncertainty walk evaluates (SPEC-0045 §2.8).
+///
+/// Each [`ChainSegment`] rides the link that [`above`] puts it on: the shank
+/// distal to the ankle, the thigh to the knee, the pelvis to the hip (on the
+/// hip's side, not the lumbar's), and the thorax, head, arms and bar to L5/S1.
+/// Rooted at the foot, the tree's distal side of the ankle, knee and hip is
+/// the anatomical proximal one; of L5/S1 it is the thorax, the anatomical
+/// distal one (SPEC-0066 §2.1.3).
+pub(super) fn tree_with(body: &Body, p: &Posture, placement: Placement) -> PlanarTree {
+    let mut tree = PlanarTree::new();
+    let ankle = tree.link(None, p.ankle);
+    let knee = tree.link(Some(ankle), p.knee);
+    let hip = tree.link(Some(knee), p.hip);
+    let lumbar = tree.link(Some(hip), l5s1_point(p, placement.l5s1));
+    tree.report(ankle, Joint::Ankle, Side::Proximal);
+    tree.report(knee, Joint::Knee, Side::Proximal);
+    tree.report(hip, Joint::Hip, Side::Proximal);
+    tree.report(lumbar, Joint::Lumbar, Side::Anatomical);
+    let carrier = |segment: ChainSegment| match segment {
+        ChainSegment::Shank => ankle,
+        ChainSegment::Thigh => knee,
+        ChainSegment::Pelvis => hip,
+        ChainSegment::ThoraxAbdomen | ChainSegment::HeadNeck | ChainSegment::Arms => lumbar,
+    };
+    for &segment in above(Joint::Ankle) {
+        tree.weight(
+            carrier(segment),
+            segment.com_with(body, p, placement),
+            body.mass_kg(segment),
+        );
+    }
+    if let Some(load) = p.load {
+        tree.weight(lumbar, load.at, load.kg.get());
+    }
+    tree
 }

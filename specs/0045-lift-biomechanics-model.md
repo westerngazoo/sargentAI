@@ -1006,7 +1006,7 @@ specified when both are clearer. Nothing in slices A/B writes to a database.
 |---|---|---|
 | **A** | `anthro` (table + sum claims + verification record); `Posture`, `Load`, `Point`/`Metres`; `above()` + `moment_about` with the sign rule; the lumbar row; the **baseline** squat solve with the system-COM constraint; **`analyse_baseline` → `Mechanics`** with its assumptions, `LoadBasis`, `ResistingGroup` and placement uncertainty; the `Rejection` variants reachable without knobs (`DoesNotBalance`, `DepthNotReachable`) | nothing |
 | **B1** | the range (§2.6.6): `squat_range` from the solved upright toward the §2.6 bottom, legs interpolated in angle by the stated convention, the trunk solved for balance in every frame, the largest balanced prefix and its `RangeEnd`; `Position::{Upright, Partial}`, `Assumption::{StraightBodyUpright, JointsAdvanceTogether}`, `FrameCount`, `Serialize` on `Point`/`Posture` | A; §5.7(a) |
-| **E** | one engine (§5.7(b)): the model moves to its own crate with no I/O dependencies, `fitai-core` re-exports it, and the reels' squat consumes it | B1; AC15 amendment |
+| **E** | one engine (§5.7(b)). *Recast by ADR 0001 (2026-10-23):* the squat's moments move onto the garust kernel inside `fitai-core`, with parity to 1e-9 N·m. Realized by SPEC-0066 slices 66-a1 (both paths, parity) and 66-a2 (the switch). The reels' consumption is no longer this slice's | B1; ADR 0001; SPEC-0066 |
 | **B** | the three knobs, `OutOfRange`, the which-unknown rule, deltas, `Borderline`, the pull | A; §5.1 amendment |
 | **C** | `api::biomech`, persistence, coach export | B, R-0041 read, R-0040 |
 

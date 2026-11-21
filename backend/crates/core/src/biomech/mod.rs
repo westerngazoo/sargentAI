@@ -24,7 +24,9 @@
 //! a real state, never flattened by `.abs()`. The raw coordinate sum flips
 //! sign at the knee on a zig-zag chain, so the per-joint orientation is
 //! applied in exactly one module, `chain` — by [`moment_about`] and its body
-//! share [`body_moment_about`].
+//! share [`body_moment_about`]. SPEC-0066 slice 66-a1 adds the garust path,
+//! `kernel`, whose `flexion_dir × side` mapping gives the same signs (the
+//! parity tests hold it to 1e-9 N·m); slice 66-a2 removes the chain's.
 //!
 //! ## What stays out of the type system on purpose
 //!
@@ -40,6 +42,7 @@ mod tests;
 mod analysis;
 mod anthro;
 mod chain;
+pub mod kernel;
 mod model;
 mod range;
 mod squat;
@@ -58,11 +61,14 @@ pub use anthro::{
 pub use chain::{above, body_moment_about, moment_about, ChainSegment};
 pub use model::model_for;
 pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
-pub use squat::{baseline, baseline_mechanics, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR};
+pub use squat::{
+    baseline, baseline_mechanics, squat_tree, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR,
+};
 
 /// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2);
-/// `chain` ([`moment_about`], [`body_moment_about`]) is the only place it is
-/// multiplied.
+/// `chain` ([`moment_about`], [`body_moment_about`]) multiplies it, and
+/// `kernel` hands it to garust as each weight's gravity vector (SPEC-0066,
+/// with both paths alive until slice 66-a2).
 pub const G: f64 = 9.81;
 
 /// Where L5/S1 sits on the trunk line, as a fraction of hip → shoulder.

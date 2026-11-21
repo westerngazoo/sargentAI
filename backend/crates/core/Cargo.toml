@@ -13,6 +13,10 @@ uuid.workspace = true
 chrono.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+# The mechanics kernel (ADR 0001). Only `biomech::kernel` imports it.
+garust-core.workspace = true
+garust-geo.workspace = true
+garust-physics.workspace = true
 
 # Test-only: the SPEC-0003 §2.4 exhaustive serde-vs-as_str encoding test
 # serializes Goal/Sex to JSON. Dev-only, so the production purity boundary

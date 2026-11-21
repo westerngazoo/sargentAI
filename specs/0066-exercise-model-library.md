@@ -92,10 +92,10 @@ pub struct PlanarTree {
 
 /// Signed moments (§2.1.3) at every reported joint, each cross-checked by
 /// virtual work. The caller adds `resisting` and the uncertainty.
-pub fn moments(tree: &PlanarTree, q: &[f64]) -> Result<Vec<(Joint, NewtonMetres)>, KernelError>;
+pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelError>;
 
 /// The force and moment the root takes: minus the sum of every applied load.
-pub fn root_reaction(tree: &PlanarTree, q: &[f64]) -> Reaction;
+pub fn root_reaction(tree: &PlanarTree) -> Reaction;   // arrives with 66-d
 ```
 
 - **The world origin is the tree's root.** That keeps `|F·x|` small and the
@@ -114,8 +114,10 @@ pub fn root_reaction(tree: &PlanarTree, q: &[f64]) -> Reaction;
 - **Invariant:** every revolute axis passes through its link's frame origin,
   since `joint_point` is that origin. A test checks that FK joint centres
   match the posture to 1e-12 m, the spike's 6.7e-16 m check.
-- **The dependency:** `garust-geo` and `garust-physics` by git, pinned by rev
-  (no umbrella crate, so no `physics` feature to forget). `cargo tree -p
+- **The dependency:** `garust-core`, `garust-geo` and `garust-physics` by git,
+  pinned by rev (no umbrella crate, so no `physics` feature to forget).
+  `garust-core` is needed for `Pga3`, the joint axis: `garust-geo` re-exports
+  only `Motor` and `Conformal`. `cargo tree -p
   fitai-core` shows no I/O crate (R-0045 AC15).
 
 #### 2.1.3 The sign convention, for every joint
@@ -181,9 +183,14 @@ is the single source for both the balance solve (`squat.rs`, which relies on
 `above`, `moment_about`, `moment_about_with`, `body_moment_about`,
 `segments_sum`, `load_sum`, `raw_sum`, `extension_sign`.
 
-**The tree** (`squat::tree(body, posture, placement) -> PlanarTree`):
-- Links: foot (root, on the floor) → ankle → shank → knee → thigh → hip →
-  pelvis → L5/S1 (placed by `placement.l5s1`, SPEC-0045 §2.5) → thorax.
+**The tree** (`squat_tree(body, posture) -> PlanarTree`, and
+`tree_with(body, posture, placement)` for the uncertainty corners):
+- Four links, **rooted at the ankle** (the foot is not a link): ankle → knee
+  → hip → L5/S1 (placed by `placement.l5s1`, SPEC-0045 §2.5). Each link is
+  the segment its joint rotates: the ankle's carries the shank, the knee's
+  the thigh, the hip's the pelvis, L5/S1's the thorax. A foot link, for a
+  ground reaction with a meaningful moment, is 66-d's to decide when
+  `root_reaction` arrives.
 - Each `ChainSegment` is a `Weight` at its `com_with` point on the link that
   `above()` puts it on today: shank on the shank, thigh on the thigh, pelvis
   on the pelvis link (on the hip's side, not the lumbar's), and thorax-abdomen,
@@ -191,19 +198,31 @@ is the single source for both the balance solve (`squat.rs`, which relies on
   the trunk line beyond the shoulder, and the arms at the shoulder-to-bar
   midpoint or hanging**, exactly as `com_with` places them. Nothing is lumped
   into a HAT weight.
-- `side = −1` at every squat joint (rooted at the foot, the distal side is
-  the anatomical proximal one).
+- `side = −1` at the ankle, knee and hip (rooted at the foot, the tree's
+  distal side is the anatomical proximal one), and `side = +1` at L5/S1: its
+  tree-distal side is the thorax, which is the joint's anatomical distal
+  segment. *(Corrected in 66-a1: revision 4 said −1 at every joint, which
+  would have flipped the lumbar sign. Found while writing 66-a1; the sign test pins it.)*
 
 **66-a1: both paths alive.**
-- Adds the dependency, `kernel.rs`, its unit tests, and `squat::tree`.
+- Adds the dependency, `kernel.rs`, its unit tests, and `squat_tree`.
+- **The pin.** By the owner's call of 2026-11-21 ("arranca ya"), 66-a1 starts
+  before 66-0 at the ADR rev `55e91407`. The squat uses only weights, which
+  that rev handles correctly. The pin moves to 66-0's rev before 66-c, with
+  this slice's parity tests re-run green (ADR 0001).
+- **Trees are built at a posture** (`q = 0`): each link's frame sits at its
+  joint's centre, so `moments` and `root_reaction` take no `q`. `force`,
+  `Cable` and `root_reaction` arrive with the first slice that uses them
+  (66-c to 66-e), so no unused code lands early.
 - Adds a parity test: every posture of a dense grid (the spike's four bodies,
-  four bars, three dorsiflexions, every frame of each range, about 3 000
-  postures, and all nine `Placement` corners of a subset) through both paths,
-  asserting `|kernel − chain| ≤ 1e-9 N·m` at every joint.
+  four bars, three dorsiflexions, every frame of each range: 48 cases, 1 916
+  postures, the rest not reaching depth) and all eight `Placement` corners of
+  one lifter's range, through both paths, asserting `|kernel − chain| ≤ 1e-9
+  N·m` at every joint.
 - The same PR snapshots the kernel's values over that grid at full precision
   into a fixture (`tests/fixtures/squat_kernel_parity.json`). That is what
-  survives `chain.rs`. The fixture is generated (about 3 000 postures × 4
-  joints), excluded from the line budget, and marked as regenerable only with
+  survives `chain.rs`. The fixture is generated (1 916 postures × 4
+  joints, 148 kB), excluded from the line budget, and marked as regenerable only with
   both paths alive. After 66-a2 that means never.
 - Amends SPEC-0045's slice E row: recast by ADR 0001 as "the squat on the
   garust kernel", realized here.
@@ -211,7 +230,7 @@ is the single source for both the balance solve (`squat.rs`, which relies on
 
 **66-a2: the switch.**
 - `analysis.rs`: the stated moments and the 8 uncertainty corners call
-  `kernel::moments(squat::tree(body, p, corner), q)`, one tree per corner, as
+  `kernel::moments(&tree_with(body, p, corner))`, one tree per corner, as
   `moment_about_with` is called per corner today. About 10 µs per tree and
   nine trees per frame keep a 41-frame range under 4 ms.
 - `api/biomech/lever.rs` (SPEC-0059's *La cuenta*): `body_nm` becomes the
@@ -567,7 +586,7 @@ it as `Assumption::FootGeometryConvention`.
 | Slice | Content | Depends on | Size (est.) |
 |---|---|---|---|
 | **66-0** | garust (own repo, own PR): `generalized_torque` holds the forces, cable agreement test; release the rev | — | ~80 |
-| **66-a1** | garust dependency; `kernel.rs` and its tests (sign table, invariant, cross-check, reaction); `squat::tree`; dense parity against `chain.rs`, both paths alive; parity fixture; SPEC-0045 slice E row amended | 66-0 | ~400 |
+| **66-a1** | garust dependency; `kernel.rs` (weights, `moments`, the sign mapping) and its tests (signs, FK invariant, cross-check, heaviest bar); `squat_tree`; dense parity against `chain.rs`, both paths alive; parity fixture; SPEC-0045 slice E row amended | — (owner: before 66-0, pinned at `55e91407`) | ~400 |
 | **66-a2** | the switch: `analysis.rs` corners, `lever.rs`, oracle tests and example on the kernel; parity against the fixture; moment functions deleted | 66-a1 | ~350 |
 | **66-b1** | `core::exercise`: trait, `Description`, `Parameter`, pair rules, generic validation, `ExerciseRange`, `Reason`; `back_squat`; `MeasuredLengths` arms; `model_for` from the library | 66-a2 | ~450 |
 | **66-b2** | api: the three endpoints, request validation, serialization, the new-vs-old squat test | 66-b1 | ~350 |
@@ -584,9 +603,12 @@ screen) is SPEC-0067's, with the Flutter gates.
 ```
 garust/crates/garust-physics/src/multibody.rs   generalized_torque holds F     [66-0]
 backend/crates/core/src/biomech/
-  kernel.rs      PlanarTree, Reported{side}, LoadSpec, force(), moments(),
-                 root_reaction(), flexion_dir() — the ONLY garust importer    [66-a1]
-  squat.rs       + tree(body, posture, placement)                              [66-a1]
+  kernel.rs      PlanarTree (links, weights, reported joints with Side),
+                 moments(), flexion_dir() — the ONLY garust importer          [66-a1]
+                 + Cable                                                      [66-c]
+                 + root_reaction()                                            [66-d]
+                 + force()                                                    [66-e]
+  squat.rs       + squat_tree(body, posture), tree_with(.., placement)        [66-a1]
   analysis.rs    stated + corners through kernel::moments                     [66-a2]
   chain.rs       ChainSegment + com_with only (moment functions deleted)      [66-a2]
   tests/         parity (dense grid, fixture), sign pairs, oracles on kernel  [66-a1/a2]
@@ -670,6 +692,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
+- 2026-11-21 — 66-a1 as built: the pin stays at `55e91407` until before 66-c (owner); the lumbar `side` corrected to `+1`; trees built at a posture (no `q`); `force`, `Cable` and `root_reaction` deferred to the slices that use them; the grid is 1 916 postures; the squat tree is rooted at the ankle (no foot link); `garust-core` is a third dependency (architect review of PR #193).
 
 ## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3
 
