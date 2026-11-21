@@ -166,6 +166,7 @@ reel's own numbers are never copied in.
 |------|----------|-----------|
 | 2026-11-21 | Every exercise's physics comes from the app's engine; the reels' mp4s are not shipped in the app. | Owner chose the interactive model over fixed videos. The reels compute in their own scripts and disagreed with the model by 35% on the squat. |
 | 2026-11-21 | Machines are in scope: cable, guided rail, lever or cam. | Owner, 2026-11-21: "también máquinas". |
+| 2026-11-21 | Start with five exercises, with tests. | Owner, 2026-11-21: "vamos iniciando con algunos 5 ejercicios, agrega pruebas". SPEC-0066 proposes dumbbell curl, triceps pushdown, lat pulldown, 45° leg press and hack squat, after the squat moves onto the kernel. |
 
 ## Changelog
 
