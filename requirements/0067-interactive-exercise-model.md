@@ -1,6 +1,6 @@
 # R-0067 — The interactive exercise model: change the body, the angles and the machine
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-11-21)
 - **Milestone:** M6 (the lift model, shown to the lifter)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-11-21
@@ -115,18 +115,18 @@ standard body at any time. Every number on the screen comes from the server.
 
 - **OQ-1. The standard body.** Which height and mass? Proposal: 1.75 m and
   75 kg, with a switch to a second standard body (1.62 m, 60 kg) so the
-  default is not one sex's average only.
+  default is not one sex's average only. *Answered 2026-11-21:* 1.75 m / 75 kg, with a second standard body of 1.62 m / 60 kg.
 - **OQ-2. Which angles move.** Should the lifter set any angle directly, even
   one the solver normally computes to keep balance? Proposal: only the
   convention's parameters in v1. A solved angle shown as a read-out, not a
-  control, so every posture drawn is one the model can stand behind.
+  control, so every posture drawn is one the model can stand behind. *Answered 2026-11-21:* only the convention's parameters in v1; solved angles are read-outs.
 - **OQ-3. The interval.** Proposal: at most one request every 150 ms while
   dragging. To be checked on a mid-range Android over mobile data in the
-  spec.
+  spec. *Answered 2026-11-21:* at most one request every 150 ms while dragging, checked on a mid-range Android in the spec.
 - **OQ-4. Saving.** Save a variant (for example "my squat with a lower bar")
-  in a later requirement?
+  in a later requirement? *Answered 2026-11-21:* saving is a later requirement.
 - **OQ-5. Entry.** Replace the *Física* check of R-0059 with this screen, or
-  open this one from it (*Jugar con el modelo*)?
+  open this one from it (*Jugar con el modelo*)? *Answered 2026-11-21:* opened from the Física check as *Jugar con el modelo*; the check stays.
 
 ## 6. Decision log
 
@@ -134,7 +134,9 @@ standard body at any time. Every number on the screen comes from the server.
 |------|----------|-----------|
 | 2026-11-21 | Interactive model per exercise instead of fixed videos; a standard body by default; body, angles and machine settings adjustable. | Owner, 2026-11-21. |
 | 2026-11-21 | A new requirement rather than an amendment of R-0059. | R-0059 is Met; this adds a screen and depends on R-0066. |
+| 2026-11-21 | Accepted, with the proposals as the answers to the open questions. | Owner: "acepta 0066 y 0067". |
 
 ## Changelog
 
 - 2026-11-21 — created (Draft).
+- 2026-11-21 — Accepted by the owner; open questions answered with the proposals.

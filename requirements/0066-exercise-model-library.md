@@ -1,6 +1,6 @@
 # R-0066 — Exercise model library: every exercise on the kernel, machines included
 
-- **Status:** Draft
+- **Status:** Accepted (owner, 2026-11-21)
 - **Milestone:** M6 (the lift model)
 - **Owner:** see [`project-specifics.md`](../project-specifics.md)
 - **Created:** 2026-11-21
@@ -143,22 +143,22 @@ reel's own numbers are never copied in.
   4. **Lat pulldown** (cable, shoulder and elbow, trunk angle a parameter):
      the first two-joint upper-body chain.
   Then the remaining free-weight and cable exercises, and the deadlift and
-  bench through R-0062 and R-0063.
+  bench through R-0062 and R-0063. *Answered 2026-11-21:* the proposal; the first five are those of SPEC-0066 (curl, triceps pushdown, lat pulldown, 45° leg press, hack squat).
 - **OQ-2. Machine geometry.** Generic defaults for each machine (pulley
   heights, rail angles, cam profiles) need a source: measured on real
   machines, taken from manufacturers' published dimensions, or chosen and
-  stated as illustrative?
+  stated as illustrative? *Answered 2026-11-21:* illustrative defaults, stated as such on screen (AC3); measured values stay a later improvement.
 - **OQ-3. Cam profiles.** A cam machine's resistance curve is rarely
   published, and no reel models one. Proposal: the lever-or-cam kind is
   specified now but its first entry waits for a machine whose geometry can be
   measured (a plate-loaded lever). The chest-supported row's "constant
   horizontal pull" from the reels is not reused as is: it is an assumption
-  about a machine, not a model of one.
+  about a machine, not a model of one. *Answered 2026-11-21:* the proposal: the lever-or-cam kind is specified, its first entry waits for a measurable machine.
 - **OQ-4. R-0062 and R-0063.** Do the deadlift and the bench stay their own
-  requirements that add entries here, or fold into this one?
+  requirements that add entries here, or fold into this one? *Answered 2026-11-21:* R-0062 and R-0063 stay their own requirements and add entries to this library.
 - **OQ-5. Exercise identity.** The plan names exercises by free text, and
   `model_for` matches a few names. The library needs stable exercise ids and a
-  mapping from the names in programs and logs. Here, or its own requirement?
+  mapping from the names in programs and logs. Here, or its own requirement? *Answered 2026-11-21:* here: stable exercise ids with names and aliases in the library (SPEC-0066 §2.4).
 
 ## 6. Decision log
 
@@ -167,7 +167,9 @@ reel's own numbers are never copied in.
 | 2026-11-21 | Every exercise's physics comes from the app's engine; the reels' mp4s are not shipped in the app. | Owner chose the interactive model over fixed videos. The reels compute in their own scripts and disagreed with the model by 35% on the squat. |
 | 2026-11-21 | Machines are in scope: cable, guided rail, lever or cam. | Owner, 2026-11-21: "también máquinas". |
 | 2026-11-21 | Start with five exercises, with tests. | Owner, 2026-11-21: "vamos iniciando con algunos 5 ejercicios, agrega pruebas". SPEC-0066 proposes dumbbell curl, triceps pushdown, lat pulldown, 45° leg press and hack squat, after the squat moves onto the kernel. |
+| 2026-11-21 | Accepted, with the proposals as the answers to the open questions. | Owner: "acepta 0066 y 0067". |
 
 ## Changelog
 
 - 2026-11-21 — created (Draft).
+- 2026-11-21 — Accepted by the owner; open questions answered with the proposals.

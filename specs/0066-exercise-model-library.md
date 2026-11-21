@@ -1,7 +1,7 @@
 # SPEC-0066 — The exercise model library on the garust kernel
 
 - **Status:** Draft — for architect review, then owner acceptance
-- **Realizes:** R-0066 (Draft, 2026-11-21; acceptance pending with this spec)
+- **Realizes:** R-0066 (Accepted 2026-11-21)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-11-21
 - **Depends on:** ADR 0001 (garust as the kernel, rev `55e91407`), SPEC-0045
