@@ -25,7 +25,7 @@ use garust_physics::multibody::{generalized_torque, joint_point, joint_torque};
 use super::{Joint, Metres, NewtonMetres, Point, G};
 
 /// The virtual-work step, radians — the parity spike's (SPEC-0066 §2.1.2).
-pub const FD_STEP: f64 = 1e-6;
+pub(crate) const FD_STEP: f64 = 1e-6;
 
 /// The cross-check's absolute tolerance, N·m.
 const TOL_ABS: f64 = 1e-4;
@@ -55,8 +55,9 @@ impl Side {
     }
 }
 
-/// A link of a [`PlanarTree`]. Only [`PlanarTree::link`] makes one, so a
-/// parent always precedes its child and garust's ordering rule cannot fail.
+/// A link of a [`PlanarTree`]. Only [`PlanarTree::link`] makes one, so within
+/// one tree a parent always precedes its child and garust's ordering rule
+/// cannot fail. An id is only meaningful in the tree that made it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LinkId(usize);
 
@@ -99,6 +100,12 @@ impl PlanarTree {
     ///
     /// The axis passes through the link's frame origin by construction
     /// (SPEC-0066 §2.1.2's invariant): the frame origin *is* `centre`.
+    ///
+    /// # Panics
+    ///
+    /// If `parent` is a [`LinkId`] from another, smaller tree: a programming
+    /// error, not a runtime condition (every caller builds its tree in one
+    /// function from ids that tree returned).
     pub fn link(&mut self, parent: Option<LinkId>, centre: Point) -> LinkId {
         let from = parent.map_or(self.root_centre_or(centre), |p| self.centres[p.0]);
         self.links.push(TreeLink {
@@ -111,11 +118,18 @@ impl PlanarTree {
     }
 
     /// Reports `link`'s joint as `joint`, with the tree's distal side `side`.
+    /// A [`LinkId`] from another tree makes [`moments`] panic, as in
+    /// [`PlanarTree::link`].
     pub fn report(&mut self, link: LinkId, joint: Joint, side: Side) {
         self.reported.push((link, joint, side));
     }
 
     /// Hangs `kg` at `at` (posture coordinates) on `link`, under gravity.
+    ///
+    /// # Panics
+    ///
+    /// If `link` is a [`LinkId`] from another, smaller tree, as in
+    /// [`PlanarTree::link`].
     pub fn weight(&mut self, link: LinkId, at: Point, kg: f64) {
         let centre = self.centres[link.0];
         self.weights.push(Weight {
@@ -131,9 +145,10 @@ impl PlanarTree {
     /// with the posture (SPEC-0066 §2.1.2).
     #[must_use]
     pub fn joint_centres(&self) -> Vec<(Joint, Point)> {
-        let Some(poses) = self.poses() else {
+        if self.links.is_empty() {
             return Vec::new();
-        };
+        }
+        let poses = reference_poses(&Tree::new(&self.links));
         let root = self.centres[0];
         self.reported
             .iter()
@@ -148,17 +163,13 @@ impl PlanarTree {
     fn root_centre_or(&self, fallback: Point) -> Point {
         self.centres.first().copied().unwrap_or(fallback)
     }
+}
 
-    /// Forward kinematics at the reference configuration; `None` when empty.
-    fn poses(&self) -> Option<Vec<Motor<f64>>> {
-        if self.links.is_empty() {
-            return None;
-        }
-        let tree = Tree::new(&self.links);
-        let mut poses = vec![Motor::identity(); tree.dof()];
-        tree.fk(&vec![0.0; tree.dof()], &mut poses);
-        Some(poses)
-    }
+/// Forward kinematics at the reference configuration (`q = 0`).
+fn reference_poses(tree: &Tree<'_>) -> Vec<Motor<f64>> {
+    let mut poses = vec![Motor::identity(); tree.dof()];
+    tree.fk(&vec![0.0; tree.dof()], &mut poses);
+    poses
 }
 
 /// The signed moment (SPEC-0066 §2.1.3: positive when the loads tend to flex
@@ -169,11 +180,17 @@ impl PlanarTree {
 ///
 /// [`KernelError::Disagree`] when a joint's two derivations differ by more
 /// than `1e-4 + 1e-9·|τ|` N·m.
+///
+/// # Panics
+///
+/// If a reported [`LinkId`] came from another, larger tree (see
+/// [`PlanarTree::link`]).
 pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelError> {
-    let Some(poses) = tree.poses() else {
+    if tree.links.is_empty() {
         return Ok(Vec::new());
-    };
+    }
     let garust_tree = Tree::new(&tree.links);
+    let poses = reference_poses(&garust_tree);
     let loads: Vec<&dyn Load> = tree.weights.iter().map(|w| w as &dyn Load).collect();
     let q = vec![0.0; garust_tree.dof()];
     let mut work = poses.clone();
@@ -207,8 +224,10 @@ pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelEr
 }
 
 /// Whether two derivations of one moment agree: `|a − b| ≤ 1e-4 + 1e-9·|a|`.
+/// Symmetric only approximately: the relative term scales with the cross
+/// product's magnitude, the reference.
 #[must_use]
-pub fn agree(cross: f64, virtual_work: f64) -> bool {
+pub(crate) fn agree(cross: f64, virtual_work: f64) -> bool {
     (cross - virtual_work).abs() <= TOL_ABS + TOL_REL * cross.abs()
 }
 

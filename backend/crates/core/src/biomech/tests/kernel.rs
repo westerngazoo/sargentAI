@@ -26,6 +26,17 @@ const PARITY_N_M: f64 = 1e-9;
 /// The joints in the order the squat tree reports them.
 const JOINTS: [Joint; 4] = [Joint::Ankle, Joint::Knee, Joint::Hip, Joint::Lumbar];
 
+/// The squat tree's four moments in [`JOINTS`] order, computed once.
+fn squat_moments(tree: &PlanarTree) -> [f64; 4] {
+    let all = moments(tree).unwrap_or_else(|e| panic!("kernel refused: {e}"));
+    JOINTS.map(|joint| {
+        all.iter().find(|(j, _)| *j == joint).map_or_else(
+            || panic!("{joint:?} not reported"),
+            |&(_, NewtonMetres(m))| m,
+        )
+    })
+}
+
 fn kernel_moment(tree: &PlanarTree, joint: Joint) -> f64 {
     let all = moments(tree).unwrap_or_else(|e| panic!("kernel refused: {e}"));
     all.iter().find(|(j, _)| *j == joint).map_or_else(
@@ -127,10 +138,29 @@ fn the_tree_puts_every_joint_where_the_posture_has_it() {
 fn every_squat_joint_has_the_sign_its_resisting_group_says() {
     let lifter = body(1.75, 80.0);
     let p = solved(&lifter, Some(100.0), 38.0);
-    let tree = squat_tree(&lifter, &p);
-    for joint in JOINTS {
-        let m = kernel_moment(&tree, joint);
+    let all = squat_moments(&squat_tree(&lifter, &p));
+    for (joint, m) in JOINTS.iter().zip(all) {
         assert!(m > 0.0, "{joint:?}: {m}");
+    }
+}
+
+/// The cross-check holds at the heaviest bar the squat accepts
+/// (`LoadKg::MAX`, 1000 kg), where its relative term matters most
+/// (SPEC-0066 §2.1.2): every frame of that range is served, none refused.
+#[test]
+fn the_cross_check_holds_at_the_heaviest_bar() {
+    let case = Case {
+        height_m: 1.75,
+        mass_kg: 80.0,
+        bar_kg: Some(1000.0),
+        dorsiflexion_deg: 38.0,
+        frames: Vec::new(),
+    };
+    let lifter = case.body();
+    let postures = case.postures();
+    assert!(!postures.is_empty(), "a 1000 kg bar still reaches depth");
+    for p in postures {
+        assert!(moments(&squat_tree(&lifter, &p)).is_ok());
     }
 }
 
@@ -190,9 +220,8 @@ fn every_grid_posture_has_the_same_moments_on_the_kernel_as_on_the_chain() {
     for case in grid() {
         let lifter = case.body();
         for p in case.postures() {
-            let tree = squat_tree(&lifter, &p);
-            for joint in JOINTS {
-                let kernel = kernel_moment(&tree, joint);
+            let kernel_all = squat_moments(&squat_tree(&lifter, &p));
+            for (joint, kernel) in JOINTS.into_iter().zip(kernel_all) {
                 let chain = moment_about(joint, &lifter, &p).0;
                 assert!(
                     (kernel - chain).abs() <= PARITY_N_M,
@@ -202,7 +231,7 @@ fn every_grid_posture_has_the_same_moments_on_the_kernel_as_on_the_chain() {
             postures += 1;
         }
     }
-    assert!(postures >= 1500, "only {postures} postures in the grid");
+    assert_eq!(postures, 1916, "the grid's posture count (SPEC-0066 §2.2)");
 }
 
 /// Every placement corner the uncertainty walk evaluates (SPEC-0045 §2.8),
@@ -228,9 +257,8 @@ fn every_placement_corner_has_the_same_moments_on_the_kernel_as_on_the_chain() {
                         arms,
                         l5s1: l,
                     };
-                    let tree = tree_with(&lifter, &p, corner);
-                    for joint in JOINTS {
-                        let kernel = kernel_moment(&tree, joint);
+                    let kernel_all = squat_moments(&tree_with(&lifter, &p, corner));
+                    for (joint, kernel) in JOINTS.into_iter().zip(kernel_all) {
                         let chain = moment_about_with(joint, &lifter, &p, corner).0;
                         assert!(
                             (kernel - chain).abs() <= PARITY_N_M,
@@ -256,10 +284,7 @@ fn kernel_frames(case: &Case) -> Vec<[f64; 4]> {
     let lifter = case.body();
     case.postures()
         .iter()
-        .map(|p| {
-            let tree = squat_tree(&lifter, p);
-            JOINTS.map(|joint| kernel_moment(&tree, joint))
-        })
+        .map(|p| squat_moments(&squat_tree(&lifter, p)))
         .collect()
 }
 

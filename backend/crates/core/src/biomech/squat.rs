@@ -327,9 +327,12 @@ impl Balance {
     }
 }
 
-/// The squat as a garust tree (SPEC-0066 §2.2): foot on the floor as the root,
-/// then ankle, knee, hip and L5/S1, each segment's weight on the link that
-/// carries it, under the stated placement conventions.
+/// The squat as a garust tree (SPEC-0066 §2.2): **rooted at the ankle** (the
+/// foot is not a link), then knee, hip and L5/S1, each segment's weight on the
+/// link that carries it, under the stated placement conventions.
+///
+/// Public in slice 66-a1 only because nothing in the crate consumes it until
+/// 66-a2 (the parity tests are its one caller); 66-a2 lowers it to the crate.
 #[must_use]
 pub fn squat_tree(body: &Body, p: &Posture) -> PlanarTree {
     tree_with(body, p, Placement::STATED)
