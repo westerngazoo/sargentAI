@@ -1,7 +1,6 @@
 # SPEC-0066 — The exercise model library on the garust kernel
 
-- **Status:** Draft, revision 3 — architect ACCEPT WITH CHANGES applied (§10)
-  (§9); for re-review, then owner acceptance
+- **Status:** Draft, revision 3 — architect ACCEPT WITH CHANGES applied (§10); §2.7 for a last architect look, then owner acceptance
 - **Realizes:** R-0066 (Accepted 2026-11-21)
 - **Author:** Claude (main session), for owner review
 - **Created:** 2026-11-21
