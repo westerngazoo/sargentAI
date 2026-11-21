@@ -1,6 +1,6 @@
 # SPEC-0066 — The exercise model library on the garust kernel
 
-- **Status:** Draft, revision 2 — the architect's REJECT of 2026-11-21 applied
+- **Status:** Draft, revision 3 — architect ACCEPT WITH CHANGES applied (§10)
   (§9); for re-review, then owner acceptance
 - **Realizes:** R-0066 (Accepted 2026-11-21)
 - **Author:** Claude (main session), for owner review
@@ -35,10 +35,13 @@ Four facts shape this spec:
 3. **But garust's virtual work is wrong for a cable.** `generalized_torque`
    differentiates `W(q) = −Σ F(q)·x(q)`, which is right only for a force that
    does not depend on the posture. A cable's direction does, so the result
-   gains a spurious `−x·∂F/∂q` term. The architect's check, reproduced in the
-   main session: one link, 200 N, `q = 0.4`, pulley `(0.3, 2.0)`. The cross
-   product gives 54.97 N·m, garust's virtual work 58.48, and virtual work with
-   `F` held at the nominal posture 54.97. AC5's cross-check could never pass
+   gains a spurious `−x·∂F/∂q` term. The main session's reproduction: one
+   link pivoting at the origin, the cable attached 0.3 m along it at angle
+   `q = 0.4` from `+x`, 200 N toward a pulley at `(0.3, 2.0)`. The cross
+   product gives 54.97 N·m, virtual work with `F` varying gives 58.48 in
+   magnitude, and virtual work with `F` held at the nominal posture gives
+   54.97. (The architect's own setup, in garust's rotation sense, gave 55.52
+   against 52.54.) The new garust test's literals are the reference. AC5's cross-check could never pass
    for a cable. The fix belongs in garust (§2.1.1). Computing virtual work in
    fitAI would put a moment rule outside the kernel, which ADR 0001 §1
    forbids.
@@ -56,16 +59,26 @@ Four facts shape this spec:
 differences only their application points:
 
 ```
-τ_j = Σ_loads F(q) · (x(q + h·e_j) − x(q − h·e_j)) / 2h
+τ_j = −Σ_loads F(q) · (x(q + h·e_j) − x(q − h·e_j)) / 2h
 ```
 
-This is the principle of virtual work as stated: the forces are held, the
-displacement is virtual. For a constant force it is identical to today's
-formula, so every existing garust test still passes unchanged. The change
-adds a cable agreement test (`joint_torque` against `generalized_torque` for a
-`Cable` at three pulley positions, with literals). Then the pin moves to the
-new rev. ADR 0001 requires fitAI's parity tests to be green before the pin
-moves. The bump is recorded in ADR 0001's consequences and in §7 here.
+The minus is garust's existing sign (`W = −F·x`), which makes the result
+equal `joint_torque`'s `τ_z`, as today. This is the principle of virtual work
+as stated: the forces are held, the displacement is virtual. For a constant
+force it is identical to today's formula, so every existing garust test still
+passes unchanged. The change adds a cable agreement test (`joint_torque`
+against `generalized_torque` for a `Cable` at three pulley positions, with
+literals).
+
+- **garust's process.** 66-0 follows garust's own flow (its PM ticket and PR,
+  since `e518fc4`), not fitAI's.
+- **The new rev must be on the GitHub remote** fitAI's `Cargo.toml` points to,
+  or public CI cannot fetch it.
+- **The bump carries more than the fix.** garust has 34 commits after
+  `55e91407`, including fixes in `world.rs` and `contact.rs`. fitAI's parity
+  tests cover fitAI's paths. ADR 0001 requires them green before the pin
+  moves, and its consequences record the bump, the commit range and the
+  parity run that justified it.
 
 #### 2.1.2 `biomech/kernel.rs` — the only module that imports garust
 
@@ -78,8 +91,9 @@ pub struct PlanarTree {
     loads: Vec<LoadSpec>,           // Weight { link, at, kg } | Force { link, at, newtons } | Cable { link, at, pulley, newtons }
 }
 
-/// Moments at every reported joint, each cross-checked by virtual work.
-pub fn moments(tree: &PlanarTree, q: &[f64]) -> Result<Vec<JointMoment>, KernelError>;
+/// Signed moments (§2.1.3) at every reported joint, each cross-checked by
+/// virtual work. The caller adds `resisting` and the uncertainty.
+pub fn moments(tree: &PlanarTree, q: &[f64]) -> Result<Vec<(Joint, NewtonMetres)>, KernelError>;
 
 /// The force and moment the root takes: minus the sum of every applied load.
 pub fn root_reaction(tree: &PlanarTree, q: &[f64]) -> Reaction;
@@ -127,9 +141,11 @@ shoulder.
 
 **From garust's `z` to that sign** there are two factors, never a
 per-joint table: `sign = flexion_dir(joint) × side(tree, joint) × τ_z`.
-- `flexion_dir(joint)`: the rotation sense, about garust's `z`, that flexes
-  the joint when the distal anatomical segment moves. One row per joint,
-  derived once from the side view (`+x` toward the toes).
+- `flexion_dir(joint)`: the rotation sense that flexes the joint when the
+  distal anatomical segment moves, **in the right-hand sense of
+  `joint_torque`'s `τ_z`**, not garust's `q` sense (the two agree only
+  because two sign flips cancel). One row per joint, derived once from the
+  side view. **Every tree has the lifter facing `+x`.**
 - `side`: `+1` when the tree's distal side at that link is the anatomical
   distal segment (rooted at the shoulder, the elbow's distal side is the
   forearm), `−1` when it is the proximal one (rooted at the foot, the knee's
@@ -139,6 +155,22 @@ Each `PlanarTree` carries `side` per reported link. **A test pins every
 (exercise, joint) pair** with a posture whose sign is obvious by inspection
 (a held dumbbell loads the curl's elbow flexors; a platform pushing ahead of
 the knee loads the leg press's knee extensors).
+
+**The enums grow** (66-a2 for the squat's, 66-b1 onward for the rest):
+- `Joint` gains `Shoulder` and `Elbow`.
+- `ResistingGroup` gains `Dorsiflexors`, `KneeFlexors`, `HipFlexors`,
+  `Abdominals`, `ShoulderFlexors`, `ShoulderExtensors`, `ElbowFlexors` and
+  `ElbowExtensors`.
+- The squat's `Mechanics.joints: [JointMoment; 4]` keeps its shape.
+
+**The squat's wire changes in one field.** Today `resisting` is fixed per
+joint (`analysis.rs:273`). Under one rule it follows the sign, so a squat
+frame whose knee moment is negative now reads `knee_flexors`, where SPEC-0059's
+example (`moment: -71.49`) reads `knee_extensors`. The moments are unchanged
+to 1e-9. 66-a2 makes this change, amends SPEC-0059's example and golden, and
+updates the endpoint's e2e. The app parses `resisting` as a string and never
+shows it (`squat_range.dart:166`), so no installed build is affected. One rule
+for every exercise, rather than two.
 
 ### 2.2 The squat on the kernel (slices 66-a1, 66-a2)
 
@@ -171,7 +203,9 @@ is the single source for both the balance solve (`squat.rs`, which relies on
   asserting `|kernel − chain| ≤ 1e-9 N·m` at every joint.
 - The same PR snapshots the kernel's values over that grid at full precision
   into a fixture (`tests/fixtures/squat_kernel_parity.json`). That is what
-  survives `chain.rs`.
+  survives `chain.rs`. The fixture is generated (about 3 000 postures × 4
+  joints), excluded from the line budget, and marked as regenerable only with
+  both paths alive. After 66-a2 that means never.
 - Amends SPEC-0045's slice E row: recast by ADR 0001 as "the squat on the
   garust kernel", realized here.
 - Nothing else changes, and the endpoints are untouched.
@@ -190,9 +224,13 @@ is the single source for both the balance solve (`squat.rs`, which relies on
   `examples/squat.rs` too.
 - The parity test reads the 66-a1 fixture: `≤ 1e-9 N·m` against literals
   that came from a green run with both paths alive.
-- The moment functions are deleted.
-- `POST /biomech/squat/range` answers byte-for-byte as before. Its e2e test
-  is the proof.
+- The moment functions are deleted. What is left of `chain.rs`
+  (`ChainSegment`, `com_with`) is renamed `segments.rs`, and the module docs
+  (`mod.rs:20–27, 63–66`, which say `chain` is the only place gravity is
+  multiplied) now name `kernel`.
+- `resisting` follows the sign (§2.1.3). `POST /biomech/squat/range` answers
+  as before except for that field, with the moments equal to 1e-9. Its e2e
+  test and SPEC-0059's example are updated in the same PR.
 
 ### 2.3 The library (slice 66-b1)
 
@@ -232,7 +270,8 @@ pub fn library() -> &'static [&'static dyn ExerciseModel];
   `shank`, `trunk`, `upper_arm` and `forearm`. Each is bounded `0.1..=1.5 m`,
   SPEC-0059's bound.
 - **Validation is generic**: one function checks `values` against the
-  description. An unknown key is `400` with that key. A missing key takes its
+  description. An unknown key is `400` with that key, and so is a `lengths`
+  key the exercise does not use. A missing key takes its
   default. A number outside `min..=max` or a choice not in `options` is `400`.
   A broken pair rule is `400`.
 - **`ExerciseRange`**: `{ end, frames, settings, table_lengths, assumptions,
@@ -241,7 +280,10 @@ pub fn library() -> &'static [&'static dyn ExerciseModel];
     (a prefix of frames that the model stands behind, then the reason), or
     `rejected { reason }` (no frames).
   - `Reason` is a closed library enum: the squat's `Rejection` wrapped
-    unchanged, `OutOfReach { frame }`, `NoLegSolution { frame }`.
+    unchanged, `ConventionPassesHorizontal` (the squat's `Stopped { bottom:
+    None }`: the bottom balances but this convention passes horizontal on the
+    way down), `OutOfReach { frame }`, `NoLegSolution { frame }`. A 66-b1 test
+    covers the `ConventionPassesHorizontal` mapping.
   - Each frame is `{ progress, points, moments }`. `points` are named
     (`ankle`, `knee`, `hip`, `l5s1`, `shoulder`, `elbow`, `hand`, `pulley`,
     `platform`…), and `moments` uses the SPEC-0059 shape `{ joint, resisting,
@@ -269,6 +311,11 @@ pub fn library() -> &'static [&'static dyn ExerciseModel];
   plan until SPEC-0067's screen can open them. A `served_in_plan` flag on
   the description says which entries the plan exposes, and only `back_squat`
   has it until then.
+- **Oracles test the production tree.** Each model has a `pub(crate)`
+  builder, `tree_at(body, values, angles) -> PlanarTree`, from explicit
+  angles. `range()` uses it for every frame, and the oracles call it for
+  postures the motion convention never produces (an arm straight and
+  horizontal, a force line through the knee).
 - **Uncertainty**: each model names the placements it nudges and their
   spreads. The corner walk runs through the same code path as the stated
   placement (SPEC-0045 §2.8). The spreads reuse `COM_PLACEMENT_SPREAD_M`
@@ -346,7 +393,9 @@ hand COM distance`. Both are stated in the result.
     `60..=130`, defaults 5 and 100); frames run from flexed to extended (the
     press);
   - `pulley_height_m` (machine, 1.5..=2.6, default 2.20, from the floor;
-    the shoulder sits at the standard body's shoulder height);
+    the shoulder's height comes from the lifter's scaled body, upright:
+    ankle height + shank + thigh + trunk, the same segment sums the squat's
+    upright uses, so "my body" moves the cable's angle too);
   - `pulley_ahead_m` (machine, −0.3..=0.8, default 0.10, ahead of the
     shoulder);
   - `stack_kg` (load, 0..=100, default 20).
@@ -368,13 +417,17 @@ hand COM distance`. Both are stated in the result.
   because the seat pushes on the pelvis and the distal rule would be wrong
   there. The model carries `RigidTrunkLumbar` (SPEC-0045) and
   `FixedRoot { at: "pelvis" }`.
-- **Motion:** the hand moves on a straight path in the plane, from
-  `hand_top`, at full reach along the cable line, to `hand_bottom`, the
-  upper chest (a stated point on the thorax). The shoulder and elbow are
-  solved by `two_link_joint` with the elbow behind the bar. garust clamps an
-  unreachable target, so `pulldown.rs` checks the reach itself. A hand
-  beyond `upper_arm + forearm` ends the range as `stopped { reason:
-  OutOfReach { frame } }`.
+- **Motion:** the hand (its Winter COM, where the cable attaches) moves on a
+  straight path in the plane, from `hand_top` to `hand_bottom`.
+  - `hand_top` lies on the line from the shoulder to the pulley, at 0.98 of
+    reach. Full reach is singular for `two_link_joint` (its own doc says so).
+  - `hand_bottom` is the upper chest, a stated point on the thorax.
+  - The shoulder and elbow are solved by `two_link_joint` with `l1 =
+    upper_arm` and `l2 = L_fh` (forearm + hand COM distance; the hand is
+    rigid beyond the forearm), elbow behind the bar.
+  - garust clamps an unreachable target, so `pulldown.rs` checks the reach
+    itself, with a stated tolerance of 1e-9 m. A hand beyond `upper_arm +
+    L_fh` ends the range as `stopped { reason: OutOfReach { frame } }`.
 - **Loads:** the thorax, head and neck and the arms as `Weight`s, and a
   `Cable` from the hand COM to the pulley.
 - **Parameters:**
@@ -399,19 +452,37 @@ hand COM distance`. Both are stated in the result.
 **The assumption, stated once.** The sled or carriage moves on a rail at α
 to the horizontal. The force between the feet and the platform acts **along
 the rail, through the centre of pressure `cop`** on the foot (`heel`, `mid`
-or `toes`, at 0.15, 0.50 and 0.85 of the foot's length from the heel). The
+or `toes`, at 0.15, 0.50 and 0.85 of the foot's length from the heel).
+
+**The foot, a stated convention.** Winter's foot row runs from the ankle to
+the second metatarsal head and gives no heel point, so the foot's geometry is
+a convention with its own spread:
+- the foot's length, heel to toe, is Winter's `0.152 H`;
+- the sole lies `ankle_height` (`WINTER.ankle_height`) below the ankle;
+- the ankle sits over a point `0.25` of the foot's length forward of the heel.
+
+The `cop` nudge (±0.02 m) carries this convention's error. The result states
+it as `Assumption::FootGeometryConvention`. The
 seat or pad takes everything else. Rail friction opposes the motion: on the
 press (`phase: up`) the platform force is `W_along + μ·N`, and on the descent
 (`phase: down`) it is `W_along − μ·N`. `N` is the rail's normal force on the
 carriage. `μ` defaults to 0 (frictionless) and ranges `0..=0.35`, after NASA
 RP-1228 as the reel cites.
 
-**A rail-fixed frame.** The rail direction `û` points up the rail. The
-platform is the plane perpendicular to `û`. Its centre is the origin of the
-machine's geometry. The hip is placed by two settings: `hip_offset_m`, its
-distance from the rail line through the platform centre, perpendicular to
-it; and the platform's travel `s` along `û`, which is the motion. The foot's
-position on the platform is `foot_height_m`, along the platform's plane.
+**A rail-fixed frame.**
+- `û` points up the rail, and `n̂` is `û` rotated +90° in the side view,
+  toward the lifter's chest.
+- The platform is the plane perpendicular to `û`. Its centre is the origin of
+  the machine's geometry.
+- The hip sits at `−hip_offset_m · n̂` from the rail line through the platform
+  centre, with the platform's travel `s` along `û` as the motion.
+- The foot's position on the platform is `foot_height_m`, along `n̂`.
+- The leg solve passes `+n̂` to `two_link_joint` as the knee's side, toward
+  the chest.
+- **No ankle limit is applied.** A flat foot fixes the ankle angle, and deep
+  knee flexion can ask for more dorsiflexion than a lifter has. The result
+  says so (`Assumption::NoAnkleLimit`). A cited limit would become a `Reason`
+  later.
 
 **45° leg press (`leg_press_45`).**
 - Tree: pelvis (root, the seat) → hip (revolute) → thigh → knee (revolute) →
@@ -419,7 +490,7 @@ position on the platform is `foot_height_m`, along the platform's plane.
   pelvis, the distal side is anatomical).
 - Motion: knee angle from `knee_extended_deg` to `knee_flexed_deg`. At each
   frame `s` and the thigh angle are solved by the two-circle intersection
-  (hip fixed, sole on the platform), knee on the side away from the rail.
+  (hip fixed, sole on the platform), knee on the `+n̂` side.
   When no intersection exists the range ends as `NoLegSolution { frame }`.
 - Loads: the leg segments as `Weight`s, and the platform force
   `kernel::force` at the foot's `cop`, of magnitude `(sled_kg + plates_kg)·g·
@@ -444,12 +515,14 @@ position on the platform is `foot_height_m`, along the platform's plane.
 - Same frame and tree. The platform is fixed and the pelvis rides the
   carriage on the pad.
 - **The force along the rail, from a free body.** The system is the carriage,
-  the plates and the whole body except the feet, which rest on the fixed
-  platform. Along the rail its external forces are gravity, rail friction and
-  the platform force. So the force is `(carriage_kg + plates_kg + M −
-  m_feet)·g·sin α ± μ·N`, where `N = (carriage_kg + plates_kg + m_upper)·g·
-  cos α` is what the pad presses into the rail, and `m_upper` is the pelvis,
-  trunk, head and arms.
+  the plates and **the whole body**. With the whole body inside, the platform
+  force is external to it. Along the rail the external forces are gravity,
+  rail friction and the platform force:
+  - `F = (carriage_kg + plates_kg + M)·g·sin α ± μ·N`;
+  - `N = (carriage_kg + plates_kg + M)·g·cos α`. The platform force has no
+    component perpendicular to the rail (the assumption above), so the whole
+    system's perpendicular weight, legs included, reaches the rail through
+    the pelvis and the pad.
 - Parameters: as the leg press, with `carriage_kg` (machine, 0..=150,
   default 60) in place of `sled_kg`. `hip_offset_m` is the pad's distance
   from the rail line.
@@ -461,12 +534,13 @@ position on the platform is `foot_height_m`, along the platform's plane.
   that the platform force is along the rail.
 - **Hip lever**: the force line a stated distance d from the hip gives
   `τ_hip = F·d` plus the segment terms.
-- **The force sum** (both machines): the reported platform force equals the
-  free-body total above, computed by hand for the standard body. This is the
-  oracle that catches a missing mass.
-- **`cop`**: moving `cop` from heel to toes, with everything else fixed,
-  moves load from the hip to the knee. Both values are literals for one
-  posture.
+- **The force sum** (both machines): the reported platform force `F` and the
+  rail's normal force `N` equal the free-body totals above, computed by hand
+  for the standard body. This is the oracle that catches a missing mass.
+- **`cop`**: for one stated posture P, the hip and knee moments with `cop` at
+  `heel` and at `toes`, all four computed by hand, as literals. The spec does
+  not pre-state which joint gains. The hand computation decides, and the
+  model must agree with it.
 - **Friction**: `phase: up` minus `phase: down` equals `2μN`, by hand.
 
 ### 2.8 Slicing
@@ -573,6 +647,24 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 
 - 2026-11-21 — created (Draft).
 - 2026-11-21 — revision 2: the architect's REJECT applied (§9).
+- 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
+
+## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3
+
+| # | Finding | Where applied |
+|---|---|---|
+| 1 | Sign-driven `resisting` changes the squat's wire; enum growth unlisted | §2.1.3 (option a: one rule; SPEC-0059's example amended in 66-a2), §2.2 |
+| 2 | Hack squat free body: feet subtracted, `N` too small | §2.7: whole body in the system; `F` and `N` both from `carriage + plates + M` |
+| 3 | The `cop` oracle pre-stated a direction | §2.7: four hand literals, no direction stated |
+| 4 | No foot model | §2.7 foot convention, `FootGeometryConvention` |
+| 5 | Pushdown shoulder height; leg-press side; ankle | §2.5 shoulder from the scaled body; §2.7 `n̂`, knee hint, `NoAnkleLimit` |
+| 6 | 66-0 formula's minus; the check's citation | §2.1.1, §1 |
+| 7 | The bump's size, garust's process, the remote | §2.1.1 |
+| 8 | The squat's `Stopped { bottom: None }` | §2.3 `ConventionPassesHorizontal` |
+| 9 | Pulldown `hand_top`, singular reach, `l2` | §2.6 |
+| 10 | Oracle postures unreachable through `range()` | §2.3 `tree_at` |
+| 11 | `moments()` return type, `flexion_dir` sense, facing `+x` | §2.1.2, §2.1.3 |
+| 12 | Fixture, `chain.rs` rename, unused lengths key | §2.2, §2.3 |
 
 ## 9. Architect review — REJECT (2026-11-21), applied in revision 2
 
