@@ -30,8 +30,8 @@ use crate::workout::LoadKg;
 use super::analysis::analyse_range;
 use super::squat::{balanced, balancing_trunk, first_moment_at, in_domain, Legs};
 use super::{
-    analyse_baseline, baseline, Assumption, Body, Dorsiflexion, Joint, Mechanics, Posture,
-    Rejection, Unknown,
+    analyse_baseline, baseline, Assumption, Body, Dorsiflexion, Joint, Mechanics, ModelError,
+    Posture, Rejection, Unknown,
 };
 
 /// How finely `sin θ(s)` is sampled before it is refined. Fixed, so `s*` does
@@ -136,6 +136,8 @@ pub enum RangeEnd {
 ///
 /// # Errors
 ///
+/// [`ModelError::Kernel`] if the kernel's cross-check fails on any frame (a
+/// modelling bug, never served). Otherwise [`ModelError::Rejected`] with:
 /// [`Rejection::DepthNotReachable`] when the lifter's dorsiflexion is below
 /// the solved upright lean, which would drive the shank backwards along the
 /// range; [`Rejection::DoesNotBalance`] with [`Unknown::ShankAngle`] when the
@@ -149,17 +151,17 @@ pub fn squat_range(
     bar_kg: Option<LoadKg>,
     ankle: Dorsiflexion,
     frames: FrameCount,
-) -> Result<SquatRange, Rejection> {
+) -> Result<SquatRange, ModelError> {
     let lean = upright_lean(body, bar_kg).ok_or(Rejection::DoesNotBalance {
         unknown: Unknown::ShankAngle,
     })?;
     let dorsi = ankle.degrees().to_radians();
     if dorsi < lean {
-        return Err(Rejection::DepthNotReachable {
+        return Err(ModelError::Rejected(Rejection::DepthNotReachable {
             limiting: Joint::Ankle,
             needed_deg: lean.to_degrees(),
             available_deg: ankle.degrees(),
-        });
+        }));
     }
     let convention = Convention {
         body,
@@ -193,13 +195,15 @@ pub fn squat_range(
             // Reached only when the end is the bottom: the frame is slice A's
             // baseline itself, never an interpolation that lands near it.
             bottom.as_ref().ok().map(|solved| {
-                frame_of(
-                    s,
-                    ankle.degrees(),
-                    knee_flexion_deg,
-                    *solved.posture(),
-                    analyse_baseline(body, solved),
-                )
+                analyse_baseline(body, solved).map(|mechanics| {
+                    frame_of(
+                        s,
+                        ankle.degrees(),
+                        knee_flexion_deg,
+                        *solved.posture(),
+                        mechanics,
+                    )
+                })
             })
         } else {
             let at = if i == 0 {
@@ -209,15 +213,18 @@ pub fn squat_range(
             };
             balanced(body, bar_kg, &legs_at(s, lean, dorsi)).map(|posture| {
                 let solved = RangePosture { posture, at };
-                frame_of(
-                    s,
-                    shank_at(s, lean, dorsi).to_degrees(),
-                    knee_flexion_deg,
-                    posture,
-                    analyse_range(body, &solved),
-                )
+                analyse_range(body, &solved).map(|mechanics| {
+                    frame_of(
+                        s,
+                        shank_at(s, lean, dorsi).to_degrees(),
+                        knee_flexion_deg,
+                        posture,
+                        mechanics,
+                    )
+                })
             })
-        };
+        }
+        .transpose()?;
         // Every sampled `s ≤ s*` balances under the `SCAN_STEPS` assumption. If
         // that assumption ever fails, the end still has to say so: `Bottom`
         // with frames missing would break the type's promise silently.

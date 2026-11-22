@@ -28,8 +28,8 @@ use super::{
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};
 use crate::biomech::{
     baseline, baseline_mechanics, scale, squat_range, Assumption, Body, ChainSegment, FrameCount,
-    Joint, Load, MeasuredLengths, Mechanics, Metres, Point, Position, Posture, RangeEnd,
-    RangeFrame, Rejection, SquatRange, Unknown, L5S1_UP_THE_TRUNK, WINTER,
+    Joint, Load, MeasuredLengths, Mechanics, Metres, ModelError, Point, Position, Posture,
+    RangeEnd, RangeFrame, Rejection, SquatRange, Unknown, L5S1_UP_THE_TRUNK, WINTER,
 };
 
 // ===========================================================================
@@ -52,7 +52,7 @@ const LOADED_BOTTOM_BALANCES_RANGE_DOES_NOT: f64 = 13.6;
 const BELOW_THE_UPRIGHT_LEAN: f64 = 2.0;
 
 /// Everything above the ankle — §2.4.2's ankle list, restated rather than
-/// read from `above()`.
+/// read from the model's `ChainSegment::ALL`.
 const ABOVE_ANKLE: [ChainSegment; 6] = [Shank, Thigh, Pelvis, ThoraxAbdomen, HeadNeck, Arms];
 
 /// A frame count the type accepts.
@@ -1014,11 +1014,11 @@ fn r11_an_ankle_below_the_upright_lean_has_no_range() {
         for available in [0.0, BELOW_THE_UPRIGHT_LEAN] {
             let what = format!("bar {bar_kg:?}, {available}°");
             match squat_range(&body, bar_kg.map(bar), dorsi(available), frames(6)) {
-                Err(Rejection::DepthNotReachable {
+                Err(ModelError::Rejected(Rejection::DepthNotReachable {
                     limiting: Joint::Ankle,
                     needed_deg,
                     available_deg,
-                }) => {
+                })) => {
                     assert_close(needed_deg, lean, 1e-9, &format!("{what}: needed is λ"));
                     assert_close(
                         available_deg,
@@ -1058,9 +1058,9 @@ fn r12_a_body_that_cannot_stand_balanced_has_no_range() {
     ] {
         assert_eq!(
             squat_range(&massless, None, dorsi(dorsiflexion), frames(6)),
-            Err(Rejection::DoesNotBalance {
+            Err(ModelError::Rejected(Rejection::DoesNotBalance {
                 unknown: Unknown::ShankAngle
-            }),
+            })),
             "{dorsiflexion}°"
         );
     }

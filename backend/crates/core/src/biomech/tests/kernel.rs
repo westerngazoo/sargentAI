@@ -1,23 +1,22 @@
-//! SPEC-0066 slice 66-a1 — the kernel glue, and the squat on it with the
-//! hand-written chain still alive as the parity reference (§2.2).
+//! SPEC-0066 slices 66-a1 and 66-a2 — the kernel glue, and the squat on it.
 //!
-//! The parity claim is the gate for moving the squat onto garust: every
-//! posture of a dense grid, and every placement corner of a subset, has the
-//! same four moments on the kernel as on `chain.rs`, to 1e-9 N·m (R-0045
-//! AC17(c)). The fixture written from a green run is what survives `chain.rs`
-//! in slice 66-a2.
+//! Slice 66-a1 proved parity with the hand-written chain while both paths
+//! were alive, to 1e-9 N·m on 1 916 postures and every placement corner, and
+//! snapshotted the kernel's values in a generated fixture. Slice 66-a2
+//! removed the chain's moment functions; the fixture is now the parity gate
+//! (R-0045 AC17(c)). It is never regenerated: both paths are gone.
 
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::{bar, dorsi, pt, solved};
-use crate::biomech::chain::{moment_about_with, Placement};
-use crate::biomech::kernel::{agree, moments, KernelError, PlanarTree, Side};
-use crate::biomech::squat::tree_with;
+use crate::biomech::kernel::{agree, moment_of, moments, KernelError, PlanarTree, Side};
+use crate::biomech::segments::Placement;
+use crate::biomech::squat::{tree_with, Loads};
 use crate::biomech::{
-    moment_about, scale, squat_range, squat_tree, Body, FrameCount, Joint, MeasuredLengths, Metres,
-    NewtonMetres, Posture, COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M,
+    body_moment, scale, squat_range, Body, FrameCount, Joint, MeasuredLengths, Metres,
+    NewtonMetres, Posture, ResistingGroup,
 };
 
 /// The parity bound (R-0045 AC17(c)).
@@ -25,6 +24,11 @@ const PARITY_N_M: f64 = 1e-9;
 
 /// The joints in the order the squat tree reports them.
 const JOINTS: [Joint; 4] = [Joint::Ankle, Joint::Knee, Joint::Hip, Joint::Lumbar];
+
+/// The squat's tree at the stated placement, bar included.
+fn squat_tree(lifter: &Body, p: &Posture) -> PlanarTree {
+    tree_with(lifter, p, Placement::STATED, Loads::All)
+}
 
 /// The squat tree's four moments in [`JOINTS`] order, computed once.
 fn squat_moments(tree: &PlanarTree) -> [f64; 4] {
@@ -186,7 +190,7 @@ fn grid() -> Vec<Case> {
 
 /// One grid case and, in the fixture, its frames' four moments in
 /// [`JOINTS`] order.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Case {
     height_m: f64,
     mass_kg: f64,
@@ -214,63 +218,6 @@ impl Case {
     }
 }
 
-#[test]
-fn every_grid_posture_has_the_same_moments_on_the_kernel_as_on_the_chain() {
-    let mut postures = 0;
-    for case in grid() {
-        let lifter = case.body();
-        for p in case.postures() {
-            let kernel_all = squat_moments(&squat_tree(&lifter, &p));
-            for (joint, kernel) in JOINTS.into_iter().zip(kernel_all) {
-                let chain = moment_about(joint, &lifter, &p).0;
-                assert!(
-                    (kernel - chain).abs() <= PARITY_N_M,
-                    "{case:?} {joint:?}: kernel {kernel}, chain {chain}"
-                );
-            }
-            postures += 1;
-        }
-    }
-    assert_eq!(postures, 1916, "the grid's posture count (SPEC-0066 §2.2)");
-}
-
-/// Every placement corner the uncertainty walk evaluates (SPEC-0045 §2.8),
-/// on one lifter's whole range.
-#[test]
-fn every_placement_corner_has_the_same_moments_on_the_kernel_as_on_the_chain() {
-    let case = Case {
-        height_m: 1.75,
-        mass_kg: 80.0,
-        bar_kg: Some(140.0),
-        dorsiflexion_deg: 38.0,
-        frames: Vec::new(),
-    };
-    let lifter = case.body();
-    let com = [-COM_PLACEMENT_SPREAD_M, COM_PLACEMENT_SPREAD_M];
-    let l5s1 = [-L5S1_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M];
-    for p in case.postures() {
-        for head in com {
-            for arms in com {
-                for l in l5s1 {
-                    let corner = Placement {
-                        head,
-                        arms,
-                        l5s1: l,
-                    };
-                    let kernel_all = squat_moments(&tree_with(&lifter, &p, corner));
-                    for (joint, kernel) in JOINTS.into_iter().zip(kernel_all) {
-                        let chain = moment_about_with(joint, &lifter, &p, corner).0;
-                        assert!(
-                            (kernel - chain).abs() <= PARITY_N_M,
-                            "{corner:?} {joint:?}: kernel {kernel}, chain {chain}"
-                        );
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // The fixture that survives chain.rs (SPEC-0066 §2.2)
 // ---------------------------------------------------------------------------
@@ -288,27 +235,10 @@ fn kernel_frames(case: &Case) -> Vec<[f64; 4]> {
         .collect()
 }
 
-/// Writes the fixture. **Generated; regenerate only with both paths alive**
-/// (SPEC-0066 §2.2), i.e. never after slice 66-a2. Run with
-/// `cargo test -p fitai-core write_the_squat_kernel_parity_fixture -- --ignored`.
-#[test]
-#[ignore = "writes the generated parity fixture; run by hand, only in slice 66-a1"]
-fn write_the_squat_kernel_parity_fixture() {
-    let cases: Vec<Case> = grid()
-        .into_iter()
-        .map(|mut case| {
-            case.frames = kernel_frames(&case);
-            case
-        })
-        .collect();
-    let json = serde_json::to_string(&cases).unwrap_or_else(|e| panic!("serialize: {e}"));
-    std::fs::write(fixture_path(), json).unwrap_or_else(|e| panic!("write: {e}"));
-}
-
 #[test]
 fn the_kernel_still_matches_the_parity_fixture() {
     let json = std::fs::read_to_string(fixture_path())
-        .unwrap_or_else(|e| panic!("the fixture is missing ({e}); write it in 66-a1"));
+        .unwrap_or_else(|e| panic!("the fixture is missing ({e})"));
     let cases: Vec<Case> = serde_json::from_str(&json).unwrap_or_else(|e| panic!("parse: {e}"));
     assert_eq!(
         cases.len(),
@@ -329,4 +259,95 @@ fn the_kernel_still_matches_the_parity_fixture() {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Slice 66-a2: one sign rule, the body's share, typed errors
+// ---------------------------------------------------------------------------
+
+/// `resisting` follows the sign (SPEC-0066 §2.1.3): positive, the loads tend
+/// to flex the joint and its extensors resist; negative, its flexors do.
+#[test]
+fn the_resisting_group_follows_the_sign_of_the_moment() {
+    let cases = [
+        (
+            Joint::Hip,
+            ResistingGroup::HipExtensors,
+            ResistingGroup::HipFlexors,
+        ),
+        (
+            Joint::Knee,
+            ResistingGroup::KneeExtensors,
+            ResistingGroup::KneeFlexors,
+        ),
+        (
+            Joint::Ankle,
+            ResistingGroup::PlantarFlexors,
+            ResistingGroup::Dorsiflexors,
+        ),
+        (
+            Joint::Lumbar,
+            ResistingGroup::SpinalErectors,
+            ResistingGroup::Abdominals,
+        ),
+    ];
+    for (joint, positive, negative) in cases {
+        assert_eq!(joint.resisting(NewtonMetres(12.0)), positive, "{joint:?} +");
+        assert_eq!(
+            joint.resisting(NewtonMetres(-12.0)),
+            negative,
+            "{joint:?} −"
+        );
+    }
+}
+
+/// The SPEC-0059 example's upright frame has the knee moment negative (the
+/// load sits ahead of the knee), so it names the knee flexors.
+#[test]
+fn an_upright_frame_with_a_negative_knee_moment_names_the_knee_flexors() {
+    let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
+    let frames = FrameCount::new(41).unwrap_or_else(|| panic!("41 is valid"));
+    let range = squat_range(&body, Some(bar(84.0)), dorsi(29.0), frames)
+        .unwrap_or_else(|e| panic!("the example solves: {e:?}"));
+    let knee = range.frames[0]
+        .mechanics
+        .joints
+        .iter()
+        .find(|j| j.joint == Joint::Knee)
+        .unwrap_or_else(|| panic!("the knee is reported"));
+    assert!(knee.moment.0 < 0.0, "{}", knee.moment.0);
+    assert_eq!(knee.resisting, ResistingGroup::KneeFlexors);
+}
+
+/// The body's own share plus the bar's term is the joint's moment
+/// (SPEC-0059 AC7, now from the kernel): the same tree without the bar.
+#[test]
+fn the_body_share_plus_the_bar_term_is_the_moment() {
+    let lifter = body(1.75, 80.0);
+    let p = solved(&lifter, Some(100.0), 38.0);
+    let all = squat_moments(&squat_tree(&lifter, &p));
+    let load = p.load.unwrap_or_else(|| panic!("a loaded posture"));
+    for (joint, total) in JOINTS.into_iter().zip(all) {
+        let share = body_moment(joint, &lifter, &p)
+            .unwrap_or_else(|e| panic!("kernel refused: {e}"))
+            .0;
+        assert!((share - total).abs() > 1.0, "{joint:?}: the bar matters");
+        let bar_only = total - share;
+        // The bar's term by hand: m·g·|lever| (its sign is the joint's).
+        let lever = load.at.x.0 - p.at(joint).x.0;
+        let by_hand = load.kg.get() * 9.81 * lever.abs();
+        assert!(
+            (bar_only.abs() - by_hand).abs() < 1e-9,
+            "{joint:?}: {bar_only} vs {by_hand}"
+        );
+    }
+}
+
+/// A joint the tree does not report is a typed error, never a silent zero.
+#[test]
+fn a_joint_the_tree_does_not_report_is_a_typed_error() {
+    assert_eq!(
+        moment_of(&[], Joint::Hip),
+        Err(KernelError::NotReported { joint: Joint::Hip })
+    );
 }

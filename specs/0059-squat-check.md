@@ -100,7 +100,7 @@ core's `Serialize` output **unchanged**; the example below is a real dump
       "mechanics": {
         "joints": [
           {"joint": "hip",    "resisting": "hip_extensors",   "moment": 33.52,  "uncertainty": 0.63},
-          {"joint": "knee",   "resisting": "knee_extensors",  "moment": -71.49, "uncertainty": 0.63},
+          {"joint": "knee",   "resisting": "knee_flexors",    "moment": -71.49, "uncertainty": 0.63},
           {"joint": "ankle",  "resisting": "plantar_flexors", "moment": 109.56, "uncertainty": 0.63},
           {"joint": "lumbar", "resisting": "spinal_erectors", "moment": 22.74,  "uncertainty": 2.05}
         ],
@@ -376,6 +376,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 - 2026-11-02 — 59-c2c dropped (owner): free sessions' logged exercises get
   no Física button. Every remaining slice is in.
 - 2026-11-04 — Implemented: qa signed off (#187); R-0059 AC5 and AC6 amended to as-built.
+- 2026-11-21 — `resisting` follows the moment's sign (SPEC-0066 §2.1.3, slice 66-a2): the example's upright knee (−71.49 N·m) now reads `knee_flexors`. Moments unchanged.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 

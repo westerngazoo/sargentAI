@@ -1,7 +1,7 @@
 //! `POST /biomech/squat/range` — validate, run the engine, wrap the result.
 
 use axum::{extract::rejection::JsonRejection, Json};
-use fitai_core::biomech;
+use fitai_core::biomech::{self, ModelError};
 
 use super::{request::RangeRequest, response::RangeResponse};
 use crate::{auth::AuthenticatedUser, error::ApiResult, http::parse_body};
@@ -12,15 +12,19 @@ use crate::{auth::AuthenticatedUser, error::ApiResult, http::parse_body};
 ///
 /// # Errors
 /// `401` without a session; `400 validation` naming the field, or `"body"`
-/// for a body that does not parse.
+/// for a body that does not parse; `500` if the kernel's cross-check fails
+/// (SPEC-0066 §2.1.2).
 pub(crate) async fn squat_range(
     _user: AuthenticatedUser,
     req: Result<Json<RangeRequest>, JsonRejection>,
 ) -> ApiResult<Json<RangeResponse>> {
     let squat = parse_body(req)?.validate()?;
     let response = match biomech::squat_range(&squat.body, squat.bar, squat.ankle, squat.frames) {
-        Ok(range) => RangeResponse::from_range(squat, range),
-        Err(rejection) => RangeResponse::rejected(rejection, squat.table_lengths),
+        Ok(range) => RangeResponse::from_range(squat, range)?,
+        Err(ModelError::Rejected(rejection)) => {
+            RangeResponse::rejected(rejection, squat.table_lengths)
+        }
+        Err(ModelError::Kernel(e)) => return Err(e.into()),
     };
     Ok(Json(response))
 }

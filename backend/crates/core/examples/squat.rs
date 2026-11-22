@@ -18,9 +18,9 @@
 use std::process::ExitCode;
 
 use fitai_core::biomech::{
-    analyse_baseline, baseline, moment_about, scale, squat_range, Baseline, Body, Dorsiflexion,
-    FrameCount, Joint, Load, MeasuredLengths, Mechanics, Metres, Point, Posture, RangeEnd,
-    Rejection, HIGH_BAR,
+    analyse_baseline, baseline, joint_moment, scale, squat_range, Baseline, Body, Dorsiflexion,
+    FrameCount, Joint, Load, MeasuredLengths, Mechanics, Metres, ModelError, Point, Posture,
+    RangeEnd, Rejection, HIGH_BAR,
 };
 use fitai_core::workout::LoadKg;
 
@@ -107,8 +107,7 @@ fn run(args: &[String]) -> Result<(), String> {
         let requested = count(args, "--frames")?.unwrap_or(11);
         let frames = FrameCount::new(requested)
             .ok_or_else(|| format!("--frames {requested} is outside 2..=241"))?;
-        range(&body, height, mass_kg, bar, ankle, frames);
-        return Ok(());
+        return range(&body, height, mass_kg, bar, ankle, frames);
     }
 
     println!();
@@ -128,14 +127,14 @@ fn run(args: &[String]) -> Result<(), String> {
     println!();
 
     match baseline(&body, bar, ankle) {
-        Ok(solved) => report(&body, &solved),
+        Ok(solved) => report(&body, &solved)?,
         Err(rejection) => explain(&body, &rejection, bar),
     }
     Ok(())
 }
 
 /// A solved lifter: the posture, the four moments, and what it all assumes.
-fn report(body: &Body, solved: &Baseline) {
+fn report(body: &Body, solved: &Baseline) -> Result<(), String> {
     let p = solved.posture();
     let lean = lean_deg(p);
     println!(
@@ -157,7 +156,7 @@ fn report(body: &Body, solved: &Baseline) {
     }
     println!();
 
-    let mechanics: Mechanics = analyse_baseline(body, solved);
+    let mechanics: Mechanics = analyse_baseline(body, solved).map_err(|e| e.to_string())?;
     println!("  moments     N·m resisting extension, ± the stated placement conventions");
     for moment in &mechanics.joints {
         println!(
@@ -178,6 +177,7 @@ fn report(body: &Body, solved: &Baseline) {
         println!("                {assumption:?}");
     }
     println!();
+    Ok(())
 }
 
 /// A rejected lifter: why, in the words that are useful to them.
@@ -227,7 +227,7 @@ fn range(
     bar: Option<LoadKg>,
     ankle: Dorsiflexion,
     frames: FrameCount,
-) {
+) -> Result<(), String> {
     println!();
     println!("Goose Physics — the squat over its range (R-0045 slice B1)");
     println!();
@@ -241,22 +241,23 @@ fn range(
     }
     println!();
     match squat_range(body, bar, ankle, frames) {
-        Err(Rejection::DepthNotReachable {
+        Err(ModelError::Kernel(e)) => return Err(e.to_string()),
+        Err(ModelError::Rejected(Rejection::DepthNotReachable {
             needed_deg,
             available_deg,
             ..
-        }) => {
+        })) => {
             println!("  REJECTED    standing upright balanced already needs {needed_deg:.1}° of");
             println!(
                 "              ankle in this model; you have {available_deg:.1}°, so the range"
             );
             println!("              cannot start (SPEC-0045 §2.6.6).");
         }
-        Err(Rejection::DoesNotBalance { .. }) => {
+        Err(ModelError::Rejected(Rejection::DoesNotBalance { .. })) => {
             println!("  REJECTED    this body cannot stand balanced in the model: with no mass");
             println!("              on the trunk line and no bar, no lean is determined.");
         }
-        Err(rejection) => explain(body, &rejection, bar),
+        Err(ModelError::Rejected(rejection)) => explain(body, &rejection, bar),
         Ok(range) => {
             println!("      s    knee    hip  trunk |    hip   knee  ankle  L5/S1   (N·m)");
             for f in &range.frames {
@@ -304,6 +305,7 @@ fn range(
         }
     }
     println!();
+    Ok(())
 }
 
 /// SPEC-0045 §2.6.1.1's relation, for this lifter: more ankle, less lean.
@@ -367,8 +369,13 @@ fn reel() -> Result<(), String> {
 
     let posture = reel_posture(bar);
     let massless = scale(Metres(1.75), 0.0, &measured);
-    let total = moment_about(Joint::Hip, &lifter, &posture).0;
-    let component = moment_about(Joint::Hip, &massless, &posture).0;
+    let hip = |body: &Body| {
+        joint_moment(Joint::Hip, body, &posture)
+            .map(|m| m.0)
+            .map_err(|e| e.to_string())
+    };
+    let total = hip(&lifter)?;
+    let component = hip(&massless)?;
 
     println!("  published   274 N·m at the hip");
     println!("  bar only    {component:.1} N·m  — the reel's number, recovered as a component");
@@ -379,11 +386,8 @@ fn reel() -> Result<(), String> {
     );
     println!();
     for joint in [Joint::Hip, Joint::Knee, Joint::Ankle, Joint::Lumbar] {
-        println!(
-            "    {:<10}{:>8.1} N·m",
-            label(joint),
-            moment_about(joint, &lifter, &posture).0
-        );
+        let moment = joint_moment(joint, &lifter, &posture).map_err(|e| e.to_string())?;
+        println!("    {:<10}{:>8.1} N·m", label(joint), moment.0);
     }
     println!();
     println!("  This posture is **built**, not solved: it is the reel's own geometry,");

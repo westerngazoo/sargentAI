@@ -120,6 +120,16 @@ impl From<fitai_core::plan::PlanError> for ApiError {
     }
 }
 
+impl From<fitai_core::biomech::KernelError> for ApiError {
+    /// The kernel's cross-check failed: a modelling bug, never served
+    /// (SPEC-0066 §2.1.2, R-0066 AC7). It maps to the opaque `500`, and the
+    /// log names only the joint, never a body value (SPEC-0059 AC8).
+    fn from(e: fitai_core::biomech::KernelError) -> Self {
+        tracing::error!(joint = ?e.joint(), "kernel cross-check failed");
+        ApiError::Internal(eyre::eyre!("kernel cross-check failed"))
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {
@@ -169,5 +179,29 @@ impl IntoResponse for ApiError {
             }
         };
         (status, Json(body)).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{http::StatusCode, response::IntoResponse};
+    use fitai_core::biomech::{Joint, KernelError};
+
+    use super::ApiError;
+
+    /// SPEC-0066 §2.1.2 — a kernel disagreement is a `500`, never a result.
+    #[test]
+    fn a_kernel_disagreement_is_a_500() {
+        let e: ApiError = KernelError::Disagree {
+            joint: Joint::Knee,
+            cross: 1.0,
+            virtual_work: 2.0,
+        }
+        .into();
+        assert!(matches!(e, ApiError::Internal(_)));
+        assert_eq!(
+            e.into_response().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 }

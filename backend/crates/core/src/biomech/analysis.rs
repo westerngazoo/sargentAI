@@ -17,8 +17,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::chain::{moment_about_with, Placement};
+use super::kernel::{moment_of, moments, KernelError};
 use super::range::{RangeAt, RangePosture};
+use super::segments::Placement;
+use super::squat::{tree_with, Loads};
 use super::{Baseline, Body, Joint, Metres, NewtonMetres, Posture};
 
 /// SPEC-0045 §2.8 — the L5/S1 placement spread, metres. A **stated
@@ -46,14 +48,22 @@ const JOINT_ORDER: [Joint; 4] = [Joint::Hip, Joint::Knee, Joint::Ankle, Joint::L
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ResistingGroup {
-    /// Resists the hip moment.
+    /// Resist a positive hip moment (the loads tend to flex the hip).
     HipExtensors,
-    /// Resists the knee moment.
+    /// Resist a negative hip moment.
+    HipFlexors,
+    /// Resist a positive knee moment.
     KneeExtensors,
-    /// Resists the ankle moment.
+    /// Resist a negative knee moment.
+    KneeFlexors,
+    /// Resist a positive ankle moment (the loads tend to dorsiflex it).
     PlantarFlexors,
-    /// Resists the L5/S1 moment.
+    /// Resist a negative ankle moment.
+    Dorsiflexors,
+    /// Resist a positive L5/S1 moment (the loads tend to flex the trunk).
     SpinalErectors,
+    /// Resist a negative L5/S1 moment.
+    Abdominals,
 }
 
 /// Where in the lift the single analysed posture sits (SPEC-0045 §2.1, §2.6.1,
@@ -170,10 +180,12 @@ pub struct Uncertainty {
 pub struct JointMoment {
     /// Which joint.
     pub joint: Joint,
-    /// The group that resists it.
+    /// The group that resists it, from the moment's sign
+    /// ([`Joint::resisting`]).
     pub resisting: ResistingGroup,
-    /// N·m resisting extension, **signed**: negative means the load is
-    /// assisting extension, which is a real state and never flattened.
+    /// N·m, **signed** (SPEC-0066 §2.1.3): positive when the loads tend to
+    /// flex the joint; negative when they tend to extend it, which is a real
+    /// state and never flattened.
     pub moment: NewtonMetres,
     /// Half-width from [`Uncertainty`]'s conventions — a bound from stated
     /// inputs, not a confidence interval. No distribution is assumed.
@@ -200,14 +212,18 @@ pub struct Mechanics {
 
 /// Analyse a posture produced by the v1 parametric solve (SPEC-0045 §2.6.1).
 ///
-/// Total: a posture that exists has moments. Every rejection happens in the
-/// solve, before there is a posture to analyse.
+/// Every rejection happens in the solve, before there is a posture to
+/// analyse.
 ///
 /// It takes a [`Baseline`] rather than a [`Posture`] so the two source
 /// assumptions below cannot be asserted about a posture that was measured or
 /// hand-built — only `squat::baseline` can make one.
-#[must_use]
-pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Mechanics {
+///
+/// # Errors
+///
+/// [`KernelError`] if the kernel's cross-check fails: a modelling bug, never
+/// served (SPEC-0066 §2.1.2).
+pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Result<Mechanics, KernelError> {
     mechanics(
         body,
         solved.posture(),
@@ -226,7 +242,7 @@ pub fn analyse_baseline(body: &Body, solved: &Baseline) -> Mechanics {
 /// Takes a [`RangePosture`], which only the range can build, for the same
 /// reason [`analyse_baseline`] takes a [`Baseline`]: the assumptions below are
 /// claims about where the posture came from.
-pub(super) fn analyse_range(body: &Body, solved: &RangePosture) -> Mechanics {
+pub(super) fn analyse_range(body: &Body, solved: &RangePosture) -> Result<Mechanics, KernelError> {
     let from_source = match solved.at() {
         RangeAt::Upright => [
             Assumption::SinglePosture {
@@ -248,7 +264,11 @@ pub(super) fn analyse_range(body: &Body, solved: &RangePosture) -> Mechanics {
 
 /// The model, shared by every source. Private: `from_source` is the half a
 /// [`Posture`] cannot carry, and only the source knows it.
-fn mechanics(body: &Body, p: &Posture, from_source: &[Assumption]) -> Mechanics {
+fn mechanics(
+    body: &Body,
+    p: &Posture,
+    from_source: &[Assumption],
+) -> Result<Mechanics, KernelError> {
     let mut assumptions = vec![
         Assumption::SagittalPlane,
         Assumption::QuasiStatic,
@@ -267,13 +287,20 @@ fn mechanics(body: &Body, p: &Posture, from_source: &[Assumption]) -> Mechanics 
     }
     assumptions.push(Assumption::BodyFatIgnored);
 
-    Mechanics {
-        joints: JOINT_ORDER.map(|joint| JointMoment {
+    let stated = joint_moments(body, p, Placement::STATED)?;
+    let half_width = placement_half_width(body, p, stated)?;
+    let joints = std::array::from_fn(|i| {
+        let joint = JOINT_ORDER[i];
+        let moment = NewtonMetres(stated[i]);
+        JointMoment {
             joint,
-            resisting: joint.resisting(),
-            moment: moment_about_with(joint, body, p, Placement::STATED),
-            uncertainty: placement_half_width(joint, body, p),
-        }),
+            resisting: joint.resisting(moment),
+            moment,
+            uncertainty: NewtonMetres(half_width[i]),
+        }
+    });
+    Ok(Mechanics {
+        joints,
         load: p
             .load
             .map_or(LoadBasis::BodyweightOnly, |l| LoadBasis::Bar {
@@ -284,27 +311,43 @@ fn mechanics(body: &Body, p: &Posture, from_source: &[Assumption]) -> Mechanics 
             l5s1_placement: Metres(L5S1_PLACEMENT_SPREAD_M),
             com_placement: Metres(COM_PLACEMENT_SPREAD_M),
         },
-    }
+    })
 }
 
-/// The largest the stated placement conventions could move this joint's
-/// moment: the moment evaluated at all eight corners of the three spreads,
-/// against the stated placement (SPEC-0045 §2.8).
+/// The four moments in [`JOINT_ORDER`] under `placement`, from the kernel.
+fn joint_moments(body: &Body, p: &Posture, placement: Placement) -> Result<[f64; 4], KernelError> {
+    let all = moments(&tree_with(body, p, placement, Loads::All))?;
+    let [hip, knee, ankle, lumbar] = JOINT_ORDER;
+    Ok([
+        moment_of(&all, hip)?.0,
+        moment_of(&all, knee)?.0,
+        moment_of(&all, ankle)?.0,
+        moment_of(&all, lumbar)?.0,
+    ])
+}
+
+/// The largest the stated placement conventions could move each joint's
+/// moment: the moments at all eight corners of the three spreads, against the
+/// stated placement (SPEC-0045 §2.8), in [`JOINT_ORDER`].
 ///
 /// Eight corners rather than a gradient because the bound is meant to be a
 /// bound — the moment is affine in each offset, so the extreme is at a corner,
 /// and walking them needs no claim about which way each one leans.
-fn placement_half_width(joint: Joint, body: &Body, p: &Posture) -> NewtonMetres {
-    let stated = moment_about_with(joint, body, p, Placement::STATED).0;
-    let mut worst: f64 = 0.0;
+fn placement_half_width(
+    body: &Body,
+    p: &Posture,
+    stated: [f64; 4],
+) -> Result<[f64; 4], KernelError> {
+    let mut worst = [0.0_f64; 4];
     for head in [-COM_PLACEMENT_SPREAD_M, COM_PLACEMENT_SPREAD_M] {
         for arms in [-COM_PLACEMENT_SPREAD_M, COM_PLACEMENT_SPREAD_M] {
             for l5s1 in [-L5S1_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M] {
-                let corner = Placement { head, arms, l5s1 };
-                let deviation = (moment_about_with(joint, body, p, corner).0 - stated).abs();
-                worst = worst.max(deviation);
+                let corner = joint_moments(body, p, Placement { head, arms, l5s1 })?;
+                for i in 0..4 {
+                    worst[i] = worst[i].max((corner[i] - stated[i]).abs());
+                }
             }
         }
     }
-    NewtonMetres(worst)
+    Ok(worst)
 }

@@ -4,7 +4,7 @@
 //! `g` is core's [`G`], the one constant every moment is multiplied by: a
 //! second value here would break `bar_nm + body_nm == hip moment`.
 
-use fitai_core::biomech::{body_moment_about, Body, Joint, RangeFrame, G};
+use fitai_core::biomech::{body_moment, Body, Joint, KernelError, RangeFrame, G};
 use serde::Serialize;
 
 /// The hip moment split into the bar's share and the body's own share, so
@@ -18,23 +18,29 @@ pub(crate) struct HipLever {
     pub(crate) bar_n: f64,
     /// `bar_n × lever_m`, the bar's share of the hip moment, N·m.
     pub(crate) bar_nm: f64,
-    /// The body's own share, core's `body_moment_about` on the loaded posture,
-    /// N·m.
+    /// The body's own share, core's `body_moment` on the loaded posture, N·m.
     pub(crate) body_nm: f64,
 }
 
-/// The hip lever of `frame` for `body`; `None` for a bodyweight-only frame.
-/// Total: never fails, never panics.
-pub(crate) fn hip_lever(body: &Body, frame: &RangeFrame) -> Option<HipLever> {
-    let load = frame.posture.load?;
+/// The hip lever of `frame` for `body`; `Ok(None)` for a bodyweight-only
+/// frame. Never panics.
+///
+/// # Errors
+///
+/// [`KernelError`] if the kernel's cross-check fails on the body's share: a
+/// modelling bug, which the handler answers with `500`.
+pub(crate) fn hip_lever(body: &Body, frame: &RangeFrame) -> Result<Option<HipLever>, KernelError> {
+    let Some(load) = frame.posture.load else {
+        return Ok(None);
+    };
     let lever_m = load.at.x.0 - frame.posture.hip.x.0;
     let bar_n = load.kg.get() * G;
-    Some(HipLever {
+    Ok(Some(HipLever {
         lever_m,
         bar_n,
         bar_nm: bar_n * lever_m,
-        body_nm: body_moment_about(Joint::Hip, body, &frame.posture).0,
-    })
+        body_nm: body_moment(Joint::Hip, body, &frame.posture)?.0,
+    }))
 }
 
 /// What the floor pushes up with, `(bar_kg + mass_kg) × g`, newtons.
@@ -61,7 +67,9 @@ mod tests {
         let range = squat_range(&body, Some(bar), ankle, FrameCount::new(41).unwrap()).unwrap();
         assert!(!range.frames.is_empty());
         for frame in &range.frames {
-            let hip = hip_lever(&body, frame).expect("a loaded frame has a lever");
+            let hip = hip_lever(&body, frame)
+                .unwrap()
+                .expect("a loaded frame has a lever");
             let joint = &frame.mechanics.joints[0];
             assert_eq!(joint.joint, Joint::Hip);
             assert!(
@@ -82,6 +90,9 @@ mod tests {
         let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
         let ankle = Dorsiflexion::from_degrees(29.0).unwrap();
         let range = squat_range(&body, None, ankle, FrameCount::new(5).unwrap()).unwrap();
-        assert!(range.frames.iter().all(|f| hip_lever(&body, f).is_none()));
+        assert!(range
+            .frames
+            .iter()
+            .all(|f| matches!(hip_lever(&body, f), Ok(None))));
     }
 }

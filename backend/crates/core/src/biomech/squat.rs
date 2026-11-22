@@ -40,11 +40,11 @@
 
 use crate::workout::LoadKg;
 
-use super::chain::{l5s1_point, Placement};
-use super::kernel::{PlanarTree, Side};
+use super::kernel::{moment_of, moments, KernelError, PlanarTree, Side};
+use super::segments::{l5s1_point, Placement};
 use super::{
-    above, along, analyse_baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, Mechanics,
-    Metres, Point, Posture, Rejection, Unknown,
+    along, analyse_baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, Mechanics, Metres,
+    ModelError, NewtonMetres, Point, Posture, Rejection, Unknown,
 };
 
 /// How far behind the mid-foot line the ankle sits, as a fraction of foot
@@ -139,15 +139,16 @@ pub fn baseline(
 ///
 /// # Errors
 ///
-/// Whatever [`baseline`] rejects. Once a posture exists it has moments: the
-/// analysis itself is total.
+/// [`ModelError::Rejected`] with whatever [`baseline`] rejects;
+/// [`ModelError::Kernel`] if the kernel's cross-check fails (a modelling bug,
+/// never seen with weights: SPEC-0066 §2.1.2).
 pub fn baseline_mechanics(
     body: &Body,
     bar_kg: Option<LoadKg>,
     ankle: Dorsiflexion,
-) -> Result<Mechanics, Rejection> {
+) -> Result<Mechanics, ModelError> {
     let solved = baseline(body, bar_kg, ankle)?;
-    Ok(analyse_baseline(body, &solved))
+    Ok(analyse_baseline(body, &solved)?)
 }
 
 /// The §2.6.1 ankle: behind the mid-foot line by a fraction of the foot, at
@@ -233,9 +234,9 @@ fn pose(body: &Body, bar_kg: Option<LoadKg>, legs: &Legs, sin_trunk: f64) -> Pos
 /// load: the quantity balance sets to zero (SPEC-0045 §2.6.3). Computed
 /// through the same placement conventions as every moment.
 fn first_moment(body: &Body, p: &Posture) -> f64 {
-    let segments: f64 = above(Joint::Ankle)
+    let segments: f64 = ChainSegment::ALL
         .iter()
-        .map(|&seg: &ChainSegment| body.mass_kg(seg) * seg.com(body, p).x.0)
+        .map(|&seg| body.mass_kg(seg) * seg.com(body, p).x.0)
         .sum();
     segments + p.load.map_or(0.0, |l| l.kg.get() * l.at.x.0)
 }
@@ -327,27 +328,66 @@ impl Balance {
     }
 }
 
-/// The squat as a garust tree (SPEC-0066 §2.2): **rooted at the ankle** (the
-/// foot is not a link), then knee, hip and L5/S1, each segment's weight on the
-/// link that carries it, under the stated placement conventions.
-///
-/// Public in slice 66-a1 only because nothing in the crate consumes it until
-/// 66-a2 (the parity tests are its one caller); 66-a2 lowers it to the crate.
-#[must_use]
-pub fn squat_tree(body: &Body, p: &Posture) -> PlanarTree {
-    tree_with(body, p, Placement::STATED)
+/// Which loads a squat tree carries: everything, or the body alone with the
+/// posture left as it is (the arms still reach for the bar), for SPEC-0059's
+/// body share.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Loads {
+    /// The segments and the bar.
+    All,
+    /// The segments only.
+    BodyOnly,
 }
 
-/// [`squat_tree`] under nudged placement conventions, the corners the
-/// uncertainty walk evaluates (SPEC-0045 §2.8).
+/// `joint`'s moment in `p`, segments and bar, signed as every moment is
+/// (SPEC-0066 §2.1.3). For a posture that did not come from the solver (a
+/// reel's geometry, a measurement): a solved one goes through
+/// [`analyse_baseline`](super::analyse_baseline), which also states its
+/// assumptions and uncertainty.
 ///
-/// Each [`ChainSegment`] rides the link that [`above`] puts it on: the shank
-/// distal to the ankle, the thigh to the knee, the pelvis to the hip (on the
-/// hip's side, not the lumbar's), and the thorax, head, arms and bar to L5/S1.
-/// Rooted at the foot, the tree's distal side of the ankle, knee and hip is
-/// the anatomical proximal one; of L5/S1 it is the thorax, the anatomical
-/// distal one (SPEC-0066 §2.1.3).
-pub(super) fn tree_with(body: &Body, p: &Posture, placement: Placement) -> PlanarTree {
+/// # Errors
+///
+/// [`KernelError`] if the kernel's cross-check fails, or the joint is not one
+/// of the squat's four (it always is).
+pub fn joint_moment(joint: Joint, body: &Body, p: &Posture) -> Result<NewtonMetres, KernelError> {
+    moment_of(
+        &moments(&tree_with(body, p, Placement::STATED, Loads::All))?,
+        joint,
+    )
+}
+
+/// The body's own share of `joint`'s moment in `p`: the same tree without the
+/// bar, signed as every moment is (SPEC-0066 §2.1.3). With the bar's own term
+/// it sums to the joint's moment (SPEC-0059 AC7).
+///
+/// # Errors
+///
+/// [`KernelError`] if the kernel's cross-check fails, or the joint is not one
+/// of the squat's four (it always is).
+pub fn body_moment(joint: Joint, body: &Body, p: &Posture) -> Result<NewtonMetres, KernelError> {
+    moment_of(
+        &moments(&tree_with(body, p, Placement::STATED, Loads::BodyOnly))?,
+        joint,
+    )
+}
+
+/// The squat as a garust tree (SPEC-0066 §2.2), **rooted at the ankle** (the
+/// foot is not a link): ankle, knee, hip and L5/S1, under `placement` (the
+/// stated conventions, or a corner the uncertainty walk evaluates,
+/// SPEC-0045 §2.8).
+///
+/// This is the one place that says which link carries which segment: the
+/// shank rides the ankle's link, the thigh the knee's, the pelvis the hip's
+/// (on the hip's side, not the lumbar's), and the thorax, head, arms and bar
+/// ride L5/S1's. Rooted at the ankle, the tree's distal side of the ankle,
+/// knee and hip is the anatomical proximal one; of L5/S1 it is the thorax,
+/// the anatomical distal one (SPEC-0066 §2.1.3).
+pub(super) fn tree_with(
+    body: &Body,
+    p: &Posture,
+    placement: Placement,
+    loads: Loads,
+) -> PlanarTree {
     let mut tree = PlanarTree::new();
     let ankle = tree.link(None, p.ankle);
     let knee = tree.link(Some(ankle), p.knee);
@@ -363,14 +403,14 @@ pub(super) fn tree_with(body: &Body, p: &Posture, placement: Placement) -> Plana
         ChainSegment::Pelvis => hip,
         ChainSegment::ThoraxAbdomen | ChainSegment::HeadNeck | ChainSegment::Arms => lumbar,
     };
-    for &segment in above(Joint::Ankle) {
+    for segment in ChainSegment::ALL {
         tree.weight(
             carrier(segment),
             segment.com_with(body, p, placement),
             body.mass_kg(segment),
         );
     }
-    if let Some(load) = p.load {
+    if let (Loads::All, Some(load)) = (loads, p.load) {
         tree.weight(lumbar, load.at, load.kg.get());
     }
     tree
