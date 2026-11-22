@@ -692,6 +692,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
+- 2026-11-21 — 66-a2 as built (owner approved the outline): the error type is `ModelError { Rejected, Kernel }`, shared by `squat_range` and `baseline_mechanics` (the outline called it `RangeError`); `joint_moment` is public beside `body_moment`, for postures that did not come from the solver (the reel check); `above()` gives way to `ChainSegment::ALL` (the balance solve's list) and `tree_with`'s links (the load sides), checked by hand sums per joint; `KernelError::NotReported` for a joint the tree does not report; the fixture's writer is removed.
 - 2026-11-21 — 66-a1 as built: the pin stays at `55e91407` until before 66-c (owner); the lumbar `side` corrected to `+1`; trees built at a posture (no `q`); `force`, `Cable` and `root_reaction` deferred to the slices that use them; the grid is 1 916 postures; the squat tree is rooted at the ankle (no foot link); `garust-core` is a third dependency (architect review of PR #193).
 
 ## 10. Architect re-review — ACCEPT WITH CHANGES (2026-11-21), applied in revision 3

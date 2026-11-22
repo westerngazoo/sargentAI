@@ -1,7 +1,7 @@
 //! SPEC-0059 §2.2 — the response envelope: core's `Serialize` output
 //! unchanged, plus the per-frame `hip` lever and `ground_n`.
 
-use fitai_core::biomech::{Assumption, RangeEnd, RangeFrame, Rejection, SquatRange};
+use fitai_core::biomech::{Assumption, KernelError, RangeEnd, RangeFrame, Rejection, SquatRange};
 use serde::Serialize;
 
 use super::{
@@ -59,7 +59,11 @@ pub(crate) struct RangeResponse {
 
 impl RangeResponse {
     /// Wrap a computed range, adding each frame's lever and ground force.
-    pub(crate) fn from_range(squat: Squat, range: SquatRange) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// [`KernelError`] if a frame's hip lever fails the kernel's cross-check.
+    pub(crate) fn from_range(squat: Squat, range: SquatRange) -> Result<Self, KernelError> {
         let ground = ground_n(
             squat.bar.map(fitai_core::workout::LoadKg::get),
             squat.mass_kg,
@@ -67,18 +71,20 @@ impl RangeResponse {
         let frames = range
             .frames
             .into_iter()
-            .map(|frame| Frame {
-                hip: hip_lever(&squat.body, &frame),
-                ground_n: ground,
-                core: frame,
+            .map(|frame| {
+                Ok(Frame {
+                    hip: hip_lever(&squat.body, &frame)?,
+                    ground_n: ground,
+                    core: frame,
+                })
             })
-            .collect();
-        Self {
+            .collect::<Result<_, KernelError>>()?;
+        Ok(Self {
             end: range.end.into(),
             table_lengths: squat.table_lengths,
             frames,
             assumptions: range.assumptions,
-        }
+        })
     }
 
     /// The engine could not place the lifter: the typed reason, no frames.

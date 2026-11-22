@@ -20,9 +20,9 @@ use garust_geo::chain::ChainJoint;
 use garust_geo::tree::{Tree, TreeLink};
 use garust_geo::Motor;
 use garust_physics::load::{Load, Weight};
-use garust_physics::multibody::{generalized_torque, joint_point, joint_torque};
+use garust_physics::multibody::{generalized_torque, joint_torque};
 
-use super::{Joint, Metres, NewtonMetres, Point, G};
+use super::{Joint, NewtonMetres, Point, G};
 
 /// The virtual-work step, radians — the parity spike's (SPEC-0066 §2.1.2).
 pub(crate) const FD_STEP: f64 = 1e-6;
@@ -37,7 +37,7 @@ const TOL_REL: f64 = 1e-9;
 /// Which anatomical segment is on the tree's distal side of a joint
 /// (SPEC-0066 §2.1.3). It decides how garust's `τ_z` maps to "resisting".
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Side {
+pub(crate) enum Side {
     /// The tree's distal side is the joint's anatomical distal segment
     /// (rooted at the shoulder, the elbow's distal side is the forearm).
     Anatomical,
@@ -59,7 +59,7 @@ impl Side {
 /// one tree a parent always precedes its child and garust's ordering rule
 /// cannot fail. An id is only meaningful in the tree that made it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LinkId(usize);
+pub(crate) struct LinkId(usize);
 
 /// The kernel and its cross-check disagreed: a modelling bug, never served
 /// (R-0066 AC7). The API maps it to `500` and logs no body value.
@@ -75,12 +75,29 @@ pub enum KernelError {
         /// The virtual-work moment.
         virtual_work: f64,
     },
+    /// A model asked for a joint its tree does not report: a bug in the
+    /// model's tree, never a silent zero.
+    #[error("the {joint:?} moment was asked for but the tree does not report it")]
+    NotReported {
+        /// The joint asked for.
+        joint: Joint,
+    },
+}
+
+impl KernelError {
+    /// The joint the error is about, for a log line that carries no body value.
+    #[must_use]
+    pub fn joint(self) -> Joint {
+        match self {
+            Self::Disagree { joint, .. } | Self::NotReported { joint } => joint,
+        }
+    }
 }
 
 /// A planar kinematic tree for garust, built at a posture: links parent
 /// first, the joints reported with their [`Side`], and the weights on it.
 #[derive(Clone, Debug, Default)]
-pub struct PlanarTree {
+pub(crate) struct PlanarTree {
     links: Vec<TreeLink>,
     /// Each link's joint centre, world frame (the posture's coordinates).
     centres: Vec<Point>,
@@ -91,7 +108,7 @@ pub struct PlanarTree {
 impl PlanarTree {
     /// An empty tree.
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
@@ -106,7 +123,7 @@ impl PlanarTree {
     /// If `parent` is a [`LinkId`] from another, smaller tree: a programming
     /// error, not a runtime condition (every caller builds its tree in one
     /// function from ids that tree returned).
-    pub fn link(&mut self, parent: Option<LinkId>, centre: Point) -> LinkId {
+    pub(crate) fn link(&mut self, parent: Option<LinkId>, centre: Point) -> LinkId {
         let from = parent.map_or(self.root_centre_or(centre), |p| self.centres[p.0]);
         self.links.push(TreeLink {
             parent: parent.map(|p| p.0),
@@ -120,7 +137,7 @@ impl PlanarTree {
     /// Reports `link`'s joint as `joint`, with the tree's distal side `side`.
     /// A [`LinkId`] from another tree makes [`moments`] panic, as in
     /// [`PlanarTree::link`].
-    pub fn report(&mut self, link: LinkId, joint: Joint, side: Side) {
+    pub(crate) fn report(&mut self, link: LinkId, joint: Joint, side: Side) {
         self.reported.push((link, joint, side));
     }
 
@@ -130,7 +147,7 @@ impl PlanarTree {
     ///
     /// If `link` is a [`LinkId`] from another, smaller tree, as in
     /// [`PlanarTree::link`].
-    pub fn weight(&mut self, link: LinkId, at: Point, kg: f64) {
+    pub(crate) fn weight(&mut self, link: LinkId, at: Point, kg: f64) {
         let centre = self.centres[link.0];
         self.weights.push(Weight {
             link: link.0,
@@ -143,8 +160,11 @@ impl PlanarTree {
     /// Every reported joint's centre as garust's forward kinematics places
     /// it, back in posture coordinates. The FK invariant test compares these
     /// with the posture (SPEC-0066 §2.1.2).
+    #[cfg(test)]
     #[must_use]
-    pub fn joint_centres(&self) -> Vec<(Joint, Point)> {
+    pub(crate) fn joint_centres(&self) -> Vec<(Joint, Point)> {
+        use garust_physics::multibody::joint_point;
+
         if self.links.is_empty() {
             return Vec::new();
         }
@@ -185,7 +205,7 @@ fn reference_poses(tree: &Tree<'_>) -> Vec<Motor<f64>> {
 ///
 /// If a reported [`LinkId`] came from another, larger tree (see
 /// [`PlanarTree::link`]).
-pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelError> {
+pub(crate) fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelError> {
     if tree.links.is_empty() {
         return Ok(Vec::new());
     }
@@ -223,6 +243,22 @@ pub fn moments(tree: &PlanarTree) -> Result<Vec<(Joint, NewtonMetres)>, KernelEr
         .collect()
 }
 
+/// `joint`'s moment in `moments`' output.
+///
+/// # Errors
+///
+/// [`KernelError::NotReported`] when the tree did not report `joint`.
+pub(crate) fn moment_of(
+    moments: &[(Joint, NewtonMetres)],
+    joint: Joint,
+) -> Result<NewtonMetres, KernelError> {
+    moments
+        .iter()
+        .find(|(j, _)| *j == joint)
+        .map(|&(_, m)| m)
+        .ok_or(KernelError::NotReported { joint })
+}
+
 /// Whether two derivations of one moment agree: `|a − b| ≤ 1e-4 + 1e-9·|a|`.
 /// Symmetric only approximately: the relative term scales with the cross
 /// product's magnitude, the reference.
@@ -248,9 +284,10 @@ fn z_axis() -> Pga3 {
     Pga3::point(0.0, 0.0, 0.0).line_through(&Pga3::point(0.0, 0.0, 1.0))
 }
 
+#[cfg(test)]
 fn point(x: f64, y: f64) -> Point {
     Point {
-        x: Metres(x),
-        y: Metres(y),
+        x: super::Metres(x),
+        y: super::Metres(y),
     }
 }

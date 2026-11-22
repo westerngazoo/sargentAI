@@ -65,7 +65,7 @@
           {
             "joint": "knee",
             "moment": -71.49467812212968,
-            "resisting": "knee_extensors",
+            "resisting": "knee_flexors",
             "uncertainty": 0.634065473603286
           },
           {

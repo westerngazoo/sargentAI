@@ -7,8 +7,8 @@
 //! solve; later, the R-0044 keypoint series through a scale bridge. Pure — no
 //! I/O, no model, no clock, no randomness (R-0045 AC15).
 //!
-//! Slice A (SPEC-0045 §2.10): the anthropometric table, the static chain with
-//! its per-joint sign rule, the lumbar row, the baseline squat solve with the
+//! Slice A (SPEC-0045 §2.10): the anthropometric table, the static chain
+//! (since SPEC-0066 slice 66-a2, the garust kernel's tree), the lumbar row, the baseline squat solve with the
 //! system-COM balance constraint, and the two rejections reachable without
 //! knobs.
 //!
@@ -22,11 +22,11 @@
 //! A moment is reported as the moment **resisting extension**: positive means
 //! the extensors are loaded, negative means the load is assisting extension —
 //! a real state, never flattened by `.abs()`. The raw coordinate sum flips
-//! sign at the knee on a zig-zag chain, so the per-joint orientation is
-//! applied in exactly one module, `chain` — by [`moment_about`] and its body
-//! share [`body_moment_about`]. SPEC-0066 slice 66-a1 adds the garust path,
-//! `kernel`, whose `flexion_dir × side` mapping gives the same signs (the
-//! parity tests hold it to 1e-9 N·m); slice 66-a2 removes the chain's.
+//! sign at the knee on a zig-zag chain, so the orientation is applied in
+//! exactly one module, `kernel`, by its `flexion_dir × side` mapping
+//! (SPEC-0066 §2.1.3). Generalized for every joint: **positive when the loads
+//! tend to flex the joint**, so its extensors resist; negative, its flexors
+//! do. [`Joint::resisting`] names the group from the sign.
 //!
 //! ## What stays out of the type system on purpose
 //!
@@ -41,10 +41,10 @@ mod tests;
 
 mod analysis;
 mod anthro;
-mod chain;
-pub mod kernel;
+mod kernel;
 mod model;
 mod range;
+mod segments;
 mod squat;
 
 use serde::{Deserialize, Serialize};
@@ -58,17 +58,19 @@ pub use analysis::{
 pub use anthro::{
     scale, Body, Length, MeasuredLengths, Segment, Table, Verification, WINTER, WINTER_VERIFICATION,
 };
-pub use chain::{above, body_moment_about, moment_about, ChainSegment};
+pub use kernel::KernelError;
 pub use model::model_for;
 pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
+pub use segments::ChainSegment;
 pub use squat::{
-    baseline, baseline_mechanics, squat_tree, Baseline, ANKLE_BEHIND_MID_FOOT, HIGH_BAR,
+    baseline, baseline_mechanics, body_moment, joint_moment, Baseline, ANKLE_BEHIND_MID_FOOT,
+    HIGH_BAR,
 };
 
-/// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2);
-/// `chain` ([`moment_about`], [`body_moment_about`]) multiplies it, and
-/// `kernel` hands it to garust as each weight's gravity vector (SPEC-0066,
-/// with both paths alive until slice 66-a2).
+/// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2):
+/// `kernel` hands it to garust as each weight's gravity vector, and the API's
+/// lever arithmetic uses it for the bar's term. The balance solve needs no
+/// `g`: it balances `Σ m·x`.
 pub const G: f64 = 9.81;
 
 /// Where L5/S1 sits on the trunk line, as a fraction of hip → shoulder.
@@ -221,41 +223,33 @@ pub(super) fn along(a: Point, b: Point, fraction: f64) -> Point {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Joint {
-    /// Hip — resisted by the hip extensors.
+    /// Hip.
     Hip,
-    /// Knee — resisted by the knee extensors.
+    /// Knee.
     Knee,
-    /// Ankle — resisted by the plantar flexors.
+    /// Ankle.
     Ankle,
-    /// L5/S1 — the net extensor moment attributed to the erector group.
+    /// L5/S1, the single lumbar joint of SPEC-0045 §2.5.
     Lumbar,
 }
 
 impl Joint {
-    /// The group that resists this joint's moment — and nothing finer
-    /// (R-0045 AC5, SPEC-0045 §2.7).
+    /// The group that resists `moment` at this joint — and nothing finer
+    /// (R-0045 AC5, SPEC-0045 §2.7). It follows the sign (SPEC-0066 §2.1.3):
+    /// positive, the loads tend to flex the joint and its extensors resist;
+    /// negative, its flexors do. Zero counts as positive.
     #[must_use]
-    pub fn resisting(self) -> ResistingGroup {
-        match self {
-            Self::Hip => ResistingGroup::HipExtensors,
-            Self::Knee => ResistingGroup::KneeExtensors,
-            Self::Ankle => ResistingGroup::PlantarFlexors,
-            Self::Lumbar => ResistingGroup::SpinalErectors,
-        }
-    }
-
-    /// `+1` or `−1`: what the raw coordinate sum must be multiplied by to
-    /// become the moment **resisting extension** (SPEC-0045 §2.4.1).
-    ///
-    /// The knee is the one that flips. On a zig-zag chain every load-side
-    /// centre of mass sits *behind* the knee while the knee extensors are
-    /// loaded, so its raw sum is negative exactly when the hip's is positive.
-    /// This is the only place the orientation is applied — architect finding 3
-    /// was a model that applied it in several, and disagreed with itself.
-    pub(super) fn extension_sign(self) -> f64 {
-        match self {
-            Self::Hip | Self::Ankle | Self::Lumbar => 1.0,
-            Self::Knee => -1.0,
+    pub fn resisting(self, moment: NewtonMetres) -> ResistingGroup {
+        let flexing = moment.0 >= 0.0;
+        match (self, flexing) {
+            (Self::Hip, true) => ResistingGroup::HipExtensors,
+            (Self::Hip, false) => ResistingGroup::HipFlexors,
+            (Self::Knee, true) => ResistingGroup::KneeExtensors,
+            (Self::Knee, false) => ResistingGroup::KneeFlexors,
+            (Self::Ankle, true) => ResistingGroup::PlantarFlexors,
+            (Self::Ankle, false) => ResistingGroup::Dorsiflexors,
+            (Self::Lumbar, true) => ResistingGroup::SpinalErectors,
+            (Self::Lumbar, false) => ResistingGroup::Abdominals,
         }
     }
 }
@@ -319,4 +313,23 @@ pub enum Rejection {
         /// What the lifter has.
         available_deg: f64,
     },
+}
+
+/// Why the model gave no answer (SPEC-0066 §2.1.2): the lifter cannot be
+/// placed (a [`Rejection`], a result the app shows), or the kernel's
+/// cross-check failed (a modelling bug, never served; the API answers `500`).
+#[derive(Clone, Copy, Debug, PartialEq, thiserror::Error)]
+pub enum ModelError {
+    /// The posture is not one the lifter can hold.
+    #[error("rejected: {0:?}")]
+    Rejected(Rejection),
+    /// Two derivations of a moment disagreed.
+    #[error(transparent)]
+    Kernel(#[from] KernelError),
+}
+
+impl From<Rejection> for ModelError {
+    fn from(rejection: Rejection) -> Self {
+        Self::Rejected(rejection)
+    }
 }

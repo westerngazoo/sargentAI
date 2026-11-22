@@ -8,7 +8,8 @@
 //! the values are (SPEC-0045 §2.3).
 //!
 //! Every hand computation below re-derives the §2.4.2 placement conventions
-//! independently of `chain.rs`: masses from [`WINTER`] fractions, levers from
+//! independently of the model (`segments.rs`'s placements, the kernel's sums):
+//! masses from [`WINTER`] fractions, levers from
 //! the posture's own geometry. Two readings the spec leaves implicit are made
 //! explicit in [`hand_com`]: the posture's `shoulder` stands for C7-T1 (the
 //! head convention already extends the trunk line from it), and the L4-L5
@@ -28,12 +29,13 @@ mod range;
 
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};
 use crate::biomech::{
-    above, analyse_baseline, baseline, baseline_mechanics, body_moment_about, moment_about, scale,
-    Assumption, Baseline, Body, ChainSegment, Dorsiflexion, Joint, Load, LoadBasis,
-    MeasuredLengths, Mechanics, Metres, Point, Position, Posture, Rejection, ResistingGroup,
-    Segment, Unknown, Verification, COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M,
-    L5S1_UP_THE_TRUNK, WINTER, WINTER_VERIFICATION,
+    analyse_baseline, baseline, baseline_mechanics, body_moment, scale, Assumption, Baseline, Body,
+    ChainSegment, Dorsiflexion, Joint, Load, LoadBasis, MeasuredLengths, Mechanics, Metres, Point,
+    Position, Posture, Rejection, ResistingGroup, Segment, Unknown, Verification,
+    COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M, L5S1_UP_THE_TRUNK, WINTER,
+    WINTER_VERIFICATION,
 };
+use crate::biomech::{joint_moment, NewtonMetres};
 use crate::workout::LoadKg;
 
 // ===========================================================================
@@ -321,7 +323,7 @@ fn hand_raw_sum(p: &Posture, joint_x: f64, segments: &[ChainSegment]) -> f64 {
 /// load, weighted by the model's masses and placed by the model's conventions.
 fn system_com_x(body: &Body, p: &Posture) -> f64 {
     let (mut first_moment, mut mass) = (0.0, 0.0);
-    for &s in above(Joint::Ankle) {
+    for s in ChainSegment::ALL {
         let m = body.mass_kg(s);
         first_moment += m * s.com(body, p).x.0;
         mass += m;
@@ -331,6 +333,27 @@ fn system_com_x(body: &Body, p: &Posture) -> f64 {
         mass += l.kg.get();
     }
     first_moment / mass
+}
+
+/// The model's moment about `j`: the public [`joint_moment`] (the kernel's,
+/// SPEC-0066 slice 66-a2), unwrapped. The hand oracles below check it.
+fn moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
+    joint_moment(j, body, p).unwrap_or_else(|e| panic!("kernel refused: {e}"))
+}
+
+/// The model's body share of `j`'s moment, the public [`body_moment`] unwrapped.
+fn body_moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
+    body_moment(j, body, p).unwrap_or_else(|e| panic!("kernel refused: {e}"))
+}
+
+/// The squat tree's orientation (SPEC-0066 §2.1.3) as the hand sums read it:
+/// the raw coordinate sum flips sign at the knee on the zig-zag chain.
+fn hand_sign(j: Joint) -> f64 {
+    if j == Joint::Knee {
+        -1.0
+    } else {
+        1.0
+    }
 }
 
 fn assert_close(actual: f64, expected: f64, tol: f64, what: &str) {
@@ -546,8 +569,8 @@ fn masses_are_table_fractions_and_ignore_measured_lengths() {
 // ===========================================================================
 
 /// The body's share plus the load's own term is the whole moment, at every
-/// joint, loaded and bodyweight-only: `body_moment_about` is the segment half
-/// of `moment_about`, with the posture (and so the arms) left as solved.
+/// joint, loaded and bodyweight-only: [`body_moment`] is the segment half of
+/// [`joint_moment`], with the posture (and so the arms) left as solved.
 #[test]
 fn the_body_share_plus_the_load_term_is_the_moment() {
     let body = lifter();
@@ -555,7 +578,7 @@ fn the_body_share_plus_the_load_term_is_the_moment() {
         let p = solved(&body, bar_kg, REACHES_PARALLEL);
         for j in [Joint::Hip, Joint::Knee, Joint::Ankle, Joint::Lumbar] {
             let load = p.load.map_or(0.0, |l| {
-                j.extension_sign() * l.kg.get() * G * (l.at.x.0 - p.at(j).x.0)
+                hand_sign(j) * l.kg.get() * G * (l.at.x.0 - p.at(j).x.0)
             });
             let what = format!("{j:?}, bar {bar_kg:?}");
             assert_close(
@@ -780,7 +803,9 @@ fn b5_bodyweight_only_solves_with_the_system_com_over_the_mid_foot() {
         "system COM x, bodyweight-only",
     );
     assert_eq!(
-        analyse_baseline(&body, &solved).load,
+        analyse_baseline(&body, &solved)
+            .unwrap_or_else(|e| panic!("kernel refused: {e}"))
+            .load,
         LoadBasis::BodyweightOnly,
         "the result must say it ran on bodyweight"
     );
@@ -1178,15 +1203,23 @@ fn the_result_is_four_joints_in_order_each_attributed_to_its_group() {
 fn every_output_value_as_json() -> String {
     let groups = [
         ResistingGroup::HipExtensors,
+        ResistingGroup::HipFlexors,
         ResistingGroup::KneeExtensors,
+        ResistingGroup::KneeFlexors,
         ResistingGroup::PlantarFlexors,
+        ResistingGroup::Dorsiflexors,
         ResistingGroup::SpinalErectors,
+        ResistingGroup::Abdominals,
     ]
     .map(|g| match g {
         ResistingGroup::HipExtensors
+        | ResistingGroup::HipFlexors
         | ResistingGroup::KneeExtensors
+        | ResistingGroup::KneeFlexors
         | ResistingGroup::PlantarFlexors
-        | ResistingGroup::SpinalErectors => g,
+        | ResistingGroup::Dorsiflexors
+        | ResistingGroup::SpinalErectors
+        | ResistingGroup::Abdominals => g,
     });
     let assumptions = [
         Assumption::SagittalPlane,
@@ -1267,7 +1300,7 @@ fn every_output_value_as_json() -> String {
 #[test]
 fn b16_the_output_names_groups_and_never_risk() {
     assert_eq!(
-        JOINTS.map(Joint::resisting),
+        JOINTS.map(|j| j.resisting(NewtonMetres(1.0))),
         [
             ResistingGroup::HipExtensors,
             ResistingGroup::KneeExtensors,
@@ -1297,7 +1330,7 @@ fn placement_uncertainty_is_the_sum_of_its_three_stated_spreads() {
     let body = lifter();
     let solved = solve(&body, Some(100.0), REACHES_PARALLEL);
     let p = solved.posture();
-    let result = analyse_baseline(&body, &solved);
+    let result = analyse_baseline(&body, &solved).unwrap_or_else(|e| panic!("kernel refused: {e}"));
 
     let trunk = (p.shoulder.x.0 - p.hip.x.0).hypot(p.shoulder.y.0 - p.hip.y.0);
     let lean = (p.shoulder.x.0 - p.hip.x.0) / trunk;
@@ -1413,23 +1446,35 @@ fn head_com_is_on_the_trunk_line_beyond_the_shoulder() {
 }
 
 /// SPEC-0045 §2.4.2 — four fixed load-side lists: everything above the joint,
-/// the pelvis on the hip's side in full, nothing below (AC1, AC4).
+/// the pelvis on the hip's side in full, nothing below (AC1, AC4). Since
+/// SPEC-0066 slice 66-a2 the lists live in the squat tree's links, so the claim
+/// is checked through the model's moments against hand sums over each list.
 #[test]
-fn above_is_the_four_fixed_load_side_lists() {
-    let expect = |j: Joint, want: &[ChainSegment]| {
-        let got = above(j);
-        assert!(
-            got.len() == want.len() && want.iter().all(|s| got.contains(s)),
-            "above({j:?}) = {got:?}, want {want:?}"
+fn each_joint_carries_exactly_its_load_side() {
+    let body = lifter();
+    for bar_kg in [Some(100.0), None] {
+        let p = solved(&body, bar_kg, REACHES_PARALLEL);
+        let expect = |j: Joint, side: &[ChainSegment]| {
+            let joint_x = if j == Joint::Lumbar {
+                along(p.hip, p.shoulder, L5S1_UP_THE_TRUNK).x.0
+            } else {
+                p.at(j).x.0
+            };
+            assert_close(
+                moment_about(j, &body, &p).0,
+                hand_sign(j) * hand_raw_sum(&p, joint_x, side),
+                1e-6,
+                &format!("{j:?}, bar {bar_kg:?}"),
+            );
+        };
+        expect(
+            Joint::Ankle,
+            &[Shank, Thigh, Pelvis, ThoraxAbdomen, HeadNeck, Arms],
         );
-    };
-    expect(
-        Joint::Ankle,
-        &[Shank, Thigh, Pelvis, ThoraxAbdomen, HeadNeck, Arms],
-    );
-    expect(Joint::Knee, &[Thigh, Pelvis, ThoraxAbdomen, HeadNeck, Arms]);
-    expect(Joint::Hip, &[Pelvis, ThoraxAbdomen, HeadNeck, Arms]);
-    expect(Joint::Lumbar, &[ThoraxAbdomen, HeadNeck, Arms]);
+        expect(Joint::Knee, &[Thigh, Pelvis, ThoraxAbdomen, HeadNeck, Arms]);
+        expect(Joint::Hip, &[Pelvis, ThoraxAbdomen, HeadNeck, Arms]);
+        expect(Joint::Lumbar, &[ThoraxAbdomen, HeadNeck, Arms]);
+    }
 }
 
 /// SPEC-0045 §2.5 — `Posture::at` returns the posture's own ankle, knee and
