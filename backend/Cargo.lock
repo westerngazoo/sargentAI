@@ -654,12 +654,12 @@ dependencies = [
 [[package]]
 name = "garust-core"
 version = "0.1.0"
-source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+source = "git+https://github.com/westerngazoo/garust?rev=5aae4a92b207bc2ceee1ae5bcdb8941076f6f224#5aae4a92b207bc2ceee1ae5bcdb8941076f6f224"
 
 [[package]]
 name = "garust-geo"
 version = "0.1.0"
-source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+source = "git+https://github.com/westerngazoo/garust?rev=5aae4a92b207bc2ceee1ae5bcdb8941076f6f224#5aae4a92b207bc2ceee1ae5bcdb8941076f6f224"
 dependencies = [
  "garust-core",
 ]
@@ -667,7 +667,7 @@ dependencies = [
 [[package]]
 name = "garust-physics"
 version = "0.1.0"
-source = "git+https://github.com/westerngazoo/garust?rev=55e91407ba77c781f18020e2e329c5c44e86c4b6#55e91407ba77c781f18020e2e329c5c44e86c4b6"
+source = "git+https://github.com/westerngazoo/garust?rev=5aae4a92b207bc2ceee1ae5bcdb8941076f6f224#5aae4a92b207bc2ceee1ae5bcdb8941076f6f224"
 dependencies = [
  "garust-core",
  "garust-geo",
