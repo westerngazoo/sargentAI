@@ -82,6 +82,7 @@ fn run(args: &[String]) -> Result<(), String> {
         thigh: number(args, "--thigh")?.map(Metres),
         shank: number(args, "--shank")?.map(Metres),
         trunk: number(args, "--trunk")?.map(Metres),
+        ..MeasuredLengths::default()
     };
     let body = scale(Metres(height), mass_kg, &measured);
     let bar = match number(args, "--bar")? {
@@ -356,6 +357,7 @@ fn reel() -> Result<(), String> {
         thigh: Some(Metres(0.40)),
         shank: Some(Metres(0.43)),
         trunk: Some(Metres(0.53)),
+        ..MeasuredLengths::default()
     };
     let lifter = scale(Metres(1.75), 80.0, &measured);
     let bar = LoadKg::try_new(100.0).map_err(|_| "100 kg is a valid load".to_owned())?;

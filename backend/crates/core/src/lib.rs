@@ -9,6 +9,7 @@ pub mod aggregate;
 pub mod archetype;
 pub mod authoring;
 pub mod biomech;
+pub mod exercise;
 pub mod goals;
 pub mod matching;
 pub mod nutrition;

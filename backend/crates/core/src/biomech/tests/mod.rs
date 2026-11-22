@@ -140,6 +140,7 @@ impl Lengths {
             thigh: Some(Metres(self.thigh)),
             shank: Some(Metres(self.shank)),
             trunk: Some(Metres(self.trunk)),
+            ..MeasuredLengths::default()
         }
     }
 }
@@ -544,6 +545,27 @@ fn scaling_never_takes_the_missing_length_fallback() {
 /// SPEC-0045 §2.3 (AC2) — masses are table fractions of body mass and have no
 /// measurement path: a body with measured lengths weighs the same as one
 /// without.
+/// SPEC-0066 §2.3 — a measured upper arm and forearm override the table, and
+/// the result still says some lengths are the table's (the hand, foot and
+/// head have no measurement path).
+#[test]
+fn measured_arm_lengths_override_the_table() {
+    let measured = MeasuredLengths {
+        upper_arm: Some(Metres(0.33)),
+        forearm: Some(Metres(0.27)),
+        ..Lengths::table().measured()
+    };
+    let body = scale(Metres(HEIGHT_M), MASS_KG, &measured);
+    assert_close(body.upper_arm(), 0.33, 1e-12, "upper arm");
+    assert_close(body.forearm(), 0.27, 1e-12, "forearm");
+    assert!(
+        body.any_length_table_derived(),
+        "the hand is still the table's"
+    );
+    let table = lifter();
+    assert!((table.upper_arm() - 0.33).abs() > 1e-3, "the table differs");
+}
+
 #[test]
 fn masses_are_table_fractions_and_ignore_measured_lengths() {
     let table = lifter();
@@ -1058,6 +1080,7 @@ fn b10_anatomically_implausible_is_unreachable_until_a_limit_is_cited() {
             shank: Some(Metres(0.25)),
             thigh: Some(Metres(0.55)),
             trunk: Some(Metres(0.72)),
+            ..MeasuredLengths::default()
         },
         Lengths::reel().measured(),
     ];
