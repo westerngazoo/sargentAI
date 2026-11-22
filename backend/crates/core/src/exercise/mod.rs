@@ -8,6 +8,7 @@
 //! the curl, pushdown, pulldown and guided machines join in 66-c to 66-e.
 
 mod back_squat;
+mod body;
 mod description;
 mod input;
 mod plan;
@@ -15,10 +16,11 @@ mod range;
 #[cfg(test)]
 mod tests;
 
+pub use body::{BodyMeasures, BODY_KEYS, STANDARD_DORSIFLEXION_DEG};
 pub use description::{Description, Equipment, Group, Ordered, Parameter, ParameterKind};
 pub use input::{validate, Invalid, Validated, Value, Values};
 pub use plan::model_for;
-pub use range::{End, ExerciseRange, Frame, NamedPoint, Reason};
+pub use range::{End, ExerciseRange, Frame, NamedAngle, NamedPoint, NamedSpread, Reason};
 
 use crate::biomech::{Body, FrameCount, KernelError};
 
@@ -27,18 +29,21 @@ pub trait ExerciseModel: Sync {
     /// The controls, the equipment, the joints reported and the stable id.
     fn describe(&self) -> Description;
 
-    /// The range of postures for `body` under `values`, sampled at `frames`.
-    /// A posture the convention cannot reach is an [`End`], not an error.
+    /// The range of postures for `body` (scaled from `measures`' lengths),
+    /// with `measures`' other body measures, under `settings`, sampled at
+    /// `frames`. A posture the convention cannot reach is an [`End`], not an
+    /// error.
     ///
     /// # Errors
     ///
-    /// [`LibraryError::Invalid`] when `values` were not validated against this
+    /// [`LibraryError::Invalid`] when `settings` were not validated against this
     /// model's description (a programming error); [`LibraryError::Kernel`]
     /// when the kernel's cross-check fails (a modelling bug, never served).
     fn range(
         &self,
         body: &Body,
-        values: &Values,
+        measures: &BodyMeasures,
+        settings: &Values,
         frames: FrameCount,
     ) -> Result<ExerciseRange, LibraryError>;
 }

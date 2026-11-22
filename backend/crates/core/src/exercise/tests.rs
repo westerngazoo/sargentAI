@@ -3,12 +3,12 @@
 //! through the library with the same numbers as `squat_range`.
 
 use super::{
-    back_squat::end_of, find, input::LENGTH_KEYS, library, validate, Description, End, Equipment,
-    Group, Invalid, Ordered, Parameter, ParameterKind, Reason, Value,
+    back_squat::end_of, body::BODY_KEYS, body::STANDARD_DORSIFLEXION_DEG, find, library, validate,
+    Description, End, Equipment, Group, Invalid, Ordered, Parameter, ParameterKind, Reason, Value,
 };
 use crate::biomech::{
-    scale, squat_range, Dorsiflexion, FrameCount, Joint, MeasuredLengths, Metres, RangeEnd,
-    Rejection,
+    scale, squat_range, Assumption, Dorsiflexion, FrameCount, Joint, MeasuredLengths, Metres,
+    RangeEnd, Rejection,
 };
 use crate::workout::LoadKg;
 
@@ -56,7 +56,7 @@ fn fixture() -> Description {
         aliases: &[],
         equipment: Equipment::Cable,
         joints: &[Joint::Hip],
-        lengths: &["thigh", "upper_arm"],
+        body: &["thigh", "upper_arm"],
         parameters: vec![
             Parameter {
                 key: "angle_deg",
@@ -153,7 +153,7 @@ fn an_unknown_length_key_is_invalid() {
         &[("wingspan".to_owned(), 1.8)],
     )
     .err();
-    assert_eq!(err, Some(Invalid { field: "lengths" }));
+    assert_eq!(err, Some(Invalid { field: "body" }));
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn a_length_the_exercise_uses_is_accepted_and_bounded() {
         &[("upper_arm".to_owned(), 0.31)],
     )
     .unwrap_or_else(|e| panic!("valid: {e:?}"));
-    assert_eq!(ok.lengths.upper_arm, Some(Metres(0.31)));
+    assert_eq!(ok.body.lengths.upper_arm, Some(Metres(0.31)));
     for bad in [0.05, 1.6] {
         assert_eq!(
             validate(
@@ -246,8 +246,13 @@ fn frames() -> FrameCount {
     FrameCount::new(21).unwrap_or_else(|| panic!("21 is valid"))
 }
 
-fn squat_values(dorsi: f64, bar_kg: f64) -> Vec<(String, Value)> {
-    vec![number("dorsiflexion_deg", dorsi), number("bar_kg", bar_kg)]
+fn squat_values(bar_kg: f64) -> Vec<(String, Value)> {
+    vec![number("bar_kg", bar_kg)]
+}
+
+/// The squat's body measures: its dorsiflexion (SPEC-0066 §2.3.1).
+fn ankle(dorsi: f64) -> Vec<(String, f64)> {
+    vec![("dorsiflexion_deg".to_owned(), dorsi)]
 }
 
 /// The library's squat has `squat_range`'s moments, to 1e-9, frame by frame.
@@ -256,10 +261,10 @@ fn the_back_squat_through_the_library_matches_squat_range() {
     let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
     let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
     for (dorsi, bar_kg) in [(29.0, 84.0), (38.0, 0.0), (45.0, 140.0)] {
-        let values = validate(&squat.describe(), &squat_values(dorsi, bar_kg), &[])
+        let values = validate(&squat.describe(), &squat_values(bar_kg), &ankle(dorsi))
             .unwrap_or_else(|e| panic!("valid: {e:?}"));
         let got = squat
-            .range(&body, &values.settings, frames())
+            .range(&body, &values.body, &values.settings, frames())
             .unwrap_or_else(|e| panic!("kernel: {e}"));
         let bar = (bar_kg > 0.0)
             .then(|| LoadKg::try_new(bar_kg).unwrap_or_else(|e| panic!("valid bar: {e:?}")));
@@ -287,11 +292,11 @@ fn the_back_squat_through_the_library_matches_squat_range() {
 #[test]
 fn a_zero_bar_is_bodyweight_only() {
     let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
-    let v = validate(&squat.describe(), &squat_values(38.0, 0.0), &[])
+    let v = validate(&squat.describe(), &squat_values(0.0), &ankle(38.0))
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
     let body = scale(Metres(1.75), 80.0, &MeasuredLengths::default());
     let r = squat
-        .range(&body, &v.settings, frames())
+        .range(&body, &v.body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(r
         .frames
@@ -299,26 +304,131 @@ fn a_zero_bar_is_bodyweight_only() {
         .all(|f| f.points.iter().all(|p| p.name != "bar")));
 }
 
-/// The squat requires its dorsiflexion: no uncited default (SPEC-0045).
+/// No squat parameter is required any more: dorsiflexion is a body measure,
+/// and a request without one gets the standard body's cited 38.8°, stated
+/// as an assumption (SPEC-0066 §2.3.1).
 #[test]
-fn the_back_squat_requires_a_dorsiflexion() {
+fn a_squat_without_a_dorsiflexion_uses_the_standard_body_and_says_so() {
     let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
-    assert_eq!(
-        validate(&squat.describe(), &[number("bar_kg", 60.0)], &[]).err(),
-        Some(Invalid {
-            field: "dorsiflexion_deg"
-        })
-    );
+    let body = scale(Metres(1.75), 75.0, &MeasuredLengths::default());
+    let v = validate(&squat.describe(), &squat_values(60.0), &[])
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    assert_eq!(v.body.dorsiflexion, None);
+    let got = squat
+        .range(&body, &v.body, &v.settings, frames())
+        .unwrap_or_else(|e| panic!("kernel: {e}"));
+    assert!(got.assumptions.contains(&Assumption::StandardDorsiflexion));
+    assert!(got.table_lengths.contains(&"dorsiflexion_deg"));
+
+    let ankle_38_8 =
+        Dorsiflexion::from_degrees(STANDARD_DORSIFLEXION_DEG).unwrap_or_else(|| panic!("in range"));
+    let bar = LoadKg::try_new(60.0).unwrap_or_else(|e| panic!("{e:?}"));
+    let want =
+        squat_range(&body, Some(bar), ankle_38_8, frames()).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(got.frames.len(), want.frames.len());
+    for (g, w) in got.frames.iter().zip(&want.frames) {
+        for (gm, wm) in g.moments.iter().zip(&w.mechanics.joints) {
+            assert!((gm.moment.0 - wm.moment.0).abs() <= 1e-9);
+        }
+    }
+}
+
+#[test]
+fn a_squat_with_its_own_dorsiflexion_states_no_standard_body() {
+    let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
+    let body = scale(Metres(1.75), 75.0, &MeasuredLengths::default());
+    let v = validate(&squat.describe(), &squat_values(60.0), &ankle(35.0))
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    let got = squat
+        .range(&body, &v.body, &v.settings, frames())
+        .unwrap_or_else(|e| panic!("kernel: {e}"));
+    assert!(!got.assumptions.contains(&Assumption::StandardDorsiflexion));
+    assert!(!got.table_lengths.contains(&"dorsiflexion_deg"));
+}
+
+#[test]
+fn a_dorsiflexion_outside_its_domain_is_invalid() {
+    let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
+    for bad in [-1.0, 90.5] {
+        assert_eq!(
+            validate(&squat.describe(), &[], &ankle(bad)).err(),
+            Some(Invalid {
+                field: "dorsiflexion_deg"
+            }),
+            "{bad}"
+        );
+    }
+}
+
+/// The squat states every parameter's default: none is required (R-0066
+/// AC1/AC2, R-0067 AC1).
+#[test]
+fn every_library_parameter_has_a_default() {
+    for model in library() {
+        for p in &model.describe().parameters {
+            let has = match &p.kind {
+                ParameterKind::Number { default, .. } => default.is_some(),
+                ParameterKind::Choice { default, .. } => default.is_some(),
+            };
+            assert!(has, "{}.{} has no default", model.describe().id, p.key);
+        }
+    }
+}
+
+/// Each frame carries its solved angles, as `squat_range` computed them, and
+/// the range its spreads (SPEC-0066 §2.3.1).
+#[test]
+fn a_squat_frame_carries_its_angles_and_the_range_its_spreads() {
+    let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
+    let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
+    let v = validate(&squat.describe(), &squat_values(84.0), &ankle(29.0))
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    let got = squat
+        .range(&body, &v.body, &v.settings, frames())
+        .unwrap_or_else(|e| panic!("kernel: {e}"));
+    let dorsi = Dorsiflexion::from_degrees(29.0).unwrap_or_else(|| panic!("valid"));
+    let bar = LoadKg::try_new(84.0).unwrap_or_else(|e| panic!("{e:?}"));
+    let want = squat_range(&body, Some(bar), dorsi, frames()).unwrap_or_else(|e| panic!("{e:?}"));
+    for (g, w) in got.frames.iter().zip(&want.frames) {
+        let angle = |name: &str| {
+            g.angles
+                .iter()
+                .find(|a| a.name == name)
+                .map_or_else(|| panic!("{name} missing"), |a| a.deg)
+        };
+        assert!((angle("shank") - w.shank_deg).abs() < 1e-12, "shank");
+        assert!(
+            (angle("knee_flexion") - w.knee_flexion_deg).abs() < 1e-12,
+            "knee_flexion"
+        );
+        assert!(
+            (angle("hip_flexion") - w.hip_flexion_deg).abs() < 1e-12,
+            "hip_flexion"
+        );
+        assert!(
+            (angle("trunk_lean") - w.trunk_lean_deg).abs() < 1e-12,
+            "trunk_lean"
+        );
+    }
+    let spread = |name: &str| {
+        got.spreads
+            .iter()
+            .find(|s| s.name == name)
+            .map_or_else(|| panic!("{name} missing"), |s| s.metres.0)
+    };
+    assert!((spread("l5s1_placement") - 0.03).abs() < 1e-12);
+    assert!((spread("com_placement") - 0.02).abs() < 1e-12);
+    assert!(got.table_lengths.contains(&"thigh"));
 }
 
 #[test]
 fn a_lifter_who_cannot_reach_depth_is_a_rejected_end() {
     let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
-    let v = validate(&squat.describe(), &squat_values(0.0, 0.0), &[])
+    let v = validate(&squat.describe(), &squat_values(0.0), &ankle(0.0))
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
     let body = scale(Metres(1.75), 80.0, &MeasuredLengths::default());
     let r = squat
-        .range(&body, &v.settings, frames())
+        .range(&body, &v.body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(r.frames.is_empty());
     assert!(matches!(
@@ -373,7 +483,7 @@ fn a_repeated_key_is_invalid() {
     let lengths = [("thigh".to_owned(), 0.4), ("thigh".to_owned(), 0.45)];
     assert_eq!(
         validate(&fixture(), &[number("angle_deg", 45.0)], &lengths).err(),
-        Some(Invalid { field: "lengths" })
+        Some(Invalid { field: "body" })
     );
 }
 
@@ -455,8 +565,12 @@ fn every_library_description_is_well_formed() {
                 assert!(lo < hi, "{}: defaults run {} backwards", d.id, pair.high);
             }
         }
-        for length in d.lengths {
-            assert!(LENGTH_KEYS.contains(length), "{}: length {length}", d.id);
+        for measure in d.body {
+            assert!(
+                BODY_KEYS.contains(measure),
+                "{}: body measure {measure}",
+                d.id
+            );
         }
     }
 }
@@ -486,10 +600,10 @@ fn a_rejected_end_serializes_without_a_repeated_key() {
 fn the_squat_through_the_library_keeps_every_frame_s_assumptions() {
     let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
     let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
-    let v = validate(&squat.describe(), &squat_values(29.0, 84.0), &[])
+    let v = validate(&squat.describe(), &squat_values(84.0), &ankle(29.0))
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
     let got = squat
-        .range(&body, &v.settings, frames())
+        .range(&body, &v.body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     let ankle = Dorsiflexion::from_degrees(29.0).unwrap_or_else(|| panic!("valid"));
     let bar = LoadKg::try_new(84.0).unwrap_or_else(|e| panic!("{e:?}"));

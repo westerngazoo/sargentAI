@@ -5,7 +5,7 @@
 use serde::Serialize;
 
 use super::input::Values;
-use crate::biomech::{Assumption, JointMoment, Point, Rejection};
+use crate::biomech::{Assumption, JointMoment, Metres, Point, Rejection};
 
 /// One exercise's range of postures.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -16,8 +16,22 @@ pub struct ExerciseRange {
     pub frames: Vec<Frame>,
     /// Every value used, defaults included (R-0066 AC2).
     pub settings: Values,
+    /// The placement spreads each moment's uncertainty comes from.
+    pub spreads: Vec<NamedSpread>,
+    /// The body measures the request did not give, so the table or the
+    /// standard body supplied them.
+    pub table_lengths: Vec<&'static str>,
     /// What readings across the frames hold under.
     pub assumptions: Vec<Assumption>,
+}
+
+/// A placement spread, by name (SPEC-0045 §2.8, SPEC-0066 §2.3.1).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+pub struct NamedSpread {
+    /// e.g. `l5s1_placement`, `com_placement`.
+    pub name: &'static str,
+    /// The spread, metres.
+    pub metres: Metres,
 }
 
 /// How a range ended (SPEC-0059's `end`, generalized).
@@ -63,6 +77,8 @@ pub struct Frame {
     /// The named points the app draws (`ankle`, `knee`, `hip`, `shoulder`,
     /// `bar`, …).
     pub points: Vec<NamedPoint>,
+    /// The solved angles, read-outs (R-0067 OQ-2).
+    pub angles: Vec<NamedAngle>,
     /// Each reported joint's moment, signed, with its resisting group and
     /// uncertainty.
     pub moments: Vec<JointMoment>,
@@ -77,4 +93,13 @@ pub struct NamedPoint {
     pub name: &'static str,
     /// Where, in the sagittal plane.
     pub at: Point,
+}
+
+/// A solved angle, by name.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+pub struct NamedAngle {
+    /// e.g. `shank`, `knee_flexion`, `hip_flexion`, `trunk_lean`.
+    pub name: &'static str,
+    /// Degrees, signed as the model states each one.
+    pub deg: f64,
 }
