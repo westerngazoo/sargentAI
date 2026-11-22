@@ -84,3 +84,11 @@ kernel, not the anthropometry.
   one place, as it does today.
 - Full inverse dynamics with acceleration terms is not in garust's
   `multibody` yet; that is a later requirement and a garust change.
+
+## Pin history
+
+| Date | Rev | Why | Gate |
+|---|---|---|---|
+| 2026-10-23 | `55e91407` | The parity spike's rev (this ADR). | The spike: 2 992 postures, 1.3e-12 N·m. |
+| 2026-11-22 | `5aae4a92` | garust PM-20: `generalized_torque` holds each load's force at the posture, so the virtual-work cross-check is right for a cable (SPEC-0066 slice 66-0). The bump carries 46 garust commits (PM-8 to PM-17 and PM-20), among them fallible `try_` constructors (`Tree::try_new`, `Motor::try_inverse`) and fixes in `contact.rs` and `line_line_closest` that fitAI does not call. | fitAI's parity fixture (1 916 postures, 1e-9 N·m) and the whole workspace suite green. Cost noted: the cross-check now runs forward kinematics twice per load rather than per joint, so a 41-frame squat range takes about 60 ms in release (debug tests run about 30× slower). |
+
