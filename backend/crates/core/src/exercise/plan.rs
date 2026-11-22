@@ -1,27 +1,30 @@
-//! SPEC-0059 §2.5 — which exercise names have a physics model in this module.
+//! SPEC-0059 §2.5, SPEC-0066 §2.3 — which exercise names the plan marks as
+//! modelled, read from the exercise library.
 
+use super::library;
 use crate::periodize::lift_key;
 use crate::technique::Lift;
 
-/// The lift whose physics model covers `exercise`, or `None` when there is
-/// none yet (SPEC-0059 §2.5: the server decides, not a client string list).
+/// The lift the plan names for `exercise`, or `None` when no library entry the
+/// plan exposes covers it (SPEC-0059 §2.5: the server decides, not a client
+/// string list).
 ///
-/// Only the back squat has a model today ([`super::squat_range`]): the
-/// library's "Back Squat", and "Sentadilla" or "Sentadilla trasera" as a
-/// lifter types them (owner, 2026-10-30). Exact after [`lift_key`]
-/// normalization (trim, lowercase), never fuzzy: a bare "Squat", a front,
-/// hack or low-bar squat is not this model, and the deadlift and bench wait
-/// for R-0045's garust work.
+/// It looks the name up, after [`lift_key`] normalization (trim, lowercase),
+/// among the aliases of the library entries whose `in_plan_as` is set: exact,
+/// never fuzzy. Only the back squat is exposed today, as [`Lift::Squat`], so
+/// installed app builds keep their *Física* button; an entry joins the plan
+/// when the app can open it (SPEC-0066 §2.3, SPEC-0067).
 ///
 /// Narrower than [`Lift::from_exercise_name`] on purpose: that one says which
 /// lift a video shows; this one says which mechanics are modelled.
 #[must_use]
 pub fn model_for(exercise: &str) -> Option<Lift> {
-    matches!(
-        lift_key(exercise).as_str(),
-        "back squat" | "sentadilla" | "sentadilla trasera"
-    )
-    .then_some(Lift::Squat)
+    let key = lift_key(exercise);
+    library().iter().find_map(|model| {
+        let d = model.describe();
+        d.in_plan_as
+            .filter(|_| d.aliases.iter().any(|alias| *alias == key))
+    })
 }
 
 #[cfg(test)]

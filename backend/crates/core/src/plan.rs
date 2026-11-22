@@ -17,7 +17,7 @@ use chrono::{Days, NaiveDate};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::biomech::model_for;
+use crate::exercise::model_for;
 use crate::technique::Lift;
 use crate::workout::MuscleGroup;
 

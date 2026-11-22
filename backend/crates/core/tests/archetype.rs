@@ -36,7 +36,7 @@ use fitai_core::archetype::{
     LengthBand, MacroEmphasis, PlanDay, ProgramTemplate, Provenance, Somatotype, StructureTag,
     TrainingPhilosophy, VolumeBand, WidthBand,
 };
-use fitai_core::biomech::model_for;
+use fitai_core::exercise::model_for;
 use fitai_core::plan::PlanExercise;
 use fitai_core::{Goal, MuscleGroup};
 

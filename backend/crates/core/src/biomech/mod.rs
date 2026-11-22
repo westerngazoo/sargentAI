@@ -42,7 +42,6 @@ mod tests;
 mod analysis;
 mod anthro;
 mod kernel;
-mod model;
 mod range;
 mod segments;
 mod squat;
@@ -59,7 +58,6 @@ pub use anthro::{
     scale, Body, Length, MeasuredLengths, Segment, Table, Verification, WINTER, WINTER_VERIFICATION,
 };
 pub use kernel::KernelError;
-pub use model::model_for;
 pub use range::{squat_range, FrameCount, RangeEnd, RangeFrame, SquatRange};
 pub use segments::ChainSegment;
 pub use squat::{

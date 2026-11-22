@@ -80,6 +80,7 @@ impl RangeRequest {
             thigh: length(self.thigh_m, "thigh_m")?,
             shank: length(self.shank_m, "shank_m")?,
             trunk: length(self.trunk_m, "trunk_m")?,
+            ..MeasuredLengths::default()
         };
         let ankle =
             Dorsiflexion::from_degrees(self.dorsiflexion_deg).ok_or(ApiError::Validation {
