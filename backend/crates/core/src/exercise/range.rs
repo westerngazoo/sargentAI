@@ -42,8 +42,11 @@ pub enum End {
 
 /// Why a range stopped or could not start: a closed set for the library.
 /// Further variants arrive with the exercises that can reach them.
+///
+/// Tagged `source`, not `reason`: the squat's [`Rejection`] is itself tagged
+/// `reason`, and one object must not carry the key twice.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case", tag = "reason")]
+#[serde(rename_all = "snake_case", tag = "source")]
 pub enum Reason {
     /// The squat's own rejection, unchanged.
     Squat(Rejection),
@@ -59,8 +62,19 @@ pub struct Frame {
     pub progress: f64,
     /// The named points the app draws (`ankle`, `knee`, `hip`, `shoulder`,
     /// `bar`, …).
-    pub points: Vec<(&'static str, Point)>,
+    pub points: Vec<NamedPoint>,
     /// Each reported joint's moment, signed, with its resisting group and
     /// uncertainty.
     pub moments: Vec<JointMoment>,
+    /// What this frame's numbers hold under (R-0066 §1).
+    pub assumptions: Vec<Assumption>,
+}
+
+/// A point the app draws, by name.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+pub struct NamedPoint {
+    /// `ankle`, `knee`, `hip`, `shoulder`, `bar`, …
+    pub name: &'static str,
+    /// Where, in the sagittal plane.
+    pub at: Point,
 }

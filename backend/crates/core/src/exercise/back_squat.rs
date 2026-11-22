@@ -3,7 +3,7 @@
 
 use super::description::{Description, Equipment, Group, Parameter, ParameterKind};
 use super::input::{Invalid, Values};
-use super::range::{End, ExerciseRange, Frame, Reason};
+use super::range::{End, ExerciseRange, Frame, NamedPoint, Reason};
 use super::{ExerciseModel, LibraryError};
 use crate::biomech::{
     squat_range, Body, Dorsiflexion, FrameCount, Joint, ModelError, RangeEnd, RangeFrame,
@@ -116,21 +116,23 @@ pub(super) fn end_of(end: RangeEnd) -> End {
     }
 }
 
-/// A squat frame's points and moments, unchanged.
+/// A squat frame's points, moments and assumptions, unchanged.
 fn frame_of(f: &RangeFrame) -> Frame {
     let p = &f.posture;
+    let named = |name, at| NamedPoint { name, at };
     let mut points = vec![
-        ("ankle", p.ankle),
-        ("knee", p.knee),
-        ("hip", p.hip),
-        ("shoulder", p.shoulder),
+        named("ankle", p.ankle),
+        named("knee", p.knee),
+        named("hip", p.hip),
+        named("shoulder", p.shoulder),
     ];
     if let Some(load) = p.load {
-        points.push(("bar", load.at));
+        points.push(named("bar", load.at));
     }
     Frame {
         progress: f.progress,
         points,
         moments: f.mechanics.joints.to_vec(),
+        assumptions: f.mechanics.assumptions.clone(),
     }
 }

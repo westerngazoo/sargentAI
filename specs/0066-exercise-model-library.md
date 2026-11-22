@@ -692,6 +692,20 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
+- 2026-11-22 — 66-b1 as built (owner approved the outline; architect ACCEPT WITH CHANGES on PR #196, applied):
+  - `range(&self, body, values, frames)` takes the validated settings and the scaled body directly (no `Input` struct). It returns `Result<_, LibraryError { Invalid, Kernel }>`, so settings validated against another description are a typed error, not a panic. 66-b2 maps `Invalid` there to `500`: after validation it is a programming error.
+  - `validate` returns `Validated { settings, lengths }`, kept apart so `settings` restates exactly what the model used. Only `validate` builds `Values`. The settings serialize as one flat object, and points as `[{name, at}]`.
+  - A repeated key, or an unknown one, is `400` with field `values` or `lengths`. The API's field is a fixed token, and request text is never echoed. A known length the exercise does not use is named.
+  - **A parameter's `default` is optional; `None` makes it required.** It is allowed only with a cited reason, never for a machine setting. Its one use is the squat's `dorsiflexion_deg`: SPEC-0045 §2.6.1.1 commits no uncited population default. **This conflicts with R-0066 AC1/AC2 and R-0067 AC1/AC5 (a default for every control): pending the owner's decision, see below.**
+  - `served_in_plan` became `in_plan_as: Option<Lift>`, the value the plan emits (it keeps `"squat"`). When SPEC-0067 exposes a second exercise, the plan's `physics` becomes the library id or a string, because `technique::Lift` names the lifts a video shows, not every modelled exercise.
+  - `model_for` moved to `exercise`, so `biomech` does not depend on the library.
+  - `Reason` is tagged `source`, because the squat's `Rejection` is tagged `reason` and one object must not repeat a key. Its other variants arrive with their slices.
+  - Each frame carries its own assumptions, as `squat_range` does.
+  - **Deferred to 66-b2's wire, and to be specified there:** `table_lengths`; the per-exercise uncertainty spreads (the squat's `Uncertainty`); and **solved angles per frame**. R-0067 OQ-2 makes solved angles read-outs, and R-0059's screen shows them, but §2.3's `Frame` has no place for them yet.
+- **Open, for the owner (66-b1):** the squat's dorsiflexion default. The options:
+  - (a) cite a normative weight-bearing value (SPEC-0045 names Bennell 1998 and a normative-range paper as the candidates) and make it the default;
+  - (b) amend R-0067 AC1/AC5: a control with no cited default is asked once, as SPEC-0059 does, and has no reset;
+  - (c) move dorsiflexion to the body, since it is a measurement of the lifter, so the standard body carries it (which still needs (a)'s citation for the standard body's value).
 - 2026-11-21 — 66-a2 as built (owner approved the outline): the error type is `ModelError { Rejected, Kernel }`, shared by `squat_range` and `baseline_mechanics` (the outline called it `RangeError`); `joint_moment` is public beside `body_moment`, for postures that did not come from the solver (the reel check); `above()` gives way to `ChainSegment::ALL` (the balance solve's list) and `tree_with`'s links (the load sides), checked by hand sums per joint; `KernelError::NotReported` for a joint the tree does not report; the fixture's writer is removed.
 - 2026-11-21 — 66-a1 as built: the pin stays at `55e91407` until before 66-c (owner); the lumbar `side` corrected to `+1`; trees built at a posture (no `q`); `force`, `Cable` and `root_reaction` deferred to the slices that use them; the grid is 1 916 postures; the squat tree is rooted at the ankle (no foot link); `garust-core` is a third dependency (architect review of PR #193).
 

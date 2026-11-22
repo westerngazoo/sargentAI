@@ -542,9 +542,6 @@ fn scaling_never_takes_the_missing_length_fallback() {
     }
 }
 
-/// SPEC-0045 §2.3 (AC2) — masses are table fractions of body mass and have no
-/// measurement path: a body with measured lengths weighs the same as one
-/// without.
 /// SPEC-0066 §2.3 — a measured upper arm and forearm override the table, and
 /// the result still says some lengths are the table's (the hand, foot and
 /// head have no measurement path).
@@ -566,6 +563,9 @@ fn measured_arm_lengths_override_the_table() {
     assert!((table.upper_arm() - 0.33).abs() > 1e-3, "the table differs");
 }
 
+/// SPEC-0045 §2.3 (AC2) — masses are table fractions of body mass and have no
+/// measurement path: a body with measured lengths weighs the same as one
+/// without.
 #[test]
 fn masses_are_table_fractions_and_ignore_measured_lengths() {
     let table = lifter();

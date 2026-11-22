@@ -3,8 +3,8 @@
 //! through the library with the same numbers as `squat_range`.
 
 use super::{
-    back_squat::end_of, find, library, validate, Description, End, Equipment, Group, Invalid,
-    Ordered, Parameter, ParameterKind, Reason, Value,
+    back_squat::end_of, find, input::LENGTH_KEYS, library, validate, Description, End, Equipment,
+    Group, Invalid, Ordered, Parameter, ParameterKind, Reason, Value,
 };
 use crate::biomech::{
     scale, squat_range, Dorsiflexion, FrameCount, Joint, MeasuredLengths, Metres, RangeEnd,
@@ -85,7 +85,7 @@ fn fixture() -> Description {
                 group: Group::Motion,
                 kind: ParameterKind::Number {
                     unit: "deg",
-                    min: 30.0,
+                    min: 0.0,
                     max: 150.0,
                     step: 1.0,
                     default: Some(100.0),
@@ -116,10 +116,10 @@ fn number(key: &str, n: f64) -> (String, Value) {
 fn missing_keys_take_their_defaults() {
     let v = validate(&fixture(), &[number("angle_deg", 45.0)], &[])
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
-    assert_eq!(v.number("angle_deg"), Some(45.0));
-    assert_eq!(v.number("low_deg"), Some(10.0));
-    assert_eq!(v.number("high_deg"), Some(100.0));
-    assert_eq!(v.choice("cop"), Some("mid"));
+    assert_eq!(v.settings.number("angle_deg"), Some(45.0));
+    assert_eq!(v.settings.number("low_deg"), Some(10.0));
+    assert_eq!(v.settings.number("high_deg"), Some(100.0));
+    assert_eq!(v.settings.choice("cop"), Some("mid"));
 }
 
 /// A parameter with no default is required (dorsiflexion is one: SPEC-0045
@@ -210,7 +210,7 @@ fn a_length_the_exercise_uses_is_accepted_and_bounded() {
         &[("upper_arm".to_owned(), 0.31)],
     )
     .unwrap_or_else(|e| panic!("valid: {e:?}"));
-    assert_eq!(ok.lengths().upper_arm, Some(Metres(0.31)));
+    assert_eq!(ok.lengths.upper_arm, Some(Metres(0.31)));
     for bad in [0.05, 1.6] {
         assert_eq!(
             validate(
@@ -259,7 +259,7 @@ fn the_back_squat_through_the_library_matches_squat_range() {
         let values = validate(&squat.describe(), &squat_values(dorsi, bar_kg), &[])
             .unwrap_or_else(|e| panic!("valid: {e:?}"));
         let got = squat
-            .range(&body, &values, frames())
+            .range(&body, &values.settings, frames())
             .unwrap_or_else(|e| panic!("kernel: {e}"));
         let bar = (bar_kg > 0.0)
             .then(|| LoadKg::try_new(bar_kg).unwrap_or_else(|e| panic!("valid bar: {e:?}")));
@@ -291,12 +291,12 @@ fn a_zero_bar_is_bodyweight_only() {
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
     let body = scale(Metres(1.75), 80.0, &MeasuredLengths::default());
     let r = squat
-        .range(&body, &v, frames())
+        .range(&body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(r
         .frames
         .iter()
-        .all(|f| f.points.iter().all(|(name, _)| *name != "bar")));
+        .all(|f| f.points.iter().all(|p| p.name != "bar")));
 }
 
 /// The squat requires its dorsiflexion: no uncited default (SPEC-0045).
@@ -318,7 +318,7 @@ fn a_lifter_who_cannot_reach_depth_is_a_rejected_end() {
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
     let body = scale(Metres(1.75), 80.0, &MeasuredLengths::default());
     let r = squat
-        .range(&body, &v, frames())
+        .range(&body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(r.frames.is_empty());
     assert!(matches!(
@@ -357,4 +357,156 @@ fn every_squat_range_end_maps_to_a_library_end() {
             reason: Reason::Squat(r)
         }
     );
+}
+
+// ---------------------------------------------------------------------------
+// Architect review of PR #196
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_repeated_key_is_invalid() {
+    let values = [number("angle_deg", 45.0), number("angle_deg", 50.0)];
+    assert_eq!(
+        validate(&fixture(), &values, &[]).err(),
+        Some(Invalid { field: "values" })
+    );
+    let lengths = [("thigh".to_owned(), 0.4), ("thigh".to_owned(), 0.45)];
+    assert_eq!(
+        validate(&fixture(), &[number("angle_deg", 45.0)], &lengths).err(),
+        Some(Invalid { field: "lengths" })
+    );
+}
+
+#[test]
+fn a_number_given_to_a_choice_is_invalid() {
+    let values = [number("angle_deg", 45.0), number("cop", 1.0)];
+    assert_eq!(
+        validate(&fixture(), &values, &[]).err(),
+        Some(Invalid { field: "cop" })
+    );
+}
+
+/// A pair broken by the request against a default still names the `high`
+/// key, the control R-0067 AC8 tells the lifter to move back.
+#[test]
+fn a_pair_broken_against_a_default_names_its_high_key() {
+    // low_deg defaults to 10; a high of 5 breaks the pair against it.
+    let values = [number("angle_deg", 45.0), number("high_deg", 5.0)];
+    assert_eq!(
+        validate(&fixture(), &values, &[]).err(),
+        Some(Invalid { field: "high_deg" })
+    );
+}
+
+/// Every description in the library is well formed (SPEC-0066 §2.3): unique
+/// keys, `min <= max`, defaults in bounds and among the options, pairs that
+/// name number parameters and hold for the defaults, lengths the request can
+/// carry. A typo in a pair key would otherwise switch its check off.
+#[test]
+fn every_library_description_is_well_formed() {
+    for model in library() {
+        let d = model.describe();
+        let mut keys: Vec<&str> = d.parameters.iter().map(|p| p.key).collect();
+        let n = keys.len();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), n, "{}: duplicate parameter keys", d.id);
+        for p in &d.parameters {
+            match &p.kind {
+                ParameterKind::Number {
+                    min,
+                    max,
+                    default,
+                    step,
+                    ..
+                } => {
+                    assert!(min <= max && *step > 0.0, "{}.{}: bounds", d.id, p.key);
+                    if let Some(v) = default {
+                        assert!((min..=max).contains(&v), "{}.{}: default", d.id, p.key);
+                    }
+                }
+                ParameterKind::Choice { options, default } => {
+                    assert!(!options.is_empty(), "{}.{}: options", d.id, p.key);
+                    if let Some(v) = default {
+                        assert!(options.contains(v), "{}.{}: default", d.id, p.key);
+                    }
+                }
+            }
+        }
+        let number_default =
+            |key: &str| d.parameters.iter().find(|p| p.key == key).map(|p| &p.kind);
+        for pair in d.pairs {
+            for key in [pair.low, pair.high] {
+                assert!(
+                    matches!(number_default(key), Some(ParameterKind::Number { .. })),
+                    "{}: pair key {key} is not a number parameter",
+                    d.id
+                );
+            }
+            if let (
+                Some(ParameterKind::Number {
+                    default: Some(lo), ..
+                }),
+                Some(ParameterKind::Number {
+                    default: Some(hi), ..
+                }),
+            ) = (number_default(pair.low), number_default(pair.high))
+            {
+                assert!(lo < hi, "{}: defaults run {} backwards", d.id, pair.high);
+            }
+        }
+        for length in d.lengths {
+            assert!(LENGTH_KEYS.contains(length), "{}: length {length}", d.id);
+        }
+    }
+}
+
+/// One `reason` key per object on the wire: the library's `Reason` is
+/// tagged `source`, the squat's `Rejection` keeps `reason`.
+#[test]
+fn a_rejected_end_serializes_without_a_repeated_key() {
+    let end = End::Rejected {
+        reason: Reason::Squat(Rejection::DepthNotReachable {
+            limiting: Joint::Ankle,
+            needed_deg: 3.0,
+            available_deg: 0.0,
+        }),
+    };
+    let json = serde_json::to_string(&end).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(json.matches("\"reason\"").count(), 2, "{json}");
+    assert_eq!(json.matches("\"source\"").count(), 1, "{json}");
+    let value: serde_json::Value = serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(value["reason"]["source"], "squat");
+    assert_eq!(value["reason"]["reason"], "depth_not_reachable");
+}
+
+/// The squat through the library states every assumption `squat_range` does,
+/// frame by frame (R-0066 §1).
+#[test]
+fn the_squat_through_the_library_keeps_every_frame_s_assumptions() {
+    let body = scale(Metres(1.78), 77.0, &MeasuredLengths::default());
+    let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
+    let v = validate(&squat.describe(), &squat_values(29.0, 84.0), &[])
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    let got = squat
+        .range(&body, &v.settings, frames())
+        .unwrap_or_else(|e| panic!("kernel: {e}"));
+    let ankle = Dorsiflexion::from_degrees(29.0).unwrap_or_else(|| panic!("valid"));
+    let bar = LoadKg::try_new(84.0).unwrap_or_else(|e| panic!("{e:?}"));
+    let want = squat_range(&body, Some(bar), ankle, frames()).unwrap_or_else(|e| panic!("{e:?}"));
+    assert_eq!(got.assumptions, want.assumptions);
+    for (g, w) in got.frames.iter().zip(&want.frames) {
+        assert_eq!(g.assumptions, w.mechanics.assumptions);
+    }
+}
+
+/// The settings serialize as one flat object the client can read by key.
+#[test]
+fn the_settings_serialize_as_one_flat_object() {
+    let v = validate(&fixture(), &[number("angle_deg", 45.0)], &[])
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    let json: serde_json::Value =
+        serde_json::to_value(&v.settings).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(json["angle_deg"], 45.0);
+    assert_eq!(json["cop"], "mid");
 }

@@ -16,9 +16,9 @@ mod range;
 mod tests;
 
 pub use description::{Description, Equipment, Group, Ordered, Parameter, ParameterKind};
-pub use input::{validate, Invalid, Value, Values};
+pub use input::{validate, Invalid, Validated, Value, Values};
 pub use plan::model_for;
-pub use range::{End, ExerciseRange, Frame, Reason};
+pub use range::{End, ExerciseRange, Frame, NamedPoint, Reason};
 
 use crate::biomech::{Body, FrameCount, KernelError};
 
