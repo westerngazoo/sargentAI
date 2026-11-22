@@ -27,11 +27,7 @@
 mod kernel;
 mod range;
 
-use crate::biomech::kernel::{moment_of, moments};
-use crate::biomech::segments::Placement;
-use crate::biomech::squat::{tree_with, Loads};
 use crate::biomech::ChainSegment::{Arms, HeadNeck, Pelvis, Shank, Thigh, ThoraxAbdomen};
-use crate::biomech::NewtonMetres;
 use crate::biomech::{
     analyse_baseline, baseline, baseline_mechanics, body_moment, scale, Assumption, Baseline, Body,
     ChainSegment, Dorsiflexion, Joint, Load, LoadBasis, MeasuredLengths, Mechanics, Metres, Point,
@@ -39,6 +35,7 @@ use crate::biomech::{
     COM_PLACEMENT_SPREAD_M, L5S1_PLACEMENT_SPREAD_M, L5S1_UP_THE_TRUNK, WINTER,
     WINTER_VERIFICATION,
 };
+use crate::biomech::{joint_moment, NewtonMetres};
 use crate::workout::LoadKg;
 
 // ===========================================================================
@@ -338,15 +335,13 @@ fn system_com_x(body: &Body, p: &Posture) -> f64 {
     first_moment / mass
 }
 
-/// The model's moment about `j`: the kernel's, on the squat tree at the stated
-/// placement (SPEC-0066 slice 66-a2). The hand oracles below check it.
+/// The model's moment about `j`: the public [`joint_moment`] (the kernel's,
+/// SPEC-0066 slice 66-a2), unwrapped. The hand oracles below check it.
 fn moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
-    let all = moments(&tree_with(body, p, Placement::STATED, Loads::All))
-        .unwrap_or_else(|e| panic!("kernel refused: {e}"));
-    moment_of(&all, j).unwrap_or_else(|e| panic!("{e}"))
+    joint_moment(j, body, p).unwrap_or_else(|e| panic!("kernel refused: {e}"))
 }
 
-/// The model's body share of `j`'s moment, [`body_moment`] unwrapped.
+/// The model's body share of `j`'s moment, the public [`body_moment`] unwrapped.
 fn body_moment_about(j: Joint, body: &Body, p: &Posture) -> NewtonMetres {
     body_moment(j, body, p).unwrap_or_else(|e| panic!("kernel refused: {e}"))
 }
@@ -574,8 +569,8 @@ fn masses_are_table_fractions_and_ignore_measured_lengths() {
 // ===========================================================================
 
 /// The body's share plus the load's own term is the whole moment, at every
-/// joint, loaded and bodyweight-only: `body_moment_about` is the segment half
-/// of `moment_about`, with the posture (and so the arms) left as solved.
+/// joint, loaded and bodyweight-only: [`body_moment`] is the segment half of
+/// [`joint_moment`], with the posture (and so the arms) left as solved.
 #[test]
 fn the_body_share_plus_the_load_term_is_the_moment() {
     let body = lifter();

@@ -15,8 +15,8 @@ use crate::biomech::kernel::{agree, moment_of, moments, KernelError, PlanarTree,
 use crate::biomech::segments::Placement;
 use crate::biomech::squat::{tree_with, Loads};
 use crate::biomech::{
-    body_moment, scale, squat_range, Body, FrameCount, Joint, MeasuredLengths, Metres,
-    NewtonMetres, Posture, ResistingGroup,
+    scale, squat_range, Body, FrameCount, Joint, MeasuredLengths, Metres, NewtonMetres, Posture,
+    ResistingGroup,
 };
 
 /// The parity bound (R-0045 AC17(c)).
@@ -317,30 +317,6 @@ fn an_upright_frame_with_a_negative_knee_moment_names_the_knee_flexors() {
         .unwrap_or_else(|| panic!("the knee is reported"));
     assert!(knee.moment.0 < 0.0, "{}", knee.moment.0);
     assert_eq!(knee.resisting, ResistingGroup::KneeFlexors);
-}
-
-/// The body's own share plus the bar's term is the joint's moment
-/// (SPEC-0059 AC7, now from the kernel): the same tree without the bar.
-#[test]
-fn the_body_share_plus_the_bar_term_is_the_moment() {
-    let lifter = body(1.75, 80.0);
-    let p = solved(&lifter, Some(100.0), 38.0);
-    let all = squat_moments(&squat_tree(&lifter, &p));
-    let load = p.load.unwrap_or_else(|| panic!("a loaded posture"));
-    for (joint, total) in JOINTS.into_iter().zip(all) {
-        let share = body_moment(joint, &lifter, &p)
-            .unwrap_or_else(|e| panic!("kernel refused: {e}"))
-            .0;
-        assert!((share - total).abs() > 1.0, "{joint:?}: the bar matters");
-        let bar_only = total - share;
-        // The bar's term by hand: m·g·|lever| (its sign is the joint's).
-        let lever = load.at.x.0 - p.at(joint).x.0;
-        let by_hand = load.kg.get() * 9.81 * lever.abs();
-        assert!(
-            (bar_only.abs() - by_hand).abs() < 1e-9,
-            "{joint:?}: {bar_only} vs {by_hand}"
-        );
-    }
 }
 
 /// A joint the tree does not report is a typed error, never a silent zero.

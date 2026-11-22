@@ -132,8 +132,9 @@ core's `Serialize` output **unchanged**; the example below is a real dump
     line, bar minus hip, positive with the bar ahead (the design's lever;
     bodyweight-only frames carry no `hip`);
   - `hip.bar_n = bar_kg × g`, `hip.bar_nm = bar_n × lever_m`;
-  - `hip.body_nm = body_moment_about(Joint::Hip, &body, &posture)`
-    (`chain.rs`), the segments' share **in the loaded posture shown**, under
+  - `hip.body_nm = body_moment(Joint::Hip, &body, &posture)` (the kernel's
+    squat tree without the bar, SPEC-0066 slice 66-a2; `body_moment_about`
+    in `chain.rs` before it), the segments' share **in the loaded posture shown**, under
     the stated placement conventions. Not the posture with the load removed:
     core places the arms' centre of mass at the shoulder → bar midpoint with
     a bar and hanging without one, so removing the load would also move the
@@ -143,9 +144,10 @@ core's `Serialize` output **unchanged**; the example below is a real dump
   A Rust test asserts, per frame, `bar_nm + body_nm == joints[0].moment` to
   `1e-9`. That is the whole "La cuenta" line, and it is the server's
   arithmetic. The envelope's `g` is core's `G` (`9.81`), the one constant
-  every moment is multiplied by (SPEC-0045 §2.2); moments are multiplied by
-  it only in `chain.rs`, and the API multiplies it only for the displayed
-  weights `bar_n` and `ground_n`.
+  every moment is multiplied by (SPEC-0045 §2.2); moments get it only in
+  `kernel`, as each weight's gravity vector (SPEC-0066 slice 66-a2; `chain.rs`
+  before it), and the API multiplies it only for the displayed weights
+  `bar_n` and `ground_n`.
 - Range-level `assumptions` are `SquatRange.assumptions` (the convention
   ones); per-frame assumptions sit inside `mechanics`, as core emits them.
 - `table_lengths` lists which of `thigh`, `shank`, `trunk` came from the
@@ -376,7 +378,7 @@ String laCuenta(HipLever h, AppLocalizations l10n, String locale) { … }
 - 2026-11-02 — 59-c2c dropped (owner): free sessions' logged exercises get
   no Física button. Every remaining slice is in.
 - 2026-11-04 — Implemented: qa signed off (#187); R-0059 AC5 and AC6 amended to as-built.
-- 2026-11-21 — `resisting` follows the moment's sign (SPEC-0066 §2.1.3, slice 66-a2): the example's upright knee (−71.49 N·m) now reads `knee_flexors`. Moments unchanged.
+- 2026-11-21 — `resisting` follows the moment's sign (SPEC-0066 §2.1.3, slice 66-a2): the example's upright knee (−71.49 N·m) now reads `knee_flexors`. Moments unchanged. §2.2's lever text now names `body_moment` and the kernel.
 
 ## 9. Architect review — ACCEPT WITH CHANGES (2026-10-25), applied
 

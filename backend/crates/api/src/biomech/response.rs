@@ -59,6 +59,7 @@ pub(crate) struct RangeResponse {
 
 impl RangeResponse {
     /// Wrap a computed range, adding each frame's lever and ground force.
+    ///
     /// # Errors
     ///
     /// [`KernelError`] if a frame's hip lever fails the kernel's cross-check.

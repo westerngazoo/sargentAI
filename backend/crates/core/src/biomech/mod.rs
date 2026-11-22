@@ -7,8 +7,8 @@
 //! solve; later, the R-0044 keypoint series through a scale bridge. Pure — no
 //! I/O, no model, no clock, no randomness (R-0045 AC15).
 //!
-//! Slice A (SPEC-0045 §2.10): the anthropometric table, the static chain with
-//! its per-joint sign rule, the lumbar row, the baseline squat solve with the
+//! Slice A (SPEC-0045 §2.10): the anthropometric table, the static chain
+//! (since SPEC-0066 slice 66-a2, the garust kernel's tree), the lumbar row, the baseline squat solve with the
 //! system-COM balance constraint, and the two rejections reachable without
 //! knobs.
 //!
@@ -68,8 +68,9 @@ pub use squat::{
 };
 
 /// Standard gravity, m·s⁻². One constant for the whole model (SPEC-0045 §2.2):
-/// `kernel` hands it to garust as each weight's gravity vector, and the
-/// balance solve weighs the segments with it.
+/// `kernel` hands it to garust as each weight's gravity vector, and the API's
+/// lever arithmetic uses it for the bar's term. The balance solve needs no
+/// `g`: it balances `Σ m·x`.
 pub const G: f64 = 9.81;
 
 /// Where L5/S1 sits on the trunk line, as a fraction of hip → shoulder.
