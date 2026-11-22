@@ -3,8 +3,9 @@
 //! through the library with the same numbers as `squat_range`.
 
 use super::{
-    back_squat::end_of, body::BODY_KEYS, body::STANDARD_DORSIFLEXION_DEG, find, library, validate,
-    Description, End, Equipment, Group, Invalid, Ordered, Parameter, ParameterKind, Reason, Value,
+    back_squat::end_of, body::body_measures, body::Source, body::BODY_MEASURES,
+    body::STANDARD_DORSIFLEXION_DEG, find, library, validate, Description, End, Equipment, Group,
+    Invalid, Ordered, Parameter, ParameterKind, Reason, Value,
 };
 use crate::biomech::{
     scale, squat_range, Assumption, Dorsiflexion, FrameCount, Joint, MeasuredLengths, Metres,
@@ -56,7 +57,7 @@ fn fixture() -> Description {
         aliases: &[],
         equipment: Equipment::Cable,
         joints: &[Joint::Hip],
-        body: &["thigh", "upper_arm"],
+        body: body_measures(&["thigh", "upper_arm"]),
         parameters: vec![
             Parameter {
                 key: "angle_deg",
@@ -210,7 +211,7 @@ fn a_length_the_exercise_uses_is_accepted_and_bounded() {
         &[("upper_arm".to_owned(), 0.31)],
     )
     .unwrap_or_else(|e| panic!("valid: {e:?}"));
-    assert_eq!(ok.body.lengths.upper_arm, Some(Metres(0.31)));
+    assert_eq!(ok.body.lengths().upper_arm, Some(Metres(0.31)));
     for bad in [0.05, 1.6] {
         assert_eq!(
             validate(
@@ -313,12 +314,21 @@ fn a_squat_without_a_dorsiflexion_uses_the_standard_body_and_says_so() {
     let body = scale(Metres(1.75), 75.0, &MeasuredLengths::default());
     let v = validate(&squat.describe(), &squat_values(60.0), &[])
         .unwrap_or_else(|e| panic!("valid: {e:?}"));
-    assert_eq!(v.body.dorsiflexion, None);
+    assert_eq!(v.body.dorsiflexion(), None);
     let got = squat
         .range(&body, &v.body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(got.assumptions.contains(&Assumption::StandardDorsiflexion));
-    assert!(got.table_lengths.contains(&"dorsiflexion_deg"));
+    let used = |key: &str| {
+        got.body
+            .iter()
+            .find(|m| m.key == key)
+            .copied()
+            .unwrap_or_else(|| panic!("{key} not restated"))
+    };
+    assert_eq!(used("dorsiflexion_deg").source, Source::Standard);
+    assert!((used("dorsiflexion_deg").value - STANDARD_DORSIFLEXION_DEG).abs() < 1e-12);
+    assert_eq!(used("thigh").source, Source::Table);
 
     let ankle_38_8 =
         Dorsiflexion::from_degrees(STANDARD_DORSIFLEXION_DEG).unwrap_or_else(|| panic!("in range"));
@@ -343,7 +353,13 @@ fn a_squat_with_its_own_dorsiflexion_states_no_standard_body() {
         .range(&body, &v.body, &v.settings, frames())
         .unwrap_or_else(|e| panic!("kernel: {e}"));
     assert!(!got.assumptions.contains(&Assumption::StandardDorsiflexion));
-    assert!(!got.table_lengths.contains(&"dorsiflexion_deg"));
+    let dorsi = got
+        .body
+        .iter()
+        .find(|m| m.key == "dorsiflexion_deg")
+        .unwrap_or_else(|| panic!("restated"));
+    assert_eq!(dorsi.source, Source::Measured);
+    assert!((dorsi.value - 35.0).abs() < 1e-12);
 }
 
 #[test]
@@ -418,7 +434,10 @@ fn a_squat_frame_carries_its_angles_and_the_range_its_spreads() {
     };
     assert!((spread("l5s1_placement") - 0.03).abs() < 1e-12);
     assert!((spread("com_placement") - 0.02).abs() < 1e-12);
-    assert!(got.table_lengths.contains(&"thigh"));
+    assert!(got
+        .body
+        .iter()
+        .any(|m| m.key == "thigh" && m.source == Source::Table));
 }
 
 #[test]
@@ -565,11 +584,12 @@ fn every_library_description_is_well_formed() {
                 assert!(lo < hi, "{}: defaults run {} backwards", d.id, pair.high);
             }
         }
-        for measure in d.body {
+        for measure in &d.body {
             assert!(
-                BODY_KEYS.contains(measure),
-                "{}: body measure {measure}",
-                d.id
+                BODY_MEASURES.contains(measure),
+                "{}: body measure {} differs from the one table",
+                d.id,
+                measure.key
             );
         }
     }
@@ -623,4 +643,41 @@ fn the_settings_serialize_as_one_flat_object() {
         serde_json::to_value(&v.settings).unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(json["angle_deg"], 45.0);
     assert_eq!(json["cop"], "mid");
+}
+
+/// A rejected end under the standard dorsiflexion still states it: the
+/// rejection depended on that value. A body with no mass and no bar cannot
+/// be placed at any ankle (SPEC-0045 §2.6.6).
+#[test]
+fn a_rejected_end_under_the_standard_body_still_says_so() {
+    let squat = find("back_squat").unwrap_or_else(|| panic!("in the library"));
+    let massless = scale(Metres(1.75), 0.0, &MeasuredLengths::default());
+    let v = validate(&squat.describe(), &squat_values(0.0), &[])
+        .unwrap_or_else(|e| panic!("valid: {e:?}"));
+    let got = squat
+        .range(&massless, &v.body, &v.settings, frames())
+        .unwrap_or_else(|e| panic!("kernel: {e}"));
+    assert!(matches!(got.end, End::Rejected { .. }), "{:?}", got.end);
+    assert!(got.assumptions.contains(&Assumption::StandardDorsiflexion));
+}
+
+/// The squat serves its dorsiflexion control complete: unit, bounds, step
+/// and the standard body's cited value (R-0067 AC3, AC5).
+#[test]
+fn the_squat_serves_its_dorsiflexion_control_with_the_standard_value() {
+    let d = find("back_squat")
+        .unwrap_or_else(|| panic!("in the library"))
+        .describe();
+    let dorsi = d
+        .body
+        .iter()
+        .find(|m| m.key == "dorsiflexion_deg")
+        .unwrap_or_else(|| panic!("served"));
+    assert_eq!(dorsi.unit, "deg");
+    assert_eq!(dorsi.standard, Some(STANDARD_DORSIFLEXION_DEG));
+    assert!(d
+        .body
+        .iter()
+        .filter(|m| m.unit == "m")
+        .all(|m| m.standard.is_none()));
 }

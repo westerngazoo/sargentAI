@@ -1,7 +1,7 @@
 //! SPEC-0066 §2.3 — the back squat in the library: an adapter over
 //! `biomech::squat_range`, with its numbers unchanged.
 
-use super::body::{BodyMeasures, STANDARD_DORSIFLEXION_DEG};
+use super::body::{body_measures, BodyMeasures, Source, UsedMeasure, STANDARD_DORSIFLEXION_DEG};
 use super::description::{Description, Equipment, Group, Parameter, ParameterKind};
 use super::input::{Invalid, Values};
 use super::range::{End, ExerciseRange, Frame, NamedAngle, NamedPoint, NamedSpread, Reason};
@@ -16,6 +16,10 @@ use crate::workout::LoadKg;
 /// The high-bar back squat of SPEC-0045 and SPEC-0059.
 pub(super) struct BackSquat;
 
+/// The squat's body measures. Dorsiflexion is the lifter's, a body measure
+/// (SPEC-0066 §2.3.1).
+const BODY: [&str; 4] = ["thigh", "shank", "trunk", "dorsiflexion_deg"];
+
 impl ExerciseModel for BackSquat {
     fn describe(&self) -> Description {
         Description {
@@ -25,8 +29,7 @@ impl ExerciseModel for BackSquat {
             aliases: &["back squat", "sentadilla", "sentadilla trasera"],
             equipment: Equipment::FreeWeight,
             joints: &[Joint::Hip, Joint::Knee, Joint::Ankle, Joint::Lumbar],
-            // Dorsiflexion is the lifter's, a body measure (SPEC-0066 §2.3.1).
-            body: &["thigh", "shank", "trunk", "dorsiflexion_deg"],
+            body: body_measures(&BODY),
             parameters: vec![Parameter {
                 key: "bar_kg",
                 group: Group::Load,
@@ -54,7 +57,7 @@ impl ExerciseModel for BackSquat {
         // The standard body's cited dorsiflexion when the lifter gave none,
         // stated in the result (SPEC-0066 §2.3.1). The model itself always
         // takes one (SPEC-0045 §2.6.1.1).
-        let ankle = match measures.dorsiflexion {
+        let ankle = match measures.dorsiflexion() {
             Some(lifter_s) => lifter_s,
             None => Dorsiflexion::from_degrees(STANDARD_DORSIFLEXION_DEG).ok_or(Invalid {
                 field: "dorsiflexion_deg",
@@ -67,14 +70,7 @@ impl ExerciseModel for BackSquat {
             None
         };
         let settings = values.clone();
-        let table_lengths: Vec<&'static str> = self
-            .describe()
-            .body
-            .iter()
-            .copied()
-            .filter(|key| !measures.has(key))
-            .collect();
-        let standard = measures.dorsiflexion.is_none();
+        let standard = measures.dorsiflexion().is_none();
         let with_standard = |mut assumptions: Vec<Assumption>| {
             if standard {
                 assumptions.push(Assumption::StandardDorsiflexion);
@@ -101,7 +97,7 @@ impl ExerciseModel for BackSquat {
             frames,
             settings,
             spreads: spreads(),
-            table_lengths,
+            body: used_body(body, measures, ankle),
             assumptions: with_standard(assumptions),
         })
     }
@@ -167,6 +163,34 @@ fn spreads() -> Vec<NamedSpread> {
         NamedSpread {
             name: "com_placement",
             metres: Metres(COM_PLACEMENT_SPREAD_M),
+        },
+    ]
+}
+
+/// The body the squat ran on: each length as scaled (measured or table) and
+/// the dorsiflexion (measured or standard).
+fn used_body(body: &Body, measures: &BodyMeasures, ankle: Dorsiflexion) -> Vec<UsedMeasure> {
+    let length = |key, value| UsedMeasure {
+        key,
+        value,
+        source: if measures.get(key).is_some() {
+            Source::Measured
+        } else {
+            Source::Table
+        },
+    };
+    vec![
+        length("thigh", body.thigh()),
+        length("shank", body.shank()),
+        length("trunk", body.trunk()),
+        UsedMeasure {
+            key: "dorsiflexion_deg",
+            value: ankle.degrees(),
+            source: if measures.dorsiflexion().is_some() {
+                Source::Measured
+            } else {
+                Source::Standard
+            },
         },
     ]
 }

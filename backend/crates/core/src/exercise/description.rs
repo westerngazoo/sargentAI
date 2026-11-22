@@ -4,6 +4,7 @@
 
 use serde::Serialize;
 
+use super::body::BodyMeasure;
 use crate::biomech::Joint;
 use crate::technique::Lift;
 
@@ -24,10 +25,10 @@ pub struct Description {
     pub equipment: Equipment,
     /// The joints the range reports a moment for.
     pub joints: &'static [Joint],
-    /// The body measures the model uses, by the request's `body` keys
-    /// (lengths and `dorsiflexion_deg`, SPEC-0066 §2.3.1); the rest come from
-    /// the table or the standard body.
-    pub body: &'static [&'static str],
+    /// The body measures the model uses (lengths and `dorsiflexion_deg`,
+    /// SPEC-0066 §2.3.1), each with its unit, bounds, step and standard value,
+    /// so the app builds its *Cuerpo* controls from the server (R-0067 AC3).
+    pub body: Vec<BodyMeasure>,
     /// The controls: motion, machine and load.
     pub parameters: Vec<Parameter>,
     /// Pairs of number parameters that must stay ordered.

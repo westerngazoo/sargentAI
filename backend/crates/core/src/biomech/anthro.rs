@@ -260,17 +260,17 @@ impl Body {
     }
 
     /// Hip → knee.
-    pub(super) fn thigh(&self) -> f64 {
+    pub(crate) fn thigh(&self) -> f64 {
         self.thigh.0
     }
 
     /// Knee → ankle.
-    pub(super) fn shank(&self) -> f64 {
+    pub(crate) fn shank(&self) -> f64 {
         self.shank.0
     }
 
     /// Hip → shoulder.
-    pub(super) fn trunk(&self) -> f64 {
+    pub(crate) fn trunk(&self) -> f64 {
         self.trunk.0
     }
 
@@ -286,12 +286,12 @@ impl Body {
     }
 
     /// Shoulder → elbow.
-    pub(super) fn upper_arm(&self) -> f64 {
+    pub(crate) fn upper_arm(&self) -> f64 {
         self.upper_arm.0
     }
 
     /// Elbow → wrist.
-    pub(super) fn forearm(&self) -> f64 {
+    pub(crate) fn forearm(&self) -> f64 {
         self.forearm.0
     }
 

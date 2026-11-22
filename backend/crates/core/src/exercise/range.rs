@@ -4,6 +4,7 @@
 
 use serde::Serialize;
 
+use super::body::UsedMeasure;
 use super::input::Values;
 use crate::biomech::{Assumption, JointMoment, Metres, Point, Rejection};
 
@@ -18,9 +19,9 @@ pub struct ExerciseRange {
     pub settings: Values,
     /// The placement spreads each moment's uncertainty comes from.
     pub spreads: Vec<NamedSpread>,
-    /// The body measures the request did not give, so the table or the
-    /// standard body supplied them.
-    pub table_lengths: Vec<&'static str>,
+    /// Every body measure the model ran on, with its value and source
+    /// (measured, table or standard): the body's half of R-0066 AC2.
+    pub body: Vec<UsedMeasure>,
     /// What readings across the frames hold under.
     pub assumptions: Vec<Assumption>,
 }

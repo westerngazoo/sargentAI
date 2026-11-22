@@ -16,7 +16,9 @@ mod range;
 #[cfg(test)]
 mod tests;
 
-pub use body::{BodyMeasures, BODY_KEYS, STANDARD_DORSIFLEXION_DEG};
+pub use body::{
+    BodyMeasure, BodyMeasures, Source, UsedMeasure, BODY_MEASURES, STANDARD_DORSIFLEXION_DEG,
+};
 pub use description::{Description, Equipment, Group, Ordered, Parameter, ParameterKind};
 pub use input::{validate, Invalid, Validated, Value, Values};
 pub use plan::model_for;

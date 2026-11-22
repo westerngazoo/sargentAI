@@ -157,9 +157,10 @@ pub enum Assumption {
     /// far it reaches, hold under this convention only.
     JointsAdvanceTogether,
     /// The ankle's weight-bearing dorsiflexion was not given, so the standard
-    /// body's cited value was used: 38.8°, Konor et al. 2012 (weight-bearing
-    /// lunge, 20 healthy adults). Emitted by the exercise library, never by
-    /// the model, which always takes a dorsiflexion (SPEC-0066 §2.3.1).
+    /// body's cited value (`exercise::STANDARD_DORSIFLEXION_DEG`) was used.
+    /// Emitted by the exercise library, never by the model, which always takes
+    /// a dorsiflexion (SPEC-0066 §2.3.1). It rides on every end, a rejected
+    /// one included: the rejection depended on that value.
     StandardDorsiflexion,
 }
 

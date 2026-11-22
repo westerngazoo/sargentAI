@@ -3,12 +3,8 @@
 
 use serde::ser::{Serialize, SerializeMap, Serializer};
 
-use super::body::{BodyMeasures, BODY_KEYS};
+use super::body::{BodyMeasures, BODY_MEASURES};
 use super::description::{Description, ParameterKind};
-use crate::biomech::{Dorsiflexion, Metres};
-
-/// Bounds on a measured length, metres (SPEC-0059's bound).
-const LENGTH_M: std::ops::RangeInclusive<f64> = 0.1..=1.5;
 
 /// A request value: a number, or one option of a choice.
 #[derive(Clone, Debug, PartialEq)]
@@ -149,32 +145,13 @@ pub fn validate(
     }
     let mut measures = BodyMeasures::default();
     for (key, value) in body {
-        let Some(&known) = BODY_KEYS.iter().find(|k| **k == key.as_str()) else {
+        let Some(measure) = BODY_MEASURES.iter().find(|m| m.key == key.as_str()) else {
             return Err(Invalid { field: "body" });
         };
-        if !d.body.contains(&known) {
-            return Err(Invalid { field: known });
+        if !d.body.iter().any(|used| used.key == measure.key) {
+            return Err(Invalid { field: measure.key });
         }
-        let invalid = Invalid { field: known };
-        let length = || {
-            LENGTH_M
-                .contains(value)
-                .then_some(Some(Metres(*value)))
-                .ok_or(invalid)
-        };
-        let l = &mut measures.lengths;
-        match known {
-            "thigh" => l.thigh = length()?,
-            "shank" => l.shank = length()?,
-            "trunk" => l.trunk = length()?,
-            "upper_arm" => l.upper_arm = length()?,
-            "forearm" => l.forearm = length()?,
-            "dorsiflexion_deg" => {
-                measures.dorsiflexion = Some(Dorsiflexion::from_degrees(*value).ok_or(invalid)?);
-            }
-            // `known` came from BODY_KEYS, whose six keys are matched above.
-            _ => return Err(Invalid { field: "body" }),
-        }
+        measures.set(measure, *value)?;
     }
     Ok(Validated {
         settings,
