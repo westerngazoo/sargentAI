@@ -340,6 +340,59 @@ pub fn library() -> &'static [&'static dyn ExerciseModel];
   (0.02) and `L5S1_PLACEMENT_SPREAD_M` (0.03) where the placement is of that
   kind, and §2.5–2.7 name them per model.
 
+### 2.3.1 The body's measures, the standard body, and the frame's angles (slice 66-b2a, amendment of 2026-11-22)
+
+**Dorsiflexion is a measure of the body, not a control of the motion** (owner,
+2026-11-22, option (c) with (a)). It is the lifter's weight-bearing ankle range
+(SPEC-0045 §2.6.1.1), as a thigh length is the lifter's thigh. So:
+
+- **`lengths` becomes `body`.** A description lists the body measures it
+  uses, by the request's `body` keys: the five lengths (`thigh`, `shank`,
+  `trunk`, `upper_arm`, `forearm`, each `0.1..=1.5` m) and `dorsiflexion_deg`
+  (`0..=90`). The squat uses `thigh`, `shank`, `trunk` and `dorsiflexion_deg`.
+  The curl uses `upper_arm` and `forearm`. The request's top-level `lengths`
+  becomes `body`. A known measure the exercise does not use is named in a
+  `400`; an unknown one is `400` with field `body`.
+- **`dorsiflexion_deg` leaves the squat's parameters.** The squat's motion has
+  no parameter left in v1; its load keeps `bar_kg`. No parameter has
+  `default: None` any more: R-0066 AC1/AC2 and R-0067 AC1/AC5 hold as written.
+  The `None` case stays in the type, allowed only with a cited reason.
+- **The standard body's dorsiflexion is a cited value: 38.8°.** Konor MM,
+  Morton S, Eckerson JM, Grindstaff TL. *Reliability of three measures of
+  ankle dorsiflexion range of motion.* Int J Sports Phys Ther. 2012;7(3):
+  279–287 (PMC3362988). Weight-bearing lunge, digital inclinometer at the
+  tibial tuberosity on the anterior tibial crest, 20 healthy adults (age
+  24 ± 3): composite mean **38.8° ± 5.2°**.
+  - *Reading stated, not assumed silently:* the paper describes the angle as
+    "relative to the ground"; this spec takes it as the tibia's inclination
+    from vertical, which is SPEC-0045's `Dorsiflexion`. The other reading (from
+    horizontal) would be 51° of dorsiflexion, outside the 30–50° normal range
+    the same paper cites and past the < 30° equinus cut-off used clinically.
+  - *What it is not:* a small young cohort, and the anterior crest is not
+    exactly the knee–ankle line. The result says so: a request with no
+    `dorsiflexion_deg` gets `Assumption::StandardDorsiflexion`, and the screen
+    shows it as the standard body's (R-0067 AC12).
+  - SPEC-0045 §2.6.1.1's rule holds: `biomech::squat_range` still takes a
+    required `Dorsiflexion`. The default lives in the library's body layer,
+    where it is cited and stated, never inside the model.
+- **`Validated` carries `body: BodyMeasures { lengths, dorsiflexion }`**, the
+  settings apart, and `range(body, measures, settings, frames)` receives them
+  both.
+
+**Each frame carries its solved angles** (R-0067 OQ-2: solved angles are
+read-outs; R-0059's screen shows them). `Frame` gains
+`angles: Vec<NamedAngle { name, deg }>`. The squat's are `shank`,
+`knee_flexion`, `hip_flexion` and `trunk_lean`, from `RangeFrame` unchanged.
+
+**The uncertainty spreads travel with the range:**
+`ExerciseRange.spreads: Vec<NamedSpread { name, metres }>`. The squat's are
+`l5s1_placement` (0.03) and `com_placement` (0.02), SPEC-0045 §2.8's
+`Uncertainty`.
+
+**`table_lengths`** (the body measures the request did not give, so the table
+or the standard body supplied them) is on `ExerciseRange`, as SPEC-0059 has
+it.
+
 ### 2.4 Serving (slice 66-b2)
 
 ```
@@ -348,8 +401,10 @@ GET  /exercise-models/{id}          → Description (R-0066 AC9)
 POST /exercise-models/{id}/range    → ExerciseRange (R-0066 AC8)
 ```
 
-- **The request body** is `{ height_m, mass_kg, lengths?: {key: m}, values?:
-  {key: number | string}, frames? }`. Height, mass and `frames` use SPEC-0059's
+- **The request body** is `{ height_m, mass_kg, body?: {key: number}, values?:
+  {key: number | string}, frames? }` (§2.3.1: `body` holds the lengths and
+  `dorsiflexion_deg`). `LibraryError::Invalid` from `range` after validation is
+  a programming error: `500`, not `400`. Height, mass and `frames` use SPEC-0059's
   table and bounds unchanged.
 - **Status codes:**
   - an invalid field is `400 {"error":"validation","field":…}`;
@@ -692,6 +747,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 3: the architect's ACCEPT WITH CHANGES applied (§10).
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
+- 2026-11-22 — §2.3.1 added (owner, option (c) with (a)): dorsiflexion is a body measure with a cited standard value (Konor et al. 2012, 38.8°); frames carry solved angles; ranges carry their spreads and `table_lengths`. Realized by slice 66-b2a before the endpoints (66-b2b).
 - 2026-11-22 — 66-b1 as built (owner approved the outline; architect ACCEPT WITH CHANGES on PR #196, applied):
   - `range(&self, body, values, frames)` takes the validated settings and the scaled body directly (no `Input` struct). It returns `Result<_, LibraryError { Invalid, Kernel }>`, so settings validated against another description are a typed error, not a panic. 66-b2 maps `Invalid` there to `500`: after validation it is a programming error.
   - `validate` returns `Validated { settings, lengths }`, kept apart so `settings` restates exactly what the model used. Only `validate` builds `Values`. The settings serialize as one flat object, and points as `[{name, at}]`.
@@ -702,7 +758,7 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
   - `Reason` is tagged `source`, because the squat's `Rejection` is tagged `reason` and one object must not repeat a key. Its other variants arrive with their slices.
   - Each frame carries its own assumptions, as `squat_range` does.
   - **Deferred to 66-b2's wire, and to be specified there:** `table_lengths`; the per-exercise uncertainty spreads (the squat's `Uncertainty`); and **solved angles per frame**. R-0067 OQ-2 makes solved angles read-outs, and R-0059's screen shows them, but §2.3's `Frame` has no place for them yet.
-- **Open, for the owner (66-b1):** the squat's dorsiflexion default. The options:
+- **Answered 2026-11-22 (owner): (c) with (a), see §2.3.1.** Was open: the squat's dorsiflexion default. The options:
   - (a) cite a normative weight-bearing value (SPEC-0045 names Bennell 1998 and a normative-range paper as the candidates) and make it the default;
   - (b) amend R-0067 AC1/AC5: a control with no cited default is asked once, as SPEC-0059 does, and has no reset;
   - (c) move dorsiflexion to the body, since it is a measurement of the lifter, so the standard body carries it (which still needs (a)'s citation for the standard body's value).

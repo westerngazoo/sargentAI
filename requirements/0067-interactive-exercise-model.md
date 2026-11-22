@@ -135,8 +135,10 @@ standard body at any time. Every number on the screen comes from the server.
 | 2026-11-21 | Interactive model per exercise instead of fixed videos; a standard body by default; body, angles and machine settings adjustable. | Owner, 2026-11-21. |
 | 2026-11-21 | A new requirement rather than an amendment of R-0059. | R-0059 is Met; this adds a screen and depends on R-0066. |
 | 2026-11-21 | Accepted, with the proposals as the answers to the open questions. | Owner: "acepta 0066 y 0067". |
+| 2026-11-22 | The standard body's ankle dorsiflexion is 38.8° (Konor et al. 2012, weight-bearing lunge, 20 healthy adults), stated on screen as the standard body's; dorsiflexion is a *Cuerpo* measure, not a *Movimiento* control. | Owner, option (c) with (a) (SPEC-0066 §2.3.1). SPEC-0045 forbids an uncited default; this one is cited. |
 
 ## Changelog
 
 - 2026-11-21 — created (Draft).
 - 2026-11-21 — Accepted by the owner; open questions answered with the proposals.
+- 2026-11-22 — the standard body's dorsiflexion recorded (SPEC-0066 §2.3.1).
