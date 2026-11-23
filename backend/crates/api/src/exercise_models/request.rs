@@ -22,18 +22,19 @@ use crate::error::{ApiError, ApiResult};
 pub(crate) struct RangeRequest {
     height_m: f64,
     mass_kg: f64,
+    // `Option`, so an explicit `null` is an absent field, as SPEC-0059.
     #[serde(default)]
-    body: Pairs<f64>,
+    body: Option<Pairs<f64>>,
     #[serde(default)]
-    values: Pairs<WireValue>,
+    values: Option<Pairs<WireValue>>,
     frames: Option<i64>,
 }
 
 impl fmt::Debug for RangeRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RangeRequest")
-            .field("body", &!self.body.0.is_empty())
-            .field("values", &!self.values.0.is_empty())
+            .field("body", &self.body.is_some())
+            .field("values", &self.values.is_some())
             .field("frames", &self.frames.is_some())
             .finish_non_exhaustive()
     }
@@ -114,12 +115,15 @@ impl RangeRequest {
         let mass_kg = mass(self.mass_kg)?;
         let values: Vec<(String, Value)> = self
             .values
+            .unwrap_or_default()
             .0
             .into_iter()
             .map(|(key, v)| (key, v.into()))
             .collect();
-        let valid = validate(d, &values, &self.body.0).map_err(|invalid| ApiError::Validation {
-            field: invalid.field,
+        let valid = validate(d, &values, &self.body.unwrap_or_default().0).map_err(|invalid| {
+            ApiError::Validation {
+                field: invalid.field,
+            }
         })?;
         let frames = frame_count(self.frames)?;
         Ok(ModelInput {

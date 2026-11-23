@@ -60,7 +60,8 @@ pub(crate) async fn describe(
 /// start is a result: `200`, as SPEC-0059 AC3.
 ///
 /// # Errors
-/// `401` without a session; `404` for an unknown id, before the body is read;
+/// `401` without a session; `404` for an unknown id, before the body is
+/// validated (a body that does not parse still gets the `404`);
 /// `400 validation` naming the field, or `"body"` for a body that does not
 /// parse; `500` when the kernel's cross-check fails or the model refuses
 /// settings that passed validation (SPEC-0066 §2.4).

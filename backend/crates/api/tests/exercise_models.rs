@@ -3,8 +3,8 @@
 //! `POST /exercise-models/{id}/range`.
 //!
 //! AC8 and AC9: the list, a description and a range, each behind a session.
-//! The status codes of §2.4: `400` naming the field, `401`, `404`, `200` for a
-//! stopped or rejected end. The squat through the library equals the squat
+//! The status codes of §2.4: `400` naming the field, `401`, `404` (before the
+//! body is validated), `200` for a stopped or rejected end. The squat through the library equals the squat
 //! through `POST /biomech/squat/range` within 1e-9 N·m at every frame and
 //! joint. SPEC-0059 AC8: no body value reaches the log.
 
@@ -80,6 +80,10 @@ fn f(v: &Value) -> f64 {
     v.as_f64()
         .unwrap_or_else(|| panic!("expected a number, got {v}"))
 }
+
+/// The standard body's bodyweight squat ends at the bottom (1.75 m, 75 kg,
+/// the table, 38.8°).
+const STANDARD_END: &str = "complete";
 
 fn validation(field: &str) -> Value {
     json!({"error": "validation", "field": field})
@@ -157,6 +161,12 @@ async fn an_unknown_id_is_404(pool: PgPool) {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = post_raw(&app, "/exercise-models/front_lever/range", &auth, "{").await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "404 wins over a body that does not parse"
+    );
 }
 
 /// §2.4 — every route needs a session, and `401` comes before `404`.
@@ -250,9 +260,8 @@ async fn the_standard_body_runs_and_is_stated(pool: PgPool) {
         dorsiflexion,
         &json!({"key": "dorsiflexion_deg", "value": 38.8, "source": "standard"})
     );
-    if body["end"]["kind"] == "complete" {
-        assert_eq!(body["frames"].as_array().unwrap().len(), 41);
-    }
+    assert_eq!(body["end"]["kind"], STANDARD_END, "{}", body["end"]);
+    assert_eq!(body["frames"].as_array().unwrap().len(), 41);
 }
 
 /// §2.4 — SPEC-0059's bounds on height, mass and frames, and the library's
@@ -313,6 +322,42 @@ async fn a_repeated_key_is_rejected(pool: PgPool) {
     assert_eq!(body, validation("body"));
 }
 
+/// §2.4, SPEC-0059 AC3 — the SPEC-0045 R7 lifter (1.75 m, 80 kg, 25°,
+/// bodyweight) stops before the bottom: `200`, a stopped end with `reached`
+/// and the squat's reason, and frames only up to where the lifter got.
+#[sqlx::test(migrations = "../../migrations")]
+async fn a_lifter_who_stops_is_a_200_with_the_reason(pool: PgPool) {
+    let (app, auth) = authed_app(pool).await;
+    let request = json!({
+        "height_m": 1.75, "mass_kg": 80.0,
+        "body": { "dorsiflexion_deg": 25.0 }, "frames": 41
+    });
+    let (status, body) = post(&app, SQUAT_RANGE, Some(&auth), request).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["end"]["kind"], "stopped");
+    let reached = f(&body["end"]["reached"]);
+    assert!((reached - 0.565).abs() < 0.001, "reached {reached}");
+    assert_eq!(body["end"]["reason"]["source"], "squat");
+    assert_eq!(body["end"]["reason"]["reason"], "depth_not_reachable");
+    assert_eq!(body["end"]["reason"]["limiting"], "ankle");
+    let frames = body["frames"].as_array().unwrap();
+    assert!(!frames.is_empty() && frames.len() < 41);
+    assert!(frames.iter().all(|fr| f(&fr["progress"]) <= reached));
+}
+
+/// SPEC-0059 accepted `null` for every optional field; so does this request.
+#[sqlx::test(migrations = "../../migrations")]
+async fn null_optional_fields_are_absent_fields(pool: PgPool) {
+    let (app, auth) = authed_app(pool).await;
+    let request = json!({
+        "height_m": 1.75, "mass_kg": 75.0,
+        "body": null, "values": null, "frames": null
+    });
+    let (status, body) = post(&app, SQUAT_RANGE, Some(&auth), request).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["settings"], json!({"bar_kg": 0.0}));
+}
+
 /// §2.4, SPEC-0059 AC3 — a lifter the squat cannot place is a `200` with a
 /// rejected end and no frames.
 #[sqlx::test(migrations = "../../migrations")]
@@ -338,6 +383,8 @@ async fn the_library_squat_equals_the_old_endpoint(pool: PgPool) {
         (1.78, 77.0, Some((0.45, 0.42)), 29.0, 84.0),
         (1.75, 80.0, None, 38.8, 0.0),
         (1.62, 58.0, Some((0.38, 0.39)), 41.0, 40.0),
+        // Stops part-way: the prefix and its end are compared too.
+        (1.75, 80.0, None, 25.0, 0.0),
     ];
     for (height, mass, lengths, dorsiflexion, bar) in lifters {
         let (thigh, shank) =
@@ -368,8 +415,31 @@ async fn the_library_squat_equals_the_old_endpoint(pool: PgPool) {
         let new_frames = new["frames"].as_array().unwrap();
         assert!(!old_frames.is_empty(), "lifter {height} m has no frames");
         assert_eq!(old_frames.len(), new_frames.len(), "lifter {height} m");
+        match old["end"]["kind"].as_str().unwrap() {
+            "bottom" => assert_eq!(new["end"]["kind"], "complete"),
+            "stopped" => {
+                assert_eq!(new["end"]["kind"], "stopped");
+                assert_eq!(f(&old["end"]["reached"]), f(&new["end"]["reached"]));
+            }
+            other => panic!("lifter {height} m: unexpected old end {other}"),
+        }
         for (o, n) in old_frames.iter().zip(new_frames) {
             assert_eq!(f(&o["progress"]), f(&n["progress"]));
+            for point in n["points"].as_array().unwrap() {
+                let name = point["name"].as_str().unwrap();
+                let at = if name == "bar" {
+                    &o["posture"]["load"]["at"]
+                } else {
+                    &o["posture"][name]
+                };
+                for axis in ["x", "y"] {
+                    let (a, b) = (f(&at[axis]), f(&point["at"][axis]));
+                    assert!(
+                        (a - b).abs() <= 1e-9,
+                        "{height} m, {name}.{axis}: {a} vs {b}"
+                    );
+                }
+            }
             let old_joints = o["mechanics"]["joints"].as_array().unwrap();
             let new_joints = n["moments"].as_array().unwrap();
             assert_eq!(old_joints.len(), new_joints.len());
