@@ -414,7 +414,7 @@ read-outs; R-0059's screen shows them). `Frame` gains
 ### 2.4 Serving (slice 66-b2)
 
 ```
-GET  /exercise-models               → [{ id, name, equipment, joints }]
+GET  /exercise-models               → [{ id, name_es, name_en, equipment, joints }]
 GET  /exercise-models/{id}          → Description (R-0066 AC9)
 POST /exercise-models/{id}/range    → ExerciseRange (R-0066 AC8)
 ```
@@ -766,6 +766,13 @@ backend/crates/api/src/biomech/lever.rs   body_nm from the kernel              [
 - 2026-11-21 — revision 4: the architect's ACCEPT; its five text minors applied (§11).
 - 2026-11-21 — Accepted by the owner; OQ-C and OQ-D answered.
 - 2026-11-22 — §2.3.1 revised after the architect's review of PR #197: body measures are served with unit, bounds, step and standard value; the range restates the body it ran on (`body`, with sources), replacing `table_lengths`; the citation quotes the paper's "(horizontal)" and states the from-vertical reading as an inference; §2.3 points to §2.3.1.
+- 2026-11-22 — 66-b2b as built (owner approved the outline):
+  - The list row carries `name_es` and `name_en`, not one `name`: the description already holds both, and the app picks by its language.
+  - All three routes need a session; `401` comes before `404`, and `404` before the body is read.
+  - `body` and `values` are read as their pairs, repeats kept, so a repeated key reaches the validation and is `400` (`values` or `body`) instead of the last one silently winning. A value that is neither a number nor a string, or a body measure that is not a number, does not parse: `400` with field `body`, as SPEC-0059.
+  - Validation order: `height_m`, `mass_kg`, then `values` and `body` (SPEC-0066 §2.3), then `frames`. Height, mass and frames share SPEC-0059's bounds through one set of functions used by both endpoints.
+  - `LibraryError` maps to `500` in the api's error module; for `Invalid` the log names only the field, a fixed token.
+  - The core types serialize as they are; the api adds only the list row. No envelope fields (`hip`, `ground_n`) are added: those stay SPEC-0059's.
 - 2026-11-22 — §2.3.1 added (owner, option (c) with (a)): dorsiflexion is a body measure with a cited standard value (Konor et al. 2012, 38.8°); frames carry solved angles; ranges carry their spreads and `table_lengths`. Realized by slice 66-b2a before the endpoints (66-b2b).
 - 2026-11-22 — 66-b1 as built (owner approved the outline; architect ACCEPT WITH CHANGES on PR #196, applied):
   - `range(&self, body, values, frames)` takes the validated settings and the scaled body directly (no `Input` struct). It returns `Result<_, LibraryError { Invalid, Kernel }>`, so settings validated against another description are a typed error, not a panic. 66-b2 maps `Invalid` there to `500`: after validation it is a programming error.
