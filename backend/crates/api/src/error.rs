@@ -130,6 +130,22 @@ impl From<fitai_core::biomech::KernelError> for ApiError {
     }
 }
 
+impl From<fitai_core::exercise::LibraryError> for ApiError {
+    /// A model gave no range for a request that passed validation: a kernel
+    /// failure (as above), or a model refusing settings its own description
+    /// accepted, a programming error (SPEC-0066 §2.4). Both are the opaque
+    /// `500`; the log names only the field, a fixed token, never a value.
+    fn from(e: fitai_core::exercise::LibraryError) -> Self {
+        match e {
+            fitai_core::exercise::LibraryError::Kernel(e) => e.into(),
+            fitai_core::exercise::LibraryError::Invalid(invalid) => {
+                tracing::error!(field = invalid.field, "model refused validated settings");
+                ApiError::Internal(eyre::eyre!("model refused validated settings"))
+            }
+        }
+    }
+}
+
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match &self {
@@ -186,6 +202,7 @@ impl IntoResponse for ApiError {
 mod tests {
     use axum::{http::StatusCode, response::IntoResponse};
     use fitai_core::biomech::{Joint, KernelError};
+    use fitai_core::exercise::{Invalid, LibraryError};
 
     use super::ApiError;
 
@@ -203,5 +220,22 @@ mod tests {
             e.into_response().status(),
             StatusCode::INTERNAL_SERVER_ERROR
         );
+    }
+
+    /// SPEC-0066 §2.4 — a model refusing settings that passed validation is a
+    /// programming error, so a `500`, not a `400`; a kernel failure from the
+    /// library is the same `500` as from the squat.
+    #[test]
+    fn a_library_error_is_a_500() {
+        let invalid: ApiError = LibraryError::Invalid(Invalid { field: "bar_kg" }).into();
+        let kernel: ApiError =
+            LibraryError::Kernel(KernelError::NotReported { joint: Joint::Hip }).into();
+        for e in [invalid, kernel] {
+            assert!(matches!(e, ApiError::Internal(_)));
+            assert_eq!(
+                e.into_response().status(),
+                StatusCode::INTERNAL_SERVER_ERROR
+            );
+        }
     }
 }
