@@ -7,6 +7,8 @@ mod lever;
 mod request;
 mod response;
 
+pub(crate) use request::{frame_count, height, mass};
+
 use axum::{routing::post, Router};
 
 use crate::AppState;

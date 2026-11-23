@@ -14,6 +14,7 @@ pub mod authored;
 pub mod biomech;
 pub mod db;
 pub mod error;
+pub mod exercise_models;
 pub mod goals;
 mod health;
 pub(crate) mod http;
@@ -108,6 +109,7 @@ pub fn app(state: AppState) -> Router {
         .merge(auth::routes())
         .merge(authored::routes())
         .merge(biomech::routes())
+        .merge(exercise_models::routes())
         .merge(goals::routes())
         .merge(profile::routes())
         .merge(workout::routes())

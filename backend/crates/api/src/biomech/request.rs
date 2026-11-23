@@ -70,12 +70,8 @@ impl RangeRequest {
     /// # Errors
     /// [`ApiError::Validation`] naming the first field out of range.
     pub(crate) fn validate(self) -> ApiResult<Squat> {
-        let height = within(
-            self.height_m,
-            f64::from(HeightCm::MIN) / 100.0..=f64::from(HeightCm::MAX) / 100.0,
-            "height_m",
-        )?;
-        let mass_kg = within(self.mass_kg, WeightKg::MIN..=WeightKg::MAX, "mass_kg")?;
+        let height = height(self.height_m)?;
+        let mass_kg = mass(self.mass_kg)?;
         let measured = MeasuredLengths {
             thigh: length(self.thigh_m, "thigh_m")?,
             shank: length(self.shank_m, "shank_m")?,
@@ -91,10 +87,7 @@ impl RangeRequest {
             .map(LoadKg::try_new)
             .transpose()
             .map_err(|_| ApiError::Validation { field: "bar_kg" })?;
-        let frames = u16::try_from(self.frames.unwrap_or(DEFAULT_FRAMES))
-            .ok()
-            .and_then(FrameCount::new)
-            .ok_or(ApiError::Validation { field: "frames" })?;
+        let frames = frame_count(self.frames)?;
         let table_lengths = [
             ("thigh", measured.thigh),
             ("shank", measured.shank),
@@ -104,7 +97,7 @@ impl RangeRequest {
         .filter_map(|(name, length)| length.is_none().then_some(name))
         .collect();
         Ok(Squat {
-            body: scale(Metres(height), mass_kg, &measured),
+            body: scale(height, mass_kg, &measured),
             mass_kg,
             bar,
             ankle,
@@ -112,6 +105,38 @@ impl RangeRequest {
             table_lengths,
         })
     }
+}
+
+/// The lifter's height, within the profile's range (SPEC-0059 §2.2).
+///
+/// # Errors
+/// [`ApiError::Validation`] naming `height_m`.
+pub(crate) fn height(height_m: f64) -> ApiResult<Metres> {
+    within(
+        height_m,
+        f64::from(HeightCm::MIN) / 100.0..=f64::from(HeightCm::MAX) / 100.0,
+        "height_m",
+    )
+    .map(Metres)
+}
+
+/// The lifter's mass, kilograms, within the profile's range (SPEC-0059 §2.2).
+///
+/// # Errors
+/// [`ApiError::Validation`] naming `mass_kg`.
+pub(crate) fn mass(mass_kg: f64) -> ApiResult<f64> {
+    within(mass_kg, WeightKg::MIN..=WeightKg::MAX, "mass_kg")
+}
+
+/// The frame count, 41 when absent (SPEC-0059 §2.2).
+///
+/// # Errors
+/// [`ApiError::Validation`] naming `frames` outside `2..=241`.
+pub(crate) fn frame_count(frames: Option<i64>) -> ApiResult<FrameCount> {
+    u16::try_from(frames.unwrap_or(DEFAULT_FRAMES))
+        .ok()
+        .and_then(FrameCount::new)
+        .ok_or(ApiError::Validation { field: "frames" })
 }
 
 fn within(value: f64, range: std::ops::RangeInclusive<f64>, field: &'static str) -> ApiResult<f64> {
