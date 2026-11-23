@@ -4,6 +4,7 @@
 
 use serde::Serialize;
 
+use super::body::BodyMeasure;
 use crate::biomech::Joint;
 use crate::technique::Lift;
 
@@ -24,9 +25,10 @@ pub struct Description {
     pub equipment: Equipment,
     /// The joints the range reports a moment for.
     pub joints: &'static [Joint],
-    /// The body lengths the model uses, by the request's `lengths` keys; the
-    /// rest of a body comes from the table.
-    pub lengths: &'static [&'static str],
+    /// The body measures the model uses (lengths and `dorsiflexion_deg`,
+    /// SPEC-0066 §2.3.1), each with its unit, bounds, step and standard value,
+    /// so the app builds its *Cuerpo* controls from the server (R-0067 AC3).
+    pub body: Vec<BodyMeasure>,
     /// The controls: motion, machine and load.
     pub parameters: Vec<Parameter>,
     /// Pairs of number parameters that must stay ordered.
@@ -53,7 +55,7 @@ pub enum Equipment {
 }
 
 /// Which group of R-0067's controls a parameter belongs to. The body's
-/// lengths are not parameters: they travel at the request's top level.
+/// measures are not parameters: they travel in the request's `body`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Group {
@@ -76,9 +78,9 @@ pub struct Parameter {
     pub kind: ParameterKind,
 }
 
-/// A parameter's kind. A `default` of `None` makes it required: the squat's
-/// dorsiflexion is one, because SPEC-0045 commits no uncited population
-/// default.
+/// A parameter's kind. A `default` of `None` makes it required, allowed only
+/// with a cited reason and never for a machine setting (SPEC-0066 §2.3.1);
+/// no library parameter uses it today.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum ParameterKind {

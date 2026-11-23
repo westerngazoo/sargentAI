@@ -1265,6 +1265,7 @@ fn every_output_value_as_json() -> String {
         Assumption::BodyFatIgnored,
         Assumption::StraightBodyUpright,
         Assumption::JointsAdvanceTogether,
+        Assumption::StandardDorsiflexion,
     ]
     .map(|a| match a {
         Assumption::SagittalPlane
@@ -1278,7 +1279,8 @@ fn every_output_value_as_json() -> String {
         | Assumption::KneesTrackFeet
         | Assumption::BodyFatIgnored
         | Assumption::StraightBodyUpright
-        | Assumption::JointsAdvanceTogether => a,
+        | Assumption::JointsAdvanceTogether
+        | Assumption::StandardDorsiflexion => a,
     });
     let rejections = [
         Rejection::DoesNotBalance {
